@@ -69,34 +69,34 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
    let verbose = False;
 
    Integer bufferSizeBeats = bufferSizeBytes/valueOf(dataWidthBytes);
-   Vector#(numServers, Reg#(Bool))               outs1 <- replicateM(mkReg(False));
-   Vector#(numServers, ConfigCounter#(16))     buffCap <- replicateM(mkConfigCounter(fromInteger(bufferSizeBeats)));
-   Vector#(numServers, Reg#(MemengineCmd))     cmdRegs <- replicateM(mkReg(unpack(0)));
+   Vector#(numServers, Reg#(Bool))          clientInFlight <- replicateM(mkReg(False));
+   Vector#(numServers, ConfigCounter#(16))  clientAvail <- replicateM(mkConfigCounter(fromInteger(bufferSizeBeats)));
+   Vector#(numServers, Reg#(MemengineCmd))  clientCommand <- replicateM(mkReg(unpack(0)));
    
    Reg#(Bool) load_in_progress <- mkReg(False);
-   FIFO#(Tuple4#(MemengineCmd,Bool,Bool,Bit#(BurstLenSize)))              loadf_b <- mkSizedFIFO(1);
-   FIFO#(Tuple4#(Bit#(serverIdxSz),MemengineCmd,Bool,Bit#(BurstLenSize))) loadf_c <- mkSizedFIFO(valueOf(cmdQDepth));
-   FIFO#(Tuple3#(Bit#(8),Bit#(serverIdxSz),Bool))        workf <- mkSizedFIFO(valueOf(cmdQDepth));
+   FIFO#(Tuple4#(MemengineCmd,Bool,Bool,Bit#(BurstLenSize)))              serverCheckAvail <- mkSizedFIFO(1);
+   FIFO#(Tuple4#(Bit#(serverIdxSz),MemengineCmd,Bool,Bit#(BurstLenSize))) serverRequest <- mkSizedFIFO(valueOf(cmdQDepth));
+   FIFO#(Tuple3#(Bit#(8),Bit#(serverIdxSz),Bool)) serverProcessing <- mkSizedFIFO(valueOf(cmdQDepth));
    
 
-   Vector#(numServers, FIFO#(void))              outfs <- replicateM(mkSizedFIFO(valueOf(cmdQDepth)));
-   Vector#(numServers, FIFO#(MemengineCmd))    cmds_in <- replicateM(mkFIFO());
+   Vector#(numServers, FIFO#(void))         clientResponse <- replicateM(mkSizedFIFO(valueOf(cmdQDepth)));
+   Vector#(numServers, FIFO#(MemengineCmd)) clientRequest <- replicateM(mkFIFO());
 
-   FIFOF#(MemData#(dataWidth))                             read_data <- mkFIFOF;
-   Vector#(numServers, FIFOF#(MemData#(dataWidth)))  read_data_buffs <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
+   FIFOF#(MemData#(dataWidth))                       serverDataFifo <- mkFIFOF;
+   Vector#(numServers, FIFOF#(MemData#(dataWidth)))  clientDataFifo <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
    function PipeOut#(Bit#(dataWidth)) check_out(PipeOut#(MemData#(dataWidth)) inpipe, Integer i) = 
       (interface PipeOut;
 	  method Bit#(dataWidth) first;
 	     return inpipe.first.data;
 	  endmethod
 	  method Action deq;
-	     if (verbose) $display("mkMemreadEngineBuff::check_out: idx %d data %h buffCap %d eob %d", i, inpipe.first.data, buffCap[i].read(), inpipe.first.last);
+	     if (verbose) $display("mkMemreadEngineBuff::check_out: idx %d data %h clientAvail %d eob %d", i, inpipe.first.data, clientAvail[i].read(), inpipe.first.last);
 	     inpipe.deq;
-	     buffCap[i].increment(1);
+	     clientAvail[i].increment(1);
 	  endmethod
 	  method Bool notEmpty = inpipe.notEmpty;
        endinterface);
-   Vector#(numServers, PipeOut#(Bit#(dataWidth))) read_data_pipes = zipWith(check_out, map(toPipeOut,read_data_buffs), genVector);
+   Vector#(numServers, PipeOut#(Bit#(dataWidth))) clientDataPipes = zipWith(check_out, map(toPipeOut,clientDataFifo), genVector);
    
    Reg#(Bit#(8))                    respCnt <- mkReg(0);
    Reg#(Bit#(TAdd#(1,serverIdxSz))) loadIdx <- mkReg(0);
@@ -117,61 +117,61 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
        endaction);
          
    for (Integer idx = 0; idx < valueOf(numServers); idx = idx + 1)
-      rule store_cmd if (!outs1[idx]);
-	 let cmd <- toGet(cmds_in[idx]).get();
-	 outs1[idx] <= True;
-	 cmdRegs[idx] <= cmd;
-	 if (verbose) $display("mkMemreadEngineBuff::%d store_cmd %d %d", counter, idx, buffCap[idx].read);
+      rule store_cmd if (!clientInFlight[idx]);
+	 let cmd <- toGet(clientRequest[idx]).get();
+	 clientInFlight[idx] <= True;
+	 clientCommand[idx] <= cmd;
+	 if (verbose) $display("mkMemreadEngineBuff::%d store_cmd %d %d", counter, idx, clientAvail[idx].read);
       endrule
    
    rule load_ctxt_a (!load_in_progress);
-      if (outs1[loadIdx]) begin
+      if (clientInFlight[loadIdx]) begin
 	 load_in_progress <= True;
-	 let cmd = cmdRegs[loadIdx];
+	 let cmd = clientCommand[loadIdx];
          let last_burst = cmd.len <= extend(cmd.burstLen);
          Bit#(BurstLenSize) cmd_len = cmd.burstLen;
 	 if (last_burst)
              cmd_len = truncate(cmd.len);
-	 let cond0 <- buffCap[loadIdx].maybeDecrement(unpack(extend(cmd_len>>beat_shift)));
-	 loadf_b.enq(tuple4(cmd,cond0,last_burst,cmd_len));
-	 if (verbose) $display("mkMemreadEngineBuff::%d load_ctxt_b buffCap[%d] %d burstLen %d cond0 %d last_burst %d", counter, loadIdx, buffCap[loadIdx].read(), cmd_len>>beat_shift, cond0, last_burst);
+	 let cond0 <- clientAvail[loadIdx].maybeDecrement(unpack(extend(cmd_len>>beat_shift)));
+	 serverCheckAvail.enq(tuple4(cmd,cond0,last_burst,cmd_len));
+	 if (verbose) $display("mkMemreadEngineBuff::%d load_ctxt_b clientAvail[%d] %d burstLen %d cond0 %d last_burst %d", counter, loadIdx, clientAvail[loadIdx].read(), cmd_len>>beat_shift, cond0, last_burst);
       end
       else begin
 	 incr_loadIdx;
       end
    endrule
 
-   // should use an EHR for outs1 to avoid the need for this pragma
+   // should use an EHR for clientInFlight to avoid the need for this pragma
    (* descending_urgency = "load_ctxt_c, store_cmd" *)
    rule load_ctxt_c if (load_in_progress);
       load_in_progress <= False;
       incr_loadIdx;
-      match {.cmd,.cond0,.last_burst,.cmd_len} <- toGet(loadf_b).get;
+      match {.cmd,.cond0,.last_burst,.cmd_len} <- toGet(serverCheckAvail).get;
       if  (cond0) begin
 	 if (verbose) $display("mkMemreadEngineBuff::%d load_ctxt_c cmd.len %d idx %d cond0 %d last_burst %d", counter, cmd.len, loadIdx, cond0, last_burst);
-	 loadf_c.enq(tuple4(truncate(loadIdx),cmd,last_burst,cmd_len));
+	 serverRequest.enq(tuple4(truncate(loadIdx),cmd,last_burst,cmd_len));
 	 if (last_burst) begin
 	    if (verbose) $display("mkMemreadEngineBuff::%d load_ctxt_b last_burst %d", counter, last_burst);
-	    outfs[loadIdx].enq(?);
-	    outs1[loadIdx] <= False;
+	    clientResponse[loadIdx].enq(?);
+	    clientInFlight[loadIdx] <= False;
 	 end
 	 else begin
 	    let new_cmd = MemengineCmd{sglId:cmd.sglId, base:cmd.base+extend(cmd.burstLen), 
 				       burstLen:cmd.burstLen, len:cmd.len-extend(cmd.burstLen), tag:cmd.tag};
-	    cmdRegs[loadIdx] <= new_cmd;
+	    clientCommand[loadIdx] <= new_cmd;
 	 end
       end
    endrule
    
    rule read_data_rule;
-      let d <- toGet(read_data).get();
-      match {.rc, .idx, .last_burst} = workf.first;
+      let d <- toGet(serverDataFifo).get();
+      match {.rc, .idx, .last_burst} = serverProcessing.first;
       let new_respCnt = respCnt+1;
       let l = False;
-      if (verbose) $display("mkMemreadEngineBuff::%d data %h new_respCnt %d rc %d last_burst %d idx %d outs1 %d eob %d", counter, d.data, new_respCnt, rc, last_burst, idx, outs1[idx], d.last);
+      if (verbose) $display("mkMemreadEngineBuff::%d data %h new_respCnt %d rc %d last_burst %d idx %d clientInFlight %d eob %d", counter, d.data, new_respCnt, rc, last_burst, idx, clientInFlight[idx], d.last);
       if (new_respCnt == rc) begin
 	 respCnt <= 0;
-	 workf.deq;
+	 serverProcessing.deq;
 	 //$display("eob %d", idx);
 	 l = last_burst;
       end
@@ -179,7 +179,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 	 respCnt <= new_respCnt;
       end
       d.last = l;
-      read_data_buffs[idx].enq(d);
+      clientDataFifo[idx].enq(d);
    endrule
 
    function MemreadServer#(dataWidth) toMemreadServer(Server#(MemengineCmd,Bool) cs, PipeOut#(Bit#(dataWidth)) p) =
@@ -207,7 +207,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 			end
 			else begin
 `endif
-			   cmds_in[i].enq(cmd);
+			   clientRequest[i].enq(cmd);
 `ifdef BSIM
 			end
 `endif
@@ -215,7 +215,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 		  endinterface
 		  interface Get response;
 		     method ActionValue#(Bool) get;
-			outfs[i].deq;
+			clientResponse[i].deq;
 			return True;
 		     endmethod
 		  endinterface
@@ -224,14 +224,14 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
    interface MemReadClient dmaClient;
       interface Get readReq;
 	 method ActionValue#(MemRequest) get();
-	    match {.idx, .cmd, .last_burst, .bl} <- toGet(loadf_c).get;
-	    workf.enq(tuple3(truncate(bl>>beat_shift), idx, last_burst));
+	    match {.idx, .cmd, .last_burst, .bl} <- toGet(serverRequest).get;
+	    serverProcessing.enq(tuple3(truncate(bl>>beat_shift), idx, last_burst));
 	    if (verbose) $display("MemreadEngine::%d readReq idx %d offset %h burstLenBytes %h last_burst %d", counter, idx, cmd.base, bl, last_burst);
 	    return MemRequest { sglId: cmd.sglId, offset: cmd.base, burstLen:bl, tag: (cmd.tag << valueOf(serverIdxSz)) | extend(idx)};
 	 endmethod
       endinterface
-      interface Put readData = toPut(read_data);
+      interface Put readData = toPut(serverDataFifo);
    endinterface 
-   interface dataPipes = read_data_pipes;
-   interface read_servers = zipWith(toMemreadServer, rs, read_data_pipes);
+   interface dataPipes = clientDataPipes;
+   interface read_servers = zipWith(toMemreadServer, rs, clientDataPipes);
 endmodule
