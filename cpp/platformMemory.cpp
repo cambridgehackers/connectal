@@ -30,7 +30,7 @@
 #define PLATFORM_TILE 0
 
 class PortalPoller;
-
+#ifndef NO_CPP_PORTAL_CODE
 static int mmu_error_limit = 20;
 static int mem_error_limit = 20;
 class MMUIndication : public MMUIndicationWrapper
@@ -121,3 +121,4 @@ void platformStatistics(void)
     fprintf(stderr, "   beats: %llx\n", (long long)beats);
     fprintf(stderr, "memory utilization (beats/cycle): %f\n", read_util);
 }
+#endif
