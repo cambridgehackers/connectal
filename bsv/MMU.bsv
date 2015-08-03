@@ -41,6 +41,7 @@ typedef Bit#(TLog#(MaxNumSGLists)) SGListId;
 typedef 12 SGListPageShift0;
 typedef 16 SGListPageShift4;
 typedef 20 SGListPageShift8;
+typedef 24 SGListPageShift12;
 typedef Bit#(TLog#(MaxNumSGLists)) RegionsIdx;
 
 typedef 8 IndexWidth;
@@ -56,13 +57,14 @@ interface MMU#(numeric type addrWidth);
 endinterface
 
 typedef struct {
-   Bit#(2) pageSize;
-   Bit#(SGListPageShift8) value;
+   Bit#(3) pageSize;
+   Bit#(SGListPageShift12) value;
 } Offset deriving (Eq,Bits,FShow);
 
 typedef Bit#(TSub#(MemOffsetSize,SGListPageShift0)) Page0;
 typedef Bit#(TSub#(MemOffsetSize,SGListPageShift4)) Page4;
 typedef Bit#(TSub#(MemOffsetSize,SGListPageShift8)) Page8;
+typedef Bit#(TSub#(MemOffsetSize,SGListPageShift12)) Page12;
 
 typedef struct {
    Bit#(TSub#(MemOffsetSize,SGListPageShift0)) barrier;
@@ -70,6 +72,7 @@ typedef struct {
    } SingleRegion deriving (Eq,Bits,FShow);
 
 typedef struct {
+   SingleRegion reg12;
    SingleRegion reg8;
    SingleRegion reg4;
    SingleRegion reg0;
@@ -106,8 +109,8 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
    Vector#(2,FIFOF#(ReqTup))          reqs0 <- replicateM(mkSizedFIFOF(3));
    
    // stage 2 (latency == 1)
-   Vector#(2,FIFOF#(Tuple3#(Bool,Bool,Bool))) conds <- replicateM(mkFIFOF);
-   Vector#(2,FIFOF#(Tuple3#(Bit#(IndexWidth),Bit#(IndexWidth),Bit#(IndexWidth)))) idxOffsets0 <- replicateM(mkFIFOF);
+   Vector#(2,FIFOF#(Tuple4#(Bool,Bool,Bool,Bool))) conds <- replicateM(mkFIFOF);
+   Vector#(2,FIFOF#(Tuple4#(Bit#(IndexWidth),Bit#(IndexWidth),Bit#(IndexWidth),Bit#(IndexWidth)))) idxOffsets0 <- replicateM(mkFIFOF);
    Vector#(2,FIFOF#(ReqTup))           reqs1 <- replicateM(mkSizedFIFOF(3));
 
    // stage 3 (latency == 1)
@@ -132,6 +135,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
    let page_shift0 = fromInteger(valueOf(SGListPageShift0));
    let page_shift4 = fromInteger(valueOf(SGListPageShift4));
    let page_shift8 = fromInteger(valueOf(SGListPageShift8));
+   let page_shift12 = fromInteger(valueOf(SGListPageShift12));
    
    function BRAMServer#(a,b) portsel(BRAM2Port#(a,b) x, Integer i);
       if(i==0) return x.portA;
@@ -156,6 +160,8 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
                Page0 off0 = truncate(req.off >> valueOf(SGListPageShift0));
                Page4 off4 = truncate(req.off >> valueOf(SGListPageShift4));
                Page8 off8 = truncate(req.off >> valueOf(SGListPageShift8));
+               Page12 off12 = truncate(req.off >> valueOf(SGListPageShift12));
+	       let cond12 = off12 < truncate(regionall.reg12.barrier);
 	       let cond8 = off8 < truncate(regionall.reg8.barrier);
 	       let cond4 = off4 < truncate(regionall.reg4.barrier);
 	       let cond0 = off0 < regionall.reg0.barrier;
@@ -164,8 +170,8 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 				     regionall.reg8.barrier, regionall.reg4.barrier, regionall.reg0.barrier,
 				     off8, off4, off0);
 	       
-	       conds[i].enq(tuple3(cond8,cond4,cond0));
-	       idxOffsets0[i].enq(tuple3(regionall.reg8.idxOffset,regionall.reg4.idxOffset, regionall.reg0.idxOffset));
+	       conds[i].enq(tuple4(cond12,cond8,cond4,cond0));
+	       idxOffsets0[i].enq(tuple4(regionall.reg12.idxOffset,regionall.reg8.idxOffset,regionall.reg4.idxOffset, regionall.reg0.idxOffset));
 	       reqs1[i].enq(req);
 	    end
 	    tagged Invalid:
@@ -178,10 +184,16 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 	 Bit#(IndexWidth) pbase = 0;
 	 Bit#(IndexWidth) idxOffset = 0;
 
-	 match{.cond8,.cond4,.cond0} <- toGet(conds[i]).get;
-	 match{.idxOffset8,.idxOffset4,.idxOffset0} <- toGet(idxOffsets0[i]).get;
+	 match{.cond12,.cond8,.cond4,.cond0} <- toGet(conds[i]).get;
+	 match{.idxOffset12,.idxOffset8,.idxOffset4,.idxOffset0} <- toGet(idxOffsets0[i]).get;
 
-	 if (cond8) begin
+	 if (cond12) begin
+	    if (verbose) $display("mkMMU::request: req.id=%h req.off=%h", req.id, req.off);
+	    o.pageSize = 4;
+	    pbase = truncate(req.off>>page_shift12);
+	    idxOffset = idxOffset12;
+	 end
+	 else if (cond8) begin
 	    if (verbose) $display("mkMMU::request: req.id=%h req.off=%h", req.id, req.off);
 	    o.pageSize = 3;
 	    pbase = truncate(req.off>>page_shift8);
@@ -204,6 +216,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 	 idxOffsets1[i].enq(idxOffset);
 	 ptrs1[i].enq(req.id);
       endrule
+      (* descending_urgency = "stage2, stage4" *)
       rule stage4; // Read relevant sglist entry
 	 let off <- toGet(offs0[i]).get();
 	 let pbase <- toGet(pbases[i]).get();
@@ -228,10 +241,12 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 	 Bit#(MemOffsetSize) rv = ?;
 	 Page4 b4 = truncate(page);
 	 Page8 b8 = truncate(page);
+	 Page12 b12 = truncate(page);
 	 case (offset.pageSize) 
 	    1: rv = {page,truncate(offset.value)};
 	    2: rv = {b4,truncate(offset.value)};
 	    3: rv = {b8,truncate(offset.value)};
+	    4: rv = {b12,truncate(offset.value)};
 	 endcase
 	 pageResponseFifos[i].enq(truncate(rv));
       endrule
@@ -289,13 +304,14 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
       if (hostMapped)
 	 simDma.idreturn(sglId);
    endmethod
-   method Action region(Bit#(32) pointer, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
+   method Action region(Bit#(32) pointer, Bit#(64) barr12, Bit#(32) index12, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
       portsel(regall, 1).request.put(BRAMRequest{write:True, responseOnWrite:False,
           address: truncate(pointer), datain: tagged Valid Region{
+             reg12: SingleRegion{barrier: truncate(barr12), idxOffset: truncate(index12)},
              reg8: SingleRegion{barrier: truncate(barr8), idxOffset: truncate(index8)},
              reg4: SingleRegion{barrier: truncate(barr4), idxOffset: truncate(index4)},
              reg0: SingleRegion{barrier: truncate(barr0), idxOffset: truncate(index0)}} });
-      if (verbose) $display("mkMMU::region pointer=%d barr8=%h barr4=%h barr0=%h", pointer, barr8, barr4, barr0);
+      if (verbose) $display("mkMMU::region pointer=%d barr12=%h barr8=%h barr4=%h barr0=%h", pointer, barr12, barr8, barr4, barr0);
       configRespFifo.enq(truncate(pointer));
    endmethod
 

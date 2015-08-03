@@ -41,7 +41,7 @@ public:
             fprintf(stderr, "daemon[%s:%d](%x, %x, %lx, %x)\n", __FUNCTION__, __LINE__, sglId, sglIndex, addr, len);
         memoryAreas[sglId].len += len;
     }
-    void region (const uint32_t sglId, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 ) {
+    void region (const uint32_t sglId, const uint64_t barr12, const uint32_t index12, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 ) {
         memoryAreas[sglId].ptr = portalMmap(memoryAreas[sglId].fd, memoryAreas[sglId].len);
         //if (trace_mmuserver)
             fprintf(stderr, "daemon[%s:%d] fd %d ptr %p len %x\n", __FUNCTION__, __LINE__, memoryAreas[sglId].fd, memoryAreas[sglId].ptr, memoryAreas[sglId].len);
@@ -52,11 +52,12 @@ public:
         memoryAreas[memoryAreasIndex].ptr = NULL;
         memoryAreas[memoryAreasIndex].len = 0;
         //if (trace_mmuserver)
-            fprintf(stderr, "daemon[%s:%d] fd %d\n", __FUNCTION__, __LINE__, fd);
-if (fd <= 0) {
-fprintf(stderr, "[%s:%d] bogus fd value %d\n", __FUNCTION__, __LINE__, fd);
-exit(1);
-}
+        fprintf(stderr, "daemon[%s:%d] fd %d\n", __FUNCTION__, __LINE__, fd);
+        if (fd <= 0) {
+            fprintf(stderr, "[%s:%d] bogus fd value %d\n", __FUNCTION__, __LINE__, fd);
+            exit(1);
+        }
+
         mIndicationProxy->idResponse(memoryAreasIndex++);
     }
     void setInterface(uint32_t interfaceId, uint32_t sglId) {

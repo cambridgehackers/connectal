@@ -19,30 +19,5 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-import Vector::*;
-import Connectable::*;
-import Portal::*;
-import MemTypes::*;
-import HostInterface::*;
 
 typedef enum {IfcNames_MMUIndicationH2S=2, IfcNames_MemServerIndicationH2S, IfcNames_MMURequestS2H, IfcNames_MemServerRequestS2H} PlatformNames deriving (Eq,Bits);
-
-typedef 2 NumReadClients;
-typedef 2 NumWriteClients;
-typedef Empty TileExtType;
-typedef 2 NumberOfTiles;
-interface Tile;
-   interface PhysMemSlave#(18,32) portals;
-   interface ReadOnly#(Bool) interrupt;
-   interface Vector#(NumReadClients,MemReadClient#(DataBusWidth)) readers;
-   interface Vector#(NumWriteClients,MemWriteClient#(DataBusWidth)) writers;
-   interface TileExtType ext;
-endinterface
-
-interface Platform#(type pins);
-   interface PhysMemSlave#(32,32) slave;
-   interface Vector#(NumberOfMasters,PhysMemMaster#(PhysAddrWidth, DataBusWidth)) masters;
-   interface Vector#(16,ReadOnly#(Bool)) interrupt;
-   interface pins pins;
-endinterface
-

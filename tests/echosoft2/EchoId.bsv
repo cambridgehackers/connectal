@@ -21,9 +21,8 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFO::*;
-import Vector::*;
+//import Vector::*;
 
 interface EchoIndication;
     method Action heard(Bit#(32) id, Bit#(32) v);
@@ -36,8 +35,8 @@ interface EchoRequest;
    method Action setLeds(Bit#(32) id, Bit#(8) v);
 endinterface
 
-interface EchoRequestInternal;
-   interface EchoRequest ifc;
+interface EchoId;
+   interface EchoRequest request;
 endinterface
 
 typedef struct {
@@ -51,7 +50,7 @@ typedef struct {
 	Bit#(16) b;
 } EchoPair2 deriving (Bits);
 
-module mkEchoRequestInternal#(EchoIndication indication)(EchoRequestInternal);
+module mkEchoId#(EchoIndication indication)(EchoId);
 
     FIFO#(EchoPair1) delay1 <- mkSizedFIFO(8);
     FIFO#(EchoPair2) delay2 <- mkSizedFIFO(8);
@@ -66,7 +65,7 @@ module mkEchoRequestInternal#(EchoIndication indication)(EchoRequestInternal);
         indication.heard2(delay2.first.id, delay2.first.b, delay2.first.a);
     endrule
    
-   interface EchoRequest ifc;
+   interface EchoRequest request;
       method Action say(Bit#(32) id, Bit#(32) v);
 	 delay1.enq(EchoPair1 { id: id, v: v});
       endmethod

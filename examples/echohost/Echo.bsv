@@ -1,4 +1,3 @@
-
 // Copyright (c) 2013 Nokia, Inc.
 // Copyright (c) 2013 Quanta Research Cambridge, Inc.
 
@@ -21,17 +20,54 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+import FIFO::*;
+import Vector::*;
+import HostInterface::*;
 
-interface Swallow;
-   method Action swallow(Bit#(32) v);
+interface EchoIndication;
+    method Action heard(Bit#(32) v);
+    method Action heard2(Bit#(16) a, Bit#(16) b);
 endinterface
 
-module mkSwallow (Swallow);
+interface EchoRequest;
+   method Action say(Bit#(32) v);
+   method Action say2(Bit#(16) a, Bit#(16) b);
+   method Action setLeds(Bit#(8) v);
+endinterface
 
-   Reg#(Bit#(32)) sink <- mkReg(0);
+interface Echo;
+   interface EchoRequest request;
+endinterface
+
+typedef struct {
+	Bit#(16) a;
+	Bit#(16) b;
+} EchoPair deriving (Bits);
+
+module mkEcho#(HostInterface host, EchoIndication indication)(Echo);
+    FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
+    FIFO#(EchoPair) delay2 <- mkSizedFIFO(8);
+
+    rule heard;
+        delay.deq;
+        indication.heard(delay.first);
+    endrule
+
+    rule heard2;
+        delay2.deq;
+        indication.heard2(delay2.first.b, delay2.first.a);
+    endrule
    
-   method Action swallow(Bit#(32) v);
-      sink <= v;
-   endmethod
-
+   interface EchoRequest request;
+      method Action say(Bit#(32) v);
+	 delay.enq(v);
+      endmethod
+      
+      method Action say2(Bit#(16) a, Bit#(16) b);
+	 delay2.enq(EchoPair { a: a, b: b});
+      endmethod
+      
+      method Action setLeds(Bit#(8) v);
+      endmethod
+   endinterface
 endmodule

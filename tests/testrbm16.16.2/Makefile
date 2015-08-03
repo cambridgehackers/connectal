@@ -1,10 +1,8 @@
-
 CONNECTALDIR?=../..
 BSCFLAGS=-aggressive-conditions -show-schedule -keep-fires -p +:../paclib
 
 MMDIR=$(CONNECTALDIR)/examples/matmul
 RBMDIR=$(CONNECTALDIR)/examples/rbm
-DBNTOPBSV= $(RBMDIR)/Top.bsv
 TESTCPPFILES= $(RBMDIR)/testrbm.cpp
 CONNECTALFLAGS = -D J_VALUE=16 -D K_VALUE=16 -D N_VALUE=2 -D DataBusWidth=64
 

@@ -43,7 +43,7 @@ interface HdmiDisplayRequest;
 endinterface
 interface HdmiDisplayIndication;
    method Action transferStarted(Bit#(32) count);
-   method Action transferFinished(Bit#(32) count);
+   method Action transferFinished(Bit#(32) count, Bit#(32) byteLen);
    method Action transferStats(Bit#(32) count, Bit#(32) transferCycles, Bit#(64) sumOfCycles);
 endinterface
 
@@ -59,6 +59,9 @@ interface HdmiDisplay;
     interface XADC xadc;
 endinterface
 
+typedef 1 NumOutstandingRequests;
+typedef 8 FrameBufferBurstLenInBytes;
+
 module mkHdmiDisplay#(Clock hdmi_clock,
 		      HdmiDisplayIndication hdmiDisplayIndication,
 		      HdmiGeneratorIndication hdmiGeneratorIndication
@@ -73,13 +76,16 @@ module mkHdmiDisplay#(Clock hdmi_clock,
    Reset fifo_reset_hdmi <- mkAsyncReset(2, fifo_reset.new_rst, hdmi_clock);
 
    Reg#(UInt#(24)) byteCountReg <- mkReg(1080*1920);
+   Reg#(Bit#(24)) frameByte <- mkReg(99, clocked_by hdmi_clock, reset_by hdmi_reset);
+   Reg#(Bit#(24)) frameByteSaved <- mkSyncReg(1234, hdmi_clock, hdmi_reset, defaultClock);
+   Reg#(Bool) frameByteReady <- mkReg(False, clocked_by hdmi_clock, reset_by hdmi_reset);
 
    Reg#(Bool) sendVsyncIndication <- mkReg(False);
    SyncPulseIfc startDMA <- mkSyncHandshake(hdmi_clock, hdmi_reset, defaultClock);
    Reg#(Bit#(1)) bozobit <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
 
    Reg#(Maybe#(Bit#(32))) referenceReg <- mkReg(tagged Invalid);
-   MemreadEngine#(64,16,1) memreadEngine <- mkMemreadEngine;
+   MemreadEngine#(64,NumOutstandingRequests,1) memreadEngine <- mkMemreadEngine;
 
    HdmiGenerator#(Rgb888) hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
 			startDMA, hdmiGeneratorIndication, clocked_by hdmi_clock, reset_by hdmi_reset);
@@ -112,6 +118,16 @@ module mkHdmiDisplay#(Clock hdmi_clock,
       bluescope.dataIn(v, v);
    endrule
 `endif
+   rule toSaved if (hdmisignals.hdmi_vsync == 1);
+      if (frameByteReady && frameByte != 0) begin
+         frameByteSaved <= frameByte;
+         frameByte <= 0;
+      end
+      frameByteReady <= False;
+   endrule
+   rule endsync if (hdmisignals.hdmi_vsync != 1);
+      frameByteReady <= True;
+   endrule
 
    SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncBRAMFIFO(1024, defaultClock, fifo_reset.new_rst, hdmi_clock, fifo_reset_hdmi);
    Reg#(Bool) evenOdd <- mkReg(True, clocked_by hdmi_clock, reset_by fifo_reset_hdmi);
@@ -129,6 +145,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
 	 synchronizer.deq;
          savedPixelReg <= doublePixel[1];
 	 pixel = doublePixel[0];
+         frameByte <= frameByte + 1;
       end
       evenOdd <= !evenOdd;
       hdmiGen.pdata.put(pixel);
@@ -145,7 +162,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
 
    Reg#(Bool) traceTransfers <- mkReg(False);
    rule startTransfer if (startDMA.pulse() &&& referenceReg matches tagged Valid .reference);
-      memreadEngine.readServers[0].request.put(MemengineCmd{sglId:reference, base:0, len:pack(extend(byteCountReg)), burstLen:64, tag: 0});
+      memreadEngine.readServers[0].request.put(MemengineCmd{sglId:reference, base:0, len:pack(extend(byteCountReg)), burstLen:fromInteger(valueOf(FrameBufferBurstLenInBytes)), tag: 0});
       if (traceTransfers)
 	 hdmiDisplayIndication.transferStarted(transferCount);
       transferCyclesSnapshot <= transferCycles;
@@ -159,7 +176,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
       let tc = transferCycles - transferCyclesSnapshot;
       transferSumOfCycles <= transferSumOfCycles + extend(tc);
       if (traceTransfers)
-	 hdmiDisplayIndication.transferFinished(transferCount);
+	 hdmiDisplayIndication.transferFinished(transferCount, extend(frameByteSaved));
    endrule
 
     rule bozobit_rule;
@@ -169,7 +186,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
     interface HdmiDisplayRequest displayRequest;
 	method Action startFrameBuffer(Int#(32) base, UInt#(32) byteCount);
 	   byteCountReg <= truncate(byteCount);
-	   $display("startFrameBuffer %h", base);
+	   $display("startFrameBuffer base %x count %d", base, byteCount);
            referenceReg <= tagged Valid truncate(pack(base));
 	endmethod
        method Action stopFrameBuffer();

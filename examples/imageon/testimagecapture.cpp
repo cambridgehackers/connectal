@@ -462,7 +462,7 @@ int main(int argc, const char **argv)
     printf("[%s:%d] before setDeLine/Pixel\n", __FUNCTION__, __LINE__);
     for (int i = 0; i < 4; i++) {
       int pixclk = (long)edid.timing[i].pixclk * 10000;
-break;
+//break;
       if ((pixclk > 0) && (pixclk < 148000000)) {
         nlines = edid.timing[i].nlines;    // number of visible lines
         npixels = edid.timing[i].npixels;

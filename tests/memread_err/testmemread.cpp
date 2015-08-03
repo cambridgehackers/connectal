@@ -44,7 +44,7 @@ int mismatchCount = 0;
 void dump(const char *prefix, char *buf, size_t len)
 {
     fprintf(stderr, "%s ", prefix);
-    for (int i = 0; i < (len > 16 ? 16 : len) ; i++)
+    for (unsigned int i = 0; i < (len > 16 ? 16 : len) ; i++)
 	fprintf(stderr, "%02x", (unsigned char)buf[i]);
     fprintf(stderr, "\n");
 }
@@ -70,18 +70,13 @@ public:
 
 int runtest(int argc, const char ** argv)
 {
-
   int test_result = 0;
   int srcAlloc;
   unsigned int *srcBuffer = 0;
 
-  MemreadRequestProxy *device = 0;
-  MemreadIndication *deviceIndication = 0;
-
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
-
-  device = new MemreadRequestProxy(IfcNames_MemreadRequest);
-  deviceIndication = new MemreadIndication(IfcNames_MemreadIndication);
+  MemreadRequestProxy *device = new MemreadRequestProxy(IfcNames_MemreadRequestS2H);
+  MemreadIndication deviceIndication(IfcNames_MemreadIndicationH2S);
   DmaManager *dma = platformInit();
 
   fprintf(stderr, "Main::allocating memory...\n");
@@ -160,8 +155,6 @@ int runtest(int argc, const char ** argv)
     fprintf(stderr, "Main::first test failed to match %d.\n", mismatchCount);
     test_result++;     // failed
   }
-
-
   return test_result;
 }
 

@@ -67,7 +67,7 @@ endif
 BSCOPTFLAGS= -show-schedule -aggressive-conditions
 BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj
 BSCFLAGS_COMMON += $(BSCWARNFLAGS) $(BSCOPTFLAGS) $(BSCPATHFLAGS) --wait-for-license
-BSC_CXXFLAGS= -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -D BSIM
+export BSC_CXXFLAGS= -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -D BSIM $(BSVDEFINES)
 BSIM_CXX_COMMON = $(CONNECTALDIR)/cpp/BsimCtrl.cpp $(CONNECTALDIR)/cpp/TlpReplay.cpp $(CONNECTALDIR)/cpp/BsimDma.cpp $(CONNECTALDIR)/cpp/sock_utils.c
 BSIM_CXX_LOCAL = $(DTOP)/jni/BsimCtrl.cpp $(DTOP)/jni/TlpReplay.cpp $(DTOP)/jni/BsimDma.cpp $(DTOP)/jni/sock_utils.c $(DTOP)/jni/portalPrintf.c
 
@@ -135,25 +135,26 @@ else
 endif
 
 bsim_exe: prepare_bin_target
-	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk bsim_exe
+	$(Q)cd jni; $(MAKE) --no-print-directory -f Ubuntu.mk bsim_exe
 	@cp -v jni/bsim_exe bin
+	$(QTUSED)
 
 bsim_exe2: prepare_bin_target
-	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk bsim_exe2
+	$(Q)cd jni; $(MAKE) --no-print-directory -f Ubuntu.mk bsim_exe2
 	@cp -v jni/bsim_exe2 bin
 
 ubuntu.exe: prepare_bin_target
 	@echo "ubuntu.exe"
-	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk ubuntu.exe
+	$(Q)cd jni; $(MAKE) --no-print-directory -f Ubuntu.mk ubuntu.exe
 	@cp -v jni/ubuntu.exe bin
 	@echo "ubuntu.exe done"
 
 ubuntu.exe2: prepare_bin_target
-	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk ubuntu.exe2
+	$(Q)cd jni; $(MAKE) --no-print-directory -f Ubuntu.mk ubuntu.exe2
 	@cp -v jni/ubuntu.exe2 bin
 
 connectal.so: prepare_bin_target
-	$(Q)cd jni; make --no-print-directory -f Ubuntu.mk connectal.so
+	$(Q)cd jni; $(MAKE) --no-print-directory -f Ubuntu.mk connectal.so
 	@cp -v jni/connectal.so bin
 
 ifneq ($(BOARD),bluesim)
@@ -202,13 +203,13 @@ endif
 endif
 
 android.exe: prepare_bin_target
-	ndk-build $(CONNECTAL_NDK_PARAM)
+	+ndk-build $(CONNECTAL_NDK_PARAM)
 	@cp -v libs/armeabi/android.exe bin
 	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || $(NDK_OBJCOPY) --remove-section fpgadata bin/android.exe
 	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
 
 android.debug.exe: prepare_bin_target
-	ndk-build $(CONNECTAL_NDK_PARAM) -B V=1 NDK_DEBUG=1
+	+ndk-build $(CONNECTAL_NDK_PARAM) -B V=1 NDK_DEBUG=1
 	@cp -v libs/armeabi/android.exe bin
 	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || $(NDK_OBJCOPY) --remove-section fpgadata bin/android.exe
 	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
@@ -280,8 +281,8 @@ bin/vsim:
 	python $(CONNECTALDIR)/scripts/sim-gen.py -o vsim/Makefile -s ~/dev/connectal/out/vsim/synthesis/ -d ~/dev/sonic-lite/vsim/modelsim -p ~/dev/sonic-lite -c $(CONNECTALDIR) -g ~/dev/connectal/out/vsim/synthesis/ -t ~/dev/connectal/out/vsim/synthesis/ -T mkSonicSimTop
 
 vsim: verilog bin/vsim
-	make -C vsim all
-	make -C vsim simulate
+	$(MAKE) -C vsim all
+	$(MAKE) -C vsim simulate
 
 $(VFILE): $(TOPBSVFILE) $(BSVFILES)
 	$(Q)mkdir -p verilog/portal $(DTOP)/obj
@@ -301,7 +302,6 @@ bsim: prepare_bin_target $(DTOP)/jni/TlpReplay.cpp $(BSIM_CXX_LOCAL)
 	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -D BSIM -sim -u -g $(MKTOP) $(TOPBSVFILE)
 	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) $(BSC_CXXFLAGS) -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX_LOCAL) $(BSIM_CXX_PROJECT)
 	$(Q)cp -v generatedbsv/bsim* bin
-	$(QTUSED)
 
 syntax.timestamp: $(BSVFILES)
 	@#$syntax.py uses environment variables: V INTERFACES BSVDEFINES_LIST DTOP DUT_NAME

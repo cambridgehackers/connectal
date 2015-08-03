@@ -31,7 +31,7 @@ import Controller::*;
 
 typedef enum {IfcNames_ControllerRequest, IfcNames_ControllerIndication} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,PmodPins,0));
+module mkConnectalTop(ConnectalTop);
    PmodControllerIndicationProxy cp <- mkPmodControllerIndicationProxy(IfcNames_ControllerIndication);
    Controller controller <- mkController(cp.ifc);
    PmodControllerRequestWrapper cw <- mkPmodControllerRequestWrapper(IfcNames_ControllerRequest, controller.req);

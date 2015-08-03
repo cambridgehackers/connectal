@@ -20,15 +20,41 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 import Vector::*;
-import HostInterface::*;
 import Portal::*;
+import HostInterface::*;
 import PlatformTypes::*;
 import Platform::*;
-import Tile::*;
+import CtrlMux::*;
+import MemServer::*;
+import MemTypes::*;
+import ReadTest::*;
+import ReadTestEnum::*;
+import ReadTestRequest::*;
+import ReadTestIndication::*;
+import `PinTypeInclude::*;
 
-module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,NumberOfMasters));
-   Vector#(NumberOfTiles,Tile) ts <- replicateM(mkTile);
-   Platform#(Empty) f <- mkPlatform(ts);
+(* synthesize *)
+module mkTile(Tile);
+   ReadTestIndicationProxy lReadTestIndicationProxy <- mkReadTestIndicationProxy(IfcNames_ReadTestIndicationH2S);
+   ReadTest lReadTest <- mkReadTest(lReadTestIndicationProxy.ifc);
+   ReadTestRequestWrapper lReadTestRequestWrapper <- mkReadTestRequestWrapper(IfcNames_ReadTestRequestS2H, lReadTest.request);
+   Vector#(NumReadClients,MemReadClient#(DataBusWidth)) nullReaders = replicate(null_mem_read_client());
+   
+   Vector#(2,StdPortal) portal_vec;
+   portal_vec[0] = lReadTestRequestWrapper.portalIfc;
+   portal_vec[1] = lReadTestIndicationProxy.portalIfc;
+   PhysMemSlave#(18,32) portal_slave <- mkSlaveMux(portal_vec);
+   let interrupts <- mkInterruptMux(getInterruptVector(portal_vec));
+   interface interrupt = interrupts;
+   interface slave = portal_slave;
+   interface readers = take(append(lReadTest.dmaClient, nullReaders));
+   interface writers = replicate(null_mem_write_client());
+   interface pins = ?;
+endmodule
+
+module mkConnectalTop(ConnectalTop);
+   Vector#(NumberOfUserTiles,Tile) ts <- replicateM(mkTile);
+   Platform f <- mkPlatform(ts);
    interface interrupt = f.interrupt;
    interface slave = f.slave;
    interface masters = f.masters;

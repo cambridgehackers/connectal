@@ -32,6 +32,7 @@ import Vector       :: *;
 import ClientServer :: *;
 import MemTypes     :: *;
 import Probe        :: *;
+import ConfigCounter ::*;
 
 typedef struct {
    TLPData#(16) tlp;
@@ -47,6 +48,15 @@ interface MemSlaveEngine#(numeric type buswidth);
     interface Reg#(Bool) use4dw;
 endinterface: MemSlaveEngine
 
+`ifdef XILINX
+   `define AXI
+`elsif BSIM
+   `define AXI
+`elsif ALTERA
+   `define AVALON
+`endif
+
+typedef 32 WriteDataMimoSize;
 module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    provisos (Div#(buswidth, 8, busWidthBytes),
 	     Div#(buswidth, 32, busWidthWords),
@@ -59,7 +69,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	     Add#(eee, busWidthWords, 8),
 	     Add#(1, a__, busWidthWords),
 	     Add#(busWidthWords, b__, 4),
-	     Add#(c__, busWidthWords, 16)
+	     Add#(c__, busWidthWords, WriteDataMimoSize)
       );
 
     let beat_shift = fromInteger(valueOf(beatShift));
@@ -77,7 +87,10 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    MIFO#(4,busWidthWords,16,Bit#(32)) completionMimo <- mkMIFO();
    MIFO#(4,busWidthWords,16,TLPTag) completionTagMimo <- mkMIFO();
 
-    MIMO#(busWidthWords,4,16,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
+   mimoCfg.bram_based = True;
+   mimoCfg.unguarded = True;
+    MIMO#(busWidthWords,4,WriteDataMimoSize,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
+    ConfigCounter#(8) writeDataCnt <- mkConfigCounter(0);
     Reg#(Bit#(10)) writeBurstCount <- mkReg(0);
    FIFO#(Bit#(10)) writeBurstCountFifo <- mkFIFO();
     Reg#(TLPLength)  writeDwCount <- mkReg(0); // how many 4 byte (double) words to send
@@ -86,6 +99,8 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
     Reg#(Bool)    writeInProgress <- mkReg(False);
     FIFOF#(TLPTag) writeTag <- mkSizedFIFOF(16);
     FIFOF#(TLPTag) doneTag <- mkSizedFIFOF(16);
+
+    Reg#(Bool) quadAlignedTlpHandled <- mkReg(True);
 
    Wire#(Bool) writeHeaderTlpWire <- mkDWire(False);
    Probe#(Bool) writeHeaderAvailableProbe <- mkProbe;
@@ -104,8 +119,15 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       writeDataMimoEnqProbe <= writeDataMimoEnqWire;
    endrule
 
-   rule writeHeaderTlp if (!writeInProgress && (!tlpWriteHeaderFifo.first.is3dw
-						|| writeDataMimo.deqReadyN(1)));
+   Reg#(Bool) writeDataCntAboveThreshold <- mkReg(False);
+   rule updateWriteDataCntAboveThreshold;
+      writeDataCntAboveThreshold <= (writeDataCnt.read >= truncate(unpack(tlpWriteHeaderFifo.first.dwCount)));
+   endrule
+   (* descending_urgency = "writeHeaderTlp,updateWriteDataCntAboveThreshold" *)
+   rule writeHeaderTlp if (!writeInProgress && writeDataCntAboveThreshold);
+      // update for next cycle
+      writeDataCntAboveThreshold <= (writeDataCnt.read >= truncate(unpack(tlpWriteHeaderFifo.first.dwCount)));
+
       writeHeaderTlpWire <= True;
       let info <- toGet(tlpWriteHeaderFifo).get();
       let tlp     = info.tlp;
@@ -119,16 +141,37 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       if (is3dw) begin
 	 if (hdr_3dw.format != MEM_WRITE_3DW_DATA)
 	    $display("MemSlaveEngine: expecting MEM_WRITE_3DW_DATA, got %d", hdr_3dw.format);
-	 Vector#(4, Bit#(32)) v = writeDataMimo.first();
+	 Vector#(4, Bit#(32)) v = unpack(0);
+         tlp.sof = True;
+`ifdef AXI
+         v = writeDataMimo.first();
 	 writeDataMimo.deq(1);
 	 hdr_3dw.data = byteSwap(v[0]);
+         tlp.eof = (dwCount == 1) ? True : False;
+         dwCount = dwCount - 1;
+         writeDataCnt.decrement(1);
+`elsif AVALON
+         let quadWordAligned = isQuadWordAligned(getLowerAddr(hdr_3dw.addr, hdr_3dw.firstbe));
+         // if quad-word aligned, insert bubble.
+         if (!quadWordAligned) begin
+            v = writeDataMimo.first();
+            writeDataMimo.deq(1);
+            hdr_3dw.data = v[0];
+         end
+         else begin
+            hdr_3dw.data = unpack(0);
+         end
+         tlp.eof = (dwCount == 1 && !quadWordAligned) ? True : False;
+         if (!quadWordAligned) begin
+            dwCount = dwCount - 1;
+            writeDataCnt.decrement(1);
+         end
+`endif
 	 tlp.be = 16'hffff;
-	 if (dwCount == 1)
-	    tlp.eof = True;
-	 dwCount = dwCount - 1;
 	 tlp.data = pack(hdr_3dw);
       end
       else begin
+         quadAlignedTlpHandled <= isQuadWordAligned(getLowerAddr(truncate(unpack(hdr_4dw.addr)), hdr_4dw.firstbe));
 	 tlp.be = 16'hffff;
       end
 
@@ -146,10 +189,18 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 
    endrule
 
-   rule writeTlps if (writeInProgress && writeDataMimo.deqReadyN(tlpDwCount));
+   rule writeTlps if (writeInProgress); // already verified  writeDataMimo.deqReadyN(tlpDwCount)) for this transaction
       TLPData#(16) tlp = defaultValue;
       tlp.sof = False;
       Vector#(4, Bit#(32)) v = unpack(0);
+      Integer currDwCount = 4;
+
+`ifdef AVALON
+      if (!quadAlignedTlpHandled) begin
+         currDwCount = 3; // 3 Data Dwords in this cycle.
+         quadAlignedTlpHandled <= True;
+      end
+`endif
 
       // The MIMO implicit guard only checks for availability of 1 element
       // so we explicitly check for the number of elements required
@@ -157,7 +208,8 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       v = writeDataMimo.first();
       let dwCount = writeDwCount - extend(pack(tlpDwCount));
       writeDwCount <= dwCount;
-      tlpDwCount <= truncate(min(4,unpack(dwCount)));
+      tlpDwCount <= truncate(min(fromInteger(currDwCount),unpack(dwCount)));
+      writeDataCnt.decrement(unpack(extend(pack(tlpDwCount))));
       lastTlp <= (dwCount <= 4);
       if (tlpDwCount == 4)
 	 tlp.be = 16'hffff;
@@ -176,8 +228,10 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	 $display("writeDwCount=%d will be zero", writeDwCount);
       end
 
-      for (Integer i = 0; i < 4; i = i + 1)
-	 tlp.data[(i+1)*32-1:i*32] = byteSwap(v[3-i]);
+      for (Integer i = 0; i < currDwCount; i = i + 1) begin
+	 tlp.data[(i+1)*32-1:i*32] = v[(currDwCount-1)-i];
+      end
+
       tlpOutFifo.enq(tlp);
    endrule
 
@@ -199,6 +253,12 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       Vector#(4, Bit#(32)) vec = unpack(0);
       Vector#(4, Bit#(32)) tlpvec = unpack(tlp.data);
       let wordCount = wordCountReg;
+`ifdef AXI
+      let dataInSecondTlp = False;
+`elsif AVALON
+      let quadWordAligned = isQuadWordAligned(getLowerAddr(hdr_3dw.addr, hdr_3dw.firstbe));
+      let dataInSecondTlp = quadWordAligned;
+`endif
       if (!tlp.sof) begin
 	 vec = reverse(tlpvec);
 	 // The MIMO implicit guard only checks for space to enqueue 1 element
@@ -222,12 +282,14 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	       && hdr_3dw.pkttype == COMPLETION
 	       && completionMimo.enqReady()
 	       && completionTagMimo.enqReady()) begin
-	    vec[0] = hdr_3dw.data;
-            wordCount = hdr_3dw.length - 1;
-	    completionMimo.enq(1, vec);
             TLPTag tag = hdr_completion.tag;
-	    lastTag <= tag;
-	    completionTagMimo.enq(1, replicate(tag));
+            lastTag <= tag;
+            if (!dataInSecondTlp) begin
+               vec[0] = hdr_3dw.data;
+               wordCount = hdr_3dw.length - 1;
+               completionMimo.enq(1, vec);
+               completionTagMimo.enq(1, replicate(tag));
+            end
 	    handled = True;
       end
       wordCountReg <= wordCount;
@@ -345,6 +407,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 
 	    Vector#(busWidthWords, Bit#(32)) v = unpack(wdata.data);
 	    writeDataMimo.enq(fromInteger(valueOf(busWidthWords)), v);
+            writeDataCnt.increment(fromInteger(valueOf(busWidthWords)));
 	    writeDataMimoEnqWire <= True;
          endmethod
        endinterface
@@ -370,8 +433,13 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	      completionMimo.deq();
 	      completionTagMimo.deq();
               Bit#(buswidth) v = 0;
-	      for (Integer i = 0; i < valueOf(busWidthWords); i = i+1)
+              for (Integer i = 0; i < valueOf(busWidthWords); i = i+1) begin
+`ifdef AXI
 		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
+`elsif AVALON
+		 v[(i+1)*32-1:i*32] = data_v[i];
+`endif
+              end
 	      return MemData { data: v, tag: truncate(tag_v[0]), last: True};
            endmethod
 	endinterface

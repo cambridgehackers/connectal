@@ -1,4 +1,8 @@
 
+S2H_INTERFACES += RbmRequest:Rbm.rbmRequest MmRequestTN:Rbm.mmRequest SigmoidRequest:Rbm.sigmoidRequest TimerRequest:Rbm.timerRequest
+H2S_INTERFACES += Rbm\#\(TDiv\#\(DataBusWidth,32\)\):RbmIndication,SigmoidIndication,MmIndication,TimerIndication
+MEM_INTERFACES = lRbm.readClients,lRbm.writeClients
+
 gen:: $(RBMDIR)/datasets
 
 $(RBMDIR)/datasets:
@@ -8,8 +12,6 @@ $(RBMDIR)/datasets:
 	(cd $(RBMDIR)/datasets; curl -O http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz)
 	(cd $(RBMDIR)/datasets; curl -O http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz)
 	cd $(RBMDIR)/datasets; gunzip *.gz
-
-INTERFACES += RbmRequest  SigmoidRequest RbmIndication SigmoidIndication 
 
 CONNECTALFLAGS  +=  -D RBMDIR='\"'$(RBMDIR)'\"'
 CONNECTALFLAGS += -I$(RBMDIR)/cpp

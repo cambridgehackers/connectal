@@ -45,7 +45,7 @@ import Memwrite::*;
 
 typedef enum {IfcNames_MemServerIndicationH2S, IfcNames_MemServerRequestS2H, IfcNames_MMURequestS2H, IfcNames_MMUIndicationH2S, IfcNames_MemwriteIndicationH2S, IfcNames_MemwriteRequestS2H} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
+module mkConnectalTop(ConnectalTop);
 
    MemwriteIndicationProxy memwriteIndicationProxy <- mkMemwriteIndicationProxy(IfcNames_MemwriteIndicationH2S);
    Memwrite memwrite <- mkMemwrite(memwriteIndicationProxy.ifc);

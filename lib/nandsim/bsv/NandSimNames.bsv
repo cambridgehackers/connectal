@@ -21,27 +21,27 @@
 
 
 typedef enum {
-   
-   IfcNames_HostMemServerIndication, 
-   IfcNames_HostMemServerRequest,
 
-   IfcNames_NandMemServerIndication, 
-   IfcNames_NandMemServerRequest,
-	      
-   IfcNames_BackingStoreMMURequest,
-   IfcNames_BackingStoreMMUIndication,
+   IfcNames_MemServerRequestS2H,
+   IfcNames_MemServerIndicationH2S,
 
-   IfcNames_AlgoMMURequest,
-   IfcNames_AlgoMMUIndication,
+   IfcNames_NandMemServerRequestS2H,
+   IfcNames_NandMemServerIndicationH2S,
+	
+   IfcNames_BackingStoreMMURequestS2H,
+   IfcNames_BackingStoreMMUIndicationH2S,
 
-   IfcNames_NandMMURequest,
-   IfcNames_NandMMUIndication,
+   IfcNames_MMURequestS2H,
+   IfcNames_MMUIndicationH2S,
 
-   IfcNames_NandCfgIndication, 
-   IfcNames_NandCfgRequest, 
+   IfcNames_NandMMURequestS2H,
+   IfcNames_NandMMUIndicationH2S,
 
-   IfcNames_AlgoIndication, 
-   IfcNames_AlgoRequest 
- 
+   IfcNames_NandCfgRequestS2H,
+   IfcNames_NandCfgIndicationH2S,
+
+   IfcNames_AlgoRequestS2H,
+   IfcNames_AlgoIndicationH2S
+
    } IfcNames deriving (Eq,Bits);
 

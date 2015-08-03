@@ -1,1 +1,0 @@
-../../examples/rbm/synth-ip.tcl

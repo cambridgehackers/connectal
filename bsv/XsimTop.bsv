@@ -30,13 +30,6 @@ import CnocPortal::*;
 import MemTypes          :: *;
 import SimDma            ::*;
 
-`ifndef PinType
-`define PinType Empty
-`endif
-
-typedef `PinType PinType;
-typedef `NumberOfMasters NumberOfMasters;
-
 module  mkXsimHost#(Clock derivedClock, Reset derivedReset)(XsimHost);
    interface derivedClock = derivedClock;
    interface derivedReset = derivedReset;
@@ -98,6 +91,12 @@ module mkXsimTop#(Clock derivedClock, Reset derivedReset)(Empty);
    let top <- mkCnocTop(
 `ifdef IMPORT_HOSTIF
        host
+`else
+`ifdef IMPORT_HOST_CLOCKS // enables synthesis boundary
+       derivedClock, derivedReset
+`else
+// otherwise no params
+`endif
 `endif
        );
    mapM_(mkXsimSource, top.indications);

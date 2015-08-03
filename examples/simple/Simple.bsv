@@ -76,7 +76,7 @@ typedef struct {
 } Say6ReqSimple deriving (Bits);
 
 interface Simple;
-   interface SimpleRequest request;
+    interface SimpleRequest request;
 endinterface
 
 module mkSimple#(SimpleRequest indication)(Simple);
@@ -143,6 +143,6 @@ module mkSimple#(SimpleRequest indication)(Simple);
       $display("mkSimple::reftest1 dst %x dst_stride %x src1 %x i_src_stride1 %x src2 %x i_src_stride2 %x i_width %x i_height %x qpelInt %x hasWeight %x i_offset %x i_scale %x i_denom %x\n",
           dst, dst_stride, src1, i_src_stride1, src2, i_src_stride2, i_width, i_height, qpelInt, hasWeight, i_offset, i_scale, i_denom);
       indication.reftest1(dst, dst_stride, src1, i_src_stride1, src2, i_src_stride2, i_width, i_height, qpelInt, hasWeight, i_offset, i_scale, i_denom);
-    endmethod
-  endinterface
+   endmethod
+   endinterface
 endmodule

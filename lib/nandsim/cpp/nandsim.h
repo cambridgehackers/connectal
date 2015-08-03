@@ -19,6 +19,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <errno.h>
 static int sockfd = -1;
 #define SOCK_NAME "socket_for_nandsim"
 void wait_for_connect_nandsim_exe()

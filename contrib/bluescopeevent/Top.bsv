@@ -44,7 +44,7 @@ import SignalGenIndication::*;
 
 typedef enum {IfcNames_HostMemServerIndication, IfcNames_HostMemServerRequest, IfcNames_HostMMURequest, IfcNames_HostMMUIndication, IfcNames_BlueScopeEventIndication, IfcNames_BlueScopeEventRequest, IfcNames_SignalGenIndication, IfcNames_SignalGenRequest} IfcNames deriving (Eq,Bits);
 
-module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,1));
+module mkConnectalTop(ConnectalTop);
 
    BlueScopeEventIndicationProxy blueScopeEventIndicationProxy <- mkBlueScopeEventIndicationProxy(IfcNames_BlueScopeEventIndication);
    BlueScopeEventControl#(32) bs <- mkBlueScopeEvent(`BlueScopeEventSampleLength, blueScopeEventIndicationProxy.ifc);

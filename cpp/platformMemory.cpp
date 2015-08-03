@@ -27,15 +27,17 @@
 #include "MemServerRequest.h"
 #include "MemServerIndication.h"
 
-class PortalPoller;
+#define PLATFORM_TILE 0
 
+class PortalPoller;
+#ifndef NO_CPP_PORTAL_CODE
 static int mmu_error_limit = 20;
 static int mem_error_limit = 20;
 class MMUIndication : public MMUIndicationWrapper
 {
   DmaManager *portalMemory;
  public:
-  MMUIndication(DmaManager *pm, unsigned int  id) : MMUIndicationWrapper(id), portalMemory(pm) {}
+  MMUIndication(DmaManager *pm, unsigned int  id, int tile=PLATFORM_TILE) : MMUIndicationWrapper(id,tile), portalMemory(pm) {}
   MMUIndication(DmaManager *pm, unsigned int  id, PortalTransportFunctions *item, void *param) : MMUIndicationWrapper(id, item, param), portalMemory(pm) {}
   virtual void configResp(uint32_t pointer){
     fprintf(stderr, "MMUIndication::configResp: %x\n", pointer);
@@ -61,8 +63,8 @@ class MemServerIndication : public MemServerIndicationWrapper
       PORTAL_PRINTF("MemServerIndication::init failed to init mtSem\n");
   }
  public:
-  MemServerIndication(unsigned int  id) : MemServerIndicationWrapper(id), memServerRequestProxy(NULL) {init();}
-  MemServerIndication(MemServerRequestProxy *p, unsigned int  id) : MemServerIndicationWrapper(id), memServerRequestProxy(p) {init();}
+  MemServerIndication(unsigned int  id, int tile=PLATFORM_TILE) : MemServerIndicationWrapper(id,tile), memServerRequestProxy(NULL) {init();}
+  MemServerIndication(MemServerRequestProxy *p, unsigned int  id, int tile=PLATFORM_TILE) : MemServerIndicationWrapper(id,tile), memServerRequestProxy(p) {init();}
   virtual void addrResponse(uint64_t physAddr){
     fprintf(stderr, "DmaIndication::addrResponse(physAddr=%"PRIx64")\n", physAddr);
   }
@@ -95,11 +97,11 @@ static MemServerIndication *hostMemServerIndication;
 static MMUIndication *mmuIndication;
 DmaManager *platformInit(void)
 {
-    hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H);
-    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H);
+    hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H, PLATFORM_TILE);
+    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H, PLATFORM_TILE);
     DmaManager *dma = new DmaManager(dmap);
-    hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S);
-    mmuIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S);
+    hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S, PLATFORM_TILE);
+    mmuIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S, PLATFORM_TILE);
 
 #ifdef FPGA0_CLOCK_FREQ
     long req_freq = FPGA0_CLOCK_FREQ;
@@ -119,3 +121,4 @@ void platformStatistics(void)
     fprintf(stderr, "   beats: %llx\n", (long long)beats);
     fprintf(stderr, "memory utilization (beats/cycle): %f\n", read_util);
 }
+#endif

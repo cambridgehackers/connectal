@@ -70,7 +70,7 @@ endmodule
 //
 // This design exposes a PCIe interface via its "pins"
 //
-module mkConnectalTop(ConnectalTop#(PhysAddrWidth,64,ZynqPcie,0));
+module mkConnectalTop(ConnectalTop);
 
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();

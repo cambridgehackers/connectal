@@ -26,6 +26,8 @@
 #include <sys/mman.h>
 #include <assert.h>
 #include "dmaManager.h"
+#include "MMURequest.h"
+#include "MMUIndication.h"
 #include "NandCfgIndication.h"
 #include "NandCfgRequest.h"
 #include "RegexpIndication.h"
@@ -42,26 +44,46 @@ extern "C" {
 #include "regexp_utils.h"
 #include "nandsim.h"
 
+class MMUIndicationNAND : public MMUIndicationWrapper
+{
+  DmaManager *portalMemory;
+ public:
+  MMUIndicationNAND(DmaManager *pm, unsigned int  id, int tile=DEFAULT_TILE) : MMUIndicationWrapper(id,tile), portalMemory(pm) {}
+  MMUIndicationNAND(DmaManager *pm, unsigned int  id, PortalTransportFunctions *item, void *param) : MMUIndicationWrapper(id, item, param), portalMemory(pm) {}
+  virtual void configResp(uint32_t pointer){
+    fprintf(stderr, "MMUIndication::configResp: %x\n", pointer);
+    portalMemory->confResp(pointer);
+  }
+  virtual void error (uint32_t code, uint32_t pointer, uint64_t offset, uint64_t extra) {
+    fprintf(stderr, "MMUIndication::error(code=0x%x, pointer=0x%x, offset=0x%"PRIx64" extra=-0x%"PRIx64"\n", code, pointer, offset, extra);
+    //if (--mmu_error_limit < 0)
+        exit(-1);
+  }
+  virtual void idResponse(uint32_t sglId){
+    portalMemory->sglIdResp(sglId);
+  }
+};
+
 size_t numBytes = 1 << 10;
 
 int main(int argc, const char **argv)
 {
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  MMURequestProxy *hostMMURequest = new MMURequestProxy(IfcNames_AlgoMMURequest);
+  //MMURequestProxy *hostMMURequest = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *hostDma = platformInit();
-  MMURequestProxy *nandsimMMURequest = new MMURequestProxy(IfcNames_NandMMURequest);
+  MMURequestProxy *nandsimMMURequest = new MMURequestProxy(IfcNames_NandMMURequestS2H);
   DmaManager *nandsimDma = new DmaManager(nandsimMMURequest);
-  MMUIndication nandsimMMUIndication(nandsimDma,IfcNames_NandMMUIndication);
+  MMUIndicationNAND nandsimMMUIndication(nandsimDma,IfcNames_NandMMUIndicationH2S);
 
-  RegexpRequestProxy *device = new RegexpRequestProxy(IfcNames_AlgoRequest);
-  RegexpIndication *deviceIndication = new RegexpIndication(IfcNames_AlgoIndication);
+  RegexpRequestProxy *device = new RegexpRequestProxy(IfcNames_AlgoRequestS2H);
+  RegexpIndication *deviceIndication = new RegexpIndication(IfcNames_AlgoIndicationH2S);
   
-  MemServerIndication hostMemServerIndication(IfcNames_HostMemServerIndication);
-  MemServerIndication nandsimMemServerIndication(IfcNames_NandMemServerIndication);
+  //MemServerIndication hostMemServerIndication(IfcNames_MemServerIndicationH2S);
+  //MemServerIndication nandsimMemServerIndication(IfcNames_NandMemServerIndicationH2S);
 
   haystack_dma = hostDma;
-  haystack_mmu = hostMMURequest;
+  //haystack_mmu = hostMMURequest;
   regexp = device;
 
   fprintf(stderr, "Main::allocating memory...\n");

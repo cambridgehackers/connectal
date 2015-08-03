@@ -72,6 +72,9 @@ public:
     void setLeds ( const uint8_t v ) {
         fprintf(stderr, "daemon[%s] id %d %d\n", __FUNCTION__, this->pint.indication_index, v);
         echoRequestProxy->setLeds(this->pint.indication_index, v);
+    }
+    void disconnect(void) {
+        fprintf(stderr, "daemon[%s] id %d\n", __FUNCTION__, this->pint.indication_index);
         sleep(1);
         exit(1);
     }

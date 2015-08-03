@@ -18,15 +18,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <assert.h>
-
 #include "MifoTestIndication.h"
 #include "MifoTestRequest.h"
-#include "GeneratedTypes.h"
 
 static uint32_t vs[4] = { 22, 0, 1, 2};
 
@@ -90,12 +84,10 @@ public:
   MifoTestIndication(unsigned int id) : MifoTestIndicationWrapper(id), cnt(0){}
 };
 
-
-
 int main(int argc, const char **argv)
 {
-  MifoTestIndication *indication = new MifoTestIndication(IfcNames_MifoTestIndication);
-  MifoTestRequestProxy *device = new MifoTestRequestProxy(IfcNames_MifoTestRequest);
+  MifoTestIndication indication(IfcNames_MifoTestIndicationH2S);
+  MifoTestRequestProxy *device = new MifoTestRequestProxy(IfcNames_MifoTestRequestS2H);
 
   device->fimo32(68);
   sleep(1);
@@ -106,7 +98,6 @@ int main(int argc, const char **argv)
   device->fimo32(23);
   sleep(1);
 
-  int v2 = 1;
   fprintf(stderr, "Main::calling mifo32(%d)\n", 22);
   device->mifo32(4, 22, 0, 1, 2);
   sleep(1);

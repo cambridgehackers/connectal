@@ -23,6 +23,8 @@ import Vector::*;
 import MemTypes::*;
 import Pipe::*;
 import ConnectalMemory::*;
+import HostInterface::*;
+import `PinTypeInclude::*;
 
 interface PortalInterrupt#(numeric type dataWidth);
    method Bool status();
@@ -54,8 +56,8 @@ function ReadOnly#(Bool) getInterrupt(MemPortal#(_a,_d) p);
    return p.interrupt;
 endfunction
 
-function Vector#(16, ReadOnly#(Bool)) getInterruptVector(Vector#(numPortals, MemPortal#(_a,_d)) portals);
-   Vector#(16, ReadOnly#(Bool)) interrupts = replicate(interface ReadOnly; method Bool _read(); return False; endmethod endinterface);
+function Vector#(MaxNumberOfPortals, ReadOnly#(Bool)) getInterruptVector(Vector#(numPortals, MemPortal#(_a,_d)) portals);
+   Vector#(MaxNumberOfPortals, ReadOnly#(Bool)) interrupts = replicate(interface ReadOnly; method Bool _read(); return False; endmethod endinterface);
    for (Integer i = 0; i < valueOf(numPortals); i = i + 1)
       interrupts[i] = getInterrupt(portals[i]);
    return interrupts;
@@ -72,16 +74,16 @@ endinterface
 
 typedef MemPortal#(12,32) StdPortal;
 
-interface ConnectalTop#(numeric type addrWidth, numeric type dataWidth, type pins, numeric type numMasters);
+interface ConnectalTop;
    interface PhysMemSlave#(32,32) slave;
-   interface Vector#(numMasters,PhysMemMaster#(addrWidth, dataWidth)) masters;
-   interface Vector#(16,ReadOnly#(Bool)) interrupt;
-   interface pins             pins;
+   interface Vector#(NumberOfMasters,PhysMemMaster#(PhysAddrWidth, DataBusWidth)) masters;
+   interface Vector#(MaxNumberOfPortals,ReadOnly#(Bool)) interrupt;
+   interface `PinType pins;
 endinterface
-
-typedef ConnectalTop#(addrWidth,64,Empty,0) StdConnectalTop#(numeric type addrWidth);
-typedef ConnectalTop#(addrWidth,64,Empty,1) StdConnectalDmaTop#(numeric type addrWidth);
-
-typeclass SynthesizableConnectalTop#(numeric type addrWidth, numeric type dataWidth, type pins, numeric type numMasters);
-   module mkSynthesizableConnectalTop(ConnectalTop#(addrWidth,dataWidth,pins,numMasters) ifc);
-endtypeclass
+interface Tile;
+   interface PhysMemSlave#(18,32) slave;
+   interface ReadOnly#(Bool) interrupt;
+   interface Vector#(NumReadClients,MemReadClient#(DataBusWidth)) readers;
+   interface Vector#(NumWriteClients,MemWriteClient#(DataBusWidth)) writers;
+   interface TileExtType pins;
+endinterface

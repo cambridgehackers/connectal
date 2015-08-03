@@ -40,8 +40,6 @@
 #include "mnist.h"
 
 MmRequestTNProxy *mmdevice = 0;
-DmaManager *dma = 0;
-MMURequestProxy *dmap = 0;
 MemServerRequestProxy *hostMemServerRequest;
 MmIndication *mmdeviceIndication = 0;
 SigmoidIndication *sigmoidindication = 0;
@@ -50,8 +48,6 @@ RbmIndication *rbmDeviceIndication = 0;
 RbmRequestProxy *rbmdevice = 0;
 TimerIndication *timerdeviceIndication = 0;
 TimerRequestProxy *timerdevice = 0;
-MemServerIndication *hostMemServerIndication = 0;
-MMUIndication *hostMMUIndication = 0;
 
 long dotprod = 0;
 
@@ -82,20 +78,15 @@ int main(int argc, const char **argv)
 {
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
  
-  mmdevice = new MmRequestTNProxy(IfcNames_MmRequestPortal);
-  rbmdevice = new RbmRequestProxy(IfcNames_RbmRequestPortal);
-  rbmDeviceIndication = new RbmIndication(IfcNames_RbmIndicationPortal);
-  mmdeviceIndication = new MmIndication(IfcNames_MmIndicationPortal);
-  sigmoiddevice = new SigmoidRequestProxy(IfcNames_SigmoidRequestPortal);
-  sigmoidindication = new SigmoidIndication(IfcNames_SigmoidIndicationPortal);
-  timerdevice = new TimerRequestProxy(IfcNames_TimerRequestPortal);
-  timerdeviceIndication = new TimerIndication(IfcNames_TimerIndicationPortal);
-
-  hostMemServerRequest = new MemServerRequestProxy(IfcNames_HostMemServerRequest);
-  dmap = new MMURequestProxy(IfcNames_HostMMURequest);
-  dma = new DmaManager(dmap);
-  hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_HostMemServerIndication);
-  hostMMUIndication = new MMUIndication(dma, IfcNames_HostMMUIndication);
+  mmdevice = new MmRequestTNProxy(IfcNames_MmRequestTNS2H);
+  rbmdevice = new RbmRequestProxy(IfcNames_RbmRequestS2H);
+  rbmDeviceIndication = new RbmIndication(IfcNames_RbmIndicationH2S);
+  mmdeviceIndication = new MmIndication(IfcNames_MmIndicationH2S);
+  sigmoiddevice = new SigmoidRequestProxy(IfcNames_SigmoidRequestS2H);
+  sigmoidindication = new SigmoidIndication(IfcNames_SigmoidIndicationH2S);
+  timerdevice = new TimerRequestProxy(IfcNames_TimerRequestS2H);
+  timerdeviceIndication = new TimerIndication(IfcNames_TimerIndicationH2S);
+  DmaManager *dma = platformInit();
 
   if(sem_init(&mul_sem, 1, 0)){
     fprintf(stderr, "failed to init mul_sem\n");
@@ -109,7 +100,7 @@ int main(int argc, const char **argv)
    exit(1);
   }
 
-  matAllocator = new PortalMatAllocator(dmap, dma);
+  matAllocator = new PortalMatAllocator(dma);
   configureSigmoidTable();
   int rv = 0;
 

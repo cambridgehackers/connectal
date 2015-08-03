@@ -177,6 +177,9 @@ static int event_socket(struct PortalInternal *pint)
            pint->client_fd_number--;
            for (j = i; j < pint->client_fd_number; j++)
                 pint->client_fd[j] = pint->client_fd[j+1];
+printf("[%s:%d] disconnect num %d cb %p\n", __FUNCTION__, __LINE__, pint->client_fd_number, pint->cb);
+           if (pint->cb)
+               pint->cb->disconnect(pint);
        }
        else if (len == -1 && errno == EAGAIN) {
            i++;

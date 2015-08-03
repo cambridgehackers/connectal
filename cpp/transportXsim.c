@@ -45,7 +45,7 @@ static int indMsgSource (PortalInternal *pint, const uint32_t portal, const uint
     }
     return 0;
 }
-static XsimMsgIndicationCb indHandlers = {indMsgSource};
+static XsimMsgIndicationCb indHandlers = {portal_disconnect, indMsgSource};
 
 static int init_xsim(struct PortalInternal *pint, void *init_param)
 {

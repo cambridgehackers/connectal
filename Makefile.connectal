@@ -43,29 +43,30 @@ gen.%:
 ifeq ($(BOARD),)
 	$(eval BOARD := $*)
 endif
-	BOARD=$(BOARD) PROJECTDIR=$* make --no-print-directory gentarget prebuild $(VARIANT_PROJECTS)
-#is this needed? (jca):	make -C $* --no-print-directory prepare_bin_target
+	+BOARD=$(BOARD) PROJECTDIR=$* $(MAKE) --no-print-directory gentarget prebuild $(VARIANT_PROJECTS)
 
 variantgen.%:
 	BOARD=$(BOARD) PROJECTDIR=variant$* \
 	    VARIANT=$* PRTOP_FILE=../$(BOARD)/Impl/TopDown/top-post-route.dcp \
-	    make --no-print-directory gentarget prebuild
+	    $(MAKE) --no-print-directory gentarget prebuild
 
 build.%: gen.%
-	make -C $* --no-print-directory all
+	$(MAKE) -C $* --no-print-directory all
 
 verilog.%: gen.%
-	make -C $* --no-print-directory verilog
+	$(MAKE) -C $* --no-print-directory verilog
 
 run.%:
-	make -C $* --no-print-directory run
+	$(MAKE) -C $* --no-print-directory run
 
 IPDIR?=$(CONNECTALDIR)/out
-NUMBER_OF_TILES?=1
+# zynq driver needs debugging for tiles
+NUMBER_OF_USER_TILES?=0
 SLAVE_DATA_BUS_WIDTH?=32
 SLAVE_CONTROL_ADDR_WIDTH?=5
 NUMBER_OF_MASTERS?=1
 PIN_TYPE?=Empty
+PIN_TYPE_INCLUDE?=HostInterface
 ifndef MAIN_CLOCK_PERIOD
     ifeq ($(BOARD),vc707g2)
     PCIE_CLOCK_PERIOD?=4
@@ -128,8 +129,8 @@ BURST_LEN_SIZE=8
 endif
 
 CONNECTALFLAGS += -D ConnectalVersion=$(VERSION)
-CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) -D MainClockPeriod=$(MAIN_CLOCK_PERIOD) $(PCIE_CLOCK_DEFINE) -D DerivedClockPeriod=$(DERIVED_CLOCK_PERIOD)
-CONNECTALFLAGS += -D NumberOfTiles=$(NUMBER_OF_TILES)
+CONNECTALFLAGS += -D NumberOfMasters=$(NUMBER_OF_MASTERS) -D PinType=$(PIN_TYPE) -D PinTypeInclude=$(PIN_TYPE_INCLUDE) -D MainClockPeriod=$(MAIN_CLOCK_PERIOD) $(PCIE_CLOCK_DEFINE) -D DerivedClockPeriod=$(DERIVED_CLOCK_PERIOD)
+CONNECTALFLAGS += -D NumberOfUserTiles=$(NUMBER_OF_USER_TILES)
 CONNECTALFLAGS += -D SlaveDataBusWidth=$(SLAVE_DATA_BUS_WIDTH)
 CONNECTALFLAGS += -D SlaveControlAddrWidth=$(SLAVE_CONTROL_ADDR_WIDTH)
 CONNECTALFLAGS += -D BurstLenSize=$(BURST_LEN_SIZE)
@@ -152,9 +153,9 @@ ifneq ($(MEM_INTERFACES),)
 USE_AUTOTOP = 1
 endif
 
-ifneq ($(NUMBER_OF_MASTERS), 0)
 INTERFACES += MemServerRequest MMURequest MemServerIndication MMUIndication
 BSVFILES += $(CONNECTALDIR)/bsv/ConnectalMemory.bsv
+ifneq ($(NUMBER_OF_MASTERS), 0)
 CPPFILES += $(CONNECTALDIR)/cpp/dmaManager.c $(CONNECTALDIR)/cpp/platformMemory.cpp
 ifneq ($(CPPFILES2),)
 CPPFILES2 += $(CONNECTALDIR)/cpp/dmaManager.c $(CONNECTALDIR)/cpp/platformMemory.cpp
@@ -171,17 +172,17 @@ CPPFILES += $(CONNECTALDIR)/cpp/transportXsim.c
 ifneq ($(CPPFILES2),)
 CPPFILES2 += $(CONNECTALDIR)/cpp/transportXsim.c
 endif
-ifeq ($(NUMBER_OF_MASTERS), 0)
-BSVFILES += $(CONNECTALDIR)/bsv/ConnectalMemory.bsv
-endif
+#ifeq ($(NUMBER_OF_MASTERS), 0)
+#BSVFILES += $(CONNECTALDIR)/bsv/ConnectalMemory.bsv
+#endif
 BSVFILES += $(CONNECTALDIR)/bsv/XsimIF.bsv
 endif
 
 all bits verilog implementation bsim xsim xsimrun: gentarget prebuild
-	make -C $(PROJECTDIR) --no-print-directory $@
+	+make -C $(PROJECTDIR) --no-print-directory $@
 
 android.exe bsim_exe ubuntu.exe exe: gentarget
-	make -C $(PROJECTDIR) --no-print-directory $@
+	+make -C $(PROJECTDIR) --no-print-directory $@
 
 PCIEGEN=$(shell grep PCIE $(CONNECTALDIR)/boardinfo/$(BOARD).json | sed 's/.*PCIE\([123]\).*/\1/')
 NEED_XILINX_PCIE_ac701=1
@@ -278,6 +279,8 @@ ifneq ($(USE_AUTOTOP),)
 	$(Q)$(CONNECTALDIR)/scripts/topgen.py --board $(BOARD) --project-dir $(GPROJ) $(AUTOTOP) $(CNOC) \
 	    $(foreach f, $(S2H_INTERFACES), --wrapper $f) \
 	    $(foreach f, $(H2S_INTERFACES), --proxy $f)   \
+ 	    $(foreach f, $(MEM_READ_INTERFACES), --memread $f)   \
+ 	    $(foreach f, $(MEM_WRITE_INTERFACES), --memwrite $f) \
 	    $(foreach f, $(MEM_INTERFACES), --proxy MemServer\#\(PhysAddrWidth,DataBusWidth,\`NumberOfMasters\):MemServerIndication:$f,cons\(lMMU,nil\))
 endif
 

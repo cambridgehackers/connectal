@@ -76,6 +76,7 @@ private:
 int main(int argc, const char **argv)
 {
   unsigned int srcGen = 0;
+  int limit = 20;
 
   Memread2RequestProxy *device = 0;
 
@@ -108,7 +109,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Main::starting read %08x\n", numWords);
   device->startRead(ref_srcAlloc, ref_srcAlloc2, 32, 16);
   fprintf(stderr, "Main::sleeping\n");
-  while(true){
+  while(limit-- > 0){
     sleep(3);
     device->getStateDbg();
     //uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
@@ -117,4 +118,5 @@ int main(int argc, const char **argv)
     //hostMemServerRequest->stateDbg(ChannelType_Read);
     platformStatistics();
   }
+  return 0;
 }

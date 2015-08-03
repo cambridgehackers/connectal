@@ -38,7 +38,7 @@ interface TestSDIO1Pins;
    interface LEDS leds;
 endinterface
 
-module mkConnectalTop#(HostInterface host)(ConnectalTop#(PhysAddrWidth,DataBusWidth,TestSDIO1Pins,0));
+module mkConnectalTop#(HostInterface host)(ConnectalTop);
 
    SDIOResponseProxy cp <- mkSDIOResponseProxy(IfcNames_ControllerResponse);
    Controller controller <- mkController(cp.ifc, host.ps7.emiosdio1);

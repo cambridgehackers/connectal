@@ -30,6 +30,7 @@ import CBus::*; // extendNP and truncateNP
 import Arith::*;
 import ConnectalClocks::*;
 
+`ifndef BSIM
 (* always_ready, always_enabled *)
 interface X7FifoSyncMacro#(numeric type data_width);
    method Bit#(1) empty();
@@ -123,21 +124,36 @@ module mkDualClockBramFIFOF#(Clock srcClock, Reset srcReset, Clock dstClock, Res
    method notFull = (fifos[0].full == 0);
 endmodule
 
-module mkSizedBRAMFIFOF#(Integer m)(FIFOF#(t))
+module mkDualClockBramFIFO#(Clock srcClock, Reset srcReset, Clock dstClock, Reset dstReset)(FIFO#(t))
    provisos (Bits#(t,sizet),
 	     Add#(1,a__,sizet));
-   let clock <- exposeCurrentClock();
-   let reset <- exposeCurrentReset();
-   let fifo <- mkDualClockBramFIFOF(clock, reset, clock, reset);
-   return fifo;
+   
+   let syncFifo <- mkDualClockBramFIFOF(srcClock, srcReset, dstClock, dstReset);
+   method enq = syncFifo.enq;
+   method deq = syncFifo.deq;
+   method first = syncFifo.first;
 endmodule
-module mkSizedBRAMFIFO#(Integer m)(FIFO#(t))
+
+`endif // not BSIM
+
+`ifdef BSIM
+module mkDualClockBramFIFOF#(Clock srcClock, Reset srcReset, Clock dstClock, Reset dstReset)(FIFOF#(t))
    provisos (Bits#(t,sizet),
 	     Add#(1,a__,sizet));
-   let clock <- exposeCurrentClock();
-   let reset <- exposeCurrentReset();
-   let fifo <- mkDualClockBramFIFOF(clock, reset, clock, reset);
-   method first = fifo.first;
-   method deq = fifo.deq;
-   method enq = fifo.enq;
+   let syncFifo <- mkSyncFIFO(512, srcClock, srcReset, dstClock);
+   method enq = syncFifo.enq;
+   method deq = syncFifo.deq;
+   method first = syncFifo.first;
+   method notFull = syncFifo.notFull;
+   method notEmpty = syncFifo.notEmpty;
 endmodule
+module mkDualClockBramFIFO#(Clock srcClock, Reset srcReset, Clock dstClock, Reset dstReset)(FIFO#(t))
+   provisos (Bits#(t,sizet),
+	     Add#(1,a__,sizet));
+   
+   let syncFifo <- mkSyncFIFO(512, srcClock, srcReset, dstClock);
+   method enq = syncFifo.enq;
+   method deq = syncFifo.deq;
+   method first = syncFifo.first;
+endmodule
+`endif

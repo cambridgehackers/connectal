@@ -35,7 +35,7 @@ bool memcmp_fail = false;
 void dump(const char *prefix, char *buf, size_t len)
 {
     fprintf(stderr, "%s ", prefix);
-    for (int i = 0; i < len ; i++) {
+    for (unsigned int i = 0; i < len ; i++) {
 	fprintf(stderr, "%02x", (unsigned char)buf[i]);
 	if (i % 32 == 31)
 	  fprintf(stderr, "\n");
@@ -63,7 +63,7 @@ public:
 int do_copy(int srcAlloc, int sgl_config_request_id, int sgl_config_indication_id)
 {
   MemcpyRequestProxy *device = new MemcpyRequestProxy(IfcNames_MemcpyRequest);
-  MemcpyIndication *deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndication);
+  MemcpyIndication deviceIndication(IfcNames_MemcpyIndication);
     DmaManager *dma = platformInit();
   //MMURequestProxy *dmap = new MMURequestProxy(sgl_config_request_id);
   //MMUIndication *hostMMUIndication = new MMUIndication(dma, sgl_config_indication_id);
@@ -103,7 +103,6 @@ int do_copy(int srcAlloc, int sgl_config_request_id, int sgl_config_indication_i
 
 int main(int argc, const char **argv)
 {
-  
   if(sem_init(&done_sem, 1, 0)){
     fprintf(stderr, "failed to init done_sem\n");
     exit(1);
@@ -111,13 +110,13 @@ int main(int argc, const char **argv)
 
   bool memcmp_fails[4] = {false, false, false, false};
 
-  int dst_ref0 = do_copy(0,        IfcNames_HostMMU0ConfigRequest, IfcNames_HostMMU0ConfigIndication);
+  int dst_ref0 = do_copy(0,        IfcNames_MMU0ConfigRequest, IfcNames_MMU0ConfigIndication);
   memcmp_fails[0] = memcmp_fail;
-  int dst_ref1 = do_copy(dst_ref0, IfcNames_HostMMU1ConfigRequest, IfcNames_HostMMU1ConfigIndication);
+  int dst_ref1 = do_copy(dst_ref0, IfcNames_MMU1ConfigRequest, IfcNames_MMU1ConfigIndication);
   memcmp_fails[1] = memcmp_fail;
-  int dst_ref2 = do_copy(dst_ref1, IfcNames_HostMMU2ConfigRequest, IfcNames_HostMMU2ConfigIndication);
+  do_copy(dst_ref1, IfcNames_MMU2ConfigRequest, IfcNames_MMU2ConfigIndication);
   memcmp_fails[2] = memcmp_fail;
-  int dst_ref3 = do_copy(dst_ref3, IfcNames_HostMMU3ConfigRequest, IfcNames_HostMMU3ConfigIndication);
+  int dst_ref3 = do_copy(dst_ref3, IfcNames_MMU3ConfigRequest, IfcNames_MMU3ConfigIndication);
   memcmp_fails[3] = memcmp_fail;
 
   fprintf(stderr, "memcpy_manysglists: Done %d %d %d %d\n", memcmp_fails[0], memcmp_fails[1], memcmp_fails[2], memcmp_fails[3]);

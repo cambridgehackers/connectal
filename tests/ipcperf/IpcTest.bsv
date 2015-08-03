@@ -1,4 +1,3 @@
-
 // Copyright (c) 2013 Nokia, Inc.
 // Copyright (c) 2013 Quanta Research Cambridge, Inc.
 
@@ -21,9 +20,7 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFO::*;
-import Vector::*;
 
 interface IpcTestIndication;
     method Action heard(Bit#(32) v);
@@ -36,8 +33,8 @@ interface IpcTestRequest;
    method Action setLeds(Bit#(8) v);
 endinterface
 
-interface IpcTestRequestInternal;
-   interface IpcTestRequest ifc;
+interface IpcTest;
+   interface IpcTestRequest request;
 endinterface
 
 typedef struct {
@@ -45,8 +42,7 @@ typedef struct {
 	Bit#(16) b;
 } IpcTestPair deriving (Bits);
 
-module mkIpcTestRequestInternal#(IpcTestIndication indication)(IpcTestRequestInternal);
-
+module mkIpcTest#(IpcTestIndication indication)(IpcTest);
     FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
     FIFO#(IpcTestPair) delay2 <- mkSizedFIFO(8);
 
@@ -60,7 +56,7 @@ module mkIpcTestRequestInternal#(IpcTestIndication indication)(IpcTestRequestInt
         indication.heard2(delay2.first.b, delay2.first.a);
     endrule
    
-   interface IpcTestRequest ifc;
+   interface IpcTestRequest request;
       method Action say(Bit#(32) v);
 	 delay.enq(v);
       endmethod

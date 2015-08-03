@@ -4,7 +4,7 @@
         "partname" : "xc7z020clg484-1",
         "rewireclockstring" : "tclzynqrewireclock",
         "TOP" : "XsimTop",
-	"bsvdefines": ["XsimHostInterface", "PhysAddrWidth=40", "XSIM"],
+	"bsvdefines": ["XsimHostInterface", "PhysAddrWidth=40", "XSIM", "SIMULATION"],
         "CONNECTALFLAGS" : [],
         "need_pcie" : "unused"
     }

@@ -1,1 +1,0 @@
-../../examples/matmul/synth-ip.tcl

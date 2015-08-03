@@ -91,7 +91,11 @@ module mkPcieTracer(PcieTracer);
    Vector#(2, BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData)) bramServers;
    bramServers[0] = fromPcieTraceBram.portA;
    bramServers[1] =   toPcieTraceBram.portA;
-   BramServerMux#(TAdd#(TlpTraceAddrSize,1), TimestampedTlpData) bramMuxReg <- mkBramServerMux(bramServers);
+   Reg#(Bool) tlpNotTracingReg = (interface Reg;
+      method Bool _read(); return !tlpTracingReg; endmethod
+      method Action _write(Bool w); endmethod
+      endinterface);
+   BramServerMux#(TAdd#(TlpTraceAddrSize,1), TimestampedTlpData) bramMuxReg <- mkGatedBramServerMux(tlpNotTracingReg, bramServers);
 
 `ifdef PCIE_BSCAN
    Vector#(2, BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData)) bscanBramServers;
@@ -113,7 +117,7 @@ module mkPcieTracer(PcieTracer);
    FIFO#(TLPData#(16)) tlpBusResponseFifo <- mkFIFO();
 
    Reg#(Bool) skippingIncomingTlps <- mkReg(False);
-   FIFO#(Bool) isRootBroadcastMessage <- mkFIFO1();
+   FIFO#(Bool) isRootBroadcastMessage <- mkFIFO();
    PulseWire fromPcie <- mkPulseWire;
    PulseWire   toPcie <- mkPulseWire;
    Wire#(TLPData#(16)) fromPcieTlp <- mkDWire(unpack(0));
@@ -129,7 +133,7 @@ module mkPcieTracer(PcieTracer);
 
    endrule
 
-   rule doTracing if (fromPcie || toPcie);
+   rule doTracing if (tlpTracingReg && (fromPcie || toPcie));
       TimestampedTlpData fromttd = fromPcie ? TimestampedTlpData { timestamp: timestamp, source: 7'h04, tlp: fromPcieTlp } : unpack(0);
       let writeAddr = tlpTraceBramWrAddrReg;
       if (tlpTraceBramWrAddrFifo.notEmpty)

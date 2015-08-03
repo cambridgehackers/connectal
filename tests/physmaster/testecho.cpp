@@ -18,8 +18,6 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
-#include <stdio.h>
 #include "PhysMemMasterRequest.h"
 #include "PhysMemMasterIndication.h"
 
@@ -33,11 +31,10 @@ public:
         fprintf(stderr, "heard an s: %lld\n", (long long)v.data);
 	//sRequestProxy->say2(v, 2*v);
     }
-    void writeDone (  const uint32_t v ) {
+    void writeDone (  const uint8_t v ) {
         sem_post(&sem_heard2);
         //fprintf(stderr, "heard an s2: %ld %ld\n", a, b);
     }
-
     PhysMemMasterIndication(unsigned int id, PortalTransportFunctions *item, void *param) : PhysMemMasterIndicationWrapper(id, item, param) {}
 };
 
@@ -45,11 +42,12 @@ public:
 
 int main(int argc, const char **argv)
 {
-    PhysMemMasterIndication *sIndication = new PhysMemMasterIndication(IfcNames_PhysMemMasterIndication, &transportSocketInit, NULL);
+    PhysMemMasterIndication sIndication(IfcNames_PhysMemMasterIndication, &transportSocketInit, NULL);
     sRequestProxy = new PhysMemMasterRequestProxy(IfcNames_PhysMemMasterRequest, &transportSocketInit, NULL);
 
     int v = 42;
     fprintf(stderr, "Saying %d\n", v);
     //call_say(v);
+    portal_disconnect(&sRequestProxy->pint);
     return 0;
 }

@@ -51,24 +51,24 @@ static int numTests = 0;
 class YuvIndication : public YuvIndicationWrapper
 {  
 public:
-  uint32_t cnt;
+  int cnt;
   void incr_cnt(){
     if (++cnt >= numTests)
       exit(0);
   }
-  virtual void rgb(uint32_t r, uint32_t g, uint32_t b) {
+  void rgb(uint8_t r, uint8_t g, uint8_t b) {
     fprintf(stderr, "rgb(%d,%d,%d)\n", r, g, b);
     struct rgb answer = {r, g, b};
     assert(expected_rgb == answer);
     incr_cnt();
   }
-  virtual void yuv(uint32_t y, uint32_t u, uint32_t v) {
+  void yuv(uint8_t y, uint8_t u, uint8_t v) {
     fprintf(stderr, "yuv(%d,%d,%d)\n", y, u, v);
     struct yuv answer = {y,u,v};
     assert(expected_yuv == answer);
     incr_cnt();
   }
-  virtual void yyuv(uint32_t yy, uint32_t uv) {
+  void yyuv(uint8_t yy, uint8_t uv) {
     fprintf(stderr, "yyuv(%d,%d)\n", yy, uv);
     //    assert(a == v1a);
     incr_cnt();
@@ -92,8 +92,8 @@ struct yuv rgbtoyuv(unsigned short r, unsigned short g, unsigned short b)
 
 int main(int argc, const char **argv)
 {
-  YuvIndication *indication = new YuvIndication(IfcNames_YuvIndicationPortal);
-  YuvRequestProxy *device = new YuvRequestProxy(IfcNames_YuvRequestPortal);
+  YuvIndication indication(IfcNames_YuvIndicationH2S);
+  YuvRequestProxy *device = new YuvRequestProxy(IfcNames_YuvRequestS2H);
 
   struct rgb tests[] = {
     { 0, 0, 0 },
@@ -109,7 +109,7 @@ int main(int argc, const char **argv)
 
   numTests++;
 
-  for (int i = 0; i < sizeof(tests)/sizeof(struct rgb); i++) {
+  for (unsigned int i = 0; i < sizeof(tests)/sizeof(struct rgb); i++) {
     expected_rgb = tests[i];
     expected_yuv = rgbtoyuv(tests[i].r, tests[i].g, tests[i].b);
     numTests++; device->toRgb(tests[i].r, tests[i].g, tests[i].b);

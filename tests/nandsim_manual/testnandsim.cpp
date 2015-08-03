@@ -19,40 +19,40 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include "dmaManager.h"
-#include "NandSimIndication.h"
-#include "NandSimRequest.h"
+#include "NandCfgIndication.h"
+#include "NandCfgRequest.h"
 
 int srcAlloc, nandAlloc;
 unsigned int *srcBuffer = 0;
 size_t numBytes = 1 << 12;
 size_t nandBytes = 1 << 24;
 
-class NandSimIndication : public NandSimIndicationWrapper
+class NandCfgIndication : public NandCfgIndicationWrapper
 {
 public:
   unsigned int rDataCnt;
   virtual void readDone(uint32_t v){
-    fprintf(stderr, "NandSim::readDone v=%x\n", v);
+    fprintf(stderr, "NandCfg::readDone v=%x\n", v);
     sem_post(&sem);
   }
   virtual void writeDone(uint32_t v){
-    fprintf(stderr, "NandSim::writeDone v=%x\n", v);
+    fprintf(stderr, "NandCfg::writeDone v=%x\n", v);
     sem_post(&sem);
   }
   virtual void eraseDone(uint32_t v){
-    fprintf(stderr, "NandSim::eraseDone v=%x\n", v);
+    fprintf(stderr, "NandCfg::eraseDone v=%x\n", v);
     sem_post(&sem);
   }
   virtual void configureNandDone(){
-    fprintf(stderr, "NandSim::configureNandDone\n");
+    fprintf(stderr, "NandCfg::configureNandDone\n");
     sem_post(&sem);
   }
 
-  NandSimIndication(int id) : NandSimIndicationWrapper(id) {
+  NandCfgIndication(int id) : NandCfgIndicationWrapper(id) {
     sem_init(&sem, 0, 0);
   }
   void wait() {
-    fprintf(stderr, "NandSim::wait for semaphore\n");
+    fprintf(stderr, "NandCfg::wait for semaphore\n");
     sem_wait(&sem);
   }
 private:
@@ -62,13 +62,13 @@ private:
 int main(int argc, const char **argv)
 {
   unsigned int srcGen = 0;
-  NandSimRequestProxy *device = 0;
-  NandSimIndication *deviceIndication = 0;
+  NandCfgRequestProxy *device = 0;
+  NandCfgIndication *deviceIndication = 0;
 
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
-  device = new NandSimRequestProxy(IfcNames_NandSimRequest);
-  deviceIndication = new NandSimIndication(IfcNames_NandSimIndication);
+  device = new NandCfgRequestProxy(IfcNames_NandCfgRequestS2H);
+  deviceIndication = new NandCfgIndication(IfcNames_NandCfgIndicationH2S);
   DmaManager *dma = platformInit();
 
   fprintf(stderr, "Main::allocating memory...\n");
@@ -77,7 +77,7 @@ int main(int argc, const char **argv)
   srcBuffer = (unsigned int *)portalMmap(srcAlloc, numBytes);
   fprintf(stderr, "fd=%d, srcBuffer=%p\n", srcAlloc, srcBuffer);
 
-  for (int i = 0; i < numBytes/sizeof(srcBuffer[0]); i++)
+  for (unsigned int i = 0; i < numBytes/sizeof(srcBuffer[0]); i++)
     srcBuffer[i] = srcGen++;
     
   portalCacheFlush(srcAlloc, srcBuffer, numBytes, 1);
@@ -92,19 +92,19 @@ int main(int argc, const char **argv)
   device->configureNand(ref_nandAlloc, nandBytes);
   deviceIndication->wait();
 
-  fprintf(stderr, "Main::starting write ref=%d, len=%08zx\n", ref_srcAlloc, numBytes);
+  fprintf(stderr, "Main::starting write ref=%d, len=%08lx\n", ref_srcAlloc, (long)numBytes);
   device->startWrite(ref_srcAlloc, 0, 0, numBytes, 16);
   deviceIndication->wait();
 
-  fprintf(stderr, "Main::starting read %08zx\n", numBytes);
+  fprintf(stderr, "Main::starting read %08lx\n", (long)numBytes);
   device->startRead(ref_srcAlloc, 0, 0, numBytes, 16);
   deviceIndication->wait();
 
-  fprintf(stderr, "Main::starting erase %08zx\n", numBytes);
+  fprintf(stderr, "Main::starting erase %08lx\n", (long)numBytes);
   device->startErase(0, numBytes);
   deviceIndication->wait();
 
-  fprintf(stderr, "Main::starting read %08zx\n", numBytes);
+  fprintf(stderr, "Main::starting read %08lx\n", (long)numBytes);
   device->startRead(ref_srcAlloc, 0, 0, numBytes, 16);
   deviceIndication->wait();
   return 0;

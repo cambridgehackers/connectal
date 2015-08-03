@@ -47,7 +47,8 @@ install: $(INSTALL_SHARED)
 		install -m644 $$fname $(DESTDIR)$(MODULES_LOAD_D_DIR) ; \
 	    done; \
 	fi
-	#(cd drivers/pcieportal; make install)
+	echo 'Installing from' $(CURDIR)
+	#(cd drivers/pcieportal; CONNECTALDIR=$(CURDIR) make install)
 	make -C drivers/pcieportal VERSION=$(VERSION) CONNECTALDIR=$(PWD) install-dkms
 	make -C pcie install
 	install -d -m755 $(DESTDIR)$(UDEV_RULES_DIR)
@@ -128,7 +129,7 @@ scripts/syntax/parsetab.py: scripts/syntax.py
 	[ -e out ] || mkdir out
 	python scripts/syntax.py
 
-allarchlist = ac701 zedboard zc702 zc706 kc705 vc707 zynq100 v2000t bluesim miniitx100 de5 htg4 vsim parallella xsim zybo kc705g2
+allarchlist = ac701 zedboard zc702 zc706 kc705 vc707 zynq100 v2000t bluesim miniitx100 de5 htg4 vsim parallella xsim zybo kc705g2 vc707g2
 
 #################################################################################################
 

@@ -52,6 +52,7 @@ extern int debug_portal;
 // Other constants
 #define MAX_TIMERS    50
 #define MAX_CLIENT_FD 10
+#define DEFAULT_TILE  0
 
 /*
  * Function vector for portal transport primitives used in generated C code
@@ -90,6 +91,14 @@ typedef struct {
 typedef int (*PORTAL_INDFUNC)(struct PortalInternal *p, unsigned int channel, int messageFd);
 
 /*
+ * Disconnect indications from sockets
+ */
+typedef int (*PORTAL_DISCONNECT)(struct PortalInternal *pint);
+typedef struct {
+    PORTAL_DISCONNECT disconnect;
+} PortalHandlerTemplate;
+
+/*
  * Main data structure used for managing Portal info at runtime
  */
 typedef struct PortalInternal {
@@ -103,7 +112,7 @@ typedef struct PortalInternal {
     uint32_t               reqinfo;
     int                    accept_finished;
     PortalTransportFunctions    *item;
-    void                   *cb;
+    PortalHandlerTemplate  *cb;
     struct PortalInternal  *mux;
     int                    muxid;
     int                    busyType;
@@ -221,6 +230,7 @@ extern "C" {
 void init_portal_internal(PortalInternal *pint, int id, int tile,
     PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *item,
     void *param, uint32_t reqinfo);
+int portal_disconnect(struct PortalInternal *p);
 // Shared memory functions
 void initPortalMemory(void);
 int portalAlloc(size_t size, int cached);
@@ -266,7 +276,7 @@ unsigned int read_pareff32(uint32_t pref, uint32_t offset);
 unsigned int read_pareff64(uint64_t pref, uint64_t offset);
 
 int setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency);
-void initPortalFramework(void);
+void initPortalHardware(void);
 void addFdToPoller(struct PortalPoller *poller, int fd);
 #ifndef __KERNEL__
 int portal_printf(const char *format, ...); // outputs to stderr

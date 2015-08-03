@@ -19,13 +19,14 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
+import Vector::*;
 import FIFOF::*;
 import ClientServer::*;
 import GetPut::*;
 import MemTypes::*;
 import MemwriteEngine::*;
 import Pipe::*;
+import HostInterface::*;
 
 interface MemwriteRequest;
    method Action startWrite(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen);
@@ -37,7 +38,7 @@ endinterface
 
 interface Memwrite;
    interface MemwriteRequest request;
-   interface MemWriteClient#(64) dmaClient;
+   interface Vector#(1,MemWriteClient#(DataBusWidth)) dmaClient;
 endinterface
 
 module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
@@ -46,7 +47,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    Reg#(Bit#(32))       burstLen <- mkReg(0);
    Reg#(Bit#(32))         srcGens <- mkReg(0);
    Reg#(Bool)              doOnce <- mkReg(False);
-   MemwriteEngine#(64,2,1)    we <- mkMemwriteEngine;
+   MemwriteEngine#(DataBusWidth,2,1)    we <- mkMemwriteEngine;
 
    rule start if (doOnce);
          we.writeServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(numWords), burstLen:truncate(burstLen)});
@@ -74,6 +75,6 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
           doOnce <= True;
        endmethod
    endinterface
-   interface MemWriteClient dmaClient = we.dmaClient;
+   interface MemWriteClient dmaClient = cons(we.dmaClient,nil);
 endmodule
 

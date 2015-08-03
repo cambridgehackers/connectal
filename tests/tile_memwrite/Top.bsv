@@ -20,15 +20,41 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 import Vector::*;
-import HostInterface::*;
 import Portal::*;
+import HostInterface::*;
 import PlatformTypes::*;
 import Platform::*;
-import Tile::*;
+import CtrlMux::*;
+import MemServer::*;
+import MemTypes::*;
+import Memwrite::*;
+import MemwriteEnum::*;
+import MemwriteRequest::*;
+import MemwriteIndication::*;
+import `PinTypeInclude::*;
 
-module mkConnectalTop(ConnectalTop#(PhysAddrWidth,DataBusWidth,Empty,NumberOfMasters));
-   Vector#(NumberOfTiles,Tile) ts <- replicateM(mkTile);
-   Platform#(Empty) f <- mkPlatform(ts);
+(* synthesize *)
+module mkTile(Tile);
+   MemwriteIndicationProxy lMemwriteIndicationProxy <- mkMemwriteIndicationProxy(IfcNames_MemwriteIndicationH2S);
+   Memwrite lMemwrite <- mkMemwrite(lMemwriteIndicationProxy.ifc);
+   MemwriteRequestWrapper lMemwriteRequestWrapper <- mkMemwriteRequestWrapper(IfcNames_MemwriteRequestS2H, lMemwrite.request);
+   Vector#(NumWriteClients,MemWriteClient#(DataBusWidth)) nullWriters = replicate(null_mem_write_client());
+   
+   Vector#(2,StdPortal) portal_vec;
+   portal_vec[0] = lMemwriteRequestWrapper.portalIfc;
+   portal_vec[1] = lMemwriteIndicationProxy.portalIfc;
+   PhysMemSlave#(18,32) portal_slave <- mkSlaveMux(portal_vec);
+   let interrupts <- mkInterruptMux(getInterruptVector(portal_vec));
+   interface interrupt = interrupts;
+   interface slave = portal_slave;
+   interface readers = replicate(null_mem_read_client());
+   interface writers = take(append(lMemwrite.dmaClient, nullWriters));
+   interface pins = ?;
+endmodule
+
+module mkConnectalTop(ConnectalTop);
+   Vector#(NumberOfUserTiles,Tile) ts <- replicateM(mkTile);
+   Platform f <- mkPlatform(ts);
    interface interrupt = f.interrupt;
    interface slave = f.slave;
    interface masters = f.masters;

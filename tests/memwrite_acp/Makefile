@@ -1,10 +1,10 @@
-
 CONNECTALDIR?=../..
-INTERFACES = MemwriteRequest MemwriteIndication
-BSVFILES = Memwrite.bsv Top.bsv
-CPPFILES = testmemwrite.cpp
+S2H_INTERFACES = MemwriteRequest:Memwrite.request
+H2S_INTERFACES = Memwrite:MemwriteIndication
+MEM_INTERFACES = nil,lMemwrite.dmaClient
 
+BSVFILES = Memwrite.bsv
+CPPFILES = testmemwrite.cpp
 CONNECTALFLAGS += -D USE_ACP
 
 include $(CONNECTALDIR)/Makefile.connectal
-

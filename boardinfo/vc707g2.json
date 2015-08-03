@@ -6,6 +6,7 @@
         "need_pcie" : "x7_gen2x8",
         "TOP" : "PcieTop",
         "constraints": ["constraints/xilinx/vc707g2.xdc"],
+        "implconstraints": ["constraints/xilinx/vc707g2.xdc"],
         "runscript" : "run.pcietest",
         "CONNECTALFLAGS" : [],
         "rewireclockstring" : ""
