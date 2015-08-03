@@ -44,7 +44,7 @@ module mkMemreadEngine(MemreadEngine#(dataWidth, cmdQDepth, numServers))
 	    ,Add#(c__, TLog#(numServers), TLog#(TMul#(cmdQDepth, numServers)))
 	    ,Add#(d__, TLog#(numServers), 6)
 	    );
-   let rv <- mkMemreadEngineBuff(valueOf(TExp#(BurstLenSize)));
+   let rv <- mkMemreadEngineBuff(valueOf(cmdQDepth) * valueOf(TExp#(BurstLenSize)));
    return rv;
 endmodule
 
