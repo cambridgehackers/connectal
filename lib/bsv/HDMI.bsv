@@ -66,7 +66,7 @@ endinterface
 
 module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
    SyncPulseIfc startDMA, HdmiGeneratorIndication indication)(HdmiGenerator#(Rgb888));
-    let verbose = False;
+    let verbose = True;
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
     // 1920 * 1080
@@ -120,6 +120,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     endrule
       
     rule vsyncReceived if (sendVsyncIndication.pulse());
+       $display("HDMI: sending vsync");
        elapsed <= counter;
        elapsedVsync <= vsyncCounters.read();
        indication.vsync(extend(elapsed - counter), vsyncCounter - vsyncCounter);
@@ -149,6 +150,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
                if (verbose)
                    $display("HDMI: lineVisible off");
                testPatternEnabled <= shadowTestPatternEnabled;
+               $display("HDMI: lineend %d", waitingForVsync);
                if (waitingForVsync)
 	          sendVsyncIndication.send();
            end
@@ -202,8 +204,8 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         method Action put(Bit#(32) v) if (testPatternEnabled == 0 && dataEnable);
            rgb888StageReg <= VideoData {de: 1, vsync: 0, hsync: 0, pixel: unpack(v[23:0])};
            gotDataWire <= True;
-           if (verbose)
-               $display("HDMI::pdata         [%d:%d] = %x", lineCount, pixelCount, v);
+           //if (verbose)
+               //$display("HDMI::pdata         [%d:%d] = %x", lineCount, pixelCount, v);
         endmethod
     endinterface
 
@@ -230,6 +232,7 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
         endmethod
         method Action waitForVsync(Bit#(32) unused);
             waitingForVsync <= True;
+            $display("HDMI: waitForVsync set");
         endmethod
     endinterface
    interface Get rgb888;
