@@ -147,52 +147,14 @@ module mkMemReadInternal#(MemServerIndication ind,
       let error <- toGet(dmaErrorFifo).get();
       ind.error(extend(pack(error.errorType)), error.pref, 0, 0);
    endrule
-
-   rule complete_burst0;
-      let tag <- tag_gen.complete;
-      serverProcessing.portB.request.put(BRAMRequest{write:False, address:tag, datain: ?, responseOnWrite: ?});
-      serverTag.enq(tag);
-      if(verbose) $display("mkMemReadInternal::complete_burst0 %h", tag);
-   endrule
-   
-   rule complete_burst1a if (compCountReg==0);
-      let drq <- serverProcessing.portB.response.get;
-      let req_burstLen = drq.req_burstLen;
-      let client = drq.client;
-      let cnt = req_burstLen >> beat_shift;
-      let tag <- toGet(serverTag).get;
-      if(killv[drq.req_tag[5:4]] == False) begin
-	 clientSelect.enq(extend(client));
-	 clientData.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}, datain: ?, responseOnWrite: ?});
-      end
-      compCountReg <= cnt-1;
-      compTagReg <= tag;
-      compClientReg <= client;
-      compTileReg <= drq.req_tag[5:4];
-      if(verbose) $display("mkMemReadInternal::complete_burst1a %h", client);
-   endrule
-
-   rule complete_burst1b if (compCountReg > 0);
-      let cnt = compCountReg;
-      let tag = compTagReg;
-      let client = compClientReg;
-      if(killv[compTileReg] == False) begin
-	 clientSelect.enq(extend(client));
-	 clientData.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}, datain: ?, responseOnWrite: ?});
-      end
-      compCountReg <= cnt-1;
-      if(verbose) $display("mkMemReadInternal::complete_burst1b count %h", compCountReg);
-   endrule
          
    rule checkMmuResp;
-      let req = clientRequest.first.req;
-      let client = clientRequest.first.client;
-      let physAddr <- mmus[req.sglId[31:16]].response.get;
+      let request <- toGet(clientRequest).get();
+      let physAddr <- mmus[request.req.sglId[31:16]].response.get;
       let rename_tag <- tag_gen.getTag;
-      clientRequest.deq();
-      serverRequest.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
-      if (verbose) $display("mkMemReadInternal::checkMmuResp: client=%d, rename_tag=%d", client,rename_tag);
-      if (verbose) $display("mkMemReadInternal::mmuResp %d %d", client, cycle_cnt-last_mmuResp);
+      serverRequest.enq(RRec{req:request.req, pa:physAddr, client:request.client, rename_tag:extend(rename_tag)});
+      if (verbose) $display("mkMemReadInternal::checkMmuResp: client=%d, rename_tag=%d", request.client,rename_tag);
+      if (verbose) $display("mkMemReadInternal::mmuResp %d %d", request.client, cycle_cnt-last_mmuResp);
       last_mmuResp <= cycle_cnt;
    endrule
    
@@ -219,6 +181,42 @@ module mkMemReadInternal#(MemServerIndication ind,
       burstReg <= burstLen-1;
       firstReg <= burstLen-1 == 0;
       lastReg  <= burstLen-1 == 1;
+   endrule
+
+   rule tag_completed;
+      let tag <- tag_gen.complete;
+      serverProcessing.portB.request.put(BRAMRequest{write:False, address:tag, datain: ?, responseOnWrite: ?});
+      serverTag.enq(tag);
+      if(verbose) $display("mkMemReadInternal::complete_burst0 %h", tag);
+   endrule
+   
+   rule complete_burst1a if (compCountReg==0);
+      let drq <- serverProcessing.portB.response.get;
+      let req_burstLen = drq.req_burstLen;
+      let client = drq.client;
+      let cnt = req_burstLen >> beat_shift;
+      let tag <- toGet(serverTag).get;
+      if(killv[drq.req_tag[5:4]] == False) begin
+	 clientSelect.enq(extend(client));
+	 clientData.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}, datain: ?, responseOnWrite: ?});
+      end
+      compCountReg <= cnt-1;
+      compTagReg <= tag;
+      compClientReg <= client;
+      compTileReg <= drq.req_tag[5:4];
+      if(verbose) $display("mkMemReadInternal::complete_burst1a %h", client);
+   endrule
+
+   rule burst_remainder if (compCountReg > 0);
+      let cnt = compCountReg;
+      let tag = compTagReg;
+      let client = compClientReg;
+      if(killv[compTileReg] == False) begin
+	 clientSelect.enq(extend(client));
+	 clientData.portB.request.put(BRAMRequest{write:False, address:{tag,truncate(cnt)}, datain: ?, responseOnWrite: ?});
+      end
+      compCountReg <= cnt-1;
+      if(verbose) $display("mkMemReadInternal::complete_burst1b count %h", compCountReg);
    endrule
    
    Vector#(numServers, MemReadServer#(dataWidth)) sv = newVector;
@@ -254,19 +252,16 @@ module mkMemReadInternal#(MemServerIndication ind,
    interface PhysMemReadClient client;
       interface Get readReq;
 	 method ActionValue#(PhysMemRequest#(addrWidth)) get();
-	    serverRequest.deq;
-	    let req = serverRequest.first.req;
-	    let physAddr = serverRequest.first.pa;
-	    let client = serverRequest.first.client;
-	    let rename_tag = serverRequest.first.rename_tag;
-	    if (False && physAddr[31:24] != 0)
-	       $display("mkMemReadInternal::req_ar: funny physAddr req.sglId=%d req.offset=%h physAddr=%h", req.sglId, req.offset, physAddr);
-	    serverProcessing.portB.request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(rename_tag),
-						   datain:DRec{req_tag:req.tag, req_burstLen: req.burstLen, client:client, rename_tag:rename_tag, last:(req.burstLen == fromInteger(valueOf(dataWidthBytes)))}});
-	    //$display("mkMemReadInternal::readReq: client=%d, rename_tag=%d, physAddr=%h req.burstLen=%d beat_shift=%d last=%d", client,rename_tag,physAddr, req.burstLen, beat_shift, req.burstLen == beat_shift);
+	    let request <- toGet(serverRequest).get;
+	    let req = request.req;
+	    if (False && request.pa[31:24] != 0)
+	       $display("mkMemReadInternal::req_ar: funny physAddr req.sglId=%d req.offset=%h physAddr=%h", req.sglId, req.offset, request.pa);
+	    serverProcessing.portB.request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(request.rename_tag),
+						   datain:DRec{req_tag:req.tag, req_burstLen: req.burstLen, client:request.client, rename_tag:request.rename_tag, last:(req.burstLen == fromInteger(valueOf(dataWidthBytes)))}});
+	    //$display("mkMemReadInternal::readReq: client=%d, rename_tag=%d, physAddr=%h req.burstLen=%d beat_shift=%d last=%d", request.client,request.rename_tag,request.pa, req.burstLen, beat_shift, req.burstLen == beat_shift);
 	    if (verbose) $display("mkMemReadInternal::read_client.readReq %d", cycle_cnt-last_readReq);
 	    last_readReq <= cycle_cnt;
-	    return PhysMemRequest{addr:physAddr, burstLen:req.burstLen, tag:rename_tag};
+	    return PhysMemRequest{addr:request.pa, burstLen:req.burstLen, tag:request.rename_tag};
 	 endmethod
       endinterface
       interface Put readData;
@@ -348,11 +343,11 @@ module mkMemWriteInternal#(MemServerIndication ind,
    endrule
 
    rule checkMmuResp;
-      let req = clientRequest.first.req;
-      let client = clientRequest.first.client;
+      let request <- toGet(clientRequest).get;
+      let req = request.req;
+      let client = request.client;
       let physAddr <- mmus[req.sglId[31:16]].response.get;
       let rename_tag <- tag_gen.getTag;
-      clientRequest.deq();
       serverRequest.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
       //if (verbose) $display("mkMemWriteInternal::checkMmuResp: client=%d, rename_tag=%d", client,rename_tag);
       if (verbose) $display("mkMemWriteInternal::mmuResp %d %d", client, cycle_cnt-last_mmuResp);
@@ -433,11 +428,11 @@ module mkMemWriteInternal#(MemServerIndication ind,
    interface PhysMemWriteClient client;
       interface Get writeReq;
 	 method ActionValue#(PhysMemRequest#(addrWidth)) get();
-	    let req = serverRequest.first.req;
-	    let physAddr = serverRequest.first.pa;
-	    let client = serverRequest.first.client;
-	    let rename_tag = serverRequest.first.rename_tag;
-	    serverRequest.deq;
+	    let request <- toGet(serverRequest).get();
+	    let req = request.req;
+	    let physAddr = request.pa;
+	    let client = request.client;
+	    let rename_tag = request.rename_tag;
 	    serverProcessing.enq(DRec{req_tag:req.tag, req_burstLen: req.burstLen, client:client, rename_tag:rename_tag, last: (req.burstLen == fromInteger(valueOf(dataWidthBytes))) });
 	    //$display("mkMemWriteInternal::writeReq: client=%d, rename_tag=%d", client,rename_tag);
 	    return PhysMemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
