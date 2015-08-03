@@ -22,7 +22,8 @@
 #define PAGE_SHIFT0 12
 #define PAGE_SHIFT4 16
 #define PAGE_SHIFT8 20
-static int shifts[] = {PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
+#define PAGE_SHIFT12 24
+static int shifts[] = {PAGE_SHIFT12, PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
 
 #include "dmaManager.h"
 #include "drivers/portalmem/portalmem.h" // PortalAlloc
@@ -39,11 +40,11 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
 {
     int rc = 0;
     int i, j;
-    uint32_t regions[3] = {0,0,0};
+    uint32_t regions[4] = {0,0,0,0};
     uint64_t border = 0;
     unsigned char entryCount = 0;
-    uint64_t borderVal[3];
-    uint32_t indexVal[3];
+    uint64_t borderVal[4];
+    uint32_t indexVal[4];
     unsigned char idxOffset;
 #if defined(BSIM) || defined(BOARD_xsim)
     int size_accum = 0;
@@ -86,7 +87,7 @@ PORTAL_PRINTF("[%s:%d]\n", __FUNCTION__, __LINE__);
     addr |= ((long)id) << 32; //[39:32] = truncate(pref);
 #endif
 
-    for(j = 0; j < 3; j++)
+    for(j = 0; j < 4; j++)
         if (len == 1<<shifts[j]) {
           regions[j]++;
           if (addr & ((1L<<shifts[j]) - 1))
@@ -109,7 +110,7 @@ PORTAL_PRINTF("[%s:%d]\n", __FUNCTION__, __LINE__);
     PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d end of list)\n", id, i);
   MMURequest_sglist(device, id, i, 0, 0); // end list
 
-  for(i = 0; i < 3; i++){
+  for(i = 0; i < 4; i++){
     idxOffset = entryCount - border;
     entryCount += regions[i];
     border += regions[i];
@@ -118,10 +119,10 @@ PORTAL_PRINTF("[%s:%d]\n", __FUNCTION__, __LINE__);
     border <<= (shifts[i] - shifts[i+1]);
   }
   if (trace_memory) {
-    PORTAL_PRINTF("regions %d (%x %x %x)\n", id,regions[0], regions[1], regions[2]);
-    PORTAL_PRINTF("borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borderVal[0], borderVal[1], borderVal[2]);
+    PORTAL_PRINTF("regions %d (%x %x %x)\n", id, regions[0], regions[1], regions[2], regions[3]);
+    PORTAL_PRINTF("borders %d (%"PRIx64" %"PRIx64" %"PRIx64" %"PRIX64")\n", id,borderVal[0], borderVal[1], borderVal[2], borderVal[3]);
   }
-  MMURequest_region(device, id, borderVal[0], indexVal[0], borderVal[1], indexVal[1], borderVal[2], indexVal[2]);
+  MMURequest_region(device, id, borderVal[0], indexVal[0], borderVal[1], indexVal[1], borderVal[2], indexVal[2], borderVal[3], indexVal[3]);
 PORTAL_PRINTF("[%s:%d]\n", __FUNCTION__, __LINE__);
   /* ifdefs here to supress warning during kernel build */
 #ifndef __KERNEL__

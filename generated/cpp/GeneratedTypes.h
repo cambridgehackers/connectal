@@ -64,7 +64,7 @@ int MemServerRequestJson_handleMessage(struct PortalInternal *p, unsigned int ch
 extern MemServerRequestCb MemServerRequestJsonProxyReq;
 
 int MMURequest_sglist ( struct PortalInternal *p, const uint32_t sglId, const uint32_t sglIndex, const uint64_t addr, const uint32_t len );
-int MMURequest_region ( struct PortalInternal *p, const uint32_t sglId, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 );
+int MMURequest_region ( struct PortalInternal *p, const uint32_t sglId, const uint64_t barr12, const uint32_t index12, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 );
 int MMURequest_idRequest ( struct PortalInternal *p, const SpecialTypeForSendingFd fd );
 int MMURequest_idReturn ( struct PortalInternal *p, const uint32_t sglId );
 int MMURequest_setInterface ( struct PortalInternal *p, const uint32_t interfaceId, const uint32_t sglId );
@@ -79,6 +79,8 @@ typedef struct {
 } MMURequest_sglistData;
 typedef struct {
     uint32_t sglId;
+    uint64_t barr12;
+    uint32_t index12;
     uint64_t barr8;
     uint32_t index8;
     uint64_t barr4;
@@ -106,7 +108,7 @@ typedef union {
 int MMURequest_handleMessage(struct PortalInternal *p, unsigned int channel, int messageFd);
 typedef struct {
     int (*sglist) (  struct PortalInternal *p, const uint32_t sglId, const uint32_t sglIndex, const uint64_t addr, const uint32_t len );
-    int (*region) (  struct PortalInternal *p, const uint32_t sglId, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 );
+    int (*region) (  struct PortalInternal *p, const uint32_t sglId, const uint64_t barr12, const uint32_t index12, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 );
     int (*idRequest) (  struct PortalInternal *p, const SpecialTypeForSendingFd fd );
     int (*idReturn) (  struct PortalInternal *p, const uint32_t sglId );
     int (*setInterface) (  struct PortalInternal *p, const uint32_t interfaceId, const uint32_t sglId );
@@ -114,7 +116,7 @@ typedef struct {
 extern MMURequestCb MMURequestProxyReq;
 
 int MMURequestJson_sglist ( struct PortalInternal *p, const uint32_t sglId, const uint32_t sglIndex, const uint64_t addr, const uint32_t len );
-int MMURequestJson_region ( struct PortalInternal *p, const uint32_t sglId, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 );
+int MMURequestJson_region ( struct PortalInternal *p, const uint32_t sglId, const uint64_t barr12, const uint32_t index12, const uint64_t barr8, const uint32_t index8, const uint64_t barr4, const uint32_t index4, const uint64_t barr0, const uint32_t index0 );
 int MMURequestJson_idRequest ( struct PortalInternal *p, const SpecialTypeForSendingFd fd );
 int MMURequestJson_idReturn ( struct PortalInternal *p, const uint32_t sglId );
 int MMURequestJson_setInterface ( struct PortalInternal *p, const uint32_t interfaceId, const uint32_t sglId );
