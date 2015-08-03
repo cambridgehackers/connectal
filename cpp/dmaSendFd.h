@@ -95,7 +95,7 @@ PORTAL_PRINTF("[%s:%d]\n", __FUNCTION__, __LINE__);
           addr >>= shifts[j];
           break;
         }
-    if (j >= 3)
+    if (j >= 4)
       PORTAL_PRINTF("DmaManager:unsupported sglist size %lx\n", len);
     if (trace_memory)
       PORTAL_PRINTF("DmaManager:sglist(id=%08x, i=%d dma_addr=%08lx, len=%08lx)\n", id, i, (long)addr, len);
