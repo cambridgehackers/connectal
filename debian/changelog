@@ -1,3 +1,10 @@
+connectal (15.08.1-1precise1) precise; urgency=medium
+
+  * Added hugetlb page size.
+  * Version 15.08.1
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 03 Aug 2015 08:11:10 -0400
+
 connectal (15.07.4-1precise1) precise; urgency=medium
 
   * Driver fixes.
