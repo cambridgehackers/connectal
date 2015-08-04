@@ -59,8 +59,8 @@ interface HdmiDisplay;
     interface XADC xadc;
 endinterface
 
-typedef 1 NumOutstandingRequests;
-typedef 8 FrameBufferBurstLenInBytes;
+typedef 3 NumOutstandingRequests;
+typedef 64 FrameBufferBurstLenInBytes;
 
 module mkHdmiDisplay#(Clock hdmi_clock,
 		      HdmiDisplayIndication hdmiDisplayIndication,
@@ -69,6 +69,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
 		      , BlueScopeIndication bluescopeIndication
 `endif
                       )(HdmiDisplay);
+   let verbose = False;
    Clock defaultClock <- exposeCurrentClock;
    Reset defaultReset <- exposeCurrentReset;
    Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
@@ -130,42 +131,90 @@ module mkHdmiDisplay#(Clock hdmi_clock,
    endrule
 
    SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncBRAMFIFO(1024, defaultClock, fifo_reset.new_rst, hdmi_clock, fifo_reset_hdmi);
+   //SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncFIFO(16, defaultClock, fifo_reset.new_rst, hdmi_clock);
    Reg#(Bool) evenOdd <- mkReg(True, clocked_by hdmi_clock, reset_by fifo_reset_hdmi);
    Reg#(Bit#(32)) savedPixelReg <- mkReg(0, clocked_by hdmi_clock, reset_by fifo_reset_hdmi);
-
-   rule fromMemread;
-      let v <- toGet(memreadEngine.dataPipes[0]).get;
-      synchronizer.enq(v);
-   endrule
-
-   rule doPut;
-      let pixel = savedPixelReg;
-      if (evenOdd) begin
-	 Vector#(2,Bit#(32)) doublePixel = unpack(synchronizer.first);
-	 synchronizer.deq;
-         savedPixelReg <= doublePixel[1];
-	 pixel = doublePixel[0];
-         frameByte <= frameByte + 1;
-      end
-      evenOdd <= !evenOdd;
-      hdmiGen.pdata.put(pixel);
-   endrule      
 
    Reg#(Bit#(32)) transferCount <- mkReg(0);
    Reg#(Bit#(32)) transferCyclesSnapshot <- mkReg(0);
    Reg#(Bit#(32)) transferCycles <- mkReg(0);
    Reg#(Bit#(48)) transferSumOfCycles<- mkReg(0);
+   Reg#(UInt#(24)) transferWord <- mkReg(0);
+   Reg#(Bit#(32)) transferLast <- mkReg(0);
+   ClockDividerIfc slowClock <- mkClockDivider(64);
+   Reset slowReset <- mkAsyncReset(2, defaultReset, slowClock.slowClock);
+   SyncPulseIfc dmastartPulse <- mkSyncPulse(defaultClock, defaultReset, slowClock.slowClock);
+   SyncPulseIfc dmaendPulse <- mkSyncPulse(defaultClock, defaultReset, slowClock.slowClock);
+   Reg#(Bool) dmastart <- mkReg(False, clocked_by slowClock.slowClock, reset_by slowReset);
+   Reg#(Bool) dmaend <- mkReg(False, clocked_by slowClock.slowClock, reset_by slowReset);
+   Reg#(Bool) dmaendDelay <- mkReg(False, clocked_by slowClock.slowClock, reset_by slowReset);
+   Reg#(Bit#(3)) dmaCount <- mkReg(0);
+   Reg#(Bool) traceTransfers <- mkReg(False);
+   Reg#(Bool) dumpstarted <- mkReg(False);
+   Reg#(Bool) dumpover <- mkReg(False);
+   Reg#(Bool) duringDma <- mkReg(False);
+   //Reg#(Bool) dmaReady <- mkReg(False);
+
+   rule dmaPulserule;
+      dmastart <= dmastartPulse.pulse;
+      dmaend <= dmaendPulse.pulse;
+      dmaendDelay <= dmaend;
+   endrule
+   rule fromMemread;
+      let v <- toGet(memreadEngine.read_servers[0].dataPipe).get;
+      synchronizer.enq(v);
+      if (verbose)
+          $display("hdmiDisplay: dmadata [%d]=%x cycle %d", transferWord, v, transferCycles - transferCyclesSnapshot);
+      transferWord <= transferWord + 1;
+      transferLast <= transferCycles;
+   endrule
+
+   rule doPut1 if (evenOdd);
+      Vector#(2,Bit#(32)) doublePixel = unpack(synchronizer.first);
+      synchronizer.deq;
+      savedPixelReg <= doublePixel[1];
+      frameByte <= frameByte + 1;
+      //if (dmaReady) begin
+         //if (verbose)
+            //$display("hdmiDisplay: SKIP     sync.deq %x:%x cycle %d", doublePixel[0], doublePixel[1], transferCycles - transferCyclesSnapshot);
+      //end
+      //else begin
+         if (verbose)
+            $display("hdmiDisplay: even     sync.deq %x:%x cycle %d", doublePixel[0], doublePixel[1], transferCycles - transferCyclesSnapshot);
+         hdmiGen.pdata.put(doublePixel[0]);
+         evenOdd <= !evenOdd;
+      //end
+   endrule      
+   rule doPut2 if (!evenOdd);
+      if (verbose)
+          $display("hdmiDisplay:     odd                             cycle %d", transferCycles - transferCyclesSnapshot);
+      hdmiGen.pdata.put(savedPixelReg);
+      evenOdd <= !evenOdd;
+   endrule      
 
    rule vsyncrule if (startDMA.pulse());
       fifo_reset.assertReset();
    endrule
 
-   Reg#(Bool) traceTransfers <- mkReg(False);
    rule startTransfer if (startDMA.pulse() &&& referenceReg matches tagged Valid .reference);
+   //   /dmaReady <= True;
+   ///endrule
+   //rule startd if (dmaReady && !duringDma &&& referenceReg matches tagged Valid .reference);
       memreadEngine.readServers[0].request.put(MemengineCmd{sglId:reference, base:0, len:pack(extend(byteCountReg)), burstLen:fromInteger(valueOf(FrameBufferBurstLenInBytes)), tag: 0});
       if (traceTransfers)
 	 hdmiDisplayIndication.transferStarted(transferCount);
       transferCyclesSnapshot <= transferCycles;
+      transferWord <= 0;
+      $display("hdmiDisplay: startdma %d residual %d gap %d", transferCycles - transferCyclesSnapshot,
+           byteCountReg - 8 * transferWord, transferCycles - transferLast);
+      dmastartPulse.send();
+      dmaCount <= dmaCount + 1;
+      if (dmaCount == 7 && !dumpover) begin
+         $dumpoff;
+         dumpover <= True;
+      end
+      //dmaReady <= False;
+      duringDma <= True;
    endrule
    rule countCycles;
       transferCycles <= transferCycles + 1;
@@ -177,6 +226,16 @@ module mkHdmiDisplay#(Clock hdmi_clock,
       transferSumOfCycles <= transferSumOfCycles + extend(tc);
       if (traceTransfers)
 	 hdmiDisplayIndication.transferFinished(transferCount, extend(frameByteSaved));
+      $display("hdmiDisplay: enddma %d", transferCycles - transferCyclesSnapshot);
+      dmaendPulse.send();
+      duringDma <= False;
+      if (!dumpstarted) begin
+         //$dumpfile("dump.vcd");
+         $dumpvars;
+         $dumpon;
+         $display("VCDDUMP starting");
+         dumpstarted <= True;
+      end
    endrule
 
     rule bozobit_rule;

@@ -65,6 +65,7 @@ static int corner[] = {0, -1, 0xf00f, 0x0fff};
 static int corner_index;
 static void fill_pixels(int offset)
 {
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     int *ptr = dataptr[frame_index];
     for (int line = 0; line < nlines; line++)
       for (int pixel = 0; pixel < npixels; pixel++) {
@@ -88,8 +89,8 @@ static void fill_pixels(int offset)
       }
     corner_index = offset/16;
     portalCacheFlush(allocFrame[frame_index], dataptr[frame_index], fbsize, 1);
-    device->startFrameBuffer(ref_srcAlloc[frame_index], fbsize);
     hdmiGenerator->setTestPattern(0);
+    device->startFrameBuffer(ref_srcAlloc[frame_index], fbsize);
     hdmiGenerator->waitForVsync(0);
     frame_index = 1 - frame_index;
 }
@@ -103,6 +104,7 @@ public:
   virtual void vsync ( uint64_t v, uint32_t w ) {
       static int base = 0;
 
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 totalcount += v;
 number += w;
       fill_pixels(base);
@@ -140,26 +142,18 @@ int main(int argc, const char **argv)
     device->stopFrameBuffer();
     //setClockFrequency(0, 100000000, 0);
 
+    int vblank, hblank, vsyncoff, hsyncoff, vsyncwidth, hsyncwidth;
 #ifdef BOARD_bluesim
     nlines = 300;
     npixels = 500;
-    int vblank = 10;
-    int hblank = 10;
-    int vsyncoff = 2;
-    int hsyncoff = 2;
-    int vsyncwidth = 3;
-    int hsyncwidth = 3;
+    vblank = 10;
+    hblank = 10;
+    vsyncoff = 2;
+    hsyncoff = 2;
+    vsyncwidth = 3;
+    hsyncwidth = 3;
 
-    fprintf(stderr, "lines %d, pixels %d, vblank %d, hblank %d, vwidth %d, hwidth %d\n",
-             nlines, npixels, vblank, hblank, vsyncwidth, hsyncwidth);
 hblank--; // needed on zc702
-    hdmiGenerator->setDeLine(vsyncoff,           // End of FrontPorch
-                            vsyncoff+vsyncwidth,// End of Sync
-                            vblank,             // Start of Visible (start of BackPorch)
-                            vblank + nlines, vblank + nlines / 2); // End
-        hdmiGenerator->setDePixel(hsyncoff,
-                            hsyncoff+hsyncwidth, hblank,
-                            hblank + npixels, hblank + npixels / 2);
 #else
     // read out monitor EDID from ADV7511
     struct edid edid;
@@ -191,38 +185,52 @@ hblank--; // needed on zc702
 
     for (int i = 0; i < 4; i++) {
       int pixclk = (long)edid.timing[i].pixclk * 10000;
-//break;
       if ((pixclk > 0) && (pixclk < 148000000)) {
 	nlines = edid.timing[i].nlines;    // number of visible lines
 	npixels = edid.timing[i].npixels;
-	int vblank = edid.timing[i].blines; // number of blanking lines
-	int hblank = edid.timing[i].bpixels;
-	int vsyncoff = edid.timing[i].vsyncoff; // number of lines in FrontPorch (within blanking)
-	int hsyncoff = edid.timing[i].hsyncoff;
-	int vsyncwidth = edid.timing[i].vsyncwidth; // width of Sync (within blanking)
-	int hsyncwidth = edid.timing[i].hsyncwidth;
+	vblank = edid.timing[i].blines; // number of blanking lines
+	hblank = edid.timing[i].bpixels;
+	vsyncoff = edid.timing[i].vsyncoff; // number of lines in FrontPorch (within blanking)
+	hsyncoff = edid.timing[i].hsyncoff;
+	vsyncwidth = edid.timing[i].vsyncwidth; // width of Sync (within blanking)
+	hsyncwidth = edid.timing[i].hsyncwidth;
 
-	fprintf(stderr, "lines %d, pixels %d, vblank %d, hblank %d, vwidth %d, hwidth %d\n",
-             nlines, npixels, vblank, hblank, vsyncwidth, hsyncwidth);
 	fprintf(stderr, "Using pixclk %d calc_pixclk %ld npixels %d nlines %d\n",
 		pixclk,
 		60l * (long)(hblank + npixels) * (long)(vblank + nlines),
 		npixels, nlines);
 	setClockFrequency(1, pixclk, 0);
 //hblank--; // needed on zc702
-	hdmiGenerator->setDeLine(vsyncoff,           // End of FrontPorch
-                                vsyncoff+vsyncwidth,// End of Sync
-                                vblank,             // Start of Visible (start of BackPorch)
-                                vblank + nlines, vblank + nlines / 2); // End
-        hdmiGenerator->setDePixel(hsyncoff,
-                                hsyncoff+hsyncwidth, hblank,
-                                hblank + npixels, hblank + npixels / 2);
 	break;
       }
     }
 #endif
+    fprintf(stderr, "lines %d, pixels %d, vblank %d, hblank %d, vwidth %d, hwidth %d\n",
+             nlines, npixels, vblank, hblank, vsyncwidth, hsyncwidth);
+    hdmiGenerator->setDeLine(vsyncoff,          // End of FrontPorch
+                            vsyncoff+vsyncwidth,// End of Sync
+                            vblank-1,           // Start of Visible (start of BackPorch)
+                            vblank + nlines, vblank + nlines / 2); // End
+    hdmiGenerator->setDePixel(hsyncoff,
+                            hsyncoff+hsyncwidth, hblank,
+                            hblank + npixels, hblank + npixels / 2);
+#if 0
+    // horiz: frontPorch:87, sync: 44, backPorch:148, (blank=87+44+148=279) pixel:1920
+    // vert: frontPorch:3, sync:5, backPorch:36, (blank = 36+5+8=49) lines:1080
+    dePixelStartSync <- mkSyncReg(              87
+    dePixelEndSync <- mkSyncReg(           44 + 87
+    dePixelStartVisible <- mkSyncReg(148 + 44 + 87
+    dePixelEnd <- mkSyncReg(  1920 + 148 + 44 + 87
+    dePixelMid <- mkSyncReg((1920/2) + 148 + 44
 
-    fbsize = nlines*npixels*4;
+    deLineStartSync <- mkSyncReg(              3
+    deLineEndSync <- mkSyncReg(            5 + 3
+    deLineStartVisible <- mkSyncReg(  36 + 5 + 3
+    deLineEnd <- mkSyncReg(    1080 + 36 + 5 + 3
+    deLineMid <- mkSyncReg((1080/2) + 41
+#endif
+
+    fbsize = nlines*npixels*sizeof(uint32_t);
 
     for (int i = 0; i < FRAME_COUNT; i++) {
         allocFrame[i] = portalAlloc(fbsize, 0);
@@ -238,7 +246,7 @@ hblank--; // needed on zc702
     sleep(3);
     fprintf(stderr, "hdmidisplay: Starting frame buffer ref=%d...", ref_srcAlloc[0]);
     fill_pixels(0);
-    fprintf(stderr, "hdmidisplay: sleep 60\n");
+    fprintf(stderr, "hdmidisplay: run test\n");
     sleep(60);
     fprintf(stderr, "hdmidisplay: done\n");
 }
