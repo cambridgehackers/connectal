@@ -52,8 +52,10 @@ module PositiveReset (
    input              IN_RST ;
    output             OUT_RST ;
 
+   (* dont_touch = "true" *)
    reg [RSTDELAY:0]   reset_hold ;
-   wire [RSTDELAY+1:0] next_reset = {reset_hold, ~ 1} ;
+   (* dont_touch = "true" *)
+   wire [RSTDELAY+1:0] next_reset = {reset_hold, 1'b0} ;
 
    assign  OUT_RST = reset_hold[RSTDELAY] ;
 
@@ -61,7 +63,8 @@ module PositiveReset (
      begin
         if (IN_RST == `BSV_RESET_VALUE)
            begin
-              reset_hold <= `BSV_ASSIGNMENT_DELAY {(RSTDELAY + 1) {1}} ;
+
+              reset_hold <= `BSV_ASSIGNMENT_DELAY -1 ;
            end
         else
           begin
@@ -76,7 +79,7 @@ module PositiveReset (
      begin
         #0 ;
         // initialize out of reset forcing the designer to do one
-        reset_hold = {(RSTDELAY + 1) {~ 1 }} ;
+        reset_hold = 0 ;
      end
    // synopsys translate_on
 `endif // BSV_NO_INITIAL_BLOCKS
