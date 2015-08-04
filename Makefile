@@ -96,12 +96,16 @@ spkg:
 	sed -i s/precise/vivid/g debian/changelog
 	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu --git-ignore-new -S -tc '--git-upstream-tag=v%(version)s'
 	git checkout debian
+	sed -i s/precise/stable/g debian/changelog
+	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu --git-ignore-new -S -tc '--git-upstream-tag=v%(version)s'
+	git checkout debian
 
 upload:
 	git push origin v$(VERSION)
-	dput ppa:jamey-hicks/connectal ../connectal_$(VERSION)-*_source.changes
 	(cd  ../obs/home:jameyhicks:connectaldeb/connectal/; osc rm * || true)
-	cp -v ../connectal_$(VERSION)*trusty*.diff.gz ../connectal_$(VERSION)*trusty*.dsc ../connectal_$(VERSION)*.orig.tar.gz ../obs/home:jameyhicks:connectaldeb/connectal/
+	cp -v ../connectal_$(VERSION)*stable*.diff.gz ../connectal_$(VERSION)*stable*.dsc ../connectal_$(VERSION)*.orig.tar.gz ../obs/home:jameyhicks:connectaldeb/connectal/
+	rm -fv ../connectal_$(VERSION)*stable*
+	dput ppa:jamey-hicks/connectal ../connectal_$(VERSION)-*_source.changes
 	(cd ../obs/home:jameyhicks:connectaldeb/connectal/; osc add *; osc commit -m $(VERSION) )
 	(cd ../obs/home:jameyhicks:connectal/connectal; sed -i "s/>v.....</>v$(VERSION)</" _service; osc commit -m "v$(VERSION)" )
 
