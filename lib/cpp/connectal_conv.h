@@ -22,6 +22,9 @@
 
 #ifndef __CONNECTAL_CONV_H__
 #define __CONNECTAL_CONV_H__
+#include <stdlib.h>
+#include <dlfcn.h>
+
 template <typename Dtype>
 class ParamType {
 public:
@@ -52,8 +55,36 @@ public:
     int stride_h_, stride_w_;
     //const 
     bool *propagate_down;
-    void forward_process(void);
-    void backward_process(void);
+    ParamType(): weight(NULL), bias(NULL), bottom(NULL), top(NULL),
+        bias_multiplier_(NULL), bottom_diff(NULL), top_diff(NULL),
+        weight_diff(NULL), bias_diff(NULL),
+        top_size(0), bottom_size(0), weight_diff_count(0), bias_diff_count(0),
+        num_(0), num_output_(0), group_(0), height_out_(0), width_out_(0),
+        kernel_h_(0), kernel_w_(0), conv_in_height_(0), conv_in_width_(0),
+        conv_in_channels_(0), conv_out_channels_(0), conv_out_spatial_dim_(0),
+        weight_offset_(0), output_offset_(0), pad_h_(0), pad_w_(0),
+        stride_h_(0), stride_w_(0), propagate_down(NULL) { }
+    virtual void forward_process(void);
+    virtual void backward_process(void);
 };
-#include "connectal_conv.cpp"
+typedef void *(*ALLOCFN)(int size);
+static void *handle;
+static ALLOCFN creatme;
+void *init_connectal_conv_library(int size)
+{
+printf("[%s:%d] load shared library for connectal_conv\n", __FUNCTION__, __LINE__);
+    if (!handle) {
+        char *libname = getenv("CONNECTAL_CONV_LIBRARY");
+        printf("%s: libname is %s\n", __FUNCTION__, libname);
+        handle = dlopen(libname, RTLD_NOW);
+        if (!handle) {
+           printf("The error is %s", dlerror());
+        }
+        creatme = (ALLOCFN)dlsym(handle,"alloc_connectal_conv");
+        if (!creatme) {
+           printf("The error is %s", dlerror());
+        }
+    }
+    return creatme(size);
+}
 #endif // __CONNECTAL_CONV_H__
