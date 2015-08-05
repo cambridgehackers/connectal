@@ -226,7 +226,7 @@ static void *bsimLinkWorker(void *p)
 
 extern "C" void bsimLinkOpen(int linknumber, int listening)
 {
-    fprintf(stderr, "%s:%d pid=%d linknumber=%d listening=%d\n", __func__, __LINE__, getpid(), linknumber, listening);
+    //fprintf(stderr, "%s:%d pid=%d linknumber=%d listening=%d\n", __func__, __LINE__, getpid(), linknumber, listening);
     struct linkInfo *li = getLinkInfo(linknumber, listening);
     if (li) {
 	li->listening = listening;
