@@ -57,11 +57,12 @@ public:
   }
 };
 
+MemwriteIndication *deviceIndication;
 int main(int argc, const char **argv)
 {
     size_t alloc_sz = 4096; //1024*1024;
   MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequestS2H);
-  MemwriteIndication deviceIndication(IfcNames_MemwriteIndicationH2S);
+  deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndicationH2S);
   DmaManager *dma = platformInit();
 
   device->pint.busyType = BUSY_SPIN;   /* spin until request portal 'notFull' */
