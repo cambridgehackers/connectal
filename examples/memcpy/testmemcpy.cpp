@@ -94,6 +94,8 @@ public:
 //
 // #define DATA_SYNC_BARRIER   __asm __volatile( "MCR p15, 0, %0, c7, c10, 4" ::  "r" (0) );
 
+MemcpyIndication *deviceIndication = 0;
+
 int main(int argc, const char **argv)
 {
   if(sem_init(&done_sem, 1, 0)){
@@ -108,7 +110,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
   MemcpyRequestProxy *device = new MemcpyRequestProxy(IfcNames_MemcpyRequestS2H);
-  MemcpyIndication deviceIndication(IfcNames_MemcpyIndicationH2S);
+  deviceIndication = new MemcpyIndication(IfcNames_MemcpyIndicationH2S);
   DmaManager *dma = platformInit();
 
   fprintf(stderr, "Main::allocating memory...\n");
