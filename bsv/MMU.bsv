@@ -95,6 +95,13 @@ typedef struct {
    ReqTup req;
    } Stage3Params deriving (Bits);
 
+typedef struct {
+   Offset off;
+   Bit#(IndexWidth) pbase;
+   Bit#(IndexWidth) idxOffset;
+   SGListId ptr;
+   } Stage4Params deriving (Bits);
+
 // the address translation servers (addr[0], addr[1]) have a latency of 8 and are fully pipelined
 module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(addrWidth))
    provisos(Log#(MaxNumSGLists, listIdxSize),
@@ -124,10 +131,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
    Vector#(2, FIFOF#(Stage3Params)) stage3Params <- replicateM(mkFIFOF);
 
    // stage 3 (latency == 1)
-   Vector#(2,FIFOF#(Offset))           offs0 <- replicateM(mkFIFOF);
-   Vector#(2,FIFOF#(Bit#(IndexWidth)))         pbases <- replicateM(mkFIFOF);
-   Vector#(2,FIFOF#(Bit#(IndexWidth)))    idxOffsets1 <- replicateM(mkFIFOF);
-   Vector#(2,FIFOF#(SGListId))         ptrs1 <- replicateM(mkFIFOF);
+   Vector#(2, FIFOF#(Stage4Params)) stage4Params <- replicateM(mkFIFOF);
 
    // stage 4 (latency == 2)
    BRAM2Port#(Bit#(entryIdxSize),Page0) pages <- mkBRAM2Server(bramConfig);
@@ -220,17 +224,15 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 	    pbase = truncate(req.off>>page_shift0);
 	    idxOffset = params.idxOffset0;
 	 end
-	 offs0[i].enq(o);
-	 pbases[i].enq(pbase);
-	 idxOffsets1[i].enq(idxOffset);
-	 ptrs1[i].enq(req.id);
+	 stage4Params[i].enq(Stage4Params { off: o, pbase: pbase, idxOffset: idxOffset, ptr: req.id });
       endrule
       (* descending_urgency = "stage2, stage4" *)
       rule stage4; // Read relevant sglist entry
-	 let off <- toGet(offs0[i]).get();
-	 let pbase <- toGet(pbases[i]).get();
-	 let idxOffset <- toGet(idxOffsets1[i]).get();
-	 let ptr <- toGet(ptrs1[i]).get();
+	 let params <- toGet(stage4Params[i]).get();
+	 let off = params.off;
+	 let pbase = params.pbase;
+	 let idxOffset = params.idxOffset;
+	 let ptr = params.ptr;
 	 Bit#(IndexWidth) p = pbase + idxOffset;
 	 if (off.pageSize == 0) begin
 	    if (verbose) $display("mkMMU::addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
