@@ -69,6 +69,8 @@ public:
 };
 
 
+MemlatencyIndication *deviceIndication = 0;
+
 int main(int argc, const char **argv)
 {
   if(sem_init(&read_done_sem, 1, 0)){
@@ -84,7 +86,7 @@ int main(int argc, const char **argv)
 
   MemlatencyRequestProxy device(IfcNames_MemlatencyRequestS2H);
   DmaManager *dma = platformInit();
-  MemlatencyIndication deviceIndication(IfcNames_MemlatencyIndicationH2S);
+  deviceIndication = new MemlatencyIndication(IfcNames_MemlatencyIndicationH2S);
 
   fprintf(stderr, "Main::allocating memory...\n");
 
