@@ -53,8 +53,13 @@ public:
     int output_offset_;
     int pad_h_, pad_w_;
     int stride_h_, stride_w_;
-    //const 
-    bool *propagate_down;
+    const bool *propagate_down;
+    // legacy support
+    Dtype* col_buffer_;
+    int is_1x1_;
+    int col_offset_;
+    int bottom_mult, top_mult;
+    int param_propagate_down_[2];
     ParamType(): weight(NULL), bias(NULL), bottom(NULL), top(NULL),
         bias_multiplier_(NULL), bottom_diff(NULL), top_diff(NULL),
         weight_diff(NULL), bias_diff(NULL),
@@ -63,26 +68,37 @@ public:
         kernel_h_(0), kernel_w_(0), conv_in_height_(0), conv_in_width_(0),
         conv_in_channels_(0), conv_out_channels_(0), conv_out_spatial_dim_(0),
         weight_offset_(0), output_offset_(0), pad_h_(0), pad_w_(0),
-        stride_h_(0), stride_w_(0), propagate_down(NULL) { }
+        stride_h_(0), stride_w_(0), propagate_down(NULL)
+        // legacy
+        , col_buffer_(NULL), is_1x1_(0), col_offset_(0), bottom_mult(0), top_mult(0)
+        //, param_propagate_down_[0](0), param_propagate_down_[1](0)
+        { }
     virtual void forward_process(void);
     virtual void backward_process(void);
+    void im2col_cpu(const Dtype* data_im);
 };
 typedef void *(*ALLOCFN)(int size);
-static void *handle;
-static ALLOCFN creatme;
 void *init_connectal_conv_library(int size)
 {
-printf("[%s:%d] load shared library for connectal_conv\n", __FUNCTION__, __LINE__);
+    static void *handle;
+    static ALLOCFN creatme;
     if (!handle) {
         char *libname = getenv("CONNECTAL_CONV_LIBRARY");
+        if (!libname) {
+            printf("%s: The environment variable CONNECTAL_CONV_LIBRARY must contain the filename of the shared library for connectal conv support\n", __FUNCTION__);
+            exit(-1);
+        }
         printf("%s: libname is %s\n", __FUNCTION__, libname);
         handle = dlopen(libname, RTLD_NOW);
-        if (!handle) {
-           printf("The error is %s", dlerror());
+        if (handle)
+            creatme = (ALLOCFN)dlsym(handle,"alloc_connectal_conv");
+        else {
+           printf("%s: dlopen(%s) failed, %s", __FUNCTION__, libname, dlerror());
+           exit(-1);
         }
-        creatme = (ALLOCFN)dlsym(handle,"alloc_connectal_conv");
         if (!creatme) {
-           printf("The error is %s", dlerror());
+           printf("%s: dlsym('alloc_connectal_conv') failed, %s", __FUNCTION__, dlerror());
+           exit(-1);
         }
     }
     return creatme(size);

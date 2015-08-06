@@ -215,14 +215,8 @@ void ParamType<Dtype>::backward_process(void)
 
 extern "C" void *alloc_connectal_conv(int size)
 {
-    if (size == sizeof(float)) {
-        ParamType<float> *param = new ParamType<float>;
-printf("[%s:%d] float param %p\n", __FUNCTION__, __LINE__, param);
-        return param;
-    }
-    else {
-        ParamType<double> *param = new ParamType<double>;
-printf("[%s:%d] double param %p\n", __FUNCTION__, __LINE__, param);
-        return param;
-    }
+    if (size == sizeof(float))
+        return new ParamType<float>;
+    else
+        return new ParamType<double>;
 }
