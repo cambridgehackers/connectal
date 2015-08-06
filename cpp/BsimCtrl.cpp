@@ -212,11 +212,11 @@ static void *bsimLinkWorker(void *p)
 		fprintf(stderr, "%s:%d[%d]: accept error %s\n",__FUNCTION__, __LINE__, li->socket[i], strerror(errno));
 		return 0;
 	    }
-	    fprintf(stderr, "%s:%d[%d]: accept ok fd=%d\n",__FUNCTION__, __LINE__, li->socket[i], li->fd[i]);
+	    //fprintf(stderr, "%s:%d[%d]: accept ok fd=%d\n",__FUNCTION__, __LINE__, li->socket[i], li->fd[i]);
 	} else {
 	    li->socket[i] = 0;
 	    li->fd[i] = init_connecting(iname, NULL);
-	    fprintf(stderr, "%s:%d[%d]: connect ok fd=%d\n",__FUNCTION__, __LINE__, li->socket[i], li->fd[i]);
+	    //fprintf(stderr, "%s:%d[%d]: connect ok fd=%d\n",__FUNCTION__, __LINE__, li->socket[i], li->fd[i]);
 	}
 	fcntl(li->fd[i], F_SETFL, O_NONBLOCK);
     }
