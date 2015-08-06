@@ -26,6 +26,7 @@ import FIFO::*;
 import FIFOF::*;
 import Vector::*;
 import GetPut::*;
+import Connectable::*;
 import BRAMFIFO::*;
 import BRAM::*;
 import MemTypes::*;
@@ -141,6 +142,9 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
    Vector#(2,FIFOF#(Bit#(addrWidth))) pageResponseFifos <- replicateM(mkFIFOF);
       
    FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
+   Vector#(2,FIFO#(DmaError)) dmaErrorFifos <- replicateM(mkFIFO());
+   for (Integer i = 0; i < 2; i = i + 1)
+      mkConnection(toGet(dmaErrorFifos[i]), toPut(dmaErrorFifo));
    rule dmaError;
       let error <- toGet(dmaErrorFifo).get();
       mmuIndication.error(extend(pack(error.errorType)), error.pref, extend(error.off), fromInteger(iid));
@@ -190,7 +194,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 						 req: req });
 	    end
 	    tagged Invalid:
-	       dmaErrorFifo.enq(DmaError { errorType: DmaErrorSGLIdInvalid, pref: extend(req.id), off:req.off });
+	       dmaErrorFifos[0].enq(DmaError { errorType: DmaErrorSGLIdInvalid, pref: extend(req.id), off:req.off });
 	 endcase
       endrule
       rule stage3; // Based on results of comparision, select a region, putting it into 'o.pageSize'.  idxOffset holds offset in sglist table of relevant entry
@@ -236,7 +240,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 	 Bit#(IndexWidth) p = pbase + idxOffset;
 	 if (off.pageSize == 0) begin
 	    if (verbose) $display("mkMMU::addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
-	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorOffsetOutOfRange, pref: extend(ptr), off:extend(off.value) });
+	    dmaErrorFifos[1].enq(DmaError { errorType: DmaErrorOffsetOutOfRange, pref: extend(ptr), off:extend(off.value) });
 	 end
 	 else begin
 	    if (verbose) $display("mkMMU::pages[%d].read %h", i, {ptr,p});
