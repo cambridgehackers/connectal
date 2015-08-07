@@ -1,3 +1,9 @@
+connectal (15.08.4-1precise1) precise; urgency=medium
+
+  * Fixed DMA write path through MemSlaveEngine post Altera merge
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 07 Aug 2015 14:42:17 -0400
+
 connectal (15.08.3-1precise1) precise; urgency=medium
 
   * Fixed python location
