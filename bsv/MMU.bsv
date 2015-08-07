@@ -26,6 +26,7 @@ import FIFO::*;
 import FIFOF::*;
 import Vector::*;
 import GetPut::*;
+import Connectable::*;
 import BRAMFIFO::*;
 import BRAM::*;
 import MemTypes::*;
@@ -83,6 +84,25 @@ typedef struct {DmaErrorType errorType;
 		Bit#(MemOffsetSize) off;
    } DmaError deriving (Bits);
 
+typedef struct {
+   Bool cond12;
+   Bool cond8;
+   Bool cond4;
+   Bool cond0;
+   Bit#(IndexWidth) idxOffset12;
+   Bit#(IndexWidth) idxOffset8;
+   Bit#(IndexWidth) idxOffset4;
+   Bit#(IndexWidth) idxOffset0;
+   ReqTup req;
+   } Stage3Params deriving (Bits);
+
+typedef struct {
+   Offset off;
+   Bit#(IndexWidth) pbase;
+   Bit#(IndexWidth) idxOffset;
+   SGListId ptr;
+   } Stage4Params deriving (Bits);
+
 // the address translation servers (addr[0], addr[1]) have a latency of 8 and are fully pipelined
 module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(addrWidth))
    provisos(Log#(MaxNumSGLists, listIdxSize),
@@ -109,15 +129,10 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
    Vector#(2,FIFOF#(ReqTup))          reqs0 <- replicateM(mkSizedFIFOF(3));
    
    // stage 2 (latency == 1)
-   Vector#(2,FIFOF#(Tuple4#(Bool,Bool,Bool,Bool))) conds <- replicateM(mkFIFOF);
-   Vector#(2,FIFOF#(Tuple4#(Bit#(IndexWidth),Bit#(IndexWidth),Bit#(IndexWidth),Bit#(IndexWidth)))) idxOffsets0 <- replicateM(mkFIFOF);
-   Vector#(2,FIFOF#(ReqTup))           reqs1 <- replicateM(mkSizedFIFOF(3));
+   Vector#(2, FIFOF#(Stage3Params)) stage3Params <- replicateM(mkFIFOF);
 
    // stage 3 (latency == 1)
-   Vector#(2,FIFOF#(Offset))           offs0 <- replicateM(mkFIFOF);
-   Vector#(2,FIFOF#(Bit#(IndexWidth)))         pbases <- replicateM(mkFIFOF);
-   Vector#(2,FIFOF#(Bit#(IndexWidth)))    idxOffsets1 <- replicateM(mkFIFOF);
-   Vector#(2,FIFOF#(SGListId))         ptrs1 <- replicateM(mkFIFOF);
+   Vector#(2, FIFOF#(Stage4Params)) stage4Params <- replicateM(mkFIFOF);
 
    // stage 4 (latency == 2)
    BRAM2Port#(Bit#(entryIdxSize),Page0) pages <- mkBRAM2Server(bramConfig);
@@ -127,6 +142,9 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
    Vector#(2,FIFOF#(Bit#(addrWidth))) pageResponseFifos <- replicateM(mkFIFOF);
       
    FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
+   Vector#(2,FIFO#(DmaError)) dmaErrorFifos <- replicateM(mkFIFO());
+   for (Integer i = 0; i < 2; i = i + 1)
+      mkConnection(toGet(dmaErrorFifos[i]), toPut(dmaErrorFifo));
    rule dmaError;
       let error <- toGet(dmaErrorFifo).get();
       mmuIndication.error(extend(pack(error.errorType)), error.pref, extend(error.off), fromInteger(iid));
@@ -170,62 +188,59 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 				     regionall.reg8.barrier, regionall.reg4.barrier, regionall.reg0.barrier,
 				     off8, off4, off0);
 	       
-	       conds[i].enq(tuple4(cond12,cond8,cond4,cond0));
-	       idxOffsets0[i].enq(tuple4(regionall.reg12.idxOffset,regionall.reg8.idxOffset,regionall.reg4.idxOffset, regionall.reg0.idxOffset));
-	       reqs1[i].enq(req);
+	       stage3Params[i].enq(Stage3Params {cond12: cond12, cond8: cond8, cond4: cond4, cond0: cond0,
+						 idxOffset12: regionall.reg12.idxOffset,idxOffset8: regionall.reg8.idxOffset,
+						 idxOffset4: regionall.reg4.idxOffset, idxOffset0: regionall.reg0.idxOffset,
+						 req: req });
 	    end
 	    tagged Invalid:
-	       dmaErrorFifo.enq(DmaError { errorType: DmaErrorSGLIdInvalid, pref: extend(req.id), off:req.off });
+	       dmaErrorFifos[0].enq(DmaError { errorType: DmaErrorSGLIdInvalid, pref: extend(req.id), off:req.off });
 	 endcase
       endrule
       rule stage3; // Based on results of comparision, select a region, putting it into 'o.pageSize'.  idxOffset holds offset in sglist table of relevant entry
-	 ReqTup req <- toGet(reqs1[i]).get;
+	 let params <- toGet(stage3Params[i]).get();
+	 ReqTup req = params.req;
 	 Offset o = Offset{pageSize: 0, value: truncate(req.off)};
 	 Bit#(IndexWidth) pbase = 0;
 	 Bit#(IndexWidth) idxOffset = 0;
 
-	 match{.cond12,.cond8,.cond4,.cond0} <- toGet(conds[i]).get;
-	 match{.idxOffset12,.idxOffset8,.idxOffset4,.idxOffset0} <- toGet(idxOffsets0[i]).get;
-
-	 if (cond12) begin
+	 if (params.cond12) begin
 	    if (verbose) $display("mkMMU::request: req.id=%h req.off=%h", req.id, req.off);
 	    o.pageSize = 4;
 	    pbase = truncate(req.off>>page_shift12);
-	    idxOffset = idxOffset12;
+	    idxOffset = params.idxOffset12;
 	 end
-	 else if (cond8) begin
+	 else if (params.cond8) begin
 	    if (verbose) $display("mkMMU::request: req.id=%h req.off=%h", req.id, req.off);
 	    o.pageSize = 3;
 	    pbase = truncate(req.off>>page_shift8);
-	    idxOffset = idxOffset8;
+	    idxOffset = params.idxOffset8;
 	 end
-	 else if (cond4) begin
+	 else if (params.cond4) begin
 	    if (verbose) $display("mkMMU::request: req.id=%h req.off=%h", req.id, req.off);
 	    o.pageSize = 2;
 	    pbase = truncate(req.off>>page_shift4);
-	    idxOffset = idxOffset4;
+	    idxOffset = params.idxOffset4;
 	 end
-	 else if (cond0) begin
+	 else if (params.cond0) begin
 	    if (verbose) $display("mkMMU::request: req.id=%h req.off=%h", req.id, req.off);
 	    o.pageSize = 1;
 	    pbase = truncate(req.off>>page_shift0);
-	    idxOffset = idxOffset0;
+	    idxOffset = params.idxOffset0;
 	 end
-	 offs0[i].enq(o);
-	 pbases[i].enq(pbase);
-	 idxOffsets1[i].enq(idxOffset);
-	 ptrs1[i].enq(req.id);
+	 stage4Params[i].enq(Stage4Params { off: o, pbase: pbase, idxOffset: idxOffset, ptr: req.id });
       endrule
       (* descending_urgency = "stage2, stage4" *)
       rule stage4; // Read relevant sglist entry
-	 let off <- toGet(offs0[i]).get();
-	 let pbase <- toGet(pbases[i]).get();
-	 let idxOffset <- toGet(idxOffsets1[i]).get();
-	 let ptr <- toGet(ptrs1[i]).get();
+	 let params <- toGet(stage4Params[i]).get();
+	 let off = params.off;
+	 let pbase = params.pbase;
+	 let idxOffset = params.idxOffset;
+	 let ptr = params.ptr;
 	 Bit#(IndexWidth) p = pbase + idxOffset;
 	 if (off.pageSize == 0) begin
 	    if (verbose) $display("mkMMU::addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
-	    dmaErrorFifo.enq(DmaError { errorType: DmaErrorOffsetOutOfRange, pref: extend(ptr), off:extend(off.value) });
+	    dmaErrorFifos[1].enq(DmaError { errorType: DmaErrorOffsetOutOfRange, pref: extend(ptr), off:extend(off.value) });
 	 end
 	 else begin
 	    if (verbose) $display("mkMMU::pages[%d].read %h", i, {ptr,p});

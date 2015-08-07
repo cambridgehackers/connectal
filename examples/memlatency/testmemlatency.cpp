@@ -69,11 +69,10 @@ public:
 };
 
 
-int runtest(int argc, const char **argv)
-{
-  MemlatencyRequestProxy *device = 0;
-  MemlatencyIndication *deviceIndication = 0;
+MemlatencyIndication *deviceIndication = 0;
 
+int main(int argc, const char **argv)
+{
   if(sem_init(&read_done_sem, 1, 0)){
     fprintf(stderr, "failed to init read_done_sem\n");
     exit(1);
@@ -85,7 +84,7 @@ int runtest(int argc, const char **argv)
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
 
-  device = new MemlatencyRequestProxy(IfcNames_MemlatencyRequestS2H);
+  MemlatencyRequestProxy device(IfcNames_MemlatencyRequestS2H);
   DmaManager *dma = platformInit();
   deviceIndication = new MemlatencyIndication(IfcNames_MemlatencyIndicationH2S);
 
@@ -111,17 +110,12 @@ int runtest(int argc, const char **argv)
     
   fprintf(stderr, "Main::starting mempcy numWords:%d\n", numWords);
   int burstLen = 16;
-  device->start(ref_dstAlloc, ref_srcAlloc, burstLen);
+  device.start(ref_dstAlloc, ref_srcAlloc, burstLen);
   sem_wait(&read_done_sem);
   sem_wait(&write_done_sem);
 
   fprintf(stderr, "average read latency:  %d\n", (unsigned int)(((float)rd_latency)/((float)num_reads)));
   fprintf(stderr, "average write latency: %d\n", (unsigned int)(((float)wr_latency)/((float)num_writes)));
 
-}
-
-int main(int argc, const char **argv)
-{
-  runtest(argc, argv);
-  exit(0);
+  return 0;
 }

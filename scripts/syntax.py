@@ -1098,7 +1098,7 @@ def generate_bsvcpp(filelist, project_dir, bsvdefines, interfaces):
                     pitem.type = AST.Type(myName, [])
                     if not globalv.globalvars.get(myName):
                         globalv.add_new(AST.TypeDef(p.tdtype.instantiate(dict(zip(p.params, thisType.params))), myName, []))
-    jsondata = AST.serialize_json(ilist, globalimports)
+    jsondata = AST.serialize_json(ilist, globalimports, bsvdefines)
     if project_dir:
         cppgen.generate_cpp(project_dir, noisyFlag, jsondata)
         bsvgen.generate_bsv(project_dir, noisyFlag, False, jsondata)

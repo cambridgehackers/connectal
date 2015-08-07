@@ -63,13 +63,13 @@ module xsimtop();
    end
    always @(`BSV_RESET_EDGE CLK) begin
       if (count == 20) begin
-	 $display("deasserting reset to value %d", !`BSV_RESET_VALUE);
+	 //$display("deasserting reset to value %d", !`BSV_RESET_VALUE);
 	 RST_N <= !`BSV_RESET_VALUE;
       end
    end
    always @(`BSV_RESET_EDGE DERIVED_CLK) begin
       if (count == (20*`MainClockPeriod/`DerivedClockPeriod)) begin
-	 $display("deasserting derived_reset to value %d", !`BSV_RESET_VALUE);
+	 //$display("deasserting derived_reset to value %d", !`BSV_RESET_VALUE);
 	 DERIVED_RST_N <= !`BSV_RESET_VALUE;
       end
    end
@@ -225,7 +225,7 @@ module XsimLink #(parameter DATAWIDTH=32) (
       end
       else begin
 	 if (en_start == 1 && started == 0) begin
-	    $display("start linknumber=%d listening=%d", start_linknumber, start_listening);
+	    //$display("start linknumber=%d listening=%d", start_linknumber, start_listening);
 	    bsimLinkOpen(start_linknumber, start_listening);
 	    linknumber_reg <= start_linknumber;
 	    listeningreg <= start_listening;
@@ -242,10 +242,10 @@ module XsimLink #(parameter DATAWIDTH=32) (
 	       rx_reg <= rx_val64;
 	    end
 	    rx_valid <= 1;
-	    $display("link %d.%d received %d %h", linknumber_reg, listeningreg, rx_valid, rx_val);
+	    //$display("link %d.%d received %d %h", linknumber_reg, listeningreg, rx_valid, rx_val);
 	 end
 	 if (started && tx_valid && bsimLinkCanTransmit(linknumber_reg, listeningreg)) begin
-	    $display("link %d.%d transmitting %d %h", linknumber_reg, listeningreg, tx_valid, tx_reg);
+	    //$display("link %d.%d transmitting %d %h", linknumber_reg, listeningreg, tx_valid, tx_reg);
 	    if (DATAWIDTH == 32)
 	      bsimLinkTransmit32(linknumber_reg, listeningreg, tx_reg);
 	    else
@@ -254,12 +254,12 @@ module XsimLink #(parameter DATAWIDTH=32) (
 	 end
 	 if (started && en_rx_deq) begin
 	    rx_valid <= 0;
-	    $display("%d.%d rx_deq %d %h", linknumber_reg, listeningreg, rx_valid, rx_reg);
+	    //$display("%d.%d rx_deq %d %h", linknumber_reg, listeningreg, rx_valid, rx_reg);
 	 end
 	 if (started && en_tx_enq && !tx_valid) begin
 	    tx_valid <= 1;
 	    tx_reg <= tx_enq_v;
-	    $display("%d.%d tx_enq %h", linknumber_reg, listeningreg, tx_enq_v);
+	    //$display("%d.%d tx_enq %h", linknumber_reg, listeningreg, tx_enq_v);
 	 end
 	 link_up_reg <= bsimLinkUp(linknumber_reg, listeningreg);
       end

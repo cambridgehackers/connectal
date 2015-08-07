@@ -93,7 +93,7 @@ def classInfo(item):
         rc['cdecls'].append(declInfo(mitem))
     return rc
 
-def serialize_json(interfaces, globalimports):
+def serialize_json(interfaces, globalimports, bsvdefines):
     global verbose
     itemlist = []
     for item in interfaces:
@@ -116,6 +116,7 @@ def serialize_json(interfaces, globalimports):
             print 'Unprocessed globaldecl:', item
     toplevel['globaldecls'] = gdlist
     toplevel['globalimports'] = globalimports
+    toplevel['bsvdefines'] = bsvdefines
     if True:
         try:
             json.dump(toplevel, jfile, sort_keys = True, indent = 4)

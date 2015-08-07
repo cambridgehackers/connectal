@@ -200,6 +200,7 @@ def collectMembers(scope, pitem):
             #print 'resolved to type', membtype.get('type'), membtype['name'], membtype
 
 def typeNumeric(item):
+    global bsvdefines
     tstr = item.get('name')
     if globalv_globalvars.has_key(tstr):
         decl = globalv_globalvars[tstr]
@@ -223,6 +224,10 @@ def typeNumeric(item):
             return max(values[0], values[1])
         elif tstr == 'TMax':
             return min(values[0], values[1])
+    if tstr[0] == '`':
+        var = tstr[1:]
+        if bsvdefines.has_key(var):
+            return int(bsvdefines[var])
     if tstr[0] >= 'A' and tstr[0] <= 'Z':
         return tstr
     return int(tstr)
@@ -333,6 +338,8 @@ def getNumeric(item):
            return max(values[0], values[1])
        elif item['name'] == 'TMax':
            return min(values[0], values[1])
+   elif item['name'].startswith('`'):
+       return int(bsvdefines[item['name'][1:]])
    return int(item['name'])
 
 def typeBitWidth(item):
@@ -724,7 +731,7 @@ def emitCD(item, generated_hpp, indentation):
         print 'EMITCD', n, t, td
 
 def generate_cpp(project_dir, noisyFlag, jsondata):
-    global globalv_globalvars, verbose
+    global globalv_globalvars, verbose, bsvdefines
     def create_cpp_file(name):
         fname = os.path.join(project_dir, 'jni', name)
         f = util.createDirAndOpen(fname, 'w')
@@ -734,6 +741,14 @@ def generate_cpp(project_dir, noisyFlag, jsondata):
         return f
 
     verbose = noisyFlag
+    bsvdefines = {}
+    for binding in jsondata['bsvdefines']:
+        if '=' in binding:
+            print 'split', binding.split('=')
+            var,val = binding.split('=')
+            bsvdefines[var] = val
+        else:
+            bsvdefines[binding] = binding
     generatedCFiles = []
     globalv_globalvars = {}
     hname = os.path.join(project_dir, 'jni', 'GeneratedTypes.h')
