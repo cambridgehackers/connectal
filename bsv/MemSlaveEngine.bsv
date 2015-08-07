@@ -76,7 +76,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 
     FIFOF#(TLPData#(16)) tlpOutFifo <- mkFIFOF;
     FIFOF#(TLPData#(16)) tlpInFifo <- mkFIFOF;
-    FIFO#(TlpWriteHeaderInfo) tlpWriteHeaderFifo <- mkFIFO;
+    FIFOF#(TlpWriteHeaderInfo) tlpWriteHeaderFifo <- mkFIFOF;
 
     Reg#(Bit#(7)) hitReg <- mkReg(0);
     Reg#(Bool) use4dwReg <- mkReg(True);
@@ -120,7 +120,10 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    endrule
 
    Reg#(Bool) writeDataCntAboveThreshold <- mkReg(False);
-   rule updateWriteDataCntAboveThreshold;
+   rule noheader if (!tlpWriteHeaderFifo.notEmpty());
+      writeDataCntAboveThreshold <= False;
+   endrule
+   rule updateWriteDataCntAboveThreshold if (writeInProgress || !writeDataCntAboveThreshold);
       writeDataCntAboveThreshold <= (writeDataCnt.read >= truncate(unpack(tlpWriteHeaderFifo.first.dwCount)));
    endrule
    (* descending_urgency = "writeHeaderTlp,updateWriteDataCntAboveThreshold" *)
