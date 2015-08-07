@@ -932,6 +932,7 @@ module mkIteratorWithContext(IteratorWithContext#(a,c)) provisos (Arith#(a), Bit
    Reg#(a) xstep <- mkReg(0);
    // inclusive limit
    Reg#(a) xlimit <- mkReg(0);
+   Reg#(a) xdown <- mkReg(0);
    Reg#(Bool) first <- mkReg(False);
    Reg#(Bool) last <- mkReg(False);
    Reg#(Bool) idle <- mkReg(True);
@@ -960,8 +961,9 @@ module mkIteratorWithContext(IteratorWithContext#(a,c)) provisos (Arith#(a), Bit
 	 let next_x = x + xstep;
 	 countReg <= countReg + 1;
 	 x <= x + xstep;
+	 xdown <= xdown - xstep;
 	 first <= False;
-	 last <= (next_x+xstep >= xlimit);
+	 last <= (xdown <= xstep);//(next_x+xstep >= xlimit);
 	 idle <= last;
       endmethod
       method Bool notEmpty();
@@ -974,6 +976,7 @@ module mkIteratorWithContext(IteratorWithContext#(a,c)) provisos (Arith#(a), Bit
       xbase <= cfg.xbase;
       xstep <= cfg.xstep;
       xlimit <= cfg.xlimit;
+      xdown <= cfg.xlimit - cfg.xbase;
 
       first <= True;
       last <= (cfg.xbase+cfg.xstep >= cfg.xlimit);
