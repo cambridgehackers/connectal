@@ -28,19 +28,18 @@
 template <typename Dtype>
 class ParamType {
 public:
-    const Dtype* weight;
-    const Dtype* bias;
     const Dtype **bottom;
+    const Dtype **top_diff;
+    Dtype **bottom_diff;
     Dtype **top;
     const Dtype *bias_multiplier_;
-    Dtype **bottom_diff;
-    const Dtype **top_diff;
+    const Dtype* weight;
+    const Dtype* bias;
     Dtype *weight_diff;
     Dtype *bias_diff;
     int top_size;
     int bottom_size;
     int weight_diff_count;
-    int bias_diff_count;
     int num_;
     int num_output_;
     int group_;
@@ -48,27 +47,23 @@ public:
     int kernel_h_, kernel_w_;
     int conv_in_height_, conv_in_width_;
     int conv_in_channels_, conv_out_channels_;
-    int conv_out_spatial_dim_;
     int weight_offset_;
-    int output_offset_;
     int pad_h_, pad_w_;
     int stride_h_, stride_w_;
-    const bool *propagate_down;
     // legacy support
     Dtype* col_buffer_;
     int is_1x1_;
     int col_offset_;
     int bottom_mult, top_mult;
     int param_propagate_down_[2];
-    ParamType(): weight(NULL), bias(NULL), bottom(NULL), top(NULL),
-        bias_multiplier_(NULL), bottom_diff(NULL), top_diff(NULL),
-        weight_diff(NULL), bias_diff(NULL),
-        top_size(0), bottom_size(0), weight_diff_count(0), bias_diff_count(0),
+    ParamType(): bottom(NULL), top_diff(NULL), bottom_diff(NULL), top(NULL),
+        bias_multiplier_(NULL), weight(NULL), bias(NULL), weight_diff(NULL), bias_diff(NULL),
+        top_size(0), bottom_size(0), weight_diff_count(0),
         num_(0), num_output_(0), group_(0), height_out_(0), width_out_(0),
         kernel_h_(0), kernel_w_(0), conv_in_height_(0), conv_in_width_(0),
-        conv_in_channels_(0), conv_out_channels_(0), conv_out_spatial_dim_(0),
-        weight_offset_(0), output_offset_(0), pad_h_(0), pad_w_(0),
-        stride_h_(0), stride_w_(0), propagate_down(NULL)
+        conv_in_channels_(0), conv_out_channels_(0),
+        weight_offset_(0), pad_h_(0), pad_w_(0),
+        stride_h_(0), stride_w_(0)
         // legacy
         , col_buffer_(NULL), is_1x1_(0), col_offset_(0), bottom_mult(0), top_mult(0)
         //, param_propagate_down_[0](0), param_propagate_down_[1](0)
