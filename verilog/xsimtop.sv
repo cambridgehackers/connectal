@@ -83,7 +83,7 @@ module XsimSource( input CLK, input CLK_GATE, input RST, input [31:0] portal, in
    end
 endmodule
 
-import "DPI-C" function void dpi_msgSink_beat(input int portal, output int beat, output int src_rdy);
+import "DPI-C" function void dpi_msgSink_beat(input int portal, output int beat, output bit src_rdy);
 module XsimSink(input CLK, input CLK_GATE, input RST, input [31:0] portal, output reg src_rdy, output reg [31:0] beat);
    always @(posedge CLK) begin
       dpi_msgSink_beat(portal, beat, src_rdy);
@@ -165,14 +165,14 @@ module XsimDmaReadWrite(input CLK,
 endmodule
 
 
-import "DPI-C" function int  bsimLinkUp(input int linknumber, input int listening);
-import "DPI-C" function void bsimLinkOpen(input int linknumber, input int listening);
-import "DPI-C" function int bsimLinkCanReceive(input int linknumber, input int listening);
-import "DPI-C" function int bsimLinkCanTransmit(input int linknumber, input int listening);
-import "DPI-C" function int bsimLinkReceive32(input int linknumber, input int listening);
-import "DPI-C" function void bsimLinkTransmit32(input int linknumber, input int listening, input int val);
-import "DPI-C" function longint bsimLinkReceive64(input int linknumber, input int listening);
-import "DPI-C" function void bsimLinkTransmit64(input int linknumber, input int listening, input longint val);
+import "DPI-C" function int  bsimLinkUp(input int linknumber, input bit listening);
+import "DPI-C" function void bsimLinkOpen(input int linknumber, input bit listening);
+import "DPI-C" function int bsimLinkCanReceive(input int linknumber, input bit listening);
+import "DPI-C" function int bsimLinkCanTransmit(input int linknumber, input bit listening);
+import "DPI-C" function int bsimLinkReceive32(input int linknumber, input bit listening);
+import "DPI-C" function void bsimLinkTransmit32(input int linknumber, input bit listening, input int val);
+import "DPI-C" function longint bsimLinkReceive64(input int linknumber, input bit listening);
+import "DPI-C" function void bsimLinkTransmit64(input int linknumber, input bit listening, input longint val);
 
 module XsimLink #(parameter DATAWIDTH=32) (
 		 input RST,
