@@ -229,7 +229,11 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
       end
 
       for (Integer i = 0; i < currDwCount; i = i + 1) begin
+`ifdef AXI
+	 tlp.data[(i+1)*32-1:i*32] = byteSwap(v[(currDwCount-1)-i]);
+`elsif AVALON
 	 tlp.data[(i+1)*32-1:i*32] = v[(currDwCount-1)-i];
+`endif
       end
 
       tlpOutFifo.enq(tlp);
