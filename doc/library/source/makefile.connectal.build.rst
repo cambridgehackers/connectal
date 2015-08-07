@@ -49,6 +49,10 @@ Environment Variables
 
    Specifies the name or address of the host on which to run the application.
 
+.. envvar:: NOFPGAJTAG
+
+   If NOFPGAJTAG is defined, then fpgajtag is not called by ubuntu.exe or android.exe.
+
 Variables Controlling the Build
 -------------------------------
 
