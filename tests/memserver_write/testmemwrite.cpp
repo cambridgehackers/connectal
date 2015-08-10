@@ -100,6 +100,7 @@ int main(int argc, const char **argv)
 	      mismatchCount++;
       }
       fprintf(stderr, "%s: done mismatchCount=%d\n", __FUNCTION__, mismatchCount);
+      platformStatistics();
 
       fprintf(stderr, "%s: calling munmap\n", __FUNCTION__);
       int unmapped = munmap(dstBuffer, alloc_sz);
