@@ -25,18 +25,21 @@
 #include <stdlib.h>
 #include <dlfcn.h>
 
+#define CACCESS(A) ((Dtype *)(param->basePtr + (A)))
+typedef unsigned long CPtr;
 template <typename Dtype>
 class ParamType {
 public:
-    const Dtype **bottom;
-    const Dtype **top_diff;
-    Dtype **bottom_diff;
-    Dtype **top;
-    const Dtype *bias_multiplier_;
-    const Dtype* weight;
-    const Dtype* bias;
-    Dtype *weight_diff;
-    Dtype *bias_diff;
+    uint8_t *basePtr;
+    CPtr *bottom;
+    CPtr *top_diff;
+    CPtr *bottom_diff;
+    CPtr *top;
+    CPtr bias_multiplier_;
+    CPtr weight;
+    CPtr bias;
+    CPtr weight_diff;
+    CPtr bias_diff;
     int top_size;
     int bottom_size;
     int weight_diff_count;
