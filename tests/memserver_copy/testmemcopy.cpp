@@ -82,9 +82,12 @@ int main(int argc, const char **argv)
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
   int burstLenBytes = 32*sizeof(uint32_t);
-  device->startCopy(ref_srcAlloc, ref_dstAlloc, alloc_sz, alloc_sz / burstLenBytes, burstLenBytes);
 
+  portalTimerStart(0);
+  device->startCopy(ref_srcAlloc, ref_dstAlloc, alloc_sz, alloc_sz / burstLenBytes, burstLenBytes);
   sem_wait(&done_sem);
+  platformStatistics();
+
   memdump((unsigned char *)dstBuffer, 32, "MEM");
   int mismatchCount = 0;
   for (size_t i = 0; i < alloc_sz/sizeof(uint32_t); i++) {
@@ -92,6 +95,5 @@ int main(int argc, const char **argv)
       mismatchCount++;
   }
   fprintf(stderr, "%s: done mismatchCount=%d\n", __FUNCTION__, mismatchCount);
-  platformStatistics();
   return (mismatchCount == 0) ? 0 : 1;
 }
