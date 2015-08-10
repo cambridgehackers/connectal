@@ -116,9 +116,13 @@ void platformStatistics(void)
 {
     uint64_t cycles = portalTimerLap(0);
     hostMemServerRequest->memoryTraffic(ChannelType_Read);
-    uint64_t beats = hostMemServerIndication->receiveMemoryTraffic();
-    float read_util = (float)beats/(float)cycles;
-    fprintf(stderr, "   beats: %llx\n", (long long)beats);
-    fprintf(stderr, "memory utilization (beats/cycle): %f\n", read_util);
+    uint64_t read_beats = hostMemServerIndication->receiveMemoryTraffic();
+    float read_util = (float)read_beats/(float)cycles;
+    hostMemServerRequest->memoryTraffic(ChannelType_Write);
+    uint64_t write_beats = hostMemServerIndication->receiveMemoryTraffic();
+    float write_util = (float)write_beats/(float)cycles;
+    fprintf(stderr, "   read_beats: %llx\n", (long long)read_beats);
+    fprintf(stderr, "  write_beats: %llx\n", (long long)write_beats);
+    fprintf(stderr, "memory utilization (beats/cycle): read %f write %f\n", read_util, write_util);
 }
 #endif
