@@ -59,7 +59,7 @@ public:
     int bottom_mult, top_mult;
     int param_propagate_down_[2];
     ParamType(): bottom(NULL), top_diff(NULL), bottom_diff(NULL), top(NULL),
-        bias_multiplier_(NULL), weight(NULL), bias(NULL), weight_diff(NULL), bias_diff(NULL),
+        bias_multiplier_(0), weight(0), bias(0), weight_diff(0), bias_diff(0),
         top_size(0), bottom_size(0), weight_diff_count(0),
         num_(0), num_output_(0), group_(0), height_out_(0), width_out_(0),
         kernel_h_(0), kernel_w_(0), conv_in_height_(0), conv_in_width_(0),
@@ -113,7 +113,7 @@ class ConnectalMemory {
 };  // class ConnectalMemory
 void init_connectal_conv_library(int size);
 void *connectal_conv_library_param(int size);
-void *alloc_portalMem(size_t size, int cached, int *fdptr);
+void *alloc_portal_memory(size_t size, int cached, int *fdptr);
 
 #ifdef DECLARE_CONNECTAL_CONV
 typedef void *(*ALLOCPARAM)(int size);
@@ -194,7 +194,7 @@ void* ConnectalMemory::mutable_cpu_data() {
   head_ = HEAD_AT_CPU;
   return cpu_ptr_;
 }
-void *alloc_portalMem(size_t size, int cached, int *fdptr)
+void *alloc_portal_memory(size_t size, int cached, int *fdptr)
 {
     init_connectal_conv_library();
     return pAlloc(size, cached, fdptr);

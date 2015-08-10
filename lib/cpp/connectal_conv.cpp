@@ -62,13 +62,13 @@ static void perfperf(long long *perfvalues, const char *name)
 #define MIN(A,B) (((A) < (B)) ? (A) : (B))
 #define MAX(A,B) (((A) > (B)) ? (A) : (B))
 template <typename Dtype>
-void forward_kernel(const ParamType<Dtype> *base, int x_stride, int y_stride, Dtype temp, const Dtype *bpx, const Dtype *wpx, Dtype *outputp)
+void forward_kernel(const ParamType<Dtype> *param, int x_stride, int y_stride, Dtype temp, const Dtype *bpx, const Dtype *wpx, Dtype *outputp)
 {
-  int bottom_hw = base->conv_in_height_ * base->conv_in_width_;
-  int kernel_hw = base->kernel_h_ * base->kernel_w_;
-  int in_group_size = base->conv_in_channels_ / base->group_;
-  int p_limit = MIN(base->kernel_h_ - base->pad_h_, y_stride);
-  int q_limit = MIN(base->kernel_w_ - base->pad_w_, x_stride);
+  int bottom_hw = param->conv_in_height_ * param->conv_in_width_;
+  int kernel_hw = param->kernel_h_ * param->kernel_w_;
+  int in_group_size = param->conv_in_channels_ / param->group_;
+  int p_limit = MIN(param->kernel_h_ - param->pad_h_, y_stride);
+  int q_limit = MIN(param->kernel_w_ - param->pad_w_, x_stride);
   // for each 'in_group', add contribution into convolution
   for (int k = 0; k < in_group_size; k++) {
     const Dtype *bpk = bpx, *wpk = wpx;
@@ -77,8 +77,8 @@ void forward_kernel(const ParamType<Dtype> *base, int x_stride, int y_stride, Dt
       const Dtype *bp = bpk, *wp = wpk;
       for (int q = 0; q < q_limit; q++)
         temp += *bp++ * *wp++;
-      bpk += base->conv_in_width_;
-      wpk += base->kernel_w_;
+      bpk += param->conv_in_width_;
+      wpk += param->kernel_w_;
     }
     bpx += bottom_hw;
     wpx += kernel_hw;
@@ -89,6 +89,7 @@ void forward_kernel(const ParamType<Dtype> *base, int x_stride, int y_stride, Dt
 template <typename Dtype>
 void ParamType<Dtype>::forward_process(void)
 {
+ParamType<Dtype> *param = this; (void)param;
   perfpinit();
   long long perfvalues1[NUM_EVENTS];
   int bottom_hw = conv_in_height_ * conv_in_width_;
@@ -136,38 +137,39 @@ void ParamType<Dtype>::forward_process(void)
 #endif
 }
 template <typename Dtype>
-void backward_bias(const ParamType<Dtype> *base, const Dtype *tptr)
+void backward_bias(const ParamType<Dtype> *param, const Dtype *tptr)
 {
-  int output_hw = base->height_out_ * base->width_out_;
-  for (int j = 0; j < base->num_output_; j++)
+  int output_hw = param->height_out_ * param->width_out_;
+  for (int j = 0; j < param->num_output_; j++)
     for (int i = 0; i < output_hw; i++)
-      base->bias_diff[j] += *tptr++ * base->bias_multiplier_[i];
+      param->bias_diff[j] += *tptr++ * param->bias_multiplier_[i];
 }
 template <typename Dtype>
-void backward_kernel(const ParamType<Dtype> *base, int pad_x, int pad_y, int gchan, int wchan, Dtype chain_grad, int imageind)
+void backward_kernel(const ParamType<Dtype> *param, int pad_x, int pad_y, int gchan, int wchan, Dtype chain_grad, int imageind)
 {
-  const Dtype *bottom_bp = base->bottom[imageind];
-  Dtype *bottom_diff_bp = base->bottom_diff[imageind];
+  const Dtype *bottom_bp = param->bottom[imageind];
+  Dtype *bottom_diff_bp = param->bottom_diff[imageind];
   int p_start = MAX(0, pad_y);
-  int p_limit = MIN(base->kernel_h_, base->conv_in_height_ + pad_y);
+  int p_limit = MIN(param->kernel_h_, param->conv_in_height_ + pad_y);
   int q_start = MAX(0, pad_x);
-  int q_limit = MIN(base->kernel_w_, base->conv_in_width_ + pad_x);
+  int q_limit = MIN(param->kernel_w_, param->conv_in_width_ + pad_x);
   for (int p = p_start; p < p_limit; ++p) {
     for (int q = q_start; q < q_limit; ++q) {
-      int belement = gchan - pad_y * base->conv_in_width_ - pad_x + p * base->conv_in_width_ + q;
-      int welement = wchan + p * base->kernel_w_ + q;
+      int belement = gchan - pad_y * param->conv_in_width_ - pad_x + p * param->conv_in_width_ + q;
+      int welement = wchan + p * param->kernel_w_ + q;
       // gradient w.r.t. weight. Note that we will accumulate diffs.
-      if (base->weight_diff)
-        base->weight_diff[welement] += bottom_bp[belement] * chain_grad;
+      if (param->weight_diff)
+        param->weight_diff[welement] += bottom_bp[belement] * chain_grad;
       // gradient w.r.t. bottom data, if necessary.
       if (bottom_diff_bp)
-        bottom_diff_bp[belement] += base->weight[welement] * chain_grad;
+        bottom_diff_bp[belement] += param->weight[welement] * chain_grad;
     }
   }
 }
 template <typename Dtype>
 void ParamType<Dtype>::backward_process(void)
 {
+ParamType<Dtype> *param = this; (void)param;
   perfpinit();
   long long perfvalues2[NUM_EVENTS];
   int bottom_hw = conv_in_height_ * conv_in_width_;
