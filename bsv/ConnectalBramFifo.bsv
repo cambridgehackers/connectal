@@ -100,11 +100,6 @@ module mkDualClockBramFIFOF#(Clock srcClock, Reset srcReset, Clock dstClock, Res
       endrule
    end
 
-   function Bool fifoNotEmpty(Integer i); return fifos[i].empty == 0; endfunction
-   function Bool fifoNotFull(Integer i); return fifos[i].full == 0; endfunction
-   Vector#(TDiv#(sizet,36), Bool) vNotEmpty = genWith(fifoNotEmpty);
-   Vector#(TDiv#(sizet,36), Bool) vNotFull = genWith(fifoNotFull);
-
    method t first() if (fifos[0].empty == 0);
       function Bit#(36) fifoFirst(Integer i); return fifos[i].dout(); endfunction
       Vector#(TDiv#(sizet,36), Bit#(36)) v = genWith(fifoFirst);
