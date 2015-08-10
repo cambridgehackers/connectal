@@ -75,6 +75,7 @@ argparser.add_argument('--stl', help='STL implementation to use for Android buil
 argparser.add_argument('--floorplan', help='Floorplan XDC', default=None)
 argparser.add_argument('-P', '--partition-module', default=[], help='Modules to separately synthesize/place/route', action='append')
 argparser.add_argument('--cachedir', default=None, help='Cache directory for fpgamake to use')
+argparser.add_argument('--nocache', help='dont use buildcache with fpgamake', action='store_true')
 argparser.add_argument('-v', '--verbose', help='Display verbose information messages', action='store_true')
 argparser.add_argument(      '--dump_map', help='List of portals passed to pcieflat for PCIe trace debug info')
 argparser.add_argument('--nonstrict', help='If nonstrict, pass -Wall to gcc, otherwise -Werror', default=False, action='store_true')
@@ -432,6 +433,10 @@ if __name__=='__main__':
     if (fpga_vendor == 'altera'):
         options.partition_module = []
 
+    if options.nocache:
+        cachearg = '--cachedir=""'
+    else:
+        cachearg = '--cachedir=%s' % os.path.abspath(options.cachedir) if options.cachedir else ''
     substs = {'partitions': ' '.join(['-s %s' % p for p in options.partition_module]),
 					 'boardname': boardname,
 					 'partname': partname,
@@ -447,7 +452,7 @@ if __name__=='__main__':
 					 'chipscope': ' '.join(['--chipscope=%s' % os.path.abspath(chipscope) for chipscope in options.chipscope]),
 					 'sourceTcl': ' '.join(['--tcl=%s' % os.path.abspath(tcl) for tcl in options.tcl]),
                                          'verilog': ' '.join([os.path.abspath(f) for f in options.verilog]),
-					 'cachedir': '--cachedir=%s' % os.path.abspath(options.cachedir) if options.cachedir else '',
+					 'cachedir': cachearg,
                                          'pin_binding' : ' '.join(['-b %s' % s for s in options.pin_binding]),
                                          'reconfig' : ' '.join(['--reconfig=%s' % rname for rname in options.reconfig]),
                                          'prtop' : ('--prtop=%s' % options.prtop) if options.prtop else ''
