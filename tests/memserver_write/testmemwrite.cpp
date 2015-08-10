@@ -90,7 +90,7 @@ int main(int argc, const char **argv)
       mismatchCount = 0;
       unsigned int ref_dstAlloc = dma->reference(dstAlloc);
       fprintf(stderr, "dma->reference %d\n", ref_dstAlloc);
-      int burstLenBytes = 16*sizeof(uint32_t);
+      int burstLenBytes = 32*sizeof(uint32_t);
       device->startWrite(ref_dstAlloc, alloc_sz, alloc_sz / burstLenBytes, burstLenBytes);
 
       sem_wait(&done_sem);
