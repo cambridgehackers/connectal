@@ -60,7 +60,11 @@ public:
 MemwriteIndication *deviceIndication;
 int main(int argc, const char **argv)
 {
+#ifdef SIMULATION
+  size_t alloc_sz = 4*1024;
+#else
   size_t alloc_sz = 16*1024*1024;
+#endif
   MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequestS2H);
   deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndicationH2S);
   DmaManager *dma = platformInit();
