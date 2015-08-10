@@ -19,8 +19,7 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-#include <stdio.h>
-#include <string.h>
+#include "portal.h"
 #include "connectal_conv.h"
 
 //#define PERFSTAT
@@ -235,3 +234,11 @@ extern "C" void *alloc_connectal_conv(int size)
     else
         return new ParamType<double>;
 }
+extern "C" void *alloc_portalMem(size_t size, int cached, int *fdptr)
+{
+    int fd = portalAlloc(size, cached);
+    if (fdptr)
+        *fdptr = fd;
+    return portalMmap(fd, size);
+}
+//int portalCacheFlush(int fd, void *__p, long size, int flush)
