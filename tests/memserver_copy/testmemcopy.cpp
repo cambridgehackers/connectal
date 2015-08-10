@@ -57,7 +57,7 @@ public:
 
 int main(int argc, const char **argv)
 {
-  size_t alloc_sz = 4096;
+  size_t alloc_sz = 10*1024*1024;
   MemcopyRequestProxy *device = new MemcopyRequestProxy(IfcNames_MemcopyRequestS2H);
   MemcopyIndication deviceIndication(IfcNames_MemcopyIndicationH2S);
   DmaManager *dma = platformInit();
@@ -81,7 +81,7 @@ int main(int argc, const char **argv)
   fprintf(stderr, "parent::starting write\n");
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
-  int burstLenBytes = 16*sizeof(uint32_t);
+  int burstLenBytes = 32*sizeof(uint32_t);
   device->startCopy(ref_srcAlloc, ref_dstAlloc, alloc_sz, alloc_sz / burstLenBytes, burstLenBytes);
 
   sem_wait(&done_sem);
@@ -92,5 +92,6 @@ int main(int argc, const char **argv)
       mismatchCount++;
   }
   fprintf(stderr, "%s: done mismatchCount=%d\n", __FUNCTION__, mismatchCount);
+  platformStatistics();
   return (mismatchCount == 0) ? 0 : 1;
 }
