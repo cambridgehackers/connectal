@@ -121,8 +121,9 @@ void platformStatistics(void)
     hostMemServerRequest->memoryTraffic(ChannelType_Write);
     uint64_t write_beats = hostMemServerIndication->receiveMemoryTraffic();
     float write_util = (float)write_beats/(float)cycles;
-    fprintf(stderr, "   read_beats: %llx\n", (long long)read_beats);
-    fprintf(stderr, "  write_beats: %llx\n", (long long)write_beats);
+    fprintf(stderr, "   read_beats: %lld\n", (long long)read_beats);
+    fprintf(stderr, "  write_beats: %lld\n", (long long)write_beats);
+    fprintf(stderr, "       cycles: %lld\n", (long long)cycles);
     fprintf(stderr, "memory utilization (beats/cycle): read %f write %f\n", read_util, write_util);
 }
 #endif
