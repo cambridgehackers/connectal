@@ -87,6 +87,7 @@ int main(int argc, const char **argv)
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
   int burstLenBytes = 32*sizeof(uint32_t);
 
+  portalTimerStart(0);
   device->startCopy(ref_srcAlloc, ref_dstAlloc, alloc_sz, alloc_sz / burstLenBytes, burstLenBytes);
   sem_wait(&done_sem);
   platformStatistics();
