@@ -101,7 +101,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
     rc = id;
 #else // defined(BSIM) || defined(BOARD_xsim) || defined(__KERNEL__)
     rc = send_fd_to_portal(priv->sglDevice, fd, id, global_pa_fd);
-    if (rc <= 0) {
+    if (rc >= 0) {
         //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
         if (priv->poll) {
             uint32_t ret;
