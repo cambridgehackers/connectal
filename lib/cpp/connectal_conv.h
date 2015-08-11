@@ -55,12 +55,6 @@ public:
     int stride_h_, stride_w_;
     int portalFd_;
     int propdone_;
-    // legacy support
-    Dtype* col_buffer_;
-    int is_1x1_;
-    int col_offset_;
-    int bottom_mult, top_mult;
-    int param_propagate_down_[2];
     ParamType(): bottom(NULL), top_diff(NULL), bottom_diff(NULL), top(NULL),
         bias_multiplier_(0), weight(0), bias(0), weight_diff(0), bias_diff(0),
         top_size(0), bottom_size(0), weight_diff_count(0),
@@ -69,13 +63,9 @@ public:
         conv_in_channels_(0), conv_out_channels_(0),
         weight_offset_(0), pad_h_(0), pad_w_(0),
         stride_h_(0), stride_w_(0), portalFd_(-1), propdone_(0)
-        // legacy
-        , col_buffer_(NULL), is_1x1_(0), col_offset_(0), bottom_mult(0), top_mult(0)
-        //, param_propagate_down_[0](0), param_propagate_down_[1](0)
         { }
     virtual void forward_process(void);
     virtual void backward_process(void);
-    void im2col_cpu(const Dtype* data_im);
 };
 class ConnectalMemory {
  public:

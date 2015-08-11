@@ -59,8 +59,8 @@ static void perfperf(long long *perfvalues, const char *name)
 }
 #endif
 
-#define MIN(A,B) (((A) < (B)) ? (A) : (B))
-#define MAX(A,B) (((A) > (B)) ? (A) : (B))
+#define MIN(A,B) (((int)(A) < (int)(B)) ? (A) : (B))
+#define MAX(A,B) (((int)(A) > (int)(B)) ? (A) : (B))
 template <typename Dtype>
 void forward_kernel(const ParamType<Dtype> *param, int p_limit, int q_limit, Dtype temp, CPtr bpx, CPtr wpx, CPtr outputp)
 {
@@ -93,11 +93,11 @@ void ParamType<Dtype>::forward_process(void)
 ParamType<Dtype> *param = this;
   perfpinit();
   long long perfvalues1[NUM_EVENTS];
-  int bottom_hw = conv_in_height_ * conv_in_width_ * sizeof(Dtype);
-  int kernel_hw = kernel_h_ * kernel_w_ * sizeof(Dtype);
-  int output_hw = height_out_ * width_out_ * sizeof(Dtype);
   int out_group_size = conv_out_channels_ / group_;
   int in_group_size = conv_in_channels_ / group_;
+  int bottom_hw = in_group_size * conv_in_height_ * conv_in_width_ * sizeof(Dtype);
+  int kernel_hw = in_group_size * kernel_h_ * kernel_w_ * sizeof(Dtype);
+  int output_hw = out_group_size * height_out_ * width_out_ * sizeof(Dtype);
   // For each input, ...
   for (int imageind = 0; imageind < bottom_size; ++imageind) {
     CPtr bottom_data = bottom[imageind];
@@ -107,9 +107,10 @@ ParamType<Dtype> *param = this;
     for (int nunused = 0; nunused < num_; ++nunused) {
       CPtr biasptr = bias;
       // if group_ > 1, restrict connectivity to a subset of inputs
+      CPtr wp_base = weight;
       for (int g = 0; g < group_; ++g) {
         CPtr outputp = top_data;
-        CPtr wp_base = weight + g * weight_offset_ * sizeof(Dtype);
+        CPtr wp_item = wp_base;
         // for each 'out_group', calculate convolution over input data
         for (int ounused = 0; ounused < out_group_size; ounused++) {
           CPtr bpg = bottom_data;
@@ -122,17 +123,18 @@ ParamType<Dtype> *param = this;
             for (int x = 0; x < width_out_; x++) {
               int p_limit = MIN(param->kernel_h_ - param->pad_h_, conv_in_height_ - y * stride_h_);
               int q_limit = MIN(param->kernel_w_ - param->pad_w_, conv_in_width_ - x * stride_w_);
-              forward_kernel<Dtype>(this, p_limit, q_limit, bias_val, bpx, wp_base, outputp);
+              forward_kernel<Dtype>(this, p_limit, q_limit, bias_val, bpx, wp_item, outputp);
               outputp += sizeof(Dtype);
               bpx += stride_w_ * sizeof(Dtype);
             }
             bpg += conv_in_width_ * stride_h_ * sizeof(Dtype);
           }
-          wp_base += in_group_size * kernel_hw;
+          wp_item += kernel_hw;
           perfread(perfvalues1);
         }
-        bottom_data += in_group_size * bottom_hw;
-        top_data += out_group_size * output_hw;
+        bottom_data += bottom_hw;
+        top_data += output_hw;
+        wp_base += weight_offset_ * sizeof(Dtype);
       }
     }
   }
@@ -145,24 +147,20 @@ ParamType<Dtype> *param = this;
 template <typename Dtype>
 void backward_bias(const ParamType<Dtype> *param, CPtr tptr)
 {
-  int output_hw = param->height_out_ * param->width_out_;
+  int output_hw = param->height_out_ * param->width_out_ * sizeof(Dtype);
   for (int j = 0; j < param->num_output_ * sizeof(Dtype); j += sizeof(Dtype))
-    for (int i = 0; i < output_hw * sizeof(Dtype); i += sizeof(Dtype)) {
+    for (int i = 0; i < output_hw; i += sizeof(Dtype)) {
       *CACCESS(param->bias_diff + j) += *CACCESS(tptr) * *CACCESS(param->bias_multiplier_ + i);
       tptr += sizeof(Dtype);
     }
 }
 template <typename Dtype>
-void backward_kernel(const ParamType<Dtype> *param, int pad_x, int pad_y, int gchan, int wchan, Dtype chain_grad, CPtr bottom_bp, CPtr bottom_diff_bp)
+void backward_kernel(const ParamType<Dtype> *param, int p_start, int p_limit, int q_start, int q_limit, int gchan, int wchan, Dtype chain_grad, CPtr bottom_bp, CPtr bottom_diff_bp)
 {
-  int p_start = MAX(0, pad_y);
-  int p_limit = MIN(param->kernel_h_, param->conv_in_height_ + pad_y);
-  int q_start = MAX(0, pad_x);
-  int q_limit = MIN(param->kernel_w_, param->conv_in_width_ + pad_x);
-  for (int p = p_start; p < p_limit; ++p) {
-    for (int q = q_start; q < q_limit; ++q) {
-      int belement = gchan + (p * param->conv_in_width_ + q) * sizeof(Dtype);
-      int welement = wchan + (p * param->kernel_w_ + q) * sizeof(Dtype);
+  for (int p = p_start; p < p_limit; p += sizeof(Dtype)) {
+    for (int q = q_start; q < q_limit; q += sizeof(Dtype)) {
+      int belement = gchan + p * param->conv_in_width_ + q;
+      int welement = wchan + p * param->kernel_w_ + q;
       // gradient w.r.t. weight. Note that we will accumulate diffs.
       if (param->weight_diff)
         *CACCESS(param->weight_diff + welement) += *CACCESS(bottom_bp + belement) * chain_grad;
@@ -178,11 +176,11 @@ void ParamType<Dtype>::backward_process(void)
 ParamType<Dtype> *param = this;
   perfpinit();
   long long perfvalues2[NUM_EVENTS];
+  int out_group_size = conv_out_channels_ / group_;
+  int in_group_size = conv_in_channels_ / group_;
   int bottom_hw = conv_in_height_ * conv_in_width_ * sizeof(Dtype);
   int kernel_hw = kernel_h_ * kernel_w_ * sizeof(Dtype);
   int output_hw = height_out_ * width_out_ * sizeof(Dtype);
-  int out_group_size = conv_out_channels_ / group_;
-  int in_group_size = conv_in_channels_ / group_;
   int usable_height = conv_in_height_ + 2 * pad_h_ - kernel_h_;
   int usable_width = conv_in_width_ + 2 * pad_w_ - kernel_w_;
   if (weight_diff)
@@ -204,18 +202,24 @@ ParamType<Dtype> *param = this;
       // Bias gradient, if necessary.
       if (bias_diff)
         backward_bias<Dtype>(this, top_diff_bp + toff);
+      int wbase = 0;
       for (int g = 0; g < group_; ++g) {
-        int wchan = g * weight_offset_ * sizeof(Dtype);
+        int wchan = wbase;
         for (int outindex = 0; outindex < out_group_size; ++outindex) {
           int gchan = gbase;
           for (int cchan = 0; cchan < in_group_size; ++cchan) {
             for (int y = 0; y <= usable_height; y += stride_h_){
               for (int x = 0; x <= usable_width; x += stride_w_) {
                 Dtype chain_grad = *CACCESS(top_diff_bp + toff + ((y * (usable_width + stride_w_) / stride_h_ + x) / stride_w_) * sizeof(Dtype));
-                int pad_x = pad_w_ - x;
-                int pad_y = pad_h_ - y;
+                int pad_x = (pad_w_ - x) * sizeof(Dtype);
+                int pad_y = (pad_h_ - y) * sizeof(Dtype);
+                int p_start = MAX(0, pad_y);
+                int p_limit = MIN(param->kernel_h_ * sizeof(Dtype), param->conv_in_height_ * sizeof(Dtype) + pad_y);
+                int q_start = MAX(0, pad_x);
+                int q_limit = MIN(param->kernel_w_ * sizeof(Dtype), param->conv_in_width_ * sizeof(Dtype) + pad_x);
                 if (chain_grad != 0.0)
-                    backward_kernel<Dtype>(this, pad_x, pad_y, gchan - (pad_y * conv_in_width_ + pad_x) * sizeof(Dtype), wchan, chain_grad, bottom[imageind], bottom_diff[imageind]);
+                    backward_kernel<Dtype>(this, p_start, p_limit, q_start, q_limit,
+                     gchan - pad_y * conv_in_width_ - pad_x, wchan, chain_grad, bottom[imageind], bottom_diff[imageind]);
               }
             }
             perfread(perfvalues2);
@@ -232,6 +236,7 @@ ParamType<Dtype> *param = this;
           toff += output_hw;
         }
         gbase += in_group_size * bottom_hw;
+        wbase += weight_offset_ * sizeof(Dtype);
       }
     }
   }
