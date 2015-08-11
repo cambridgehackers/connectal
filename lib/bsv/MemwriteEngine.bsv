@@ -279,7 +279,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
 		  interface Put request;
 		     method Action put(MemengineCmd cmd);
 			Bit#(32) bsb = fromInteger(bufferSizeBytes);
-`ifdef BSIM	 
+`ifdef SIMULATION
 			Bit#(32) dw = fromInteger(valueOf(dataWidthBytes));
 			Bit#(32) bl = extend(cmd.burstLen);
 			// this is because bsc lifts the divide operation (below) 
@@ -299,7 +299,7 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
 `endif
 			   cmds_in[i].enq(cmd);
 			   //$display("(%d) %h %h %h", i, cmd.base, cmd.len, cmd.burstLen);
-`ifdef BSIM
+`ifdef SIMULATION
 			end
 `endif
  		     endmethod

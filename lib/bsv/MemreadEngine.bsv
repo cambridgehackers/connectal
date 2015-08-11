@@ -195,7 +195,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 		  interface Put request;
 		     method Action put(MemengineCmd cmd);
 			Bit#(32) bsb = fromInteger(bufferSizeBytes);
-`ifdef BSIM	 
+`ifdef SIMULATION
 			Bit#(32) dw = fromInteger(valueOf(dataWidthBytes));
 			let mdw = ((cmd.len)/dw)*dw != cmd.len;
 			let bbl = extend(cmd.burstLen) > bsb;
@@ -208,7 +208,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 			else begin
 `endif
 			   clientRequest[i].enq(cmd);
-`ifdef BSIM
+`ifdef SIMULATION
 			end
 `endif
  		     endmethod
