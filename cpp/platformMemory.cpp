@@ -33,6 +33,16 @@ class PortalPoller;
 #ifndef NO_CPP_PORTAL_CODE
 static int mmu_error_limit = 20;
 static int mem_error_limit = 20;
+static const char *dmaErrors[] = {
+				"None",
+				"SGL Id out of range for read",
+				"SGL Id out of range for write",
+				"MMU out of range for read",
+				"MMU out of range for write",
+				"Offset out of range",
+				"SGL Id invalid",
+				"Tile tag out of range"
+				};
 class MMUIndication : public MMUIndicationWrapper
 {
   DmaManager *portalMemory;
@@ -44,7 +54,7 @@ class MMUIndication : public MMUIndicationWrapper
     portalMemory->confResp(pointer);
   }
   virtual void error (uint32_t code, uint32_t pointer, uint64_t offset, uint64_t extra) {
-    fprintf(stderr, "MMUIndication::error(code=0x%x, pointer=0x%x, offset=0x%"PRIx64" extra=-0x%"PRIx64"\n", code, pointer, offset, extra);
+    fprintf(stderr, "MMUIndication::error(code=0x%x:%s, pointer=0x%x, offset=0x%"PRIx64" extra=0x%"PRIx64"\n", code, dmaErrors[code], pointer, offset, extra);
     if (--mmu_error_limit < 0)
         exit(-1);
   }
