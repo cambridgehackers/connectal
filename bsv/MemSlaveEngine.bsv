@@ -56,7 +56,8 @@ endinterface: MemSlaveEngine
    `define AVALON
 `endif
 
-typedef 32 WriteDataMimoSize;
+typedef 64 WriteDataMimoSize;
+typedef TAdd#(1,TLog#(WriteDataMimoSize)) WriteDataBurstLenSize;
 module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    provisos (Div#(buswidth, 8, busWidthBytes),
 	     Div#(buswidth, 32, busWidthWords),
@@ -91,8 +92,8 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    mimoCfg.unguarded = True;
     MIMO#(busWidthWords,4,WriteDataMimoSize,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
     ConfigCounter#(8) writeDataCnt <- mkConfigCounter(0);
-    Reg#(Bit#(10)) writeBurstCount <- mkReg(0);
-   FIFO#(Bit#(10)) writeBurstCountFifo <- mkFIFO();
+    Reg#(Bit#(WriteDataBurstLenSize)) writeBurstCount <- mkReg(0);
+    FIFO#(Bit#(WriteDataBurstLenSize)) writeBurstCountFifo <- mkFIFO();
     Reg#(TLPLength)  writeDwCount <- mkReg(0); // how many 4 byte (double) words to send
     Reg#(LUInt#(4))    tlpDwCount <- mkReg(0); // how many to send in the next tlp (at most 4)
     Reg#(Bool)            lastTlp <- mkReg(False); // if the next tlp sent is the last one
@@ -120,6 +121,10 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    endrule
 
    Reg#(Bool) writeDataCntAboveThreshold <- mkReg(False);
+   Reg#(Bool) writeDataMimoHasRoom <- mkReg(False);
+   rule updateWriteDataMimoHasRoom;
+      writeDataMimoHasRoom <= (writeDataCnt.read <= fromInteger(valueOf(WriteDataMimoSize) - valueOf(busWidthWords)));
+   endrule
    rule noheader if (!tlpWriteHeaderFifo.notEmpty());
       writeDataCntAboveThreshold <= False;
    endrule
@@ -355,7 +360,7 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
    interface PhysMemWriteServer write_server; 
       interface Put writeReq;
          method Action put(PhysMemRequest#(40) req); // if (writeBurstCount == 0);
-	    let burstLen = req.burstLen >> beat_shift;
+	    Bit#(WriteDataBurstLenSize) burstLen = truncate(req.burstLen >> beat_shift);
 	    let addr = req.addr;
 	    let awid = req.tag;
 	    let writeIs3dw = False;
@@ -397,13 +402,13 @@ module mkMemSlaveEngine#(PciId my_id)(MemSlaveEngine#(buswidth))
 	       tlp.data = pack(hdr_3dw);
 	    end
 	    tlpWriteHeaderFifo.enq(TlpWriteHeaderInfo {tlp: tlp, dwCount: tlplen, is3dw: writeIs3dw, isHeaderOnly: (writeIs3dw && tlplen == 1) });
-	    writeBurstCountFifo.enq(extend(burstLen));
+	    writeBurstCountFifo.enq(burstLen);
 	    writeTag.enq(extend(awid));
          endmethod
 	endinterface
       interface Put writeData;
          method Action put(MemData#(buswidth) wdata)
-	      provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords))));
+	    provisos (Bits#(Vector#(busWidthWords, Bit#(32)), busWidth)) if (writeDataMimoHasRoom); //.enqReadyN(fromInteger(valueOf(busWidthWords))));
 
 	    let burstLen = writeBurstCount;
 	    if (burstLen == 0) begin
