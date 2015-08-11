@@ -6,6 +6,6 @@ MEM_INTERFACES = lMemcopy.readClients,lMemcopy.writeClients
 BSVFILES = ../memserver_copy/Memcopy.bsv
 CPPFILES = ../memserver_copy/testmemcopy.cpp
 
-CONNECTALFLAGS += -D USE_ACP -P mkConnectalTop
+CONNECTALFLAGS += -D USE_ACP -P mkConnectalTop -D DataBusSize=128
 
 include $(CONNECTALDIR)/Makefile.connectal
