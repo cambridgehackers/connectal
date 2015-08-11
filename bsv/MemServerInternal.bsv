@@ -93,6 +93,7 @@ module mkMemReadInternal#(MemServerIndication ind,
 	    ,Div#(dataWidth,8,dataWidthBytes)
 	    ,Add#(beatShift, a__, 8)
 	    ,Add#(b__, TLog#(numTags), 6)
+	    ,Add#(beatShift, c__, BurstLenSize)
 	    );
    
    
@@ -302,6 +303,7 @@ module mkMemWriteInternal#(MemServerIndication ind,
 	    ,Div#(dataWidth,8,dataWidthBytes)
 	    ,Add#(beatShift, a__, 8)
 	    ,Add#(b__, TLog#(numTags), 6)
+	    ,Add#(beatShift, c__, BurstLenSize)
 	    );
    
    let verbose = False;
