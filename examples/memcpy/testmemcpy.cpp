@@ -37,7 +37,7 @@ int srcAlloc;
 int dstAlloc;
 unsigned int *srcBuffer = 0;
 unsigned int *dstBuffer = 0;
-#ifndef BSIM
+#ifndef SIMULATION
 int numWords = 16 << 18;
 #else
 int numWords = 16 << 10;
