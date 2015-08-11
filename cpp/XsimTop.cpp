@@ -46,11 +46,28 @@ static Portal                 *mcommon;
 static XsimMsgIndicationProxy *xsimIndicationProxy;
 static XsimMsgRequest         *xsimRequest;
 
+static int finish = 0;
+static int xsim_disconnect(struct PortalInternal *pint)
+{
+  fprintf(stderr, "%s:%d pint=%p calling $finish\n", __FUNCTION__, __LINE__, pint);
+  finish = 1;
+  return 0;
+}
+
+static PortalHandlerTemplate xsim_handler = {
+  xsim_disconnect
+};
+
+extern "C" int dpi_finish()
+{
+  return finish;
+}
+
 extern "C" void dpi_init()
 {
-    if (trace_xsimtop) 
-        fprintf(stderr, "%s:\n", __FUNCTION__);
-    mcommon = new Portal(0, 0, sizeof(uint32_t), portal_mux_handler, NULL, &transportSocketResp, NULL);
+    if (trace_xsimtop)
+      fprintf(stderr, "%s:%d &xsim_handler=%p\n", __FUNCTION__, __LINE__, &xsim_handler);
+    mcommon = new Portal(0, 0, sizeof(uint32_t), portal_mux_handler, &xsim_handler, &transportSocketResp, NULL);
     PortalMuxParam param = {};
     param.pint = &mcommon->pint;
     xsimIndicationProxy = new XsimMsgIndicationProxy(XsimIfcNames_XsimMsgIndication, &transportMux, &param);
