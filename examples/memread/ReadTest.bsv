@@ -44,7 +44,7 @@ interface ReadTestIndication;
    method Action readDone(Bit#(32) mismatchCount);
 endinterface
 
-typedef 12 NumOutstandingRequests;
+typedef 14 NumOutstandingRequests;
 typedef TMul#(NumOutstandingRequests,TMul#(32,4)) BufferSizeBytes;
 module mkReadTest#(ReadTestIndication indication) (ReadTest);
 
