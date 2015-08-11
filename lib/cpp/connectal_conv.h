@@ -40,6 +40,8 @@ public:
     CPtr bias;
     CPtr weight_diff;
     CPtr bias_diff;
+    CPtr zero_region;
+    int zero_region_len;
     int top_size;
     int bottom_size;
     int weight_diff_count;
@@ -57,6 +59,7 @@ public:
     int propdone_;
     ParamType(): bottom(NULL), top_diff(NULL), bottom_diff(NULL), top(NULL),
         bias_multiplier_(0), weight(0), bias(0), weight_diff(0), bias_diff(0),
+        zero_region(0), zero_region_len(0),
         top_size(0), bottom_size(0), weight_diff_count(0),
         num_(0), num_output_(0), group_(0), height_out_(0), width_out_(0),
         kernel_h_(0), kernel_w_(0), conv_in_height_(0), conv_in_width_(0),

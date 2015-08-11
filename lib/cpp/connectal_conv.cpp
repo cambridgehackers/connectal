@@ -60,10 +60,9 @@ ParamType<Dtype> *param = this;
   int kernel_hw = in_group_size * kernel_h_ * kernel_w_ * sizeof(Dtype);
   int output_hw = out_group_size * height_out_ * width_out_ * sizeof(Dtype);
   // For each input, ...
-  for (int imageind = 0; imageind < bottom_size; ++imageind) {
-    CPtr bottom_data = bottom[imageind];
-    CPtr top_data = top[imageind];
-      // Convolution
+  CPtr bottom_data = bottom[0];
+  CPtr top_data = top[0];
+  for (int imageind_unused = 0; imageind_unused < bottom_size; ++imageind_unused) {
     // For each image in input batch
     for (int nunused = 0; nunused < num_; ++nunused) {
       CPtr biasptr = bias;
@@ -103,15 +102,22 @@ template <typename Dtype>
 void backward_bias(const ParamType<Dtype> *param, CPtr tptr)
 {
   int output_hw = param->height_out_ * param->width_out_ * sizeof(Dtype);
-  for (int j = 0; j < param->num_output_ * sizeof(Dtype); j += sizeof(Dtype))
+  for (int j = 0; j < param->num_output_ * sizeof(Dtype); j += sizeof(Dtype)) {
+    Dtype temp = 0;
     for (int i = 0; i < output_hw; i += sizeof(Dtype)) {
-      *CACCESS(param->bias_diff + j) += *CACCESS(tptr) * *CACCESS(param->bias_multiplier_ + i);
+      temp += *CACCESS(tptr) * *CACCESS(param->bias_multiplier_ + i);
       tptr += sizeof(Dtype);
     }
+    *CACCESS(param->bias_diff + j) += temp;
+  }
 }
 template <typename Dtype>
-void backward_kernel(const ParamType<Dtype> *param, int p_start, int p_limit, int q_start, int q_limit, int gchan, int wchan, Dtype chain_grad, CPtr bottom_bp, CPtr bottom_diff_bp)
+void backward_kernel(const ParamType<Dtype> *param, int pad_x, int pad_y, int gchan, int wchan, Dtype chain_grad, CPtr bottom_bp, CPtr bottom_diff_bp)
 {
+  int p_start = MAX(0, pad_y);
+  int p_limit = MIN(param->kernel_h_ * sizeof(Dtype), param->conv_in_height_ * sizeof(Dtype) + pad_y);
+  int q_start = MAX(0, pad_x);
+  int q_limit = MIN(param->kernel_w_ * sizeof(Dtype), param->conv_in_width_ * sizeof(Dtype) + pad_x);
   for (int p = p_start; p < p_limit; p += sizeof(Dtype)) {
     for (int q = q_start; q < q_limit; q += sizeof(Dtype)) {
       int belement = gchan + p * param->conv_in_width_ + q;
@@ -136,25 +142,17 @@ ParamType<Dtype> *param = this;
   int output_hw = height_out_ * width_out_ * sizeof(Dtype);
   int usable_height = conv_in_height_ + 2 * pad_h_ - kernel_h_;
   int usable_width = conv_in_width_ + 2 * pad_w_ - kernel_w_;
-  if (weight_diff)
-    memset(CACCESS(weight_diff), 0, weight_diff_count);
-  if (bias_diff)
-    memset(CACCESS(bias_diff), 0, num_output_ * sizeof(Dtype));
-  // zero out gradient wrt bottom data, we're about to fill it
-  for (int imageind = 0; imageind < top_size; ++imageind)
-    if (bottom_diff[imageind])
-      memset(CACCESS(bottom_diff[imageind]), 0, num_ * conv_in_channels_ * bottom_hw);
+  memset(CACCESS(zero_region), 0, zero_region_len);
   // For all images
-  for (int imageind = 0; imageind < top_size; ++imageind) {
-    CPtr top_diff_bp = top_diff[imageind];
-    if (!weight_diff && !bottom_diff[imageind])
-      continue;
+  CPtr toff = top_diff[0];
+  CPtr bottom_ptr = bottom[0];
+  CPtr bottom_diff_ptr = bottom_diff[0];
+  for (int imageind_unused = 0; imageind_unused < top_size; ++imageind_unused) {
     int gbase = 0;
-    int toff = 0;
     for (int n = 0; n < num_; ++n) {
       // Bias gradient, if necessary.
       if (bias_diff)
-        backward_bias<Dtype>(this, top_diff_bp + toff);
+        backward_bias<Dtype>(this, toff);
       int wbase = 0;
       for (int g = 0; g < group_; ++g) {
         int wchan = wbase;
@@ -163,16 +161,12 @@ ParamType<Dtype> *param = this;
           for (int cchan = 0; cchan < in_group_size; ++cchan) {
             for (int y = 0; y <= usable_height; y += stride_h_){
               for (int x = 0; x <= usable_width; x += stride_w_) {
-                Dtype chain_grad = *CACCESS(top_diff_bp + toff + ((y * (usable_width + stride_w_) / stride_h_ + x) / stride_w_) * sizeof(Dtype));
+                Dtype chain_grad = *CACCESS(toff + ((y * (usable_width + stride_w_) / stride_h_ + x) / stride_w_) * sizeof(Dtype));
                 int pad_x = (pad_w_ - x) * sizeof(Dtype);
                 int pad_y = (pad_h_ - y) * sizeof(Dtype);
-                int p_start = MAX(0, pad_y);
-                int p_limit = MIN(param->kernel_h_ * sizeof(Dtype), param->conv_in_height_ * sizeof(Dtype) + pad_y);
-                int q_start = MAX(0, pad_x);
-                int q_limit = MIN(param->kernel_w_ * sizeof(Dtype), param->conv_in_width_ * sizeof(Dtype) + pad_x);
                 if (chain_grad != 0.0)
-                    backward_kernel<Dtype>(this, p_start, p_limit, q_start, q_limit,
-                     gchan - pad_y * conv_in_width_ - pad_x, wchan, chain_grad, bottom[imageind], bottom_diff[imageind]);
+                    backward_kernel<Dtype>(this, pad_x, pad_y,
+                     gchan - pad_y * conv_in_width_ - pad_x, wchan, chain_grad, bottom_ptr, bottom_diff_ptr);
               }
             }
             wchan += kernel_hw;
@@ -184,6 +178,8 @@ ParamType<Dtype> *param = this;
         wbase += weight_offset_ * sizeof(Dtype);
       }
     }
+    bottom_ptr += num_ * in_group_size * bottom_hw;
+    bottom_diff_ptr += num_ * in_group_size * bottom_hw;
   }
 }
 
