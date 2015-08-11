@@ -82,11 +82,11 @@ int main(int argc, const char **argv)
     portalTimerStart(0);
     device->startRead(ref_srcAlloc, numWords * 4, burstLen * 4, iterCnt);
     sem_wait(&test_sem);
+    platformStatistics();
     if (mismatchCount) {
         fprintf(stderr, "Main::first test failed to match %d.\n", mismatchCount);
         test_result++;     // failed
     }
-    platformStatistics();
 
     /* Test 2: check that mismatch is detected */
     srcBuffer[0] = -1;
