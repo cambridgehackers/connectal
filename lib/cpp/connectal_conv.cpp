@@ -22,43 +22,6 @@
 #include "portal.h"
 #include "connectal_conv.h"
 
-//#define PERFSTAT
-#define NUM_EVENTS 4
-static void perfpinit(void)
-{
-#ifdef PERFSTAT
-  static int once = 1;
-  int event[NUM_EVENTS] = {PAPI_TOT_INS, PAPI_TOT_CYC, PAPI_BR_MSP, PAPI_L1_DCM };
-  if (once) {
-    once = 0;
-    /* Start counting events */
-    if (PAPI_start_counters(event, NUM_EVENTS) != PAPI_OK) {
-        fprintf(stderr, "PAPI_start_counters - FAILED\n");
-        exit(1);
-    }
-  }
-#endif
-}
-static void perfread(long long *perfvalues)
-{
-#ifdef PERFSTAT
-    if (PAPI_read_counters(perfvalues, NUM_EVENTS) != PAPI_OK) {
-        fprintf(stderr, "PAPI_read_counters - FAILED\n");
-        exit(1);
-    }
-#endif
-}
-#ifdef PERFSTAT
-static void perfperf(long long *perfvalues, const char *name)
-{
-    printf("%s: Total instructions: %6lld;", name, perfvalues[0]);
-    printf("Total cycles: %6lld;", perfvalues[1]);
-    printf("Instr per cycle: %2.3f;", (double)perfvalues[0] / (double) perfvalues[1]);
-    printf("Branches mispredicted: %6lld;", perfvalues[2]);
-    printf("L1 Cache misses: %6lld\n", perfvalues[3]);
-}
-#endif
-
 #define MIN(A,B) (((int)(A) < (int)(B)) ? (A) : (B))
 #define MAX(A,B) (((int)(A) > (int)(B)) ? (A) : (B))
 template <typename Dtype>
@@ -91,8 +54,6 @@ template <typename Dtype>
 void ParamType<Dtype>::forward_process(void)
 {
 ParamType<Dtype> *param = this;
-  perfpinit();
-  long long perfvalues1[NUM_EVENTS];
   int out_group_size = conv_out_channels_ / group_;
   int in_group_size = conv_in_channels_ / group_;
   int bottom_hw = in_group_size * conv_in_height_ * conv_in_width_ * sizeof(Dtype);
@@ -130,7 +91,6 @@ ParamType<Dtype> *param = this;
             bpg += conv_in_width_ * stride_h_ * sizeof(Dtype);
           }
           wp_item += kernel_hw;
-          perfread(perfvalues1);
         }
         bottom_data += bottom_hw;
         top_data += output_hw;
@@ -138,11 +98,6 @@ ParamType<Dtype> *param = this;
       }
     }
   }
-#ifdef PERFSTAT
-  static int jcacount = 0;
-  if (jcacount++ > 300 && jcacount < 310)
-    perfperf(perfvalues1, "forward");
-#endif
 }
 template <typename Dtype>
 void backward_bias(const ParamType<Dtype> *param, CPtr tptr)
@@ -174,8 +129,6 @@ template <typename Dtype>
 void ParamType<Dtype>::backward_process(void)
 {
 ParamType<Dtype> *param = this;
-  perfpinit();
-  long long perfvalues2[NUM_EVENTS];
   int out_group_size = conv_out_channels_ / group_;
   int in_group_size = conv_in_channels_ / group_;
   int bottom_hw = conv_in_height_ * conv_in_width_ * sizeof(Dtype);
@@ -222,17 +175,9 @@ ParamType<Dtype> *param = this;
                      gchan - pad_y * conv_in_width_ - pad_x, wchan, chain_grad, bottom[imageind], bottom_diff[imageind]);
               }
             }
-            perfread(perfvalues2);
             wchan += kernel_hw;
             gchan += bottom_hw;
           }
-#ifdef PERFSTAT
-          static int jcacount = 0;
-          if (jcacount++ > 300) {
-              perfperf(perfvalues2, "second");
-              exit(-1);
-          }
-#endif
           toff += output_hw;
         }
         gbase += in_group_size * bottom_hw;
