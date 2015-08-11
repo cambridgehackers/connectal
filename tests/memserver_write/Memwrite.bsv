@@ -60,10 +60,10 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    Reg#(Bit#(32))              srcGens <- mkReg(0);
 
    AddressGenerator#(32, DataBusWidth) addrGenerator <- mkAddressGenerator();
-   FIFO#(MemRequest) reqFifo <- mkFIFO();
-   FIFO#(PhysMemRequest#(32)) preqFifo <- mkFIFO();
+   FIFO#(MemRequest) reqFifo <- mkSizedFIFO(4);
+   FIFO#(PhysMemRequest#(32)) preqFifo <- mkSizedFIFO(4);
    FIFO#(MemData#(DataBusWidth))   dataFifo <- mkSizedBRAMFIFO(1024);
-   FIFO#(Bit#(MemTagSize)) doneFifo <- mkFIFO();
+   FIFO#(Bit#(MemTagSize)) doneFifo <- mkSizedFIFO(4);
 
    let verboseProgress = False;
 
