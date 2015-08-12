@@ -94,6 +94,7 @@ endinterface
 interface MemreadServer#(numeric type dataWidth);
    interface Server#(MemengineCmd,Bool) cmdServer;
    interface PipeOut#(Bit#(dataWidth)) dataPipe;
+   interface PipeOut#(MemData#(dataWidth)) memDataPipe;
 endinterface
       
 interface MemreadEngine#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers);

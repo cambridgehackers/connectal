@@ -84,10 +84,10 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 
    FIFOF#(MemData#(dataWidth))                       serverDataFifo <- mkFIFOF;
    Vector#(numServers, FIFOF#(MemData#(dataWidth)))  clientDataFifo <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
-   function PipeOut#(Bit#(dataWidth)) check_out(PipeOut#(MemData#(dataWidth)) inpipe, Integer i) = 
+   function PipeOut#(MemData#(dataWidth)) mem_data_out(PipeOut#(MemData#(dataWidth)) inpipe, Integer i) = 
       (interface PipeOut;
-	  method Bit#(dataWidth) first;
-	     return inpipe.first.data;
+	  method MemData#(dataWidth) first;
+	     return inpipe.first;
 	  endmethod
 	  method Action deq;
 	     if (verbose) $display("mkMemreadEngineBuff::check_out: idx %d data %h clientAvail %d eob %d", i, inpipe.first.data, clientAvail[i].read(), inpipe.first.last);
@@ -96,7 +96,9 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 	  endmethod
 	  method Bool notEmpty = inpipe.notEmpty;
        endinterface);
-   Vector#(numServers, PipeOut#(Bit#(dataWidth))) clientDataPipes = zipWith(check_out, map(toPipeOut,clientDataFifo), genVector);
+   function Bit#(dataWidth) memData_data(MemData#(dataWidth) d); return d.data; endfunction
+   Vector#(numServers, PipeOut#(MemData#(dataWidth))) memDataPipes = zipWith(mem_data_out, map(toPipeOut,clientDataFifo), genVector);
+   Vector#(numServers, PipeOut#(Bit#(dataWidth))) clientDataPipes = map(mapPipe(memData_data), memDataPipes);
    
    Reg#(Bit#(8))                    respCnt <- mkReg(0);
    Reg#(Bit#(TAdd#(1,serverIdxSz))) loadIdx <- mkReg(0);
@@ -182,10 +184,11 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
       clientDataFifo[idx].enq(d);
    endrule
 
-   function MemreadServer#(dataWidth) toMemreadServer(Server#(MemengineCmd,Bool) cs, PipeOut#(Bit#(dataWidth)) p) =
+   function MemreadServer#(dataWidth) toMemreadServer(Server#(MemengineCmd,Bool) cs, PipeOut#(MemData#(dataWidth)) mdp) =
       (interface MemreadServer;
 	  interface cmdServer = cs;
-	  interface dataPipe  = p;
+	  interface memDataPipe  = mdp;
+	  interface dataPipe = mapPipe(memData_data, mdp);
        endinterface);
 
       
@@ -233,5 +236,5 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
       interface Put readData = toPut(serverDataFifo);
    endinterface 
    interface dataPipes = clientDataPipes;
-   interface read_servers = zipWith(toMemreadServer, rs, clientDataPipes);
+   interface read_servers = zipWith(toMemreadServer, rs, memDataPipes);
 endmodule
