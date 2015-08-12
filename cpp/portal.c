@@ -38,6 +38,7 @@
 #include <stdarg.h> // for portal_printf
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <libgen.h>  // dirname
 #endif
 #include "drivers/portalmem/portalmem.h" // PA_MALLOC
 
@@ -166,9 +167,12 @@ void initPortalHardware(void)
         exit(-1);
     }
     else if (pid) {
+#ifndef SIMULATION
         int status;
         waitpid(pid, &status, 0);
-#ifdef __arm__
+#endif
+#ifdef SIMULATION
+#elif defined(__arm__)
 	{
 	  int fd;
 	  ssize_t len;
@@ -180,7 +184,7 @@ void initPortalHardware(void)
 	  printf("[%s:%d] fd %d len %lu\n", __FUNCTION__, __LINE__, fd, len);
 	  close(fd);
 	}
-#elif !defined(BSIM) && !defined(BOARD_xsim)
+#else
         while (1) {
             struct stat statbuf;
             int rc = stat("/dev/connectal", &statbuf); /* wait for driver to load */
@@ -190,7 +194,7 @@ void initPortalHardware(void)
             sleep(1);
         }
 #endif
-#if !defined(BSIM) && !defined(BOARD_xsim)
+#ifndef SIMULATION
         checkSignature("/dev/connectal",
 #ifdef ZYNQ
             PORTAL_SIGNATURE
@@ -204,14 +208,27 @@ void initPortalHardware(void)
     else {
 #define MAX_PATH 2000
         static char buf[MAX_PATH];
+        char *argv[] = { (char *)"fpgajtag", NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+        int ind = 1;
         buf[0] = 0;
         int rc = readlink("/proc/self/exe", buf, sizeof(buf));
 	if (rc < 0)
 	    fprintf(stderr, "[%s:%d] readlink error %d\n", __FUNCTION__, __LINE__, errno);
-#if !defined(BOARD_bluesim) && !defined(BOARD_xsim)
+#ifdef BOARD_bluesim
+        char *p = dirname(buf);
+        static char buf2[MAX_PATH];
+        sprintf(buf2, "%s/bsim", p);
+printf("[%s:%d] BSIM %s *******\n", __FUNCTION__, __LINE__, buf2);
+        argv[ind++] = NULL;
+        rc = execvp (buf2, argv);
+#elif defined(BOARD_xsim)
+        argv[ind++] = (char *)"-R";
+        argv[ind++] = (char *)"work.xsimtop";
+printf("[%s:%d] RUNNING XSIM\n", __FUNCTION__, __LINE__);
+        rc = execvp ("xsim", argv);
+printf("[%s:%d] rc %d\n", __FUNCTION__, __LINE__, rc);
+#else
         char *serial = getenv("SERIALNO");
-        int ind = 1;
-        char *argv[] = { (char *)"fpgajtag", NULL, NULL, NULL, NULL, NULL, NULL, NULL};
         if (serial) {
             argv[ind++] = (char *)"-s";
             argv[ind++] = strdup(serial);
@@ -228,7 +245,7 @@ void initPortalHardware(void)
         execvp ("fpgajtag", argv);
 #endif // !__arm__
         }
-#endif
+#endif // SIMULATION
         exit(-1);
     }
 #endif // !__KERNEL__

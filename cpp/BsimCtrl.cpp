@@ -126,7 +126,11 @@ last_val = this_val;
         for (i = 0; i < fd_array_index; i++) {
             head.sockfd = fd_array[i];
             rv = portalRecvFd(head.sockfd, &head.req, sizeof(head.req), &recvfd);
-	    if(rv > 0){
+            if (rv == 0) {
+printf("[%s:%d] bluesim socket closed\n", __FUNCTION__, __LINE__);
+                exit(0);
+            }
+	    else if(rv > 0){
 	        assert(rv == sizeof(memrequest));
 	        respitem.portal = head.req.portal;
 	        head.valid = 1;

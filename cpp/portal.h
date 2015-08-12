@@ -312,7 +312,7 @@ private:
     pthread_mutex_t mutex;
     struct pollfd *portal_fds;
     int pipefd[2];
-    int inited;
+    int startThread;
     int numWrappers;
     int numFds;
 public:

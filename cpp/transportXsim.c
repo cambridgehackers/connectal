@@ -49,6 +49,9 @@ static XsimMsgIndicationCb indHandlers = {portal_disconnect, indMsgSource};
 
 static int init_xsim(struct PortalInternal *pint, void *init_param)
 {
+    initPortalHardware();
+printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+//sleep(10);
     if (!indPortal.mux_ports) {
         init_portal_internal(&mcommon, 0, 0, portal_mux_handler, NULL,
             &transportSocketInit, NULL, sizeof(uint32_t)); 

@@ -216,20 +216,20 @@ android.debug.exe: prepare_bin_target
 
 run:
 ifeq ($(CONNECTAL_SHARED),1)
-	$(RUN_BSC_LM_LICENSE_FILE) $(GDB_BSIM) ./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe2 $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
+	$(RUN_BSC_LM_LICENSE_FILE) $(GDB) ./bin/bsim_exe2 $(RUN_ARGS); retcode=$$?; exit $$retcode
 else
 ifeq ($(BOARD),bluesim)
     ifeq ($(RUNSOURCE2),)
-	$(RUN_BSC_LM_LICENSE_FILE) $(GDB_BSIM) ./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid; exit $$retcode
+	$(RUN_BSC_LM_LICENSE_FILE) $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; exit $$retcode
     else
-	$(RUN_BSC_LM_LICENSE_FILE) ./bin/bsim -w & bsimpid=$$!; echo bsimpid $$bsimpid; $(GDB2) ./bin/bsim_exe2& bsim2pid=$$!; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsimpid $$bsim2pid; exit $$retcode
+	$(RUN_BSC_LM_LICENSE_FILE) $(GDB2) ./bin/bsim_exe2& bsim2pid=$$!; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsim2pid; exit $$retcode
     endif
 else
   ifeq ($(BOARD),xsim)
     ifeq ($(RUNSOURCE2),)
-	xsim -R work.xsimtop & xsimpid=$$!; echo xsimpid $$xsimpid; sleep 5; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid; exit $$retcode
+	$(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; exit $$retcode
     else
-	xsim -R work.xsimtop & xsimpid=$$!; echo xsimpid $$xsimpid; sleep 5; $(GDB2) ./bin/ubuntu.exe2& xsim2pid=$$!; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; kill $$xsimpid $$xsim2pid; exit $$retcode
+	$(GDB2) ./bin/ubuntu.exe2& xsim2pid=$$!; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; $$xsim2pid; exit $$retcode
     endif
   else
     ifeq ($(OS),android)

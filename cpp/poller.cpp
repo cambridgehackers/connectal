@@ -33,7 +33,7 @@ PortalPoller *defaultPoller = new PortalPoller();
 uint64_t poll_enter_time, poll_return_time; // for performance measurement
 
 PortalPoller::PortalPoller()
-  : portal_wrappers(0), portal_fds(0), inited(0), numWrappers(0), numFds(0), stopping(0)
+  : portal_wrappers(0), portal_fds(0), startThread(1), numWrappers(0), numFds(0), stopping(0)
 {
     int rc = pipe(pipefd);
     if (rc != 0)
@@ -135,6 +135,7 @@ void PortalPoller::stop(void)
     uint8_t ch = 0;
     int rc;
     stopping = 1;
+    startThread = 0;
     rc = write(pipefd[1], &ch, 1);
     if (rc < 0)
         fprintf(stderr, "[%s:%d] write error %d\n", __FUNCTION__, __LINE__, errno);
@@ -214,11 +215,11 @@ void PortalPoller::start()
 {
     pthread_t threaddata;
     pthread_mutex_lock(&mutex);
-    if (inited) {
+    if (!startThread) {
         pthread_mutex_unlock(&mutex);
         return;
     }
-    inited = 1;
+    startThread = 0;
     pthread_mutex_unlock(&mutex);
     pthread_create(&threaddata, NULL, &pthread_worker, (void *)this);
     sem_wait(&sem_startup);

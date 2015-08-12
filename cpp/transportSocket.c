@@ -476,6 +476,7 @@ static int init_bsim(struct PortalInternal *pint, void *param)
 #ifdef BSIM
     int found = 0;
     int i;
+    initPortalHardware();
     connect_to_bsim();
 #ifndef __KERNEL__
     assert(pint->fpga_number < MAX_BSIM_PORTAL_ID);

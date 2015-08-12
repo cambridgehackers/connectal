@@ -67,15 +67,12 @@ extern "C" void dpi_init()
 {
     if (trace_xsimtop)
       fprintf(stderr, "%s:%d &xsim_handler=%p\n", __FUNCTION__, __LINE__, &xsim_handler);
+    defaultPoller->stop();
     mcommon = new Portal(0, 0, sizeof(uint32_t), portal_mux_handler, &xsim_handler, &transportSocketResp, NULL);
     PortalMuxParam param = {};
     param.pint = &mcommon->pint;
     xsimIndicationProxy = new XsimMsgIndicationProxy(XsimIfcNames_XsimMsgIndication, &transportMux, &param);
     xsimRequest = new XsimMsgRequest(XsimIfcNames_XsimMsgRequest, &transportMux, &param);
-
-    fprintf(stderr, "%s: before sleep\n", __FUNCTION__);
-    defaultPoller->stop();
-    sleep(1);
     fprintf(stderr, "%s: end\n", __FUNCTION__);
 }
 
