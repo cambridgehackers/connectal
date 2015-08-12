@@ -347,7 +347,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    clkgenParams.clkin_buffer     = False;
    clkgenParams.clkfbout_mult_f  = 4.000; // 1000MHz
    clkgenParams.clkout0_divide_f = derivedClockPeriod;
-   clkgenParams.clkout1_divide     = 8; //  125MHz;
+   clkgenParams.clkout1_divide     = round(mainClockPeriod); // defaults to 125MHz;
    clkgenParams.clkout1_duty_cycle = 0.5;
    clkgenParams.clkout1_phase      = 0.0000;
    ClockGenerator7           clkgen <- mkClockGenerator7(clkgenParams, clocked_by clock250, reset_by user_reset_n);
