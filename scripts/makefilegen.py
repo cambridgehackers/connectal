@@ -84,7 +84,7 @@ argparser.add_argument('--prvariant', default=[], help='name of a variant for pa
 argparser.add_argument('--reconfig', default=[], help='partial reconfig module names', action='append')
 argparser.add_argument('--bsvpath', default=[], help='directories to add to bsc search path', action='append')
 argparser.add_argument('--mainclockperiod', default=10, help='Clock period of default clock, in nanoseconds', type=int)
-argparser.add_argument('--derivedclockperiod', default=5, help='Clock period of derivedClock, in nanoseconds', type=int)
+argparser.add_argument('--derivedclockperiod', default=5, help='Clock period of derivedClock, in nanoseconds', type=float)
 argparser.add_argument('--pcieclockperiod', default=None, help='Clock period of PCIE clock, in nanoseconds', type=int)
 
 noisyFlag=False
@@ -301,7 +301,7 @@ if __name__=='__main__':
     bsvdefines.append('project_dir=$(DTOP)')
     print bsvdefines
     bsvdefines.append('MainClockPeriod=%d' % options.mainclockperiod)
-    bsvdefines.append('DerivedClockPeriod=%d' % options.derivedclockperiod)
+    bsvdefines.append('DerivedClockPeriod=%f' % options.derivedclockperiod)
     if options.pcieclockperiod:
         bsvdefines.append('PcieClockPeriod=%d' % options.pcieclockperiod)
     print bsvdefines
