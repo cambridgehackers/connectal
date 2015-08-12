@@ -5,7 +5,7 @@
         "rewireclockstring" : "tclzynqrewireclock",
         "TOP" : "BsimTop",
 	"bsvdefines": ["BsimHostInterface", "PhysAddrWidth=40", "SIMULATION"],
-        "CONNECTALFLAGS" : [],
+        "CONNECTALFLAGS" : ["--mainclockperiod=20", "--derivedclockperiod=10"],
         "need_pcie" : "unused"
     },
     "fmc": {

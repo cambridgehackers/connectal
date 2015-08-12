@@ -8,7 +8,7 @@
         "TOP" : "ZynqTop",
         "runscript" : "run.android",
         "bsvdefines" : ["XILINX=1", "ZynqHostInterface", "PhysAddrWidth=32", "NUMBER_OF_LEDS=4"],
-	    "CONNECTALFLAGS": [],
+        "CONNECTALFLAGS": ["--mainclockperiod=5", "--derivedclockperiod=2.5"],
         "need_pcie" : "unused"
     },
     "fmc1": {

@@ -7,7 +7,7 @@
         "TOP" : "PcieTop",
         "constraints": ["constraints/altera/de5.sdc"],
         "runscript" : "run.pcietest.altera",
-        "CONNECTALFLAGS" : [],
+        "CONNECTALFLAGS" : ["--mainclockperiod=8", "--derivedclockperiod=4", "--pcieclockperiod=8"],
         "rewireclockstring" : ""
     },
     "BUTTON": {

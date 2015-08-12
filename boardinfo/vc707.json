@@ -8,7 +8,7 @@
         "constraints": ["constraints/xilinx/vc707.xdc"],
         "implconstraints": ["constraints/xilinx/vc707.xdc"],
         "runscript" : "run.pcietest",
-        "CONNECTALFLAGS" : [],
+        "CONNECTALFLAGS" : ["--mainclockperiod=8", "--derivedclockperiod=4", "--pcieclockperiod=8"],
         "rewireclockstring" : ""
     },
     "fmc": {

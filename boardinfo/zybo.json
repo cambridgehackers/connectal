@@ -8,7 +8,7 @@
         "implconstraints": ["constraints/xilinx/xc7z010clg400.xdc", "constraints/xilinx/zybo.xdc"],
         "TOP" : "ZynqTop",
         "runscript" : "run.android",
-        "CONNECTALFLAGS" : [],
+        "CONNECTALFLAGS" : ["--mainclockperiod=10", "--derivedclockperiod=5"],
         "need_pcie" : "unused"
     },
     "pins": {
