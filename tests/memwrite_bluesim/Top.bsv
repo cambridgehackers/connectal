@@ -34,7 +34,7 @@ import MemTypes::*;
 import MemServer::*;
 import MMU::*;
 import HostInterface::*;
-import MemSlaveEngine::*;
+import Mem2Tlp::*;
 import MemwriteRequest::*;
 import MemServerRequest::*;
 import MMURequest::*;
@@ -91,7 +91,7 @@ module mkConnectalTop(ConnectalTop);
       $dumpoff();
    endrule
 
-   MemSlaveEngine#(DataBusWidth) memSlaveEngine <- mkMemSlaveEngine(PciId {bus: 4, dev: 2, func: 0});
+   Mem2Tlp#(DataBusWidth) memSlaveEngine <- mkMem2Tlp(PciId {bus: 4, dev: 2, func: 0});
    mkConnection(dma.masters[0], memSlaveEngine.slave);
 
    rule displayTlp;
