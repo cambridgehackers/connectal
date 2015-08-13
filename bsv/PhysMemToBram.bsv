@@ -28,7 +28,7 @@ import AddressGenerator::*;
 import BRAM::*;
 
 
-module mkCtrl2BRAM#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (PhysMemSlave#(busAddrWidth, busDataWidth))
+module mkPhysMemToBram#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (PhysMemSlave#(busAddrWidth, busDataWidth))
    provisos(Add#(a__, bramAddrWidth, busAddrWidth));
 
    FIFOF#(Bit#(6))  readTagFifo <- mkFIFOF();
