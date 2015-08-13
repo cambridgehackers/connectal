@@ -67,7 +67,7 @@ module mkNandSim#(NandCfgIndication indication) (NandSim);
    NandSimControl ns <- mkNandSimControl(take(re.readServers), take(re.dataPipes), take(we.writeServers), take(we.dataPipes), indication);
 
    Server#(MemengineCmd,Bool) slave_read_server  = re.read_servers[2].cmdServer;
-   PipeOut#(Bit#(64))         slave_read_pipe    = re.read_servers[2].dataPipe;
+   PipeOut#(MemDataF#(64))    slave_read_pipe    = re.read_servers[2].memDataPipe;
    Server#(MemengineCmd,Bool) slave_write_server = we.write_servers[3].cmdServer;
    PipeIn#(Bit#(64))          slave_write_pipe   = we.write_servers[3].dataPipe;
    FIFO#(Bit#(MemTagSize))    slaveWriteTag <- mkSizedFIFO(1);
@@ -116,8 +116,8 @@ module mkNandSim#(NandCfgIndication indication) (NandSim);
 	       let new_slaveReadCnt = slaveReadCnt-8;
 	       let last = new_slaveReadCnt==0;
 	       slaveReadCnt <= new_slaveReadCnt;
-	       if (verbose) $display("mkNandSim.memSlave::readData %d %d %d %d", slaveReadTag.first, last, rv, slaveReadCnt);
-	       return MemData{data:rv, tag:slaveReadTag.first,last:last};
+	       if (verbose) $display("mkNandSim.memSlave::readData %d %d %d %d", slaveReadTag.first, last, rv.data, slaveReadCnt);
+	       return MemData{data:rv.data, tag:slaveReadTag.first,last:last};
             endmethod
 	 endinterface
       endinterface

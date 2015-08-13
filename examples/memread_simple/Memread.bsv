@@ -19,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFO::*;
 import FIFOF::*;
 import Vector::*;
@@ -33,7 +32,7 @@ import Pipe::*;
 import HostInterface::*; // for DataBusWidth
 
 interface MemreadRequest;
-   method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
+   method Action startRead(Bit#(32) pointer, Bit#(32) numBytes, Bit#(32) burstLenInBytes, Bit#(32) iterCnt);
 endinterface
 
 interface Memread;
@@ -46,51 +45,47 @@ interface MemreadIndication;
 endinterface
 
 module mkMemread#(MemreadIndication indication) (Memread);
-
    Reg#(SGLId)   pointer <- mkReg(0);
-   Reg#(Bit#(32))       numWords <- mkReg(0);
-   Reg#(Bit#(32))       burstLen <- mkReg(0);
-   FIFO#(void)                cf <- mkSizedFIFO(1);
+   Reg#(Bit#(32))       numBytes <- mkReg(0);
+   Reg#(Bit#(BurstLenSize)) burstLenInBytes <- mkReg(0);
    Reg#(Bit#(32))  itersToFinish <- mkReg(0);
    Reg#(Bit#(32))   itersToStart <- mkReg(0);
    Reg#(Bit#(32))        srcGens <- mkReg(0);
    Reg#(Bit#(32)) mismatchCounts <- mkReg(0);
    MemreadEngine#(DataBusWidth,2,1) re <- mkMemreadEngine;
-   Bit#(MemOffsetSize) chunk = extend(numWords)*4;
-   
-   
+
    rule start (itersToStart > 0);
-      re.read_servers[0].cmdServer.request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(chunk), burstLen:truncate(burstLen*4)});
+      re.read_servers[0].cmdServer.request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, burstLen:burstLenInBytes});
       itersToStart <= itersToStart-1;
    endrule
 
    rule check;
-      let v <- toGet(re.read_servers[0].dataPipe).get;
+      let v <- toGet(re.read_servers[0].memDataPipe).get;
       let expectedV = {srcGens+1,srcGens};
-      let misMatch = v != expectedV;
+      let misMatch = v.data != expectedV;
       mismatchCounts <= mismatchCounts + (misMatch ? 1 : 0);
       let new_srcGens = srcGens+2;
-      if (new_srcGens >= truncate(chunk/4))
+      if (new_srcGens >= truncate(numBytes/4))
 	 new_srcGens = 0;
       srcGens <= new_srcGens;
-   endrule
-   
-   rule finish if (itersToFinish > 0);
-      let rv <- re.read_servers[0].cmdServer.response.get;
-      if (itersToFinish == 1) begin
-	 cf.deq;
-	 indication.readDone(mismatchCounts);
+      if (v.last) begin
+         if (itersToFinish == 1) begin
+	    indication.readDone(mismatchCounts);
+         end
+         itersToFinish <= itersToFinish - 1;
       end
-      itersToFinish <= itersToFinish - 1;
    endrule
-   
+
+   rule finish;
+      let rv <- re.read_servers[0].cmdServer.response.get;
+   endrule
+
    interface dmaClient = cons(re.dmaClient, nil);
    interface MemreadRequest request;
-      method Action startRead(Bit#(32) rp, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic) if (itersToStart == 0 && itersToFinish == 0);
+      method Action startRead(Bit#(32) rp, Bit#(32) nb, Bit#(32) bl, Bit#(32) ic) if (itersToStart == 0 && itersToFinish == 0);
 	 pointer <= rp;
-	 cf.enq(?);
-	 numWords  <= nw;
-	 burstLen  <= bl;
+	 numBytes <= nb;
+	 burstLenInBytes  <= truncate(bl);
 	 itersToFinish <= ic;
 	 itersToStart <= ic;
 	 mismatchCounts <= 0;

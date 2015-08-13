@@ -69,12 +69,12 @@ module mkMemrw#(MemrwIndication indication)(Memrw);
 
    rule finishRead;
       let rv0 <- re.read_servers[0].cmdServer.response.get;
-      if(rdIterCnt==0)
-	 indication.readDone;
    endrule
    
    rule readConsume;
-      re.read_servers[0].dataPipe.deq;
+      let v <- toGet(re.read_servers[0].memDataPipe).get;
+      if(v.last && rdIterCnt==0)
+	 indication.readDone;
    endrule
    
    rule startWrite(wrIterCnt > 0);

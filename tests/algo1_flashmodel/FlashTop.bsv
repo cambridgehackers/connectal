@@ -339,11 +339,11 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 
 		//forward data
 		rule forwardDmaRdData;
-			let d <- toGet(re.read_servers[b].dataPipe).get;
+			let d <- toGet(re.read_servers[b].memDataPipe).get;
 			let tag = dmaRdReq2RespQ[b].first;
-			flashCtrl.user.writeWord(tuple2(d, tag));
+			flashCtrl.user.writeWord(tuple2(d.data, tag));
 			$display("Main.bsv: forwarded dma read data [%d]: tag=%d, data=%x", dmaReadBurstCount[b],
-							tag, d);
+							tag, d.data);
 
 			if (dmaReadBurstCount[b] == fromInteger(pageWords-1)) begin
 				dmaRdReq2RespQ[b].deq;

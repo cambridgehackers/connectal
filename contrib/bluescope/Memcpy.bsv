@@ -61,6 +61,7 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    Reg#(SGLId)      rdPointer <- mkReg(0);
    Reg#(SGLId)      wrPointer <- mkReg(0);
    Reg#(Bit#(32))         burstLen <- mkReg(0);
+   FIFO#(void)       doneFifo <- mkFIFO;
       
    rule start(iterCnt > 0);
       re.read_servers[0].cmdServer.request.put(MemengineCmd{sglId:rdPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
@@ -68,8 +69,11 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       iterCnt <= iterCnt-1;
    endrule
 
-   rule finish;
+   rule finishold;
       let rv0 <- re.read_servers[0].cmdServer.response.get;
+   endrule
+   rule finish;
+      doneFifo.deq;
       let rv1 <- we.write_servers[0].cmdServer.response.get;
       if(iterCnt==0) begin
 	 indication.done;
@@ -77,9 +81,11 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    endrule
    
    rule xfer;
-      let v <- toGet(re.read_servers[0].dataPipe).get;
-      we.write_servers[0].dataPipe.enq(v);
-      bs.dataIn(v,v);
+      let v <- toGet(re.read_servers[0].memDataPipe).get;
+      we.write_servers[0].dataPipe.enq(v.data);
+      bs.dataIn(v.data,v.data);
+      if (v.last)
+         doneFifo.enq(?);
    endrule
    
    interface MemcpyRequest request;

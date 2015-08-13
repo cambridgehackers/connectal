@@ -89,7 +89,6 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
    endrule
    
    rule read_finish;
-      if (verbose) $display("read_finish %d", rdIterCnt);
       let rv0 <- re.read_servers[0].cmdServer.response.get;
    endrule
 
@@ -101,9 +100,10 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
    endrule
    
    rule fill_buffer;
-      let v <- toGet(re.read_servers[0].dataPipe).get;
-      buffer.enq(v);
-      if (verbose) $display("fill_buffer %h", v);
+      let v <- toGet(re.read_servers[0].memDataPipe).get;
+      buffer.enq(v.data);
+      if (verbose) $display("fill_buffer %h", v.data);
+      if (v.last && verbose) $display("read_finish %d", rdIterCnt);
    endrule
    
    rule drain_buffer;

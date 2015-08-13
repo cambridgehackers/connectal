@@ -48,9 +48,8 @@ interface ReadTestIndication;
 endinterface
 
 module mkReadTest#(ReadTestIndication indication) (ReadTest#(4));
-
    Reg#(SGLId)     pointer <- mkReg(0);
-   Reg#(Bit#(32))         numBytes <- mkReg(0);
+   Reg#(Bit#(32)) numBytes <- mkReg(0);
    Reg#(Bit#(BurstLenSize)) burstLenBytes <- mkReg(0);
    Reg#(Bit#(32))          itersToStart <- mkReg(0);
    Reg#(Bit#(32))        startBase <- mkReg(0);
@@ -62,15 +61,16 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest#(4));
    
    Vector#(4,Reg#(Bit#(32)))        srcGens <- replicateM(mkReg(0));
    Vector#(4,Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
+   Vector#(4,FIFO#(void))          doneFifo <- replicateM(mkFIFO);
    
    Stmt startStmt = seq
 		       startBase <= 0;
 		       for(startPtr <= 0; startPtr < 4; startPtr <= startPtr+1)
 			  (action
-			      let cmd = MemengineCmd{sglId:pointer, base:extend(startBase), len:numBytes, burstLen:truncate(burstLenBytes)};
+			      let cmd = MemengineCmd{sglId:pointer, base:extend(startBase), len:numBytes, burstLen:burstLenBytes};
 			      res[startPtr].read_servers[0].cmdServer.request.put(cmd);
 			      startBase <= startBase+numBytes;
-			      //$display("start:%d %h %d %h (%d)", startPtr, startBase, numBytes, burstLenBytes*4, itersToStart);
+			      //$display("start:%d %h %d %h (%d)", startPtr, startBase, numBytes, burstLenBytes, itersToStart);
 			   endaction);
 		    endseq;
    FSM startFSM <- mkFSM(startStmt);
@@ -90,11 +90,14 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest#(4));
       itersToStart <= itersToStart-1;
    endrule
    
-   rule finish;
-      for(Integer i = 0; i < 4; i=i+1) begin
-	 //$display("finish: %d (%d)", i, itersToStart);
+   rule finishold;
+      for(Integer i = 0; i < 4; i=i+1)
 	 let rv <- res[i].read_servers[0].cmdServer.response.get;
-      end
+   endrule
+
+   rule finish;
+      for(Integer i = 0; i < 4; i=i+1)
+	 doneFifo[i].deq;
       if (itersToStart == 0)
 	 finishFSM.start;
       else
@@ -103,9 +106,9 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest#(4));
    
    for(Integer i = 0; i < 4; i=i+1)
       rule check;
-	 let v <- toGet(res[i].read_servers[0].dataPipe).get;
+	 let v <- toGet(res[i].read_servers[0].memDataPipe).get;
 	 let expectedV = {srcGens[i]+1,srcGens[i]};
-	 let misMatch = v != expectedV;
+	 let misMatch = v.data != expectedV;
 	 mismatchCounts[i] <= mismatchCounts[i] + (misMatch ? 1 : 0);
 	 if (srcGens[i]+2 == fromInteger(i+1)*(numBytes>>2)) begin
 	    //$display("check %d %d", i, srcGens[i]+1);
@@ -113,6 +116,10 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest#(4));
 	 end
 	 else
 	    srcGens[i] <= srcGens[i]+2;
+         if (v.last) begin
+	    //$display("finish: %d (%d)", i, itersToStart);
+            doneFifo[i].enq(?);
+         end
       endrule
    
    function MemReadClient#(DataBusWidth) dc(MemreadEngine#(DataBusWidth,1,1) re) = re.dmaClient;

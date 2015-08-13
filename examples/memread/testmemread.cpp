@@ -101,7 +101,7 @@ int main(int argc, const char **argv)
 
     fprintf(stderr, "Starting second read, mismatches expected\n");
     mismatchCount = 0;
-    device->startRead(ref_srcAlloc, numWords * 4, burstLen * 4, iterCnt);
+    device->startRead(ref_srcAlloc, numWords * 4 / NumberOfMasters, burstLen * 4, iterCnt);
     sem_wait(&test_sem);
     if (mismatchCount != 3/*number of errors introduced above*/ * iterCnt) {
         fprintf(stderr, "Main::second test failed to match mismatchCount=%d (expected %d) iterCnt=%d numWords=%d.\n",

@@ -62,6 +62,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest#(4));
    
    Vector#(4,Reg#(Bit#(32)))        srcGens <- replicateM(mkReg(0));
    Vector#(4,Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
+   Vector#(4,FIFO#(void)) doneFifo <- replicateM(mkFIFO);
    
    Stmt startStmt = seq
 		       startBase <= 0;
@@ -90,11 +91,14 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest#(4));
       itersToStart <= itersToStart-1;
    endrule
    
-   rule finish;
-      for(Integer i = 0; i < 4; i=i+1) begin
-	 //$display("finish: %d (%d)", i, itersToStart);
+   rule finishold;
+      for(Integer i = 0; i < 4; i=i+1)
 	 let rv <- res[i].read_servers[0].cmdServer.response.get;
-      end
+   endrule
+   rule finish;
+      for(Integer i = 0; i < 4; i=i+1)
+         doneFifo[i].deq;
+      //$display("finish: %d (%d)", i, itersToStart);
       if (itersToStart == 0)
 	 finishFSM.start;
       else
@@ -103,9 +107,9 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest#(4));
    
    for(Integer i = 0; i < 4; i=i+1)
       rule check;
-	 let v <- toGet(res[i].read_servers[0].dataPipe).get;
+	 let v <- toGet(res[i].read_servers[0].memDataPipe).get;
 	 let expectedV = {srcGens[i]+3,srcGens[i]+2,srcGens[i]+1,srcGens[i]};
-	 let misMatch = v != expectedV;
+	 let misMatch = v.data != expectedV;
 	 mismatchCounts[i] <= mismatchCounts[i] + (misMatch ? 1 : 0);
 	 if (srcGens[i]+4 == fromInteger(i+1)*(numBytes>>2)) begin
 	    //$display("check %d %d", i, srcGens[i]+1);
@@ -113,6 +117,8 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest#(4));
 	 end
 	 else
 	    srcGens[i] <= srcGens[i]+4;
+         if (v.last)
+            doneFifo[i].enq(?);
       endrule
    
    function MemReadClient#(DataBusWidth) dc(MemreadEngine#(DataBusWidth,1,1) re) = re.dmaClient;

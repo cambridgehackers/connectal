@@ -30,6 +30,10 @@
 #include "dmaManager.h"
 #include "StrstrIndication.h"
 #include "StrstrRequest.h"
+#include "MMURequest.h"
+#include "MMUIndication.h"
+#include "MemServerRequest.h"
+#include "MemServerIndication.h"
 
 static int trace_memory = 1;
 extern "C" {
@@ -48,15 +52,15 @@ int main(int argc, const char **argv)
 {
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
   DmaManager *hostDma = platformInit();
-  MMURequestProxy *nandsimMMURequest = new MMURequestProxy(IfcNames_NandMMURequest);
+  MMURequestProxy *nandsimMMURequest = new MMURequestProxy(IfcNames_NandMMURequestS2H);
   DmaManager *nandsimDma = new DmaManager(nandsimMMURequest);
-  MMUIndication nandsimMMUIndication(nandsimDma,IfcNames_NandMMUIndication);
+  MMUIndication nandsimMMUIndication(nandsimDma,IfcNames_NandMMUIndicationH2S);
 
-  StrstrRequestProxy *strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequest);
-  StrstrIndication *strstrIndication = new StrstrIndication(IfcNames_AlgoIndication);
+  StrstrRequestProxy *strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequestS2H);
+  StrstrIndication *strstrIndication = new StrstrIndication(IfcNames_AlgoIndicationH2S);
   
-  MemServerIndication hostMemServerIndication(IfcNames_HostMemServerIndication);
-  MemServerIndication nandsimMemServerIndication(IfcNames_NandMemServerIndication);
+  MemServerIndication hostMemServerIndication(IfcNames_HostMemServerIndicationH2S);
+  MemServerIndication nandsimMemServerIndication(IfcNames_NandMemServerIndicationH2S);
 
   fprintf(stderr, "Main::allocating memory...\n");
 

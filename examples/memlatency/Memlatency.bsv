@@ -81,12 +81,14 @@ module mkMemlatency#(MemlatencyIndication indication)(Memlatency);
 
    rule finishRead;
       let rv0 <- re.read_servers[0].cmdServer.response.get;
-      let rdStart <- toGet(rdStartFifo).get();
-      rdLatFifo.enq(cycles-rdStart);
    endrule
    
    rule readConsume;
-      re.read_servers[0].dataPipe.deq;
+      let v <- toGet(re.read_servers[0].memDataPipe).get;
+      if (v.last) begin
+         let rdStart <- toGet(rdStartFifo).get();
+         rdLatFifo.enq(cycles-rdStart);
+      end
    endrule
    
    rule startWrite(wrIterCnt > 0);
