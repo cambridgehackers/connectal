@@ -57,12 +57,12 @@ module mkMemread#(MemreadIndication indication) (Memread);
    
    rule finish;
       if (debug) $display("finish");
-      let rv <- re.readServers[0].response.get;
+      let rv <- re.read_servers[0].cmdServer.response.get;
       indication.readDone(mismatchCount);
    endrule
    
    rule check;
-      let v <- toGet(re.dataPipes[0]).get;
+      let v <- toGet(re.read_servers[0].dataPipe).get;
       let expectedV = {srcGen+1,srcGen};
       let misMatch = v != expectedV;
       if (debug && misMatch) $display("check %h %h", v, expectedV);
@@ -84,7 +84,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 mismatchCount <= 0;
 	 srcGen <= 0;
 	 let cmd = MemengineCmd{sglId:rp, base:extend(off*4), len:nw*4, burstLen:truncate(bl*4)};
-	 re.readServers[0].request.put(cmd);
+	 re.read_servers[0].cmdServer.request.put(cmd);
       endmethod
    endinterface
 endmodule

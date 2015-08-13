@@ -110,11 +110,11 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, HdmiGenerato
         synchronizer.enq(serdes.data.capture);
     endrule
     rule send_data;
-        we.dataPipes[0].enq(synchronizer.first);
+        we.write_servers[0].dataPipe.enq(synchronizer.first);
         synchronizer.deq;
     endrule
     rule dma_response;
-        let rv <- we.writeServers[0].response.get;
+        let rv <- we.write_servers[0].cmdServer.response.get;
         serdes_indication.iserdes_dma('hffffffff); // request is all finished
     endrule
 
@@ -229,7 +229,7 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, HdmiGenerato
             serdes.data.start_capture();
         endmethod
         method Action startWrite(Bit#(32) pointer, Bit#(32) numBytes);
-            we.writeServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(numBytes), burstLen:8});
+            we.write_servers[0].cmdServer.request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(numBytes), burstLen:8});
             dmaRun <= True;
         endmethod
 	method Action set_host_oe(Bit#(1) v);

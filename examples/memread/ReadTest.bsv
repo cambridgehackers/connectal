@@ -73,7 +73,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
       // first pipeline stage
       if (re.read_servers[0].memDataPipe.notEmpty()) begin
 	 let md <- toGet(re.read_servers[0].memDataPipe).get;
-	 $display("md v=%h tag=%d first=%d last=%d", md.data, md.tag, md.first, md.last);
+	 //$display("md v=%h tag=%d first=%d last=%d", md.data, md.tag, md.first, md.last);
 	 let v = md.data;
 	 let rval = bytesRead/4;
 	 function Bit#(32) expectedVal(Integer i); return rval+fromInteger(i); endfunction

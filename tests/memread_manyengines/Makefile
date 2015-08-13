@@ -1,10 +1,10 @@
 
 CONNECTALDIR?=../..
-S2H_INTERFACES = MemreadRequest:Memread.request
-H2S_INTERFACES = Memread\#\(\`NumEngines\):MemreadIndication
-MEM_INTERFACES = lMemread.dmaClients,nil
-BSVFILES = Memread.bsv
-CPPFILES=testmemread.cpp
+S2H_INTERFACES = ReadTestRequest:ReadTest.request
+H2S_INTERFACES = ReadTest\#\(\`NumEngines\):ReadTestIndication
+MEM_INTERFACES = lReadTest.dmaClients,nil
+BSVFILES = ReadTest.bsv
+CPPFILES = ../../examples/memread/testmemread.cpp
 CONNECTALFLAGS += --bscflags " -D DataBusWidth=128 -D NumEngines=4"
 CONNECTALFLAGS += -I$(CONNECTALDIR)/examples/memread
 

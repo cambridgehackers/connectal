@@ -182,10 +182,6 @@ Memory Engine Interfaces
 
    .. bsv:subinterface:: MemWriteClient#(dataWidth) dmaClient
 
-   .. bsv:subinterface:: Vector#(numServers, Server#(MemengineCmd,Bool)) writeServers
-
-   .. bsv:subinterface:: Vector#(numServers, PipeIn#(Bit#(dataWidth))) dataPipes
-
    .. bsv:subinterface:: Vector#(numServers, MemwriteServer#(dataWidth)) write_servers
 
 .. bsv:interface:: MemreadServer#(numeric type dataWidth)
@@ -197,10 +193,6 @@ Memory Engine Interfaces
 .. bsv:interface:: MemreadEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers)
 
    .. bsv:subinterface:: MemReadClient#(dataWidth) dmaClient
-
-   .. bsv:subinterface:: Vector#(numServers, Server#(MemengineCmd,Bool)) readServers
-
-   .. bsv:subinterface:: Vector#(numServers, PipeOut#(Bit#(dataWidth))) dataPipes
 
    .. bsv:subinterface:: Vector#(numServers, MemreadServer#(dataWidth)) read_servers
 

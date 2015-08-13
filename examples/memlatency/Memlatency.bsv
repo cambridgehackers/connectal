@@ -74,35 +74,35 @@ module mkMemlatency#(MemlatencyIndication indication)(Memlatency);
    endrule
    
    rule startRead(rdIterCnt > 0);
-      re.readServers[0].request.put(MemengineCmd{sglId:rdPointer, base:0, len:burstLen*4, burstLen:truncate(burstLen*4)});
+      re.read_servers[0].cmdServer.request.put(MemengineCmd{sglId:rdPointer, base:0, len:burstLen*4, burstLen:truncate(burstLen*4)});
       rdIterCnt <= rdIterCnt-1;
       rdStartFifo.enq(cycles);
    endrule
 
    rule finishRead;
-      let rv0 <- re.readServers[0].response.get;
+      let rv0 <- re.read_servers[0].cmdServer.response.get;
       let rdStart <- toGet(rdStartFifo).get();
       rdLatFifo.enq(cycles-rdStart);
    endrule
    
    rule readConsume;
-      re.dataPipes[0].deq;
+      re.read_servers[0].dataPipe.deq;
    endrule
    
    rule startWrite(wrIterCnt > 0);
-      we.writeServers[0].request.put(MemengineCmd{sglId:wrPointer, base:0, len:burstLen*4, burstLen:truncate(burstLen*4)});
+      we.write_servers[0].cmdServer.request.put(MemengineCmd{sglId:wrPointer, base:0, len:burstLen*4, burstLen:truncate(burstLen*4)});
       wrIterCnt <= wrIterCnt-1;
       wrStartFifo.enq(cycles);
    endrule
 
    rule finishWrite;
-      let rv0 <- we.writeServers[0].response.get;
+      let rv0 <- we.write_servers[0].cmdServer.response.get;
       let wrStart <- toGet(wrStartFifo).get();
       wrLatFifo.enq(cycles-wrStart);
    endrule
    
    rule writeProduce;
-      we.dataPipes[0].enq(1);
+      we.write_servers[0].dataPipe.enq(1);
    endrule
    
    rule report;

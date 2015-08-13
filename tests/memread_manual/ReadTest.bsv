@@ -59,12 +59,12 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    
    rule start (itersToStart > 0);
       $display("Test: request.put");
-      re.readServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, burstLen:burstLenBytes});
+      re.read_servers[0].cmdServer.request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, burstLen:burstLenBytes});
       itersToStart <= itersToStart-1;
    endrule
 
    rule check;
-      let v <- toGet(re.dataPipes[0]).get;
+      let v <- toGet(re.read_servers[0].dataPipe).get;
       let rval = wordsRead/4;
       let expectedV = {rval+1,rval};
       let misMatch = v != expectedV;
@@ -81,7 +81,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    rule finish if (itersToFinish > 0);
       $display("Test: response.get itersToFinish %x", itersToFinish);
       let mc <- toGet(checkDoneFifo).get();
-      let rv <- re.readServers[0].response.get;
+      let rv <- re.read_servers[0].cmdServer.response.get;
       if (itersToFinish == 1) begin
 	 indication.readDone(mismatchCounts);
       end

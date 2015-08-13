@@ -53,6 +53,11 @@ public:
         mismatchCount += v;
         sem_post(&test_sem);
     }
+    // memread_4m
+    void started ( const uint32_t numWords ) {
+    }
+    void reportStateDbg ( const uint32_t streamRdCnt, const uint32_t mismatchCount )  {
+    }
     ReadTestIndication(int id, int tile=DEFAULT_TILE) : ReadTestIndicationWrapper(id,tile){}
 };
 

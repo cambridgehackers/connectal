@@ -48,28 +48,12 @@ import FMComms1ADC::*;
 import FMComms1DAC::*;
 import FMComms1::*;
 import extraXilinxCells::*;
-
-/* Duplicate def here, this is also in ZynqTop */
-
-interface I2C_Pins;
-   interface Inout#(Bit#(1)) scl;
-   interface Inout#(Bit#(1)) sda;
-endinterface
+import FMComms1Pins::*;
 
 
 `define BlueScopeEventPIOSampleLength 512
 
-typedef enum { IfcNames_BlueScopeEventPIORequest, IfcNames_BlueScopeEventPIOIndication, IfcNames_FMComms1Request, IfcNames_FMComms1Indication, IfcNames_HostMemServerIndication, IfcNames_HostMemServerRequest, IfcNames_HostMMURequest, IfcNames_HostMMUIndication} IfcNames deriving (Eq,Bits);
-
-interface FMComms1Pins;
-   interface FMComms1ADCPins adcpins;
-   interface FMComms1DACPins dacpins;
-   interface I2C_Pins         i2c1;
-   method Bit#(1) ad9548_ref_p();
-   method Bit#(1) ad9548_ref_n();
-   
-//   (* prefix="" *)
-endinterface
+typedef enum { IfcNames_BlueScopeEventPIORequest, IfcNames_BlueScopeEventPIOIndication, IfcNames_FMComms1Request, IfcNames_FMComms1Indication, IfcNames_MemServerIndicationH2S, IfcNames_MemServerRequestS2H, IfcNames_MMURequestS2H, IfcNames_MMUIndicationH2S} IfcNames deriving (Eq,Bits);
 
 /* clk1 is the FCLKCLK1 controlled by software */
 
@@ -117,13 +101,13 @@ module mkConnectalTop#(HostInterface host)(ConnectalTop);
 
    Vector#(1,  MemReadClient#(64))   readClients = cons(fmcomms1.readDmaClient, nil);
    Vector#(1, MemWriteClient#(64))  writeClients = cons(fmcomms1.writeDmaClient, nil);
-   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_HostMMUIndication);
+   MMUIndicationProxy hostMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_MMUIndicationH2S);
    MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, hostMMUIndicationProxy.ifc);
-   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(IfcNames_HostMMURequest, hostMMU.request);
+   MMURequestWrapper hostMMURequestWrapper <- mkMMURequestWrapper(IfcNames_MMURequestS2H, hostMMU.request);
 
-   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_HostMemServerIndication);
+   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_MemServerIndicationH2S);
    MemServer#(PhysAddrWidth,64,1) dma <- mkMemServer(readClients, writeClients, cons(hostMMU,nil), hostMemServerIndicationProxy.ifc);
-   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_HostMemServerRequest, dma.request);
+   MemServerRequestWrapper hostMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_MemServerRequestS2H, dma.request);
 
    Vector#(8,StdPortal) portals;
    portals[0] = fmcomms1RequestWrapper.portalIfc;

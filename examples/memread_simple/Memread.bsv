@@ -60,12 +60,12 @@ module mkMemread#(MemreadIndication indication) (Memread);
    
    
    rule start (itersToStart > 0);
-      re.readServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(chunk), burstLen:truncate(burstLen*4)});
+      re.read_servers[0].cmdServer.request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(chunk), burstLen:truncate(burstLen*4)});
       itersToStart <= itersToStart-1;
    endrule
 
    rule check;
-      let v <- toGet(re.dataPipes[0]).get;
+      let v <- toGet(re.read_servers[0].dataPipe).get;
       let expectedV = {srcGens+1,srcGens};
       let misMatch = v != expectedV;
       mismatchCounts <= mismatchCounts + (misMatch ? 1 : 0);
@@ -76,7 +76,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    endrule
    
    rule finish if (itersToFinish > 0);
-      let rv <- re.readServers[0].response.get;
+      let rv <- re.read_servers[0].cmdServer.response.get;
       if (itersToFinish == 1) begin
 	 cf.deq;
 	 indication.readDone(mismatchCounts);

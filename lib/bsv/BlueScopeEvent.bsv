@@ -112,10 +112,10 @@ module mkSyncBlueScopeEvent#(Integer samples, BlueScopeEventIndication indicatio
    
 //   (* descending_urgency = "resetState, startState" *)
 
-   mkConnection(toGet(dfifo), toPut(mwriter.dataPipes[0]));
+   mkConnection(toGet(dfifo), toPut(mwriter.write_servers[0].dataPipe));
 
    rule writeDone;
-      let tag <- mwriter.writeServers[0].response.get();
+      let tag <- mwriter.write_servers[0].cmdServer.response.get();
       indication.dmaDone;
    endrule
 
@@ -159,7 +159,7 @@ module mkSyncBlueScopeEvent#(Integer samples, BlueScopeEventIndication indicatio
       endmethod
 
       method Action startDma(Bit#(32) pointer, Bit#(32) len);
-	 mwriter.writeServers[0].request.put(MemengineCmd {sglId: pointer, base: 0, burstLen: 8*fromInteger(valueOf(TDiv#(dataWidth,8))), len: len, tag: ?});
+	 mwriter.write_servers[0].cmdServer.request.put(MemengineCmd {sglId: pointer, base: 0, burstLen: 8*fromInteger(valueOf(TDiv#(dataWidth,8))), len: len, tag: ?});
       endmethod
 
    endinterface

@@ -1,6 +1,6 @@
 
 S2H_INTERFACES += RbmRequest:Rbm.rbmRequest MmRequestTN:Rbm.mmRequest SigmoidRequest:Rbm.sigmoidRequest TimerRequest:Rbm.timerRequest
-H2S_INTERFACES += Rbm\#\(TDiv\#\(DataBusWidth,32\)\):RbmIndication,SigmoidIndication,MmIndication,TimerIndication
+H2S_INTERFACES += Rbm\#\(TDiv\#\(DataBusWidth,32\)\):RbmIndication,SigmoidIndication,MmIndication,TimerIndication:host
 MEM_INTERFACES = lRbm.readClients,lRbm.writeClients
 
 gen:: $(RBMDIR)/datasets

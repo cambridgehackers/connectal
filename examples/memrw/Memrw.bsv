@@ -63,34 +63,34 @@ module mkMemrw#(MemrwIndication indication)(Memrw);
    
    rule startRead(rdIterCnt > 0);
       $display("startRead %d", rdIterCnt);
-      re.readServers[0].request.put(MemengineCmd{sglId:rdPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
+      re.read_servers[0].cmdServer.request.put(MemengineCmd{sglId:rdPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
       rdIterCnt <= rdIterCnt-1;
    endrule
 
    rule finishRead;
-      let rv0 <- re.readServers[0].response.get;
+      let rv0 <- re.read_servers[0].cmdServer.response.get;
       if(rdIterCnt==0)
 	 indication.readDone;
    endrule
    
    rule readConsume;
-      re.dataPipes[0].deq;
+      re.read_servers[0].dataPipe.deq;
    endrule
    
    rule startWrite(wrIterCnt > 0);
       $display("startWrite %d", wrIterCnt);
-      we.writeServers[0].request.put(MemengineCmd{sglId:wrPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
+      we.write_servers[0].cmdServer.request.put(MemengineCmd{sglId:wrPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
       wrIterCnt <= wrIterCnt-1;
    endrule
 
    rule finishWrite;
-      let rv0 <- we.writeServers[0].response.get;
+      let rv0 <- we.write_servers[0].cmdServer.response.get;
       if(wrIterCnt==0)
 	 indication.writeDone;
    endrule
    
    rule writeProduce;
-      we.dataPipes[0].enq(1);
+      we.write_servers[0].dataPipe.enq(1);
    endrule
    
    interface MemrwRequest request;

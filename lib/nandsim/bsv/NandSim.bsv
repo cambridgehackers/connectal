@@ -66,10 +66,10 @@ module mkNandSim#(NandCfgIndication indication) (NandSim);
    MemwriteEngine#(64, 1, 4)  we <- mkMemwriteEngine();
    NandSimControl ns <- mkNandSimControl(take(re.readServers), take(re.dataPipes), take(we.writeServers), take(we.dataPipes), indication);
 
-   Server#(MemengineCmd,Bool) slave_read_server  = re.readServers[2];
-   PipeOut#(Bit#(64))         slave_read_pipe    = re.dataPipes[2];
-   Server#(MemengineCmd,Bool) slave_write_server = we.writeServers[3];
-   PipeIn#(Bit#(64))          slave_write_pipe   = we.dataPipes[3];
+   Server#(MemengineCmd,Bool) slave_read_server  = re.read_servers[2].cmdServer;
+   PipeOut#(Bit#(64))         slave_read_pipe    = re.read_servers[2].dataPipe;
+   Server#(MemengineCmd,Bool) slave_write_server = we.write_servers[3].cmdServer;
+   PipeIn#(Bit#(64))          slave_write_pipe   = we.write_servers[3].dataPipe;
    FIFO#(Bit#(MemTagSize))    slaveWriteTag <- mkSizedFIFO(1);
    FIFO#(Bit#(MemTagSize))    slaveReadTag <- mkSizedFIFO(1);
    Reg#(Bit#(BurstLenSize))   slaveReadCnt <- mkReg(0);

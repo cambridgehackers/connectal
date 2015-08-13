@@ -200,7 +200,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
    //   /dmaReady <= True;
    ///endrule
    //rule startd if (dmaReady && !duringDma &&& referenceReg matches tagged Valid .reference);
-      memreadEngine.readServers[0].request.put(MemengineCmd{sglId:reference, base:0, len:pack(extend(byteCountReg)), burstLen:fromInteger(valueOf(FrameBufferBurstLenInBytes)), tag: 0});
+      memreadEngine.read_servers[0].cmdServer.request.put(MemengineCmd{sglId:reference, base:0, len:pack(extend(byteCountReg)), burstLen:fromInteger(valueOf(FrameBufferBurstLenInBytes)), tag: 0});
       if (traceTransfers)
 	 hdmiDisplayIndication.transferStarted(transferCount);
       transferCyclesSnapshot <= transferCycles;
@@ -220,7 +220,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
       transferCycles <= transferCycles + 1;
    endrule
    rule finishTransferRule;
-      let b <- memreadEngine.readServers[0].response.get;
+      let b <- memreadEngine.read_servers[0].cmdServer.response.get;
       transferCount <= transferCount + 1;
       let tc = transferCycles - transferCyclesSnapshot;
       transferSumOfCycles <= transferSumOfCycles + extend(tc);

@@ -62,8 +62,8 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
    FIFOF#(Bit#(64)) outReg1 <- mkFIFOF;
    PipeIn#(Bit#(64)) pi0 = toPipeIn(outReg0);
    PipeIn#(Bit#(64)) pi1 = toPipeIn(outReg1);
-   mkConnection(re0.dataPipes[0], pi0);
-   mkConnection(re1.dataPipes[0], pi1);
+   mkConnection(re0.read_servers[0].dataPipe, pi0);
+   mkConnection(re1.read_servers[0].dataPipe, pi1);
 
    Reg#(Bool)         valid0Reg <- mkReg(False);
    Reg#(Bit#(64)) v0Reg <- mkReg(0);
@@ -114,16 +114,16 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
    endrule
    
    rule done;
-      let rv0 <- re0.readServers[0].response.get;
-      let rv1 <- re1.readServers[0].response.get;
+      let rv0 <- re0.read_servers[0].cmdServer.response.get;
+      let rv1 <- re1.read_servers[0].cmdServer.response.get;
       indication.readDone(mismatchCount1+mismatchCount0);
    endrule
    
    interface Memread2Request request;
        method Action startRead(Bit#(32) pointer, Bit#(32) pointer2, Bit#(32) numWords, Bit#(32) bl);
 	  $display("startRead(%d %d %d %d)", pointer, pointer2, numWords, bl);
-	  re0.readServers[0].request.put(MemengineCmd{sglId:pointer,  base:0, len:numWords*4, burstLen:truncate(bl*4)});
-	  re1.readServers[0].request.put(MemengineCmd{sglId:pointer2, base:0, len:numWords*4, burstLen:truncate(bl*4)});
+	  re0.read_servers[0].cmdServer.request.put(MemengineCmd{sglId:pointer,  base:0, len:numWords*4, burstLen:truncate(bl*4)});
+	  re1.read_servers[0].cmdServer.request.put(MemengineCmd{sglId:pointer2, base:0, len:numWords*4, burstLen:truncate(bl*4)});
 	  indication.started(numWords);
        endmethod
 

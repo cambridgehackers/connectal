@@ -19,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFO::*;
 import FIFOF::*;
 import Vector::*;
@@ -27,50 +26,51 @@ import StmtFSM::*;
 import GetPut::*;
 import ClientServer::*;
 
+import Pipe::*;
 import MemTypes::*;
 import MemreadEngine::*;
-import Pipe::*;
+import HostInterface::*;
 
-interface MemreadRequest;
-   method Action startRead(Bit#(32) pointer, Bit#(32) offset, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
+interface ReadTestRequest;
+   method Action startRead(Bit#(32) pointer, Bit#(32) numBytes, Bit#(32) burstLen, Bit#(32) iterCnt);
    method Action getStateDbg();   
 endinterface
 
-interface Memread#(numeric type nClients);
-   interface MemreadRequest request;
-   interface Vector#(nClients,MemReadClient#(64)) dmaClients;
+interface ReadTest#(numeric type nClients);
+   interface ReadTestRequest request;
+   interface Vector#(nClients,MemReadClient#(DataBusWidth)) dmaClients;
 endinterface
 
-interface MemreadIndication;
-   method Action started(Bit#(32) numWords);
+interface ReadTestIndication;
+   method Action started(Bit#(32) numBytes);
    method Action reportStateDbg(Bit#(32) streamRdCnt, Bit#(32) mismatchCount);
    method Action readDone(Bit#(32) mismatchCount);
 endinterface
 
-module mkMemread#(MemreadIndication indication) (Memread#(4));
+module mkReadTest#(ReadTestIndication indication) (ReadTest#(4));
 
    Reg#(SGLId)     pointer <- mkReg(0);
-   Reg#(Bit#(32))         numWords <- mkReg(0);
-   Reg#(Bit#(32))         burstLen <- mkReg(0);
-   Reg#(Bit#(32))          iterCnt <- mkReg(0);
+   Reg#(Bit#(32))         numBytes <- mkReg(0);
+   Reg#(Bit#(BurstLenSize)) burstLenBytes <- mkReg(0);
+   Reg#(Bit#(32))          itersToStart <- mkReg(0);
    Reg#(Bit#(32))        startBase <- mkReg(0);
    Reg#(Bit#(3))          startPtr <- mkReg(0);
    Reg#(Bit#(3))         finishPtr <- mkReg(0);
    Reg#(Bit#(32))    mismatchAccum <- mkReg(0);
+   Vector#(4,MemreadEngine#(DataBusWidth,1,1))      res <- replicateM(mkMemreadEngine);
    FIFO#(void)           startFifo <- mkFIFO;
    
    Vector#(4,Reg#(Bit#(32)))        srcGens <- replicateM(mkReg(0));
    Vector#(4,Reg#(Bit#(32))) mismatchCounts <- replicateM(mkReg(0));
-   Vector#(4,MemreadEngine#(64,1,1))      res <- replicateM(mkMemreadEngine);
    
    Stmt startStmt = seq
 		       startBase <= 0;
 		       for(startPtr <= 0; startPtr < 4; startPtr <= startPtr+1)
 			  (action
-			      let cmd = MemengineCmd{sglId:pointer, base:extend(startBase), len:numWords, burstLen:truncate(burstLen*4)};
-			      res[startPtr].readServers[0].request.put(cmd);
-			      startBase <= startBase+numWords;
-			      //$display("start:%d %h %d %h (%d)", startPtr, startBase, numWords, burstLen*4, iterCnt);
+			      let cmd = MemengineCmd{sglId:pointer, base:extend(startBase), len:numBytes, burstLen:truncate(burstLenBytes)};
+			      res[startPtr].read_servers[0].cmdServer.request.put(cmd);
+			      startBase <= startBase+numBytes;
+			      //$display("start:%d %h %d %h (%d)", startPtr, startBase, numBytes, burstLenBytes*4, itersToStart);
 			   endaction);
 		    endseq;
    FSM startFSM <- mkFSM(startStmt);
@@ -84,18 +84,18 @@ module mkMemread#(MemreadIndication indication) (Memread#(4));
 		    endseq;
    FSM finishFSM <- mkFSM(finishStmt);
    
-   rule start (iterCnt > 0);
+   rule start (itersToStart > 0);
       startFifo.deq;
       startFSM.start;
-      iterCnt <= iterCnt-1;
+      itersToStart <= itersToStart-1;
    endrule
    
    rule finish;
       for(Integer i = 0; i < 4; i=i+1) begin
-	 //$display("finish: %d (%d)", i, iterCnt);
-	 let rv <- res[i].readServers[0].response.get;
+	 //$display("finish: %d (%d)", i, itersToStart);
+	 let rv <- res[i].read_servers[0].cmdServer.response.get;
       end
-      if (iterCnt == 0)
+      if (itersToStart == 0)
 	 finishFSM.start;
       else
 	 startFifo.enq(?);
@@ -103,38 +103,36 @@ module mkMemread#(MemreadIndication indication) (Memread#(4));
    
    for(Integer i = 0; i < 4; i=i+1)
       rule check;
-	 let v <- toGet(res[i].dataPipes[0]).get;
-	 let expectedV = {srcGens[i]+1,srcGens[i]};
+	 let v <- toGet(res[i].read_servers[0].dataPipe).get;
+	 let expectedV = {srcGens[i]+3,srcGens[i]+2,srcGens[i]+1,srcGens[i]};
 	 let misMatch = v != expectedV;
 	 mismatchCounts[i] <= mismatchCounts[i] + (misMatch ? 1 : 0);
-	 if (srcGens[i]+2 == fromInteger(i+1)*(numWords>>2)) begin
+	 if (srcGens[i]+4 == fromInteger(i+1)*(numBytes>>2)) begin
 	    //$display("check %d %d", i, srcGens[i]+1);
-	    srcGens[i] <= fromInteger(i)*(numWords>>2);
+	    srcGens[i] <= fromInteger(i)*(numBytes>>2);
 	 end
 	 else
-	    srcGens[i] <= srcGens[i]+2;
+	    srcGens[i] <= srcGens[i]+4;
       endrule
    
-   function MemReadClient#(64) dc(MemreadEngine#(64,1,1) re) = re.dmaClient;
+   function MemReadClient#(DataBusWidth) dc(MemreadEngine#(DataBusWidth,1,1) re) = re.dmaClient;
    interface dmaClients = map(dc,res);
-   interface MemreadRequest request;
-      method Action startRead(Bit#(32) rp, Bit#(32) off, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
-	 //$display("startRead rdPointer=%d numWords=%h burstLen=%d iterCnt=%d", rp, nw, bl, ic);
-	 indication.started(nw);
+   interface ReadTestRequest request;
+      method Action startRead(Bit#(32) rp, Bit#(32) nb, Bit#(32) bl, Bit#(32) ic);
+	 //$display("startRead rdPointer=%d numBytes=%h burstLenBytes=%d itersToStart=%d", rp, nb, bl, ic);
+	 indication.started(nb);
 	 pointer <= rp;
-	 numWords  <= nw;
-	 burstLen  <= bl;
-	 iterCnt <= ic;
+	 numBytes  <= nb;
+	 burstLenBytes  <= truncate(bl);
+	 itersToStart <= ic;
 	 for(Integer i = 0; i < 4; i=i+1) begin
 	    mismatchCounts[i] <= 0;
-	    srcGens[i] <= fromInteger(i)*(nw>>2);
+	    srcGens[i] <= fromInteger(i)*(nb>>2);
 	 end
 	 startFifo.enq(?);
       endmethod
       method Action getStateDbg();
-	 indication.reportStateDbg(iterCnt, mismatchCounts[0]);
+	 indication.reportStateDbg(itersToStart, mismatchCounts[0]);
       endmethod
    endinterface
 endmodule
-
-

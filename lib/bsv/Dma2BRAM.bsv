@@ -209,7 +209,7 @@ module mkBRAMWriteClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMWriteClient#
       
    rule drain_geatbox;
       Vector#(nd,Bit#(dsz)) v = gb.first;
-      we.dataPipes[0].enq(pack(v));
+      we.write_servers[0].dataPipe.enq(pack(v));
       gb.deq;
    endrule
    
@@ -225,14 +225,14 @@ module mkBRAMWriteClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMWriteClient#
    endrule
    
    rule loadReq(i <= n);
-      we.writeServers[0].request.put(MemengineCmd{sglId:ptr, base:off, len:truncate(bus_width_in_bytes), burstLen:truncate(bus_width_in_bytes), tag: 0});
+      we.write_servers[0].cmdServer.request.put(MemengineCmd{sglId:ptr, base:off, len:truncate(bus_width_in_bytes), burstLen:truncate(bus_width_in_bytes), tag: 0});
       off <= off+bus_width_in_bytes;
       i <= i+fromInteger(valueOf(nd));
       //$display("mkBRAMWriteClient::loadReq %h", i);
    endrule
    
    rule loadResp;
-      let __x <- we.writeServers[0].response.get;
+      let __x <- we.write_servers[0].cmdServer.response.get;
       if (i > n)
 	 f.enq(?);
    endrule

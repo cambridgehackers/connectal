@@ -63,22 +63,22 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    Reg#(Bit#(32))         burstLen <- mkReg(0);
       
    rule start(iterCnt > 0);
-      re.readServers[0].request.put(MemengineCmd{sglId:rdPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
-      we.writeServers[0].request.put(MemengineCmd{sglId:wrPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
+      re.read_servers[0].cmdServer.request.put(MemengineCmd{sglId:rdPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
+      we.write_servers[0].cmdServer.request.put(MemengineCmd{sglId:wrPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
       iterCnt <= iterCnt-1;
    endrule
 
    rule finish;
-      let rv0 <- re.readServers[0].response.get;
-      let rv1 <- we.writeServers[0].response.get;
+      let rv0 <- re.read_servers[0].cmdServer.response.get;
+      let rv1 <- we.write_servers[0].cmdServer.response.get;
       if(iterCnt==0) begin
 	 indication.done;
       end
    endrule
    
    rule xfer;
-      let v <- toGet(re.dataPipes[0]).get;
-      we.dataPipes[0].enq(v);
+      let v <- toGet(re.read_servers[0].dataPipe).get;
+      we.write_servers[0].dataPipe.enq(v);
       bs.dataIn(v,v);
    endrule
    
