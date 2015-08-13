@@ -220,7 +220,7 @@ instance Connectable#(PhysMemMaster#(addrWidth, busWidth), PhysMemSlave#(addrWid
    endmodule
 endinstance
 
-// this is used for debugging Mem2Tlp/Tlp2Mem in BsimTop.bsv
+// this is used for debugging MemToPcie/PcieToMem in BsimTop.bsv
 instance Connectable#(PhysMemMaster#(32, busWidth), PhysMemSlave#(40, busWidth));
    module mkConnection#(PhysMemMaster#(32, busWidth) m, PhysMemSlave#(40, busWidth) s)(Empty);
       //mkConnection(m.read_client.readReq, s.read_server.readReq);

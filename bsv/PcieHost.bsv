@@ -33,8 +33,8 @@ import PcieTracer        :: *;
 import Xilinx            :: *;
 import Bscan             :: *;
 import Portal            :: *;
-import Mem2Tlp    :: *;
-import Tlp2Mem   :: *;
+import MemToPcie    :: *;
+import PcieToMem   :: *;
 import PcieCsr           :: *;
 import MemTypes          :: *;
 `ifndef BSIM
@@ -66,8 +66,8 @@ import "BDPI" function Bool can_put_tlp();
 import "BDPI" function Bool can_get_tlp();
 
 (* synthesize *)
-module mkMem2TlpSynth#(PciId my_id)(Mem2Tlp#(DataBusWidth));
-   let memSlaveEngine <- mkMem2Tlp(my_id);
+module mkMemToPcieSynth#(PciId my_id)(MemToPcie#(DataBusWidth));
+   let memSlaveEngine <- mkMemToPcie(my_id);
    return memSlaveEngine;
 endmodule
 
@@ -83,10 +83,10 @@ typedef 2   NumberOfTlpIntfs;
 module mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    Vector#(NumberOfTlpIntfs, TLPDispatcher) dispatcher <- replicateM(mkTLPDispatcher);
    Vector#(NumberOfTlpIntfs, TLPArbiter) arbiter <- replicateM(mkTLPArbiter);
-   Vector#(NumberOfMasters, Mem2Tlp#(DataBusWidth)) sEngine <- replicateM(mkMem2TlpSynth(my_pciId));
+   Vector#(NumberOfMasters, MemToPcie#(DataBusWidth)) sEngine <- replicateM(mkMemToPcieSynth(my_pciId));
    Vector#(NumberOfMasters,PhysMemSlave#(PciePhysAddrWidth,DataBusWidth)) slavearr;
    MemInterrupt intr <- mkMemInterrupt(my_pciId);
-   Vector#(PortMax, Tlp2Mem) mvec;
+   Vector#(PortMax, PcieToMem) mvec;
    for (Integer i=0; i < valueOf(NumberOfMasters); i=i+1) begin
       let tlp;
       tlp = sEngine[i].tlp;
@@ -101,7 +101,7 @@ module mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
       if (i == portInterrupt)
          tlp = intr.tlp;
       else begin
-         mvec[i] <- mkTlp2Mem(my_pciId);
+         mvec[i] <- mkPcieToMem(my_pciId);
          tlp = mvec[i].tlp;
       end
       mkConnection((interface Server;
@@ -137,7 +137,7 @@ endmodule: mkPcieHost
 module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    let dispatcher <- mkTLPDispatcher;
    let arbiter    <- mkTLPArbiter;
-   Vector#(NumberOfMasters,Mem2Tlp#(DataBusWidth)) sEngine <- replicateM(mkMem2TlpSynth(my_pciId));
+   Vector#(NumberOfMasters,MemToPcie#(DataBusWidth)) sEngine <- replicateM(mkMemToPcieSynth(my_pciId));
    Vector#(NumberOfMasters,PhysMemSlave#(PciePhysAddrWidth,DataBusWidth)) slavearr;
    MemInterrupt intr <- mkMemInterrupt(my_pciId);
 `ifdef PCIE_BSCAN
@@ -145,7 +145,7 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    BscanLocal lbscan <- mkBscanLocal(bscan, clocked_by bscan.tck, reset_by bscan.rst);
 `endif
 
-   Vector#(PortMax, Tlp2Mem) mvec;
+   Vector#(PortMax, PcieToMem) mvec;
    for (Integer i = 0; i < valueOf(PortMax) - 1 + valueOf(NumberOfMasters); i=i+1) begin
        let tlp;
        if (i == portInterrupt)
@@ -155,7 +155,7 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
            slavearr[i - portAxi] = sEngine[i - portAxi].slave;
        end
        else begin
-           mvec[i] <- mkTlp2Mem(my_pciId);
+           mvec[i] <- mkPcieToMem(my_pciId);
            tlp = mvec[i].tlp;
        end
        mkConnection((interface Server;

@@ -41,12 +41,12 @@ typedef struct {
    Bool         isHeaderOnly;
    } TlpWriteHeaderInfo deriving (Bits);
 
-interface Mem2Tlp#(numeric type buswidth);
+interface MemToPcie#(numeric type buswidth);
     interface Client#(TLPData#(16), TLPData#(16)) tlp;
     interface PhysMemSlave#(40,buswidth) slave;
     method Bool tlpOutFifoNotEmpty();
     interface Reg#(Bool) use4dw;
-endinterface: Mem2Tlp
+endinterface: MemToPcie
 
 `ifdef XILINX
    `define AXI
@@ -58,7 +58,7 @@ endinterface: Mem2Tlp
 
 typedef 64 WriteDataMimoSize;
 typedef TAdd#(1,TLog#(WriteDataMimoSize)) WriteDataBurstLenSize;
-module mkMem2Tlp#(PciId my_id)(Mem2Tlp#(buswidth))
+module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
    provisos (Div#(buswidth, 8, busWidthBytes),
 	     Div#(buswidth, 32, busWidthWords),
 	     Bits#(Vector#(busWidthWords, Bit#(32)), buswidth),
@@ -148,7 +148,7 @@ module mkMem2Tlp#(PciId my_id)(Mem2Tlp#(buswidth))
       TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
       if (is3dw) begin
 	 if (hdr_3dw.format != MEM_WRITE_3DW_DATA)
-	    $display("Mem2Tlp: expecting MEM_WRITE_3DW_DATA, got %d", hdr_3dw.format);
+	    $display("MemToPcie: expecting MEM_WRITE_3DW_DATA, got %d", hdr_3dw.format);
 	 Vector#(4, Bit#(32)) v = unpack(0);
          tlp.sof = True;
 `ifdef AXI
@@ -459,5 +459,5 @@ module mkMem2Tlp#(PciId my_id)(Mem2Tlp#(buswidth))
     endinterface: slave
    method Bool tlpOutFifoNotEmpty() = tlpOutFifo.notEmpty;
    interface Reg use4dw = use4dwReg;
-endmodule: mkMem2Tlp
+endmodule: mkMemToPcie
 

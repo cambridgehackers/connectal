@@ -34,7 +34,7 @@ import MemTypes     :: *;
 // Top interface: PCIe transaction level packets (TLPs)
 // Bottom interface: MemMaster that sends read/write requests to an MemSlave
 // Also sources interrupt MSIX requests
-interface Tlp2Mem;
+interface PcieToMem;
     interface Client#(TLPData#(16), TLPData#(16)) tlp;
     interface PhysMemMaster#(32,32) master;
 endinterface
@@ -51,7 +51,7 @@ endinterface
 
 
 (* synthesize *)
-module mkTlp2Mem#(PciId my_id)(Tlp2Mem);
+module mkPcieToMem#(PciId my_id)(PcieToMem);
     Reg#(Bit#(7)) hitReg <- mkReg(0);
     FIFOF#(TLPMemoryIO3DWHeader) readHeaderFifo <- mkSizedFIFOF(8);
     FIFOF#(TLPMemoryIO3DWHeader) readDataFifo <- mkSizedFIFOF(8);
@@ -189,7 +189,7 @@ module mkTlp2Mem#(PciId my_id)(Tlp2Mem);
     interface Client        tlp;
     interface Put response;
         method Action put(TLPData#(16) tlp);
-	    $display("Tlp2Mem.put tlp=%h", tlp);
+	    $display("PcieToMem.put tlp=%h", tlp);
 	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
 	    hitReg <= tlp.hit;
 	    TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
@@ -261,7 +261,7 @@ module mkTlp2Mem#(PciId my_id)(Tlp2Mem);
 	endinterface
     endinterface
     endinterface: master
-endmodule: mkTlp2Mem
+endmodule: mkPcieToMem
 
 interface MemInterrupt;
     interface Client#(TLPData#(16), TLPData#(16)) tlp;

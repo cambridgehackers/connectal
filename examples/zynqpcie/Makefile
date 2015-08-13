@@ -8,7 +8,7 @@ PIN_TYPE=ZynqPcie
 PIN_TYPE_INCLUDE = ZynqPcieTestIF
 CONNECTALFLAGS += -D PcieHostIF=1 -D PCIE_NO_BSCAN=1 --bscflags="+RTS -K96000000 -RTS"
 CONNECTALFLAGS += --xci=$(CONNECTALDIR)/out/$(BOARD)/pcie_7x_0/pcie_7x_0.xci -C $(BOARD)/sources/zynqpcie.xdc
-CONNECTALFLAGS += -P mkPcieHostTopSynth -P mkMem2Tlp
+CONNECTALFLAGS += -P mkPcieHostTopSynth -P mkMemToPcie
 
 ## this design would work on a Virtex board with a second PCIE port
 PIN_BINDINGS ?= -b pcie:pcie

@@ -36,7 +36,7 @@ import Portal::*;
 import ConnectalMemory::*;
 import MemTypes::*;
 import HostInterface::*;
-import Mem2Tlp::*;
+import MemToPcie::*;
 import AddressGenerator::*;
 import MemreadRequest::*;
 import MemServerRequest::*;
@@ -91,7 +91,7 @@ module mkConnectalTop(ConnectalTop);
    endrule
 
    let my_id = PciId {bus: 4, dev: 2, func: 0};
-   Mem2Tlp#(DataBusWidth) memSlaveEngine <- mkMem2Tlp(my_id);
+   MemToPcie#(DataBusWidth) memSlaveEngine <- mkMemToPcie(my_id);
    mkConnection(dma.masters[0], memSlaveEngine.slave);
 
    AddressGenerator#(32, DataBusWidth) addrGenerator <- mkAddressGenerator();
