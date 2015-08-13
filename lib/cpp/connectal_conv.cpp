@@ -19,8 +19,22 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-#include "portal.h"
+#include "ConvIndication.h"
+#include "ConvRequest.h"
 #include "connectal_conv.h"
+
+static ConvRequestProxy *convRequest;
+
+class ConvIndication : public ConvIndicationWrapper
+{
+public:
+    void outputp(float v) {
+        printf("heard an conv: %f\n", v);
+	//convRequest->say2(v, 2*v);
+    }
+    ConvIndication(unsigned int id) : ConvIndicationWrapper(id) {}
+};
+static ConvIndication *indication;
 
 #define MIN(A,B) (((int)(A) < (int)(B)) ? (A) : (B))
 #define MAX(A,B) (((int)(A) > (int)(B)) ? (A) : (B))
@@ -185,6 +199,14 @@ ParamType<Dtype> *param = this;
 
 extern "C" void *alloc_connectal_conv(int size)
 {
+    static int once = 1;
+    if (once) {
+        once = 0;
+printf("[%s:%d] create proxy\n", __FUNCTION__, __LINE__);
+        indication = new ConvIndication(IfcNames_ConvIndicationH2S);
+        convRequest = new ConvRequestProxy(IfcNames_ConvRequestS2H);
+        //convRequest->say(v);
+    }
     if (size == sizeof(float))
         return new ParamType<float>;
     else

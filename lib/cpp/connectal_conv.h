@@ -105,7 +105,10 @@ class ConnectalMemory {
   ConnectalHead head_;
   bool own_cpu_data_;
   int  controlFd_;
-  //DISABLE_COPY_AND_ASSIGN(ConnectalMemory);
+private:
+  // Disable the copy and assignment operator for a class.
+  ConnectalMemory(const ConnectalMemory&);
+  ConnectalMemory& operator=(const ConnectalMemory&);
 };  // class ConnectalMemory
 void init_connectal_conv_library(int size);
 void *connectal_conv_library_param(int size);
