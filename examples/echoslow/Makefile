@@ -7,6 +7,6 @@ CPPFILES= ../echo/testecho.cpp
 NUMBER_OF_MASTERS =0
 CONNECTALFLAGS += -D IMPORT_HOST_CLOCKS
 
-MAIN_CLOCK_PERIOD=20
+CONNECTALFLAGS += --mainclockperiod=20
 
 include $(CONNECTALDIR)/Makefile.connectal
