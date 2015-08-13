@@ -83,13 +83,12 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
 	 validReg <= True;
 	 let next_bytesRead = bytesRead + fromInteger(valueOf(DataBusWidth))/8;
 	 let next_bytesToRead = bytesToRead - fromInteger(valueOf(DataBusWidth))/8;
-	 let last = (bytesToRead <= fromInteger(valueOf(DataBusWidth))/8);
 	 //$display("check next_bytesRead=%d next_bytesToRead=%d last=%d", next_bytesRead, next_bytesToRead, last);
-	 if (last) begin
+	 if (md.last) begin
 	    next_bytesRead = 0;
 	    next_bytesToRead = numBytes;
 	 end
-	 lastReg <= last;
+	 lastReg <= md.last;
 	 bytesRead <= next_bytesRead;
 	 bytesToRead <= next_bytesToRead;
       end
