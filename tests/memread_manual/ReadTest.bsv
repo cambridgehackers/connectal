@@ -54,8 +54,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    Reg#(Bit#(32))   itersToStart <- mkReg(0);
    Reg#(Bit#(32))        wordsRead <- mkReg(0);
    Reg#(Bit#(32)) mismatchCounts <- mkReg(0);
-   MemreadEngine#(DataBusWidth,1,1)        re <- mkMemreadEngine;
-   FIFO#(Bit#(32)) checkDoneFifo <- mkFIFO();
+   MemreadEngine#(DataBusWidth,1,1) re <- mkMemreadEngine;
    
    rule start (itersToStart > 0);
       $display("Test: request.put");
@@ -64,28 +63,26 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    endrule
 
    rule check;
-      let v <- toGet(re.read_servers[0].dataPipe).get;
+      let v <- toGet(re.read_servers[0].memDataPipe).get;
       let rval = wordsRead/4;
       let expectedV = {rval+1,rval};
-      let misMatch = v != expectedV;
+      let misMatch = v.data != expectedV;
       mismatchCounts <= mismatchCounts + (misMatch ? 1 : 0);
       let new_wordsRead = wordsRead + fromInteger(valueOf(DataBusWidth))/8;
       //$display("Test: check new=%x numBytes=%x wordsRead=%x misMatch=%x read=%x expect=%x", new_wordsRead, numBytes, wordsRead, misMatch, v, expectedV);
-      if (new_wordsRead >= truncate(numBytes)) begin
+      if (v.last) begin
+         $display("Test: itersToFinish %x", itersToFinish);
+         if (itersToFinish == 1) begin
+	    indication.readDone(mismatchCounts);
+         end
+         itersToFinish <= itersToFinish - 1;
 	 new_wordsRead = 0;
-	 checkDoneFifo.enq(mismatchCounts);
       end
       wordsRead <= new_wordsRead;
    endrule
    
-   rule finish if (itersToFinish > 0);
-      $display("Test: response.get itersToFinish %x", itersToFinish);
-      let mc <- toGet(checkDoneFifo).get();
+   rule finish;
       let rv <- re.read_servers[0].cmdServer.response.get;
-      if (itersToFinish == 1) begin
-	 indication.readDone(mismatchCounts);
-      end
-      itersToFinish <= itersToFinish - 1;
    endrule
    
    interface dmaClient = vec(re.dmaClient);
