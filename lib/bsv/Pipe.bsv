@@ -904,6 +904,7 @@ typedef struct {
    Bool last;
    b ctxt;
 } IteratorValue#(type a, type b) deriving (Bits);
+function a iteratorValueData(IteratorValue#(a,b) ivd); return ivd.value; endfunction
 
 interface IteratorWithContext#(type a, type c);
    interface PipeOut#(a) pipe;
