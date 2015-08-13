@@ -166,7 +166,7 @@ ssize_t sock_fd_write(int sockfd, void *ptr, size_t nbytes, int sendfd)
     msg.msg_iovlen = 1;
     ssize_t bytesSent = sendmsg(sockfd, &msg, 0);
     if (bytesSent != (ssize_t)nbytes) {
-        fprintf(stderr, "[%s:%d] error in sendmsg %lu %d\n", __FUNCTION__, __LINE__, bytesSent, errno);
+        fprintf(stderr, "[%s:%d] error in sendmsg %ld %d\n", __FUNCTION__, __LINE__, (long)bytesSent, errno);
         exit(1);
     }
     return bytesSent;

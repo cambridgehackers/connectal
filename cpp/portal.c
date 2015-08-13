@@ -207,15 +207,47 @@ void initPortalHardware(void)
     }
     else {
 #define MAX_PATH 2000
-        static char buf[MAX_PATH];
+        static char buf[400000];
+        char *filename = NULL;
         char *argv[] = { (char *)"fpgajtag", NULL, NULL, NULL, NULL, NULL, NULL, NULL};
-        int ind = 1;
+        int ind = 1, rc, fd;
         buf[0] = 0;
-        int rc = readlink("/proc/self/exe", buf, sizeof(buf));
-	if (rc < 0)
-	    fprintf(stderr, "[%s:%d] readlink error %d\n", __FUNCTION__, __LINE__, errno);
+        fd = open("/proc/self/maps", O_RDONLY);
+        while ((rc = read(fd, buf, sizeof(buf)-1)) > 0) {
+            buf[rc] = 0;
+            rc = 0;
+            while(buf[rc]) {
+                char *endptr;
+                long addr = strtol(&buf[rc], &endptr, 16);
+                if (endptr && *endptr == '-') {
+                    char *endptr2;
+                    long addr2 = strtol(endptr+1, &endptr2, 16);
+                    if (addr <= (long)&initPortalHardware && (long)&initPortalHardware <= addr2) {
+                        filename = strstr(endptr2, "  ");
+                        while (*filename == ' ')
+                            filename++;
+                        endptr2 = strstr(filename, "\n");
+                        if (endptr2)
+                            *endptr2 = 0;
+                        printf("buffer %s\n", filename);
+                        goto endloop;
+                    }
+                }
+                while(buf[rc] && buf[rc] != '\n')
+                    rc++;
+                if (buf[rc])
+                    rc++;
+            }
+        }
+endloop:
+	if (!filename) {
+	    fprintf(stderr, "[%s:%d] could not find execution filename\n", __FUNCTION__, __LINE__);
+            exit(0);
+        }
+        if (getenv("NOFPGAJTAG"))
+            exit(0);
 #ifdef BOARD_bluesim
-        char *p = dirname(buf);
+        char *p = dirname(filename);
         static char buf2[MAX_PATH];
         sprintf(buf2, "%s/bsim", p);
 printf("[%s:%d] BSIM %s *******\n", __FUNCTION__, __LINE__, buf2);
@@ -233,15 +265,13 @@ printf("[%s:%d] rc %d\n", __FUNCTION__, __LINE__, rc);
             argv[ind++] = (char *)"-s";
             argv[ind++] = strdup(serial);
         }
-        if (getenv("NOFPGAJTAG"))
-            exit(0);
-        else {
+        {
 #ifdef __arm__
         argv[ind++] = (char *)"-x";
-        argv[ind++] = buf;
+        argv[ind++] = filename;
         execvp ("/fpgajtag", argv);
 #else
-        argv[ind++] = buf;
+        argv[ind++] = filename;
         execvp ("fpgajtag", argv);
 #endif // !__arm__
         }
