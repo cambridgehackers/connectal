@@ -55,10 +55,6 @@ module mkMemread#(MemreadIndication indication) (Memread);
 
    let debug = True;
    
-   rule finish;
-      let v <- re.read_servers[0].cmdServer.response.get;
-   endrule
-   
    rule check;
       let v <- toGet(re.read_servers[0].memDataPipe).get;
       let expectedV = {srcGen+1,srcGen};
@@ -86,7 +82,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 mismatchCount <= 0;
 	 srcGen <= 0;
 	 let cmd = MemengineCmd{sglId:rp, base:extend(off*4), len:nw*4, burstLen:truncate(bl*4)};
-	 re.read_servers[0].cmdServer.request.put(cmd);
+	 re.read_servers[0].request.put(cmd);
       endmethod
    endinterface
 endmodule

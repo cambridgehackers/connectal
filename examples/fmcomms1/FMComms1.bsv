@@ -84,11 +84,7 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
    
    rule readStart (readRun == 1);
       readIterCount <= readIterCount + 1;
-      re.read_servers[0].cmdServer.request.put(MemengineCmd{sglId:readPointer, base:0, len:readNumWords*4, burstLen:readBurstLen*4});
-   endrule
-   
-   rule readFinish;
-      let rv <- re.read_servers[0].cmdServer.response.get;
+      re.read_servers[0].request.put(MemengineCmd{sglId:readPointer, base:0, len:readNumWords*4, burstLen:readBurstLen*4});
    endrule
    
    rule writeStart (writeRun == 1);

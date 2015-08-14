@@ -64,14 +64,11 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    FIFO#(void)       doneFifo <- mkFIFO;
       
    rule start(iterCnt > 0);
-      re.read_servers[0].cmdServer.request.put(MemengineCmd{sglId:rdPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
+      re.read_servers[0].request.put(MemengineCmd{sglId:rdPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
       we.write_servers[0].cmdServer.request.put(MemengineCmd{sglId:wrPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
       iterCnt <= iterCnt-1;
    endrule
 
-   rule finishold;
-      let rv0 <- re.read_servers[0].cmdServer.response.get;
-   endrule
    rule finish;
       doneFifo.deq;
       let rv1 <- we.write_servers[0].cmdServer.response.get;

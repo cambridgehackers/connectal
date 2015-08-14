@@ -55,7 +55,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    MemreadEngine#(DataBusWidth,2,1) re <- mkMemreadEngine;
 
    rule start (itersToStart > 0);
-      re.read_servers[0].cmdServer.request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, burstLen:burstLenInBytes});
+      re.read_servers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, burstLen:burstLenInBytes});
       itersToStart <= itersToStart-1;
    endrule
 
@@ -74,10 +74,6 @@ module mkMemread#(MemreadIndication indication) (Memread);
          end
          itersToFinish <= itersToFinish - 1;
       end
-   endrule
-
-   rule finish;
-      let rv <- re.read_servers[0].cmdServer.response.get;
    endrule
 
    interface dmaClient = cons(re.dmaClient, nil);

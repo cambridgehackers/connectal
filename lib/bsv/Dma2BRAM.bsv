@@ -161,10 +161,6 @@ module mkBRAMWriter#(Integer id,
       if(verbose) $display("mkBRAMWriter::discard (%d) %x", id, j);
    endrule
 
-   rule oldfinish;
-      let rv <- readServer.cmdServer.response.get;
-   endrule
-   
    method Action start(SGLId h, Bit#(MemOffsetSize) b, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx) if (!running);
       if(verbose) $display("mkBRAMWriter::start (%d) %d, %d, %d %d", id, h, b, start_idx, finish_idx);
       Bit#(BurstLenSize) burst_len_bytes = fromInteger(valueOf(bwbytes));
@@ -173,7 +169,7 @@ module mkBRAMWriter#(Integer id,
       Bit#(TLog#(nd)) zeros = 0;
       Bit#(32) req_len_bytes = {zeros,req_len_ds[31:valueOf(TLog#(nd))]} * fromInteger(valueOf(bwbytes));
 
-      readServer.cmdServer.request.put(MemengineCmd{sglId:h, base:b, len:req_len_bytes, burstLen:burst_len_bytes, tag: 0});
+      readServer.request.put(MemengineCmd{sglId:h, base:b, len:req_len_bytes, burstLen:burst_len_bytes, tag: 0});
       if(verbose) $display("mkBRAMWriter::start (%d) %d, %d", id, req_len_bytes, burst_len_bytes);
       j <= extend(start_idx);
       n <= extend(finish_idx);

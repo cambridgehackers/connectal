@@ -58,7 +58,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    
    rule start (itersToStart > 0);
       $display("Test: request.put");
-      re.read_servers[0].cmdServer.request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, burstLen:burstLenBytes});
+      re.read_servers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, burstLen:burstLenBytes});
       itersToStart <= itersToStart-1;
    endrule
 
@@ -79,10 +79,6 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
 	 new_wordsRead = 0;
       end
       wordsRead <= new_wordsRead;
-   endrule
-   
-   rule finish;
-      let rv <- re.read_servers[0].cmdServer.response.get;
    endrule
    
    interface dmaClient = vec(re.dmaClient);

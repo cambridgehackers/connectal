@@ -21,7 +21,7 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
+import FIFO::*;
 import BRAMFIFO::*;
 import Vector::*;
 import Clocks::*;
@@ -154,6 +154,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
    Reg#(Bool) dumpover <- mkReg(False);
    Reg#(Bool) duringDma <- mkReg(False);
    //Reg#(Bool) dmaReady <- mkReg(False);
+   FIFO#(void)  doneFifo <- mkFIFO;
 
    rule dmaPulserule;
       dmastart <= dmastartPulse.pulse;
@@ -167,6 +168,8 @@ module mkHdmiDisplay#(Clock hdmi_clock,
           $display("hdmiDisplay: dmadata [%d]=%x cycle %d", transferWord, v.data, transferCycles - transferCyclesSnapshot);
       transferWord <= transferWord + 1;
       transferLast <= transferCycles;
+      if (v.last)
+         doneFifo.enq(?);
    endrule
 
    rule doPut1 if (evenOdd);
@@ -200,7 +203,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
    //   /dmaReady <= True;
    ///endrule
    //rule startd if (dmaReady && !duringDma &&& referenceReg matches tagged Valid .reference);
-      memreadEngine.read_servers[0].cmdServer.request.put(MemengineCmd{sglId:reference, base:0, len:pack(extend(byteCountReg)), burstLen:fromInteger(valueOf(FrameBufferBurstLenInBytes)), tag: 0});
+      memreadEngine.read_servers[0].request.put(MemengineCmd{sglId:reference, base:0, len:pack(extend(byteCountReg)), burstLen:fromInteger(valueOf(FrameBufferBurstLenInBytes)), tag: 0});
       if (traceTransfers)
 	 hdmiDisplayIndication.transferStarted(transferCount);
       transferCyclesSnapshot <= transferCycles;
@@ -220,7 +223,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
       transferCycles <= transferCycles + 1;
    endrule
    rule finishTransferRule;
-      let b <- memreadEngine.read_servers[0].cmdServer.response.get;
+      doneFifo.deq;
       transferCount <= transferCount + 1;
       let tc = transferCycles - transferCyclesSnapshot;
       transferSumOfCycles <= transferSumOfCycles + extend(tc);

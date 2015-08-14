@@ -321,7 +321,7 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 								len:fromInteger(dmaBurstBytes), 
 								burstLen:fromInteger(dmaBurstBytes)
 							};
-			re.read_servers[b].cmdServer.request.put(dmaCmd);
+			re.read_servers[b].request.put(dmaCmd);
 			$display("Main.bsv: dma read cmd issued: sglId=%x, burstOffset=%d", sglId, burstOffset);
 
 			if (dmaRdReqCnts[b] == fromInteger(dmaBurstsPerPage-1)) begin
@@ -331,10 +331,6 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 			else begin
 				dmaRdReqCnts[b] <= dmaRdReqCnts[b] + 1;
 			end
-		endrule
-
-		rule dmaReaderGetResponse;
-			let dummy <- re.read_servers[b].cmdServer.response.get;
 		endrule
 
 		//forward data

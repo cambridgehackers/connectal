@@ -97,6 +97,7 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
    Reg#(Bit#(64))  charCnt <- mkReg(0);
    Reg#(Bit#(64))   resCnt <- mkReg(0);
    Reg#(Bool)     accepted <- mkReg(False);
+   FIFO#(void)    doneFifo <- mkFIFO;
    
    rule countCycles;
       if (timing) $display("******************************************** %d", cycleCnt);
@@ -111,10 +112,12 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
    rule haystackResp;
       let rv <- toGet(haystack_re.memDataPipe).get;
       haystack.enq(unpack(rv.data));
+      if (rv.last)
+         doneFifo.enq(?);
    endrule
    
    rule haystackFinish if (!haystack.notEmpty);
-      let rv <- haystack_re.cmdServer.response.get;
+      doneFifo.deq;
       ldrFIFO.enq(tagged Done fromInteger(iid));
       conff.deq;
       fsmState.deq;
@@ -201,7 +204,7 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
    // 	 begin
    // 	    match {.pointer, .len}  = p;
    // 	    if (verbose) $display("setupSearch %d %d", pointer, len);
-   // 	    haystack_re.cmdServer.request.put(MemengineCmd{sglId:pointer, base:0, len:len, burstLen:16*fromInteger(valueOf(nc))});
+   // 	    haystack_re.request.put(MemengineCmd{sglId:pointer, base:0, len:len, burstLen:16*fromInteger(valueOf(nc))});
    // 	    charCnt <= 0;
    // 	    resCnt <= 0;
    // 	    fsmState.enq(0);
@@ -240,7 +243,7 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
       conff.enq(True);
       match {.pointer, .len}  = p;
       if (verbose) $display("setupSearch %d %d", pointer, len);
-      haystack_re.cmdServer.request.put(MemengineCmd{sglId:pointer, base:0, len:len, burstLen:16*fromInteger(valueOf(nc)), tag: 0});
+      haystack_re.request.put(MemengineCmd{sglId:pointer, base:0, len:len, burstLen:16*fromInteger(valueOf(nc)), tag: 0});
       charCnt <= 0;
       resCnt <= 0;
       fsmState.enq(0);

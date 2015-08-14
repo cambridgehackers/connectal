@@ -97,7 +97,7 @@ typedef struct {
    } MemDataF#(numeric type dsz) deriving (Bits);
 
 interface MemreadServer#(numeric type dataWidth);
-   interface Server#(MemengineCmd,Bool) cmdServer;
+   interface Put#(MemengineCmd)             request;
    interface PipeOut#(MemDataF#(dataWidth)) memDataPipe;
 endinterface
       

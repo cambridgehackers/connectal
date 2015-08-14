@@ -76,7 +76,6 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
    FIFO#(Tuple5#(Bit#(serverIdxSz),MemengineCmd,Bool,Bool,Bit#(BurstLenSize))) serverRequest <- mkSizedFIFO(valueOf(cmdQDepth));
    FIFO#(Tuple4#(Bit#(8),Bit#(serverIdxSz),Bool,Bool)) serverProcessing <- mkSizedFIFO(valueOf(cmdQDepth));
 
-   Vector#(numServers, FIFO#(void))         clientResponse <- replicateM(mkSizedFIFO(valueOf(cmdQDepth)));
    Vector#(numServers, FIFO#(MemengineCmd)) clientRequest <- replicateM(mkFIFO());
 
    FIFOF#(MemData#(dataWidth))                       serverDataFifo <- mkFIFOF;
@@ -151,7 +150,6 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 	 serverRequest.enq(tuple5(truncate(loadIdx),cmd,first_burst,last_burst,cmd_len));
 	 if (last_burst) begin
 	    if (verbose) $display("mkMemreadEngineBuff::%d load_ctxt_b last_burst %d", counter, last_burst);
-	    clientResponse[loadIdx].enq(?);
 	    clientInFlight[loadIdx] <= False;
 	 end
 	 else begin
@@ -186,7 +184,6 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
    Vector#(numServers, MemreadServer#(dataWidth)) rs;
    for(Integer i = 0; i < valueOf(numServers); i=i+1)
       rs[i] = (interface MemreadServer#(dataWidth);
-               interface Server cmdServer;
 		  interface Put request;
 		     method Action put(MemengineCmd cmd);
 			Bit#(32) bsb = fromInteger(bufferSizeBytes);
@@ -207,15 +204,8 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 			   end
  		     endmethod
 		  endinterface
-		  interface Get response;
-		     method ActionValue#(Bool) get;
-			clientResponse[i].deq;
-			return True;
-		     endmethod
-		  endinterface
-	       endinterface
-               interface memDataPipe = memDataPipes[i];
-             endinterface);
+                  interface memDataPipe = memDataPipes[i];
+               endinterface);
    interface MemReadClient dmaClient;
       interface Get readReq;
 	 method ActionValue#(MemRequest) get();

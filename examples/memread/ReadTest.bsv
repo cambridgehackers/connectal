@@ -60,7 +60,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    
    rule start (itersToStart > 0);
       $display("Test: request.put");
-      re.read_servers[0].cmdServer.request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, tag:0, burstLen:burstLenBytes});
+      re.read_servers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, tag:0, burstLen:burstLenBytes});
       itersToStart <= itersToStart-1;
    endrule
 
@@ -69,6 +69,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    Reg#(Bool)               validReg <- mkReg(False);
    Reg#(Bit#(32))           bytesToRead <- mkReg(0);
    Reg#(Bool)               lastReg <- mkReg(False);
+   FIFO#(void)              doneFifo <- mkFIFO;
    rule check;
       // first pipeline stage
       if (re.read_servers[0].memDataPipe.notEmpty()) begin
@@ -91,6 +92,8 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
 	 lastReg <= md.last;
 	 bytesRead <= next_bytesRead;
 	 bytesToRead <= next_bytesToRead;
+         if (md.last)
+             doneFifo.enq(?);
       end
       else begin
 	 validReg <= False;
@@ -112,7 +115,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    rule finish if (itersToFinish > 0);
       $display("Test: response.get itersToFinish %x", itersToFinish);
       let mc <- toGet(checkDoneFifo).get();
-      let rv <- re.read_servers[0].cmdServer.response.get;
+      doneFifo.deq;
       if (itersToFinish == 1) begin
 	 indication.readDone(mismatchCounts);
       end

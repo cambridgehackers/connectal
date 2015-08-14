@@ -112,13 +112,6 @@ module mkNandSimMod#(NandCfgIndication indication,
 
    connectToFlashModel(re.dmaClient,we.dmaClient);
    
-   for(Integer i = 0; i < valueOf(numSlaves); i=i+1)
-      rule completeSlaveReadReq;
-	 slaveReadTags[i].deq;
-	 let rv <- slave_read_servers[i].cmdServer.response.get;
-	 if (verbose) $display("mkNandSim::completeSlaveReadReq (%d)", i);
-      endrule
-
    function PhysMemSlave#(PhysAddrWidth,64) mms(Integer i);
       return (
    interface PhysMemSlave;
@@ -146,7 +139,7 @@ module mkNandSimMod#(NandCfgIndication indication,
 	 interface Put readReq;
 	    method Action put(PhysMemRequest#(PhysAddrWidth) req);
 	       if (verbose) $display("mkNandSim.memSlave::readReq %d %d %d (%d)", req.addr, req.burstLen, req.tag, i);
-	       slave_read_servers[i].cmdServer.request.put(MemengineCmd{sglId:0, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen), tag:req.tag});
+	       slave_read_servers[i].request.put(MemengineCmd{sglId:0, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen), tag:req.tag});
 	       slaveReadTags[i].enq(req.tag);
 	       slaveReadCnts[i] <= req.burstLen;
 	    endmethod
@@ -158,6 +151,8 @@ module mkNandSimMod#(NandCfgIndication indication,
 	       let last = new_slaveReadCnt==0;
 	       slaveReadCnts[i] <= new_slaveReadCnt;
 	       if (verbose) $display("mkNandSim.memSlave::readData %d %d %d %d (%d)", slaveReadTags[i].first, last, rv.data, slaveReadCnts[i], i);
+               if (rv.last)
+	          slaveReadTags[i].deq;
 	       return MemData{data:rv.data, tag:slaveReadTags[i].first,last:last};
             endmethod
 	 endinterface
@@ -229,9 +224,6 @@ module mkNandSimControl#(MemreadServer#(64) dram_read_server, MemreadServer#(64)
       indication.eraseDone(0);
    endrule
    
-   rule oldwritedone;
-      let dramReadDone <-  dram_read_server.cmdServer.response.get();
-   endrule
    rule writeDone;
       let nandWriteDone <-  nand_write_server.cmdServer.response.get();
       dram_read_done.deq;
@@ -240,9 +232,6 @@ module mkNandSimControl#(MemreadServer#(64) dram_read_server, MemreadServer#(64)
       indication.writeDone(0);
    endrule
 
-   rule oldreaddone;
-      let nandReadDone <-  nand_read_server.cmdServer.response.get();
-   endrule
    rule readDone;
       nand_read_done.deq;
       let dramWriteDone <- dram_write_server.cmdServer.response.get();
@@ -258,7 +247,7 @@ module mkNandSimControl#(MemreadServer#(64) dram_read_server, MemreadServer#(64)
       method Action startRead(Bit#(32) pointer, Bit#(32) dramOffset, Bit#(32) nandAddr,Bit#(32) numBytes, Bit#(32) burstLen);
 	 $display("startRead numBytes=%d burstLen=%d", numBytes, burstLen);
 	 readReqFifo.enq(numBytes);
-	  nand_read_server.cmdServer.request.put(MemengineCmd {sglId: 0, base: extend(nandAddr), burstLen: truncate(burstLen), len: extend(numBytes)});
+	  nand_read_server.request.put(MemengineCmd {sglId: 0, base: extend(nandAddr), burstLen: truncate(burstLen), len: extend(numBytes)});
 	 dram_write_server.cmdServer.request.put(MemengineCmd {sglId: pointer, base: extend(dramOffset), burstLen: truncate(burstLen), len: extend(numBytes)});
       endmethod
 
@@ -269,7 +258,7 @@ module mkNandSimControl#(MemreadServer#(64) dram_read_server, MemreadServer#(64)
 	 $display("startWrite numBytes=%d burstLen=%d", numBytes, burstLen);
 	 writeReqFifo.enq(numBytes);
 	  nand_write_server.cmdServer.request.put(MemengineCmd {sglId: 0, base: extend(nandAddr), burstLen: truncate(burstLen), len: extend(numBytes)});
-	  dram_read_server.cmdServer.request.put(MemengineCmd {sglId: pointer, base: extend(dramOffset), burstLen: truncate(burstLen), len: extend(numBytes)});
+	  dram_read_server.request.put(MemengineCmd {sglId: pointer, base: extend(dramOffset), burstLen: truncate(burstLen), len: extend(numBytes)});
       endmethod
 
       method Action startErase(Bit#(32) nandAddr, Bit#(32) numBytes);

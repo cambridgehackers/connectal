@@ -69,7 +69,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest#(4));
 		       for(startPtr <= 0; startPtr < 4; startPtr <= startPtr+1)
 			  (action
 			      let cmd = MemengineCmd{sglId:pointer, base:extend(startBase), len:numBytes, burstLen:truncate(burstLenBytes)};
-			      res[startPtr].read_servers[0].cmdServer.request.put(cmd);
+			      res[startPtr].read_servers[0].request.put(cmd);
 			      startBase <= startBase+numBytes;
 			      //$display("start:%d %h %d %h (%d)", startPtr, startBase, numBytes, burstLenBytes*4, itersToStart);
 			   endaction);
@@ -91,10 +91,6 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest#(4));
       itersToStart <= itersToStart-1;
    endrule
    
-   rule finishold;
-      for(Integer i = 0; i < 4; i=i+1)
-	 let rv <- res[i].read_servers[0].cmdServer.response.get;
-   endrule
    rule finish;
       for(Integer i = 0; i < 4; i=i+1)
          doneFifo[i].deq;

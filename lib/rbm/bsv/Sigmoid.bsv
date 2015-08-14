@@ -250,10 +250,6 @@ module  mkSigmoid#(Vector#(2,MemreadServer#(TMul#(N,32))) readSrvrs,
       sinkC.pipe.enq(vs);
    endrule
 
-   rule sourceFinishRule;
-      let b <- source.finish();
-   endrule
-
    method Action sigmoidDone;
       let b <- sinkC.finish();
    endmethod

@@ -125,12 +125,6 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
       end
    endrule
    
-   rule serv0;
-      let rv0 <- re0.read_servers[0].cmdServer.response.get;
-   endrule
-   rule serv1;
-      let rv1 <- re1.read_servers[0].cmdServer.response.get;
-   endrule
    rule done;
       doneReg0.deq;
       doneReg1.deq;
@@ -140,8 +134,8 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
    interface Memread2Request request;
        method Action startRead(Bit#(32) pointer, Bit#(32) pointer2, Bit#(32) numWords, Bit#(32) bl);
 	  $display("startRead(%d %d %d %d)", pointer, pointer2, numWords, bl);
-	  re0.read_servers[0].cmdServer.request.put(MemengineCmd{sglId:pointer,  base:0, len:numWords*4, burstLen:truncate(bl*4)});
-	  re1.read_servers[0].cmdServer.request.put(MemengineCmd{sglId:pointer2, base:0, len:numWords*4, burstLen:truncate(bl*4)});
+	  re0.read_servers[0].request.put(MemengineCmd{sglId:pointer,  base:0, len:numWords*4, burstLen:truncate(bl*4)});
+	  re1.read_servers[0].request.put(MemengineCmd{sglId:pointer2, base:0, len:numWords*4, burstLen:truncate(bl*4)});
 	  indication.started(numWords);
        endmethod
 

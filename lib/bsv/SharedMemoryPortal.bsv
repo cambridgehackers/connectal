@@ -64,7 +64,7 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
    let verbose = False;
 
    rule updateReqHeadTail if (state == Idle && readyReg);
-      readEngine.cmdServer.request.put(
+      readEngine.request.put(
           MemengineCmd {sglId: sglIdReg, base: 0, burstLen: 16, len: 16, tag: 0});
       state <= HeadRequested;
    endrule
@@ -109,7 +109,7 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
       if (verbose) $display("requestMessage id=%d tail=%h head=%h wordCount=%d", sglIdReg, tailReg, headReg, wordCount);
       tailReg <= tail;
       countReg <= truncate(wordCount);
-      readEngine.cmdServer.request.put( MemengineCmd
+      readEngine.request.put( MemengineCmd
           {sglId: sglIdReg, base: extend(tailReg << 2), burstLen: 16, len: wordCount << 2, tag: 0});
       state <= MessageHeaderRequested;
    endrule
@@ -187,10 +187,6 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
       state <= Idle;
    endrule
 
-   rule consumeResponse;
-      let response <- readEngine.cmdServer.response.get();
-   endrule
-
    interface SharedMemoryPortalConfig cfg;
       method Action setSglId(Bit#(32) id);
          sglIdReg <= id;
@@ -229,7 +225,7 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
    end
 
    rule updateIndHeadTail if (state == Idle && readyReg);
-      readEngine.cmdServer.request.put(
+      readEngine.request.put(
           MemengineCmd {sglId: sglIdReg, base: 0, burstLen: 16, len: 16, tag: 0});
       state <= HeadRequested;
    endrule

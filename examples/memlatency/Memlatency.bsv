@@ -74,15 +74,11 @@ module mkMemlatency#(MemlatencyIndication indication)(Memlatency);
    endrule
    
    rule startRead(rdIterCnt > 0);
-      re.read_servers[0].cmdServer.request.put(MemengineCmd{sglId:rdPointer, base:0, len:burstLen*4, burstLen:truncate(burstLen*4)});
+      re.read_servers[0].request.put(MemengineCmd{sglId:rdPointer, base:0, len:burstLen*4, burstLen:truncate(burstLen*4)});
       rdIterCnt <= rdIterCnt-1;
       rdStartFifo.enq(cycles);
    endrule
 
-   rule finishRead;
-      let rv0 <- re.read_servers[0].cmdServer.response.get;
-   endrule
-   
    rule readConsume;
       let v <- toGet(re.read_servers[0].memDataPipe).get;
       if (v.last) begin
