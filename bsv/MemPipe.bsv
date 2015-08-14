@@ -130,7 +130,7 @@ endmodule
 
 module mkMemWriterPipe2#(Bool lastOnly,
 			 Reg#(SGLId) ptrReg,
-			 IteratorIfc#(Bit#(addrsz)) addrIterator,
+			 IteratorWithContext#(Bit#(addrsz),Bit#(MemTagSize)) addrIterator,
 			 PipeOut#(dtype) dataPipe,
 			 Bit#(BurstLenSize) burstLen)(MemWriterPipe#(dsz))
    provisos (Bits#(dtype, dsz),
@@ -146,11 +146,12 @@ module mkMemWriterPipe2#(Bool lastOnly,
    FIFOF#(Bool)                       doneFifo <- mkFIFOF();
 
    rule writeReqRule;
-      let offset <- toGet(addrIterator.pipe).get();
+      let iv <- toGet(addrIterator.ivpipe).get();
+      let offset = iv.value;
       let tag = 22;
-      $display("writeReqRule: offset=%h burstLen=%d addrIterator.isLast %d", offset, burstLen, addrIterator.isLast());
+      $display("MemWriterPipe2.writeReqRule: offset=%h burstLen=%d addrIterator.isLast %d", offset, burstLen, addrIterator.isLast());
       reqFifo.enq(MemRequest { sglId: ptrReg, offset: extend(offset), burstLen: burstLen, tag: tag });
-      lastFifo.enq(addrIterator.isLast());
+      lastFifo.enq(iv.last);
    endrule
    rule writeReqReadyRule if (counter.read() >= extend(unpack(burstLen)));
       let req <- toGet(reqFifo).get();
@@ -160,15 +161,17 @@ module mkMemWriterPipe2#(Bool lastOnly,
    rule writeDataRule;
       let tag = 22;
       let v <- toGet(dataPipe).get();
-      //$display("MemWriterPipe.writeDataRule: data=%h", v);
+      $display("MemWriterPipe2.writeDataRule: data=%h", v);
       writeDataFifo.enq(MemData { data: pack(v), tag: tag, last: False });
       counter.increment(fromInteger(valueOf(TDiv#(dsz,8))));
    endrule
    rule writeDone;
       let last <- toGet(lastFifo).get();
       let tag <- toGet(writeDoneFifo).get();
-      if (!lastOnly || last)
+      if (!lastOnly || last) begin
+	 $display("writeDone lastOnly=%d last=%d", lastOnly, last);
 	 doneFifo.enq(last);
+      end
    endrule
    interface PipeOut lastPipe = toPipeOut(doneFifo);
    interface MemWriteClient writeClient;
