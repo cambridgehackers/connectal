@@ -308,7 +308,7 @@ int portalAlloc(size_t size, int cached)
 #else
     fd = ioctl(global_pa_fd, PA_MALLOC, &portalAlloc);
 #endif
-    PORTAL_PRINTF("alloc size=%ld fd=%d\n", (unsigned long)size, fd);
+    //PORTAL_PRINTF("alloc size=%ld fd=%d\n", (unsigned long)size, fd);
     if (fd == -1) {
         PORTAL_PRINTF("portalAllocCached: alloc failed size=%ld errno=%d\n", (unsigned long)size, errno);
         exit(-1);

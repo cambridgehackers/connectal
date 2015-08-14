@@ -49,7 +49,6 @@ class MMUIndication : public MMUIndicationWrapper
   MMUIndication(DmaManager *pm, unsigned int  id, int tile=PLATFORM_TILE) : MMUIndicationWrapper(id,tile), portalMemory(pm) {}
   MMUIndication(DmaManager *pm, unsigned int  id, PortalTransportFunctions *item, void *param) : MMUIndicationWrapper(id, item, param), portalMemory(pm) {}
   virtual void configResp(uint32_t pointer){
-    fprintf(stderr, "MMUIndication::configResp: %x\n", pointer);
     portalMemory->confResp(pointer);
   }
   virtual void error (uint32_t code, uint32_t pointer, uint64_t offset, uint64_t extra) {

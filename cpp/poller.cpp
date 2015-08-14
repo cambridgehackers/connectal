@@ -55,7 +55,7 @@ int PortalPoller::unregisterInstance(Portal *portal)
     pthread_mutex_lock(&mutex);
     while(i < numWrappers){
         if(portal_wrappers[i]->pint.fpga_number == portal->pint.fpga_number) {
-            fprintf(stderr, "PortalPoller::unregisterInstance %d %d\n", i, portal->pint.fpga_number);
+	    //fprintf(stderr, "PortalPoller::unregisterInstance %d %d\n", i, portal->pint.fpga_number);
             break;
         }
         i++;
@@ -104,7 +104,7 @@ int PortalPoller::registerInstance(Portal *portal)
     if (rc < 0)
         fprintf(stderr, "[%s:%d] write error %d\n", __FUNCTION__, __LINE__, errno);
     numWrappers++;
-    fprintf(stderr, "Portal::registerInstance fpga%d fd %d clients %d\n", portal->pint.fpga_number, portal->pint.fpga_fd, portal->pint.client_fd_number);
+    //fprintf(stderr, "Portal::registerInstance fpga%d fd %d clients %d\n", portal->pint.fpga_number, portal->pint.fpga_fd, portal->pint.client_fd_number);
     portal_wrappers = (Portal **)realloc(portal_wrappers, numWrappers*sizeof(Portal *));
     portal_wrappers[numWrappers-1] = portal;
 
@@ -127,7 +127,7 @@ void* PortalPoller::init(void)
         pthread_mutex_unlock(&mutex);
     }
 #endif
-    fprintf(stderr, "portalExec::about to enter loop, numFds=%d\n", numFds);
+    //fprintf(stderr, "portalExec::about to enter loop, numFds=%d\n", numFds);
     return NULL;
 }
 void PortalPoller::stop(void)

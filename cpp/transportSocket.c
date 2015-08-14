@@ -336,7 +336,6 @@ static void write_fd_portal_bsim(PortalInternal *pint, volatile unsigned int **a
 {
   struct memrequest foo = {pint->fpga_number, 1,*addr,v};
 
-fprintf(stderr, "[%s:%d] fd %d\n", __FUNCTION__, __LINE__, v);
   portalSendFd(global_sockfd, &foo, sizeof(foo), v);
 }
 #else // __KERNEL__
@@ -465,7 +464,7 @@ void write_fd_portal_bsim(struct PortalInternal *pint, volatile unsigned int **a
         return;
     fmem = fget(v);
     foo.addr = fmem->private_data;
-    printk("[%s:%d] fd %x dmabuf %p\n", __FUNCTION__, __LINE__, v, foo.addr);
+    //printk("[%s:%d] fd %x dmabuf %p\n", __FUNCTION__, __LINE__, v, foo.addr);
     fput(fmem);
     down_interruptible(&bsim_avail);
     memcpy(&upreq, &foo, sizeof(upreq));

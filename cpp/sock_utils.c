@@ -112,7 +112,7 @@ int init_connecting(const char *arg_name, PortalSocketParam *param)
     addrinfo.ai_addr = (struct sockaddr *)&sa;
 
     if (param && param->addr) {
-        fprintf(stderr, "[%s:%d] TCP\n", __FUNCTION__, __LINE__);
+	if (trace_socket) fprintf(stderr, "[%s:%d] TCP\n", __FUNCTION__, __LINE__);
         addr = param->addr;
     }
     if ((sockfd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol)) == -1) {
@@ -131,7 +131,7 @@ int init_connecting(const char *arg_name, PortalSocketParam *param)
             PORTAL_PRINTF( "%s (%s) retrying connection\n",__FUNCTION__, arg_name);
         sleep(1);
     }
-    PORTAL_PRINTF( "%s (%s) connected.  Attempts %d\n",__FUNCTION__, arg_name, connect_attempts);
+    if (trace_socket) PORTAL_PRINTF( "%s (%s) connected.  Attempts %d\n",__FUNCTION__, arg_name, connect_attempts);
     return sockfd;
 }
 
