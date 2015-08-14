@@ -49,17 +49,7 @@ import FlashTop::*;
 import ControllerTypes::*;
 import FlashRequest::*;
 import FlashIndication::*;
-
-interface Top_Pins;
-	interface Aurora_Pins#(4) aurora_fmc1;
-	interface Aurora_Clock_Pins aurora_clk_fmc1;
-endinterface
-
-//typedef enum { NoInterface, IfcNames_AlgoIndication, IfcNames_AlgoMMUIndication,
-   //IfcNames_AlgoMMURequest, IfcNames_AlgoRequest,
-   //IfcNames_BackingStoreMMUIndication, IfcNames_BackingStoreMMURequest,
-   //IfcNames_HostMemServerIndication, IfcNames_NandCfgIndication, IfcNames_NandCfgRequest,
-   //IfcNames_NandMemServerIndication, IfcNames_NandMMUIndication, IfcNames_NandMMURequest} IfcNames;
+import TopPins::*;
 
 module mkConnectalTop#(HostInterface host)(ConnectalTop);
    
@@ -67,38 +57,38 @@ module mkConnectalTop#(HostInterface host)(ConnectalTop);
    Reset rst250 = host.derivedReset;
 	
    // strstr algo
-   StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(IfcNames_AlgoIndication);
+   StrstrIndicationProxy strstrIndicationProxy <- mkStrstrIndicationProxy(IfcNames_AlgoIndicationH2S);
    Strstr#(128,128) strstr <- mkStrstr(strstrIndicationProxy.ifc);
-   StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(IfcNames_AlgoRequest,strstr.request);
+   StrstrRequestWrapper strstrRequestWrapper <- mkStrstrRequestWrapper(IfcNames_AlgoRequestS2H,strstr.request);
    
    // algo mmu
-   MMUIndicationProxy algoMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_AlgoMMUIndication);
+   MMUIndicationProxy algoMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_AlgoMMUIndicationH2S);
    MMU#(PhysAddrWidth) algoMMU <- mkMMU(0, True, algoMMUIndicationProxy.ifc);
-   MMURequestWrapper algoMMURequestWrapper <- mkMMURequestWrapper(IfcNames_AlgoMMURequest, algoMMU.request);
+   MMURequestWrapper algoMMURequestWrapper <- mkMMURequestWrapper(IfcNames_AlgoMMURequestS2H, algoMMU.request);
 
    // backing store mmu
-   MMUIndicationProxy backingMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_BackingStoreMMUIndication);
+   MMUIndicationProxy backingMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_BackingStoreMMUIndicationH2S);
    MMU#(PhysAddrWidth) backingMMU <- mkMMU(1, True, backingMMUIndicationProxy.ifc);
-   MMURequestWrapper backingMMURequestWrapper <- mkMMURequestWrapper(IfcNames_BackingStoreMMURequest, backingMMU.request);
+   MMURequestWrapper backingMMURequestWrapper <- mkMMURequestWrapper(IfcNames_BackingStoreMMURequestS2H, backingMMU.request);
    
    // nand mmu
-   MMUIndicationProxy nandMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_NandMMUIndication);
+   MMUIndicationProxy nandMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_NandMMUIndicationH2S);
    MMU#(FlashAddrWidth) nandMMU <- mkMMU(0, False, nandMMUIndicationProxy.ifc);
-   MMURequestWrapper nandMMURequestWrapper <- mkMMURequestWrapper(IfcNames_NandMMURequest, nandMMU.request);
+   MMURequestWrapper nandMMURequestWrapper <- mkMMURequestWrapper(IfcNames_NandMMURequestS2H, nandMMU.request);
 
    // flash top
-   FlashIndicationProxy flashIndicationProxy <- mkFlashIndicationProxy(IfcNames_NandCfgIndication);
+   FlashIndicationProxy flashIndicationProxy <- mkFlashIndicationProxy(IfcNames_NandCfgIndicationH2S);
    FlashTop flashtop <- mkFlashTop(flashIndicationProxy.ifc, clk250, rst250);
-   FlashRequestWrapper flashRequestWrapper <- mkFlashRequestWrapper(IfcNames_NandCfgRequest,flashtop.request);
+   FlashRequestWrapper flashRequestWrapper <- mkFlashRequestWrapper(IfcNames_NandCfgRequestS2H,flashtop.request);
    
    // host memory server
-   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_HostMemServerIndication);
+   MemServerIndicationProxy hostMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_MemServerIndicationH2S);
    let rcs = append(strstr.config_read_client,flashtop.hostMemReadClient);
    let wcs = flashtop.hostMemWriteClient;
    MemServer#(PhysAddrWidth,DataBusWidth,1) hostMemServer <- mkMemServer(rcs,wcs,vec(algoMMU,backingMMU), hostMemServerIndicationProxy.ifc);
 
    // flash memory read server
-   MemServerIndicationProxy flashMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_NandMemServerIndication);
+   MemServerIndicationProxy flashMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_NandMemServerIndicationH2S);
    MemServer#(FlashAddrWidth,FlashDataWidth,1) flashMemServer <- mkMemServer(strstr.haystack_read_client, nil, vec(nandMMU),
 									     flashMemServerIndicationProxy.ifc);
    mkConnection(flashMemServer.masters[0], flashtop.memSlave);

@@ -513,21 +513,18 @@ interface DramMatrixMultiply#(numeric type n, numeric type dmasz, numeric type n
 endinterface
 
 module  mkDramMatrixMultiply#(HostInterface host)(DramMatrixMultiply#(N,TMul#(N,32),2));
-
    MemwriteEngine#(TMul#(N,32),2, J)   writeEngine <- mkMemwriteEngine();
    MemreadEngine#(TMul#(N,32), 2, J) rowReadEngine <- mkMemreadEngineBuff(512);
    MemreadEngine#(TMul#(N,32), 2, K) colReadEngine <- mkMemreadEngineBuff(512);
    
-   Vector#(J, Server#(MemengineCmd,Bool)) rowReadServers = rowReadEngine.readServers;
-   Vector#(K, Server#(MemengineCmd,Bool)) colReadServers = colReadEngine.readServers;
-   Vector#(J, PipeOut#(Bit#(TMul#(N,32)))) rowReadDataPipes = rowReadEngine.dataPipes;
-   Vector#(K, PipeOut#(Bit#(TMul#(N,32)))) colReadDataPipes = colReadEngine.dataPipes;
+   Vector#(J, MemreadServer#(TMul#(N,32))) rowReadServers = rowReadEngine.read_servers;
+   Vector#(K, MemreadServer#(TMul#(N,32))) colReadServers = colReadEngine.read_servers;
       
    MemWriter#(TMul#(32,N)) bogusWriter <- mkMemWriter;
    
-   Vector#(J, VectorSource#(DmaSz, Vector#(N,Float))) xvfsources <- mapM(uncurry(mkMemreadVectorSource), zip(rowReadServers, rowReadDataPipes));
-   Vector#(K, VectorSource#(DmaSz, Vector#(N,Float))) yvfsources <- mapM(uncurry(mkMemreadVectorSource), zip(colReadServers, colReadDataPipes));
-   Vector#(J,   VectorSink#(DmaSz, Vector#(N,Float)))      sinks <- mapM(uncurry(mkMemwriteVectorSink),   zip(writeEngine.writeServers,   writeEngine.dataPipes));
+   Vector#(J, VectorSource#(DmaSz, Vector#(N,Float))) xvfsources <- mapM(mkMemreadVectorSource, rowReadServers);
+   Vector#(K, VectorSource#(DmaSz, Vector#(N,Float))) yvfsources <- mapM(mkMemreadVectorSource, colReadServers);
+   Vector#(J,   VectorSink#(DmaSz, Vector#(N,Float)))      sinks <- mapM(uncurry(mkMemwriteVectorSink), zip(writeEngine.writeServers,   writeEngine.dataPipes));
    
    DmaMatrixMultiplyIfc#(MMSize,DmaSz) dmaMMF <- mkDmaMatrixMultiply(xvfsources, yvfsources, sinks, host);
    interface Vector readClients  = cons(rowReadEngine.dmaClient, cons(colReadEngine.dmaClient, nil));

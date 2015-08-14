@@ -107,8 +107,7 @@ module mkNandSimMod#(NandCfgIndication indication,
 					 nand_ctrl_host_ws, we.write_servers[0], we.write_servers[1],
 					 indication);
    
-   Vector#(numSlaves,Server#(MemengineCmd,Bool)) slave_read_servers  = takeTail(re.readServers);
-   Vector#(numSlaves,PipeOut#(Bit#(64)))         slave_read_pipes    = takeTail(re.dataPipes);
+   Vector#(numSlaves,MemreadServer#(64)) slave_read_servers  = takeTail(re.read_servers);
    Vector#(numSlaves,Server#(MemengineCmd,Bool)) slave_write_servers = takeTail(we.writeServers);
    Vector#(numSlaves,PipeIn#(Bit#(64)))          slave_write_pipes   = takeTail(we.dataPipes);
    Vector#(numSlaves,FIFO#(Bit#(MemTagSize)))    slaveWriteTags <- replicateM(mkSizedBRAMFIFO(valueOf(memengineOuts)));
@@ -120,7 +119,7 @@ module mkNandSimMod#(NandCfgIndication indication,
    for(Integer i = 0; i < valueOf(numSlaves); i=i+1)
       rule completeSlaveReadReq;
 	 slaveReadTags[i].deq;
-	 let rv <- slave_read_servers[i].response.get;
+	 let rv <- slave_read_servers[i].cmdServer.response.get;
 	 if (verbose) $display("mkNandSim::completeSlaveReadReq (%d)", i);
       endrule
 
@@ -151,19 +150,19 @@ module mkNandSimMod#(NandCfgIndication indication,
 	 interface Put readReq;
 	    method Action put(PhysMemRequest#(PhysAddrWidth) req);
 	       if (verbose) $display("mkNandSim.memSlave::readReq %d %d %d (%d)", req.addr, req.burstLen, req.tag, i);
-	       slave_read_servers[i].request.put(MemengineCmd{sglId:0, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen), tag:req.tag});
+	       slave_read_servers[i].cmdServer.request.put(MemengineCmd{sglId:0, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen), tag:req.tag});
 	       slaveReadTags[i].enq(req.tag);
 	       slaveReadCnts[i] <= req.burstLen;
 	    endmethod
 	 endinterface
 	 interface Get  readData;
 	    method ActionValue#(MemData#(64)) get();
-	       let rv <- toGet(slave_read_pipes[i]).get;
+	       let rv <- toGet(slave_read_servers[i].memDataPipe).get;
 	       let new_slaveReadCnt = slaveReadCnts[i]-8;
 	       let last = new_slaveReadCnt==0;
 	       slaveReadCnts[i] <= new_slaveReadCnt;
-	       if (verbose) $display("mkNandSim.memSlave::readData %d %d %d %d (%d)", slaveReadTags[i].first, last, rv, slaveReadCnts[i], i);
-	       return MemData{data:rv, tag:slaveReadTags[i].first,last:last};
+	       if (verbose) $display("mkNandSim.memSlave::readData %d %d %d %d (%d)", slaveReadTags[i].first, last, rv.data, slaveReadCnts[i], i);
+	       return MemData{data:rv.data, tag:slaveReadTags[i].first,last:last};
             endmethod
 	 endinterface
       endinterface

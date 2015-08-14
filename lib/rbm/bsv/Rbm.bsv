@@ -80,8 +80,7 @@ endmodule
    
    
    
-module  mkStatesPipe#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
-		      Vector#(2, PipeOut#(Bit#(TMul#(N,32)))) readPipes,
+module  mkStatesPipe#(Vector#(2,MemreadServer#(TMul#(N,32))) readSrvrs,
 		      Vector#(1,Server#(MemengineCmd,Bool)) writeServers,
 		      Vector#(1, PipeIn#(Bit#(TMul#(N,32))))  writePipes)(StatesPipe#(N, DmaSz))
    provisos ( Bits#(Vector#(N, Float), DmaSz)
@@ -90,7 +89,7 @@ module  mkStatesPipe#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
    let verbose = True;
    let nshift = valueOf(nshift);
    
-   Vector#(2, VectorSource#(DmaSz, Vector#(N,Float))) statesources <- mapM(uncurry(mkMemreadVectorSource), zip(readServers, readPipes));
+   Vector#(2, VectorSource#(DmaSz, Vector#(N,Float))) statesources <- mapM(mkMemreadVectorSource, readSrvrs);
    VectorSink#(DmaSz, Vector#(N, Float)) dmaStatesSink <- mkMemwriteVectorSink(writeServers[0], writePipes[0]);
    PipeOut#(Vector#(N, Float)) dmaStatesPipe <- mkComputeStatesPipe(statesources[0].pipe, statesources[1].pipe, dmaStatesSink.pipe);
 
@@ -116,14 +115,13 @@ interface UpdateWeights#(numeric type n, numeric type dmasz);
    method ActionValue#(Bool) finish();
 endinterface
 
-module  mkUpdateWeights#(Vector#(3,Server#(MemengineCmd,Bool)) readServers,
-			    Vector#(3, PipeOut#(Bit#(TMul#(N,32)))) readPipes,
+module  mkUpdateWeights#(Vector#(3,MemreadServer#(TMul#(N,32))) readSrvrs,
 			    Vector#(1,Server#(MemengineCmd,Bool)) writeServers,
 			    Vector#(1, PipeIn#(Bit#(TMul#(N,32))))  writePipes)(UpdateWeights#(N, DmaSz))
    provisos ( Bits#(Vector#(N, Float), DmaSz)
 	     ,Log#(N,nshift));
 
-   Vector#(3, VectorSource#(DmaSz, Vector#(N,Float))) sources <- mapM(uncurry(mkMemreadVectorSource), zip(readServers, readPipes));
+   Vector#(3, VectorSource#(DmaSz, Vector#(N,Float))) sources <- mapM(mkMemreadVectorSource, readSrvrs);
 
    let n = valueOf(N);
    let nshift = valueOf(nshift);
@@ -196,12 +194,11 @@ interface SumOfErrorSquared#(numeric type n, numeric type dmasz);
    interface SumOfErrorSquaredDebug debug;
 endinterface
 
-module  mkSumOfErrorSquared#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
-			     Vector#(2, PipeOut#(Bit#(TMul#(N,32)))) readPipes)(SumOfErrorSquared#(N, DmaSz))
+module  mkSumOfErrorSquared#(Vector#(2,MemreadServer#(TMul#(N,32))) readSrvrs)(SumOfErrorSquared#(N, DmaSz))
    provisos ( Bits#(Vector#(N, Float), DmaSz)
 	     ,Log#(N,nshift));
    
-   Vector#(2, VectorSource#(DmaSz, Vector#(N,Float))) sources <- mapM(uncurry(mkMemreadVectorSource), zip(readServers, readPipes));
+   Vector#(2, VectorSource#(DmaSz, Vector#(N,Float))) sources <- mapM(mkMemreadVectorSource, readSrvrs);
    let n = valueOf(N);
    let nshift = valueOf(nshift);
    SharedDotProdServer#(1) dotprod <- mkSharedInterleavedDotProdServerConfig(0);
@@ -256,15 +253,14 @@ module  mkRbm#(HostInterface host, RbmIndication rbmInd, SigmoidIndication sigmo
    MemreadEngine#(TMul#(n,32), 2, 9) readEngine  <- mkMemreadEngine;
    MemwriteEngine#(TMul#(n,32),2, 3) writeEngine <- mkMemwriteEngine;
    
-   let res = readEngine.readServers;
-   let rep = readEngine.dataPipes;
+   let res = readEngine.read_servers;
    let wes = writeEngine.writeServers;
    let wep = writeEngine.dataPipes;
    
-   SigmoidIfc#(TMul#(32,n)) sigmoid <- mkSigmoid(takeAt(0,res), takeAt(0,rep), takeAt(0,wes), takeAt(0,wep)); // 2 read, 1 write
-   StatesPipe#(N, DmaSz) states <- mkStatesPipe(takeAt(2,res), takeAt(2,rep), takeAt(1,wes), takeAt(1,wep));              // 2 read, 1 write
-   UpdateWeights#(N, DmaSz) updateWeights <- mkUpdateWeights(takeAt(4,res), takeAt(4,rep), takeAt(2,wes), takeAt(2,wep)); // 3 read, 1 write
-   SumOfErrorSquared#(N, DmaSz) sumOfErrorSquared <- mkSumOfErrorSquared(takeAt(7,res), takeAt(7,rep));                   // 2 read, 0 write
+   SigmoidIfc#(TMul#(32,n)) sigmoid <- mkSigmoid(takeAt(0,res), takeAt(0,wes), takeAt(0,wep)); // 2 read, 1 write
+   StatesPipe#(N, DmaSz) states <- mkStatesPipe(takeAt(2,res), takeAt(1,wes), takeAt(1,wep));  // 2 read, 1 write
+   UpdateWeights#(N, DmaSz) updateWeights <- mkUpdateWeights(takeAt(4,res), takeAt(2,wes), takeAt(2,wep)); // 3 read, 1 write
+   SumOfErrorSquared#(N, DmaSz) sumOfErrorSquared <- mkSumOfErrorSquared(takeAt(7,res));       // 2 read, 0 write
    MmTNInternal#(N) mm <- mkMmTNInternal(host);
    
    ///////////////////////////////////////////////

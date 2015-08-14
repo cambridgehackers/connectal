@@ -18,32 +18,38 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+//import SpecialFIFOs::*;
+//import Vector::*;
+//import BuildVector::*;
+//import StmtFSM::*;
+//import FIFO::*;
+//import BRAM::*;
+//import DefaultValue::*;
+//import Connectable::*;
+//import CtrlMux::*;
+//import Portal::*;
+//import ConnectalMemory::*;
+//import MemTypes::*;
+//import MemServer::*;
+//import MemServerInternal::*;
+//import MMU::*;
+//import MemreadEngine::*;
+//import MemwriteEngine::*;
+//import HostInterface::*;
+//import MMURequest::*;
+//import StrstrRequest::*;
+//import MemServerIndication::*;
+//import MMUIndication::*;
+//import StrstrIndication::*;
+//import NandSimNames::*;
+//import Strstr::*;
+import AuroraCommon::*;
+//import FlashTop::*;
+//import ControllerTypes::*;
+//import FlashRequest::*;
+//import FlashIndication::*;
 
-
-typedef enum {
-
-   IfcNames_MemServerRequestS2H,
-   IfcNames_MemServerIndicationH2S,
-
-   IfcNames_NandMemServerRequestS2H,
-   IfcNames_NandMemServerIndicationH2S,
-	
-   IfcNames_BackingStoreMMURequestS2H,
-   IfcNames_BackingStoreMMUIndicationH2S,
-
-   IfcNames_MMURequestS2H,
-   IfcNames_MMUIndicationH2S,
-   IfcNames_AlgoMMURequestS2H,
-   IfcNames_AlgoMMUIndicationH2S,
-
-   IfcNames_NandMMURequestS2H,
-   IfcNames_NandMMUIndicationH2S,
-
-   IfcNames_NandCfgRequestS2H,
-   IfcNames_NandCfgIndicationH2S,
-
-   IfcNames_AlgoRequestS2H,
-   IfcNames_AlgoIndicationH2S
-
-   } IfcNames deriving (Eq,Bits);
-
+interface Top_Pins;
+	interface Aurora_Pins#(4) aurora_fmc1;
+	interface Aurora_Clock_Pins aurora_clk_fmc1;
+endinterface

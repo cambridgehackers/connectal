@@ -194,8 +194,7 @@ interface SigmoidIfc#(numeric type dsz);
    method Bit#(32) tableSize;
 endinterface
 
-module  mkSigmoid#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
-		   Vector#(2, PipeOut#(Bit#(TMul#(N,32)))) readPipes,
+module  mkSigmoid#(Vector#(2,MemreadServer#(TMul#(N,32))) readSrvrs,
 		   Vector#(1,Server#(MemengineCmd,Bool)) writeServers,
 		   Vector#(1, PipeIn#(Bit#(TMul#(N,32))))  writePipes ) (SigmoidIfc#(dsz))
    provisos (Bits#(Float, fsz)
@@ -210,8 +209,8 @@ module  mkSigmoid#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
    let nshift = valueOf(nshift);
    
    Bool verbose = False;
-   VectorSource#(dmasz, Vector#(n,Float)) source <- mkMemreadVectorSource(readServers[0], readPipes[0]);
-   VectorSource#(dmasz, Vector#(n,Float)) tabsrc <- mkMemreadVectorSource(readServers[1], readPipes[1]);
+   VectorSource#(dmasz, Vector#(n,Float)) source <- mkMemreadVectorSource(readSrvrs[0]);
+   VectorSource#(dmasz, Vector#(n,Float)) tabsrc <- mkMemreadVectorSource(readSrvrs[1]);
 
    Vector#(n, SigmoidTable#(6)) sigmoidTables <- replicateM(mkSigmoidTable);
    Vector#(n, Server#(Float,Float)) sigmoidServers <- mapM(uncurry(mkSigmoidServer), zip(genVector,sigmoidTables));

@@ -42,7 +42,7 @@ interface VectorSource#(numeric type dsz, type a);
    method ActionValue#(Bool) finish();
 endinterface
 
-module  mkMemreadVectorSource#(Server#(MemengineCmd,Bool) memreadServer, PipeOut#(Bit#(asz)) pipeOut)(VectorSource#(asz, a))
+module  mkMemreadVectorSource#(MemreadServer#(asz) memreadServer)(VectorSource#(asz, a))
    provisos (Bits#(a,asz),
 	     Div#(asz,8,abytes),
 	     Log#(abytes,ashift),
@@ -53,12 +53,12 @@ module  mkMemreadVectorSource#(Server#(MemengineCmd,Bool) memreadServer, PipeOut
    let ashift = valueOf(ashift);
    method Action start(SGLId p, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l);
       if (verbose) $display("VectorSource.start h=%d a=%h l=%h ashift=%d", p, a, l, ashift);
-      memreadServer.request.put(MemengineCmd { sglId: p, base: a << ashift, len: truncate(l << ashift), burstLen: (fromInteger(valueOf(BurstLen)) << ashift), tag: 0});
+      memreadServer.cmdServer.request.put(MemengineCmd { sglId: p, base: a << ashift, len: truncate(l << ashift), burstLen: (fromInteger(valueOf(BurstLen)) << ashift), tag: 0});
       // Bit#(8) foo = (fromInteger(valueOf(BurstLen)) << ashift);
       // $display("feck %d", foo);
    endmethod
-   method finish = memreadServer.response.get;
-   interface PipeOut pipe = mapPipe(unpack, pipeOut);
+   method finish = memreadServer.cmdServer.response.get;
+   interface PipeOut pipe = mapPipe(unpack, memreadServer.dataPipe);
 endmodule
 
 interface VectorSink#(numeric type dsz, type a);
