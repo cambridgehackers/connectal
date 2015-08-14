@@ -25,6 +25,8 @@
 #include "sock_utils.h"
 #include <assert.h>
 
+static int trace_socket; // = 1;
+
 static unsigned int tag_counter;
 #define MAX_BSIM_TILES     4
 typedef struct bsim_fpga_map_entry{
@@ -110,7 +112,6 @@ int i;
 
 static pthread_mutex_t socket_mutex;
 int global_sockfd = -1;
-static int trace_socket; // = 1;
 
 void connect_to_bsim(void)
 {
