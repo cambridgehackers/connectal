@@ -104,8 +104,8 @@ module mkMPEngine#(MemreadServer#(haystackBusWidth) haystackReader,
    Reg#(Bit#(32)) iReg <- mkReg(0); // offset in needle
    Reg#(Bit#(2))  epochReg <- mkReg(0);
 
-   BRAMWriter#(NeedleIdxWidth,configBusWidth) n2b <- mkBRAMWriter(0, needle.portB, configReader.cmdServer, configReader.dataPipe);
-   BRAMWriter#(NeedleIdxWidth,configBusWidth) mp2b <- mkBRAMWriter(1, mpNext.portB, configReader.cmdServer, configReader.dataPipe);
+   BRAMWriter#(NeedleIdxWidth,configBusWidth) n2b <- mkBRAMWriter(0, needle.portB, configReader);
+   BRAMWriter#(NeedleIdxWidth,configBusWidth) mp2b <- mkBRAMWriter(1, mpNext.portB, configReader);
 
    FIFOF#(Tuple2#(Bit#(2),Bit#(32))) efifo <- mkSizedFIFOF(2);
    FIFOF#(Tripple#(Bit#(32))) ssfifo <- mkFIFOF;
@@ -117,8 +117,8 @@ module mkMPEngine#(MemreadServer#(haystackBusWidth) haystackReader,
    
    rule haystackResp;
       if (debug) $display("mkMPEngine::haystackResp");
-      let rv <- toGet(haystackReader.dataPipe).get;
-      haystack.enq(unpack(rv));
+      let rv <- toGet(haystackReader.memDataPipe).get;
+      haystack.enq(unpack(rv.data));
    endrule
    
    rule haystackDrain(stage != Search);

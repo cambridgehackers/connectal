@@ -51,7 +51,7 @@ module mkTest#(TestIndication indication)(Test);
    
    MemreadEngine#(64,1,1)  re <- mkMemreadEngine;
    BRAM1Port#(Bit#(10),Bit#(8)) bram <- mkBRAM1Server(defaultValue);
-   BRAMWriter#(10,64) bramWriter <- mkBRAMWriter(2, bram.portA, re.read_servers[0].cmdServer, re.read_servers[0].dataPipe);
+   BRAMWriter#(10,64) bramWriter <- mkBRAMWriter(2, bram.portA, re.read_servers[0]);
       
    rule finishWrite;
       let rv <- bramWriter.finish;

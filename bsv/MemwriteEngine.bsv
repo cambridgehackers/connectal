@@ -311,7 +311,6 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
 		     endmethod
 		  endinterface
 	       endinterface);
-   interface writeServers = rs;
    interface MemWriteClient dmaClient;
       interface Get writeReq;
 	 method ActionValue#(MemRequest) get();
@@ -356,10 +355,5 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
 	 endmethod
       endinterface
    endinterface 
-   interface dataPipes = zipWith(check_in, write_data_buffs, genVector);
    interface write_servers = zipWith(toMemwriteServer, rs, zipWith(check_in, write_data_buffs, genVector));
 endmodule
-
-
-
-	       

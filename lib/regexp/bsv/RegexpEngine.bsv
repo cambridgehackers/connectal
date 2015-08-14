@@ -82,9 +82,9 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
    BRAM1Port#(Bit#(5), Bit#(8)) stateMap <- mkBRAM1Server(defaultValue);
    BRAM1Port#(Bit#(10),Bit#(8)) stateTransitions <- mkBRAM1Server(defaultValue);
 
-   BRAMWriter#(8,64) charMapWriter <- mkBRAMWriter(0, charMap.portA, config_re.cmdServer, config_re.dataPipe);
-   BRAMWriter#(5,64) stateMapWriter <- mkBRAMWriter(1, stateMap.portA, config_re.cmdServer, config_re.dataPipe);
-   BRAMWriter#(10,64) stateTransitionsWriter <- mkBRAMWriter(2, stateTransitions.portA, config_re.cmdServer, config_re.dataPipe);
+   BRAMWriter#(8,64) charMapWriter <- mkBRAMWriter(0, charMap.portA, config_re);
+   BRAMWriter#(5,64) stateMapWriter <- mkBRAMWriter(1, stateMap.portA, config_re);
+   BRAMWriter#(10,64) stateTransitionsWriter <- mkBRAMWriter(2, stateTransitions.portA, config_re);
 	          
    let clk <- exposeCurrentClock;
    let rst <- exposeCurrentReset;
@@ -109,8 +109,8 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
    endrule
    
    rule haystackResp;
-      let rv <- toGet(haystack_re.dataPipe).get;
-      haystack.enq(unpack(rv));
+      let rv <- toGet(haystack_re.memDataPipe).get;
+      haystack.enq(unpack(rv.data));
    endrule
    
    rule haystackFinish if (!haystack.notEmpty);

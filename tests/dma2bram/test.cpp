@@ -18,7 +18,6 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#include <monkit.h>
 #include "dmaManager.h"
 #include "TestIndication.h"
 #include "TestRequest.h"
@@ -28,7 +27,6 @@ unsigned int alloc_sz = 1<<10;
 
 class TestIndication : public TestIndicationWrapper
 {
-
 public:
   TestIndication(unsigned int id) : TestIndicationWrapper(id){}
   virtual void writeDone(uint32_t v) {
@@ -41,16 +39,15 @@ int main(int argc, const char **argv)
 {
   DmaManager *dma = platformInit();
   TestRequestProxy *testRequest = new TestRequestProxy(IfcNames_TestRequestS2H);
-  TestIndication *testIndication = new TestIndication(IfcNames_TestIndicationH2S);
+  TestIndication testIndication(IfcNames_TestIndicationH2S);
 
   if(sem_init(&test_sem, 1, 0)){
     fprintf(stderr, "failed to init test_sem\n");
     return -1;
   }
-
   int srcAlloc = portalAlloc(alloc_sz, 0);
-  unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
-  unsigned int ref_srcAlloc = dma->reference(srcAlloc);
+  //unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
+  int ref_srcAlloc = dma->reference(srcAlloc);
 
   testRequest->startWrite(ref_srcAlloc);
   sem_wait(&test_sem);

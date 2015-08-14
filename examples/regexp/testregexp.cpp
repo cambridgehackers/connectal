@@ -18,9 +18,10 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#include <iostream>
-#include <fstream>
-#include <sys/stat.h>
+#include <assert.h>
+//#include <iostream>
+//#include <fstream>
+//#include <sys/stat.h>
 #include "dmaManager.h"
 #include "RegexpIndication.h"
 #include "RegexpRequest.h"
@@ -28,15 +29,13 @@
 
 int main(int argc, const char **argv)
 {
-
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
-
   RegexpRequestProxy *device = new RegexpRequestProxy(IfcNames_RegexpRequestS2H);
-    DmaManager *hostDma = platformInit();
+  DmaManager *hostDma = platformInit();
   RegexpIndication *deviceIndication = new RegexpIndication(IfcNames_RegexpIndicationH2S);
   
   haystack_dma = hostDma;
-  haystack_mmu = hostMMURequest;
+  //haystack_mmu = hostMMURequest;
   regexp = device;
 
   if(sem_init(&test_sem, 1, 0)){
@@ -62,7 +61,6 @@ int main(int argc, const char **argv)
     portalCacheFlush(stateTransitionsP.alloc, stateTransitionsP.mem, stateTransitionsP.length, 1);
 
     for(int i = 0; i < num_tests; i++){
-
       device->setup(charMapP.ref, charMapP.length);
       device->setup(stateMapP.ref, stateMapP.length);
       device->setup(stateTransitionsP.ref, stateTransitionsP.length);

@@ -86,8 +86,6 @@ endinterface
 
 interface MemwriteEngine#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers);
    interface MemWriteClient#(dataWidth) dmaClient;
-   interface Vector#(numServers, Server#(MemengineCmd,Bool)) writeServers;
-   interface Vector#(numServers, PipeIn#(Bit#(dataWidth))) dataPipes;
    interface Vector#(numServers, MemwriteServer#(dataWidth)) write_servers;
 endinterface
 
@@ -100,14 +98,11 @@ typedef struct {
 
 interface MemreadServer#(numeric type dataWidth);
    interface Server#(MemengineCmd,Bool) cmdServer;
-   interface PipeOut#(Bit#(dataWidth)) dataPipe;
    interface PipeOut#(MemDataF#(dataWidth)) memDataPipe;
 endinterface
       
 interface MemreadEngine#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers);
    interface MemReadClient#(dataWidth) dmaClient;
-   interface Vector#(numServers, Server#(MemengineCmd,Bool)) readServers;
-   interface Vector#(numServers, PipeOut#(Bit#(dataWidth))) dataPipes;
    interface Vector#(numServers, MemreadServer#(dataWidth)) read_servers;
 endinterface
 

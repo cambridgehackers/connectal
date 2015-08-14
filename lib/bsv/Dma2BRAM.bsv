@@ -121,8 +121,7 @@ endmodule
 
 module mkBRAMWriter#(Integer id,
 		     BRAMServer#(Bit#(bramIdxWidth),d) br, 
-		     Server#(MemengineCmd,Bool) readServer, 
-		     PipeOut#(Bit#(busWidth)) readPipe)(BRAMWriter#(bramIdxWidth,busWidth))
+		     MemreadServer#(busWidth) readServer)(BRAMWriter#(bramIdxWidth,busWidth))
    provisos(Bits#(d,dsz),
 	    Div#(busWidth,dsz,nd),
 	    Mul#(nd,dsz,busWidth),
@@ -140,11 +139,14 @@ module mkBRAMWriter#(Integer id,
    Reg#(Bit#(cntW)) n <- mkReg(0);
    Gearbox#(nd,1,d) gb <- mkNto1Gearbox(clk,rst,clk,rst);
    Reg#(Bool) running <- mkReg(False);
+   FIFO#(void) doneFifo <- mkFIFO;
    
    rule feed_gearbox if (running);
-      let v <- toGet(readPipe).get;
-      if(verbose) $display("mkBRAMWriter::feed_gearbox (%d) %x", id, v);
-      gb.enq(unpack(v));
+      let v <- toGet(readServer.memDataPipe).get;
+      if(verbose) $display("mkBRAMWriter::feed_gearbox (%d) %x", id, v.data);
+      gb.enq(unpack(v.data));
+      if (v.last)
+          doneFifo.enq(?);
    endrule
    
    rule load(j <= n);
@@ -158,6 +160,10 @@ module mkBRAMWriter#(Integer id,
       gb.deq;
       if(verbose) $display("mkBRAMWriter::discard (%d) %x", id, j);
    endrule
+
+   rule oldfinish;
+      let rv <- readServer.cmdServer.response.get;
+   endrule
    
    method Action start(SGLId h, Bit#(MemOffsetSize) b, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx) if (!running);
       if(verbose) $display("mkBRAMWriter::start (%d) %d, %d, %d %d", id, h, b, start_idx, finish_idx);
@@ -167,16 +173,16 @@ module mkBRAMWriter#(Integer id,
       Bit#(TLog#(nd)) zeros = 0;
       Bit#(32) req_len_bytes = {zeros,req_len_ds[31:valueOf(TLog#(nd))]} * fromInteger(valueOf(bwbytes));
 
-      readServer.request.put(MemengineCmd{sglId:h, base:b, len:req_len_bytes, burstLen:burst_len_bytes, tag: 0});
+      readServer.cmdServer.request.put(MemengineCmd{sglId:h, base:b, len:req_len_bytes, burstLen:burst_len_bytes, tag: 0});
       if(verbose) $display("mkBRAMWriter::start (%d) %d, %d", id, req_len_bytes, burst_len_bytes);
       j <= extend(start_idx);
       n <= extend(finish_idx);
       running <= True;
    endmethod
-   
+
    method ActionValue#(Bool) finish() if (running);
       if(verbose) $display("mkBRAMWriter::finish (%d)", id);
-      let rv <- readServer.response.get;
+      doneFifo.deq;
       running <= False;
       return True;
    endmethod

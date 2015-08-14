@@ -70,9 +70,9 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
    endrule
 
    rule receiveReqHeadTail if (state == HeadRequested || state == TailRequested);
-      let data <- toGet(readEngine.dataPipe).get();
-      let w0 = data[31:0];
-      let w1 = data[63:32];
+      let v <- toGet(readEngine.memDataPipe).get();
+      let w0 = v.data[31:0];
+      let w1 = v.data[63:32];
       let head = headReg;
       let tail = tailReg;
       if (state == HeadRequested) begin
@@ -115,8 +115,8 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
    endrule
 
    rule demuxwords if (readMifo.enqReady());
-      let data <- toGet(readEngine.dataPipe).get();
-      Vector#(2,Bit#(32)) dvec = unpack(data);
+      let v <- toGet(readEngine.memDataPipe).get();
+      Vector#(2,Bit#(32)) dvec = unpack(v.data);
       let enqCount = 2;
       Vector#(4,Bit#(32)) dvec4;
       dvec4[0] = dvec[0];

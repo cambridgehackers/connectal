@@ -18,15 +18,13 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#include <fcntl.h>
 #include <assert.h>
-#include <semaphore.h>
-#include <ctime>
-#include <monkit.h>
-#include <mp.h>
 #include "dmaManager.h"
 #include "StrstrIndication.h"
 #include "StrstrRequest.h"
 #include "strstr.h"
+#include "mp.h"
 
 int sw_match_cnt = 0;
 
@@ -97,9 +95,9 @@ int main(int argc, const char **argv)
     portalTimerStart(0);
     device->search(ref_haystackAlloc, haystack_len);
     deviceIndication->wait();
-    uint64_t cycles = portalTimerLap(0);
-    uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
-    fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
+    //uint64_t cycles = portalTimerLap(0);
+    //uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
+    //fprintf(stderr, "memory read utilization (beats/cycle): %f\n", ((float)beats)/((float)cycles));
 
     close(needleAlloc);
     close(haystackAlloc);
@@ -113,13 +111,13 @@ int main(int argc, const char **argv)
     int mpNextAlloc;
     const char *needle_text = "I have control\n";
 #ifndef BSIM
-    unsigned int BENCHMARK_INPUT_SIZE = 16 << 18;
+    int BENCHMARK_INPUT_SIZE = 16 << 18;
 #else
-    unsigned int BENCHMARK_INPUT_SIZE = 16 << 15;
+    int BENCHMARK_INPUT_SIZE = 16 << 15;
 #endif
-    unsigned int haystack_alloc_len = BENCHMARK_INPUT_SIZE;
-    unsigned int needle_alloc_len = strlen(needle_text);
-    unsigned int mpNext_alloc_len = needle_alloc_len*4;
+    int haystack_alloc_len = BENCHMARK_INPUT_SIZE;
+    int needle_alloc_len = strlen(needle_text);
+    int mpNext_alloc_len = needle_alloc_len*4;
     
     needleAlloc = portalAlloc(needle_alloc_len, 0);
     haystackAlloc = portalAlloc(haystack_alloc_len, 0);
@@ -129,12 +127,15 @@ int main(int argc, const char **argv)
     char *haystack = (char *)portalMmap(haystackAlloc, haystack_alloc_len);
     int *mpNext = (int *)portalMmap(mpNextAlloc, mpNext_alloc_len);
 
-    unsigned int ref_needleAlloc = dma->reference(needleAlloc);
-    unsigned int ref_haystackAlloc = dma->reference(haystackAlloc);
-    unsigned int ref_mpNextAlloc = dma->reference(mpNextAlloc);
+    int ref_needleAlloc = dma->reference(needleAlloc);
+    int ref_haystackAlloc = dma->reference(haystackAlloc);
+    int ref_mpNextAlloc = dma->reference(mpNextAlloc);
 
-    FILE* fp = fopen("/dev/urandom", "r");
-    size_t rv = fread(haystack, 1, BENCHMARK_INPUT_SIZE, fp);
+    int fp = open("/dev/urandom", O_RDONLY);
+    int rv = read(fp, haystack, BENCHMARK_INPUT_SIZE);
+    if (rv != BENCHMARK_INPUT_SIZE) {
+        printf("[%s:%d] /dev/urandom failed?\n", __FUNCTION__, __LINE__);
+    }
     strncpy(needle, needle_text, needle_alloc_len);
     
     int needle_len = strlen(needle);
@@ -162,24 +163,19 @@ int main(int argc, const char **argv)
     portalTimerStart(0);
     device->search(ref_haystackAlloc, haystack_len);
     deviceIndication->wait();
-    uint64_t hw_cycles = portalTimerLap(0);
-    uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
-    float read_util = (float)beats/(float)hw_cycles;
-    fprintf(stderr, "hw_cycles:%llx\n", (long long)hw_cycles);
-    fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
-    fprintf(stderr, "speedup: %f\n", ((float)sw_cycles)/((float)hw_cycles));
+    //uint64_t hw_cycles = portalTimerLap(0);
+    //uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
+    //float read_util = (float)beats/(float)hw_cycles;
+    //fprintf(stderr, "hw_cycles:%llx\n", (long long)hw_cycles);
+    //fprintf(stderr, "memory read utilization (beats/cycle): %f\n", read_util);
+    //fprintf(stderr, "speedup: %f\n", ((float)sw_cycles)/((float)hw_cycles));
 
-    MonkitFile("perf.monkit")
-      .setHwCycles(hw_cycles)
-      .setSwCycles(sw_cycles)
-      .setReadBwUtil(read_util)
-      .writeFile();
-
-    close(needleAlloc);
-    close(haystackAlloc);
-    close(mpNextAlloc);
+    //MonkitFile("perf.monkit")
+      //.setHwCycles(hw_cycles)
+      //.setSwCycles(sw_cycles)
+      //.setReadBwUtil(read_util)
+      //.writeFile();
   }
-
   int hw_match_cnt = deviceIndication->match_cnt;
   fprintf(stderr, "teststrstr: Done, sw_match_cnt=%d, hw_match_cnt=%d\n", sw_match_cnt, hw_match_cnt);
   return (sw_match_cnt != hw_match_cnt);

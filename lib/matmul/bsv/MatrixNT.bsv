@@ -524,7 +524,7 @@ module  mkDramMatrixMultiply#(HostInterface host)(DramMatrixMultiply#(N,TMul#(N,
    
    Vector#(J, VectorSource#(DmaSz, Vector#(N,Float))) xvfsources <- mapM(mkMemreadVectorSource, rowReadServers);
    Vector#(K, VectorSource#(DmaSz, Vector#(N,Float))) yvfsources <- mapM(mkMemreadVectorSource, colReadServers);
-   Vector#(J,   VectorSink#(DmaSz, Vector#(N,Float)))      sinks <- mapM(uncurry(mkMemwriteVectorSink), zip(writeEngine.writeServers,   writeEngine.dataPipes));
+   Vector#(J,   VectorSink#(DmaSz, Vector#(N,Float)))      sinks <- mapM(mkMemwriteVectorSink, writeEngine);
    
    DmaMatrixMultiplyIfc#(MMSize,DmaSz) dmaMMF <- mkDmaMatrixMultiply(xvfsources, yvfsources, sinks, host);
    interface Vector readClients  = cons(rowReadEngine.dmaClient, cons(colReadEngine.dmaClient, nil));

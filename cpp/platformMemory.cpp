@@ -30,10 +30,9 @@
 #define PLATFORM_TILE 0
 
 class PortalPoller;
-#ifndef NO_CPP_PORTAL_CODE
-static int mmu_error_limit = 20;
-static int mem_error_limit = 20;
-static const char *dmaErrors[] = {
+int mmu_error_limit = 20;
+int mem_error_limit = 20;
+const char *dmaErrors[] = {
 				"None",
 				"SGL Id out of range for read",
 				"SGL Id out of range for write",
@@ -136,4 +135,3 @@ void platformStatistics(void)
     fprintf(stderr, "       cycles: %lld\n", (long long)cycles);
     fprintf(stderr, "memory utilization (beats/cycle): read %f write %f\n", read_util, write_util);
 }
-#endif
