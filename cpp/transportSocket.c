@@ -65,8 +65,9 @@ static void initialize_bsim_map(void)
       bsim_fpga_map[tile_index][portal_index].name = id;
       bsim_fpga_map[tile_index][portal_index].offset = portal_index;
       bsim_fpga_map[tile_index][portal_index].valid = 1;
-      PORTAL_PRINTF("%s: bsim_fpga_map[%d/%d][%d/%d]=%d (%d)\n", __FUNCTION__, tile_index, num_tiles, portal_index, num_portals,
-          bsim_fpga_map[tile_index][portal_index].name, (portal_index+1==num_portals));
+      if (trace_socket)
+	PORTAL_PRINTF("%s: bsim_fpga_map[%d/%d][%d/%d]=%d (%d)\n", __FUNCTION__, tile_index, num_tiles, portal_index, num_portals,
+		      bsim_fpga_map[tile_index][portal_index].name, (portal_index+1==num_portals));
       portal_index++;
       base_ptr += PORTAL_BASE_OFFSET;
     } while (portal_index < num_portals && portal_index < 32);
