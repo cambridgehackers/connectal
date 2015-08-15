@@ -180,7 +180,7 @@ Memory Engine Interfaces
 
    .. bsv:subinterface:: PipeIn#(Bit#(dataWidth)) data
 
-.. bsv:interface:: MemwriteEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers)
+.. bsv:interface:: MemwriteEngine#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers)
 
    .. bsv:subinterface:: MemWriteClient#(dataWidth) dmaClient
 
@@ -192,7 +192,7 @@ Memory Engine Interfaces
 
    .. bsv:subinterface:: PipeOut#(Bit#(dataWidth)) data
       
-.. bsv:interface:: MemreadEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers)
+.. bsv:interface:: MemreadEngine#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers)
 
    .. bsv:subinterface:: MemReadClient#(dataWidth) dmaClient
 

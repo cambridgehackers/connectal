@@ -24,27 +24,26 @@ import FIFOF::*;
 import Vector::*;
 import GetPut::*;
 import ClientServer::*;
-
 import Pipe::*;
 import MemTypes::*;
 import MemreadEngine::*;
 import Pipe::*;
 import HostInterface::*; // for DataBusWidth
 
-interface MemreadRequest;
+interface ReadTestRequest;
    method Action startRead(Bit#(32) pointer, Bit#(32) numBytes, Bit#(32) burstLenInBytes, Bit#(32) iterCnt);
 endinterface
 
-interface Memread;
-   interface MemreadRequest request;
+interface ReadTest;
+   interface ReadTestRequest request;
    interface Vector#(1,MemReadClient#(DataBusWidth)) dmaClient;
 endinterface
 
-interface MemreadIndication;
+interface ReadTestIndication;
    method Action readDone(Bit#(32) mismatchCount);
 endinterface
 
-module mkMemread#(MemreadIndication indication) (Memread);
+module mkReadTest#(ReadTestIndication indication) (ReadTest);
    Reg#(SGLId)   pointer <- mkReg(0);
    Reg#(Bit#(32))       numBytes <- mkReg(0);
    Reg#(Bit#(BurstLenSize)) burstLenInBytes <- mkReg(0);
@@ -59,25 +58,25 @@ module mkMemread#(MemreadIndication indication) (Memread);
       itersToStart <= itersToStart-1;
    endrule
 
+   function Bit#(32) expectedVal(Integer i); return srcGens+fromInteger(i); endfunction
    rule check;
       let v <- toGet(re.readServers[0].data).get;
-      let expectedV = {srcGens+1,srcGens};
+      let expectedV = pack(genWith(expectedVal));
       let misMatch = v.data != expectedV;
       mismatchCounts <= mismatchCounts + (misMatch ? 1 : 0);
       let new_srcGens = srcGens+2;
-      if (new_srcGens >= truncate(numBytes/4))
-	 new_srcGens = 0;
-      srcGens <= new_srcGens;
       if (v.last) begin
+	 new_srcGens = 0;
          if (itersToFinish == 1) begin
 	    indication.readDone(mismatchCounts);
          end
          itersToFinish <= itersToFinish - 1;
       end
+      srcGens <= new_srcGens;
    endrule
 
    interface dmaClient = cons(re.dmaClient, nil);
-   interface MemreadRequest request;
+   interface ReadTestRequest request;
       method Action startRead(Bit#(32) rp, Bit#(32) nb, Bit#(32) bl, Bit#(32) ic) if (itersToStart == 0 && itersToFinish == 0);
 	 pointer <= rp;
 	 numBytes <= nb;

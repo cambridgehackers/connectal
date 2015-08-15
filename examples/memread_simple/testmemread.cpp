@@ -19,8 +19,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include "dmaManager.h"
-#include "MemreadRequest.h"
-#include "MemreadIndication.h"
+#include "ReadTestRequest.h"
+#include "ReadTestIndication.h"
 
 #ifdef BSIM
 static size_t test_sz = 0x124000; // make sure to allocate at least one entry of each size
@@ -30,20 +30,20 @@ static size_t test_sz = 0x1240000; // make sure to allocate at least one entry o
 sem_t test_sem;
 static int burstLen = 16 * 4;
 
-class MemreadIndication : public MemreadIndicationWrapper
+class ReadTestIndication : public ReadTestIndicationWrapper
 {
 public:
   void readDone(uint32_t v){
-    printf( "Memread::readDone(mismatch = %x)\n", v);
+    printf( "ReadTest::readDone(mismatch = %x)\n", v);
     sem_post(&test_sem);
   }
-  MemreadIndication(int id) : MemreadIndicationWrapper(id){}
+  ReadTestIndication(int id) : ReadTestIndicationWrapper(id){}
 };
 
 int main(int argc, const char **argv)
 {
-  MemreadRequestProxy *device = new MemreadRequestProxy(IfcNames_MemreadRequestS2H);
-  MemreadIndication deviceIndication(IfcNames_MemreadIndicationH2S);
+  ReadTestRequestProxy *device = new ReadTestRequestProxy(IfcNames_ReadTestRequestS2H);
+  ReadTestIndication deviceIndication(IfcNames_ReadTestIndicationH2S);
   DmaManager *dma = platformInit();
 
   int srcAlloc;
