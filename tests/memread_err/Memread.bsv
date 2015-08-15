@@ -56,7 +56,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    let debug = True;
    
    rule check;
-      let v <- toGet(re.readServers[0].memDataPipe).get;
+      let v <- toGet(re.readServers[0].data).get;
       let expectedV = {srcGen+1,srcGen};
       let misMatch = v.data != expectedV;
       if (debug && misMatch) $display("check %h %h", v, expectedV);

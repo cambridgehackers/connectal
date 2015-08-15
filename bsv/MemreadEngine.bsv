@@ -204,7 +204,7 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
 			   end
  		     endmethod
 		  endinterface
-                  interface memDataPipe = memDataPipes[i];
+                  interface data = memDataPipes[i];
                endinterface);
    interface MemReadClient dmaClient;
       interface Get readReq;

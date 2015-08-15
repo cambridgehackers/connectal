@@ -118,7 +118,7 @@ module mkMPEngine#(MemreadServer#(haystackBusWidth) haystackReader,
    
    rule haystackResp;
       if (debug) $display("mkMPEngine::haystackResp");
-      let rv <- toGet(haystackReader.memDataPipe).get;
+      let rv <- toGet(haystackReader.data).get;
       haystack.enq(unpack(rv.data));
       if (rv.last)
          conff.deq;

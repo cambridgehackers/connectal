@@ -162,7 +162,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
       dmaendDelay <= dmaend;
    endrule
    rule fromMemread;
-      let v <- toGet(memreadEngine.readServers[0].memDataPipe).get;
+      let v <- toGet(memreadEngine.readServers[0].data).get;
       synchronizer.enq(v.data);
       if (verbose)
           $display("hdmiDisplay: dmadata [%d]=%x cycle %d", transferWord, v.data, transferCycles - transferCyclesSnapshot);

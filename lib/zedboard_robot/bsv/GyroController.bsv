@@ -157,10 +157,10 @@ module mkGyroController#(GyroCtrlIndication ind)(GyroController);
          en_memwr <= en_memwr-1;
       end
       writePtr <= new_writePtr;      
-      we.writeServers[0].cmdServer.request.put(MemengineCmd{sglId:sglId, base:extend(writePtr), burstLen:8, len:8, tag:0});
+      we.writeServers[0].request.put(MemengineCmd{sglId:sglId, base:extend(writePtr), burstLen:8, len:8, tag:0});
    endrule
    rule we_cmd_deq;
-      let rv <- we.writeServers[0].cmdServer.response.get;
+      let rv <- we.writeServers[0].done.get;
       Bit#(32) new_cWritePtr = cWritePtr + 8;
       if(new_cWritePtr >= allocSz) begin
 	 new_cWritePtr = 0;
@@ -171,7 +171,7 @@ module mkGyroController#(GyroCtrlIndication ind)(GyroController);
    
    rule we_data_enq;
       gb.deq;
-      we.writeServers[0].dataPipe.enq(pack(gb.first));
+      we.writeServers[0].data.enq(pack(gb.first));
    endrule
    
    interface GyroCtrlRequest req;

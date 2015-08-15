@@ -244,7 +244,7 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 								len:fromInteger(dmaBurstBytes), 
 								burstLen:fromInteger(dmaBurstBytes)
 							};
-			we.writeServers[b].cmdServer.request.put(dmaCmd);
+			we.writeServers[b].request.put(dmaCmd);
 			dmaReq2RespQ[b].enq(tuple2(tag, dmaWrReqCnts[b]));
 			
 			$display("@%d Main.bsv: init dma write tag=%d, bus=%d, addr=0x%x 0x%x", 
@@ -264,12 +264,12 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 			let taggedRdata = dmaWriteBufOut[b].first;
 			let data = tpl_1(taggedRdata);
 			dmaWriteBufOut[b].deq;
-			we.writeServers[b].dataPipe.enq(data);
+			we.writeServers[b].data.enq(data);
 		endrule
 
 		//dma response.get done; when enough has accumulated, send ack to sw
 		rule dmaWriterGetResponse;
-			let dummy <- we.writeServers[b].cmdServer.response.get;
+			let dummy <- we.writeServers[b].done.get;
 			let tagCnt = dmaReq2RespQ[b].first;
 			dmaReq2RespQ[b].deq;
 			$display("@%d Main.bsv: dma resp [%d] tag=%d", cycleCnt, tpl_2(tagCnt), tpl_1(tagCnt));
@@ -335,7 +335,7 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 
 		//forward data
 		rule forwardDmaRdData;
-			let d <- toGet(re.readServers[b].memDataPipe).get;
+			let d <- toGet(re.readServers[b].data).get;
 			let tag = dmaRdReq2RespQ[b].first;
 			flashCtrl.user.writeWord(tuple2(d.data, tag));
 			$display("Main.bsv: forwarded dma read data [%d]: tag=%d, data=%x", dmaReadBurstCount[b],

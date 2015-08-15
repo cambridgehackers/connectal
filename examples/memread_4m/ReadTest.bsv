@@ -101,7 +101,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest#(4));
    
    for(Integer i = 0; i < 4; i=i+1)
       rule check;
-	 let v <- toGet(res[i].readServers[0].memDataPipe).get;
+	 let v <- toGet(res[i].readServers[0].data).get;
 	 let expectedV = {srcGens[i]+1,srcGens[i]};
 	 let misMatch = v.data != expectedV;
 	 mismatchCounts[i] <= mismatchCounts[i] + (misMatch ? 1 : 0);

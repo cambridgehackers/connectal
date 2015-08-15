@@ -60,7 +60,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    endrule
 
    rule check;
-      let v <- toGet(re.readServers[0].memDataPipe).get;
+      let v <- toGet(re.readServers[0].data).get;
       let expectedV = {srcGens+1,srcGens};
       let misMatch = v.data != expectedV;
       mismatchCounts <= mismatchCounts + (misMatch ? 1 : 0);

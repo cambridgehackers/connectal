@@ -65,13 +65,13 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
    FIFOF#(Bit#(1)) doneReg0 <- mkFIFOF;
    FIFOF#(Bit#(1)) doneReg1 <- mkFIFOF;
    rule re0_read;
-      let v <- toGet(re0.readServers[0].memDataPipe).get;
+      let v <- toGet(re0.readServers[0].data).get;
       toPut(pi0).put(v.data);
       if (v.last)
          doneReg0.enq(0);
    endrule
    rule re1_read;
-      let v <- toGet(re1.readServers[0].memDataPipe).get;
+      let v <- toGet(re1.readServers[0].data).get;
       toPut(pi1).put(v.data);
       if (v.last)
          doneReg1.enq(0);

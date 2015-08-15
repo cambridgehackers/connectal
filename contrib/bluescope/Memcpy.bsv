@@ -65,21 +65,21 @@ module mkMemcpyRequest#(MemcpyIndication indication,
       
    rule start(iterCnt > 0);
       re.readServers[0].request.put(MemengineCmd{sglId:rdPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
-      we.writeServers[0].cmdServer.request.put(MemengineCmd{sglId:wrPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
+      we.writeServers[0].request.put(MemengineCmd{sglId:wrPointer, base:0, len:numWords*4, burstLen:truncate(burstLen*4)});
       iterCnt <= iterCnt-1;
    endrule
 
    rule finish;
       doneFifo.deq;
-      let rv1 <- we.writeServers[0].cmdServer.response.get;
+      let rv1 <- we.writeServers[0].done.get;
       if(iterCnt==0) begin
 	 indication.done;
       end
    endrule
    
    rule xfer;
-      let v <- toGet(re.readServers[0].memDataPipe).get;
-      we.writeServers[0].dataPipe.enq(v.data);
+      let v <- toGet(re.readServers[0].data).get;
+      we.writeServers[0].data.enq(v.data);
       bs.dataIn(v.data,v.data);
       if (v.last)
          doneFifo.enq(?);

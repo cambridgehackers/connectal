@@ -110,7 +110,7 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
    endrule
    
    rule haystackResp;
-      let rv <- toGet(haystack_re.memDataPipe).get;
+      let rv <- toGet(haystack_re.data).get;
       haystack.enq(unpack(rv.data));
       if (rv.last)
          doneFifo.enq(?);

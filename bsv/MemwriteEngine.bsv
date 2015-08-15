@@ -19,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import Vector::*;
 import FIFOF::*;
 import FIFO::*;
@@ -28,13 +27,11 @@ import ClientServer::*;
 import BRAM::*;
 import BRAMFIFO::*;
 import Connectable::*;
-
 import ConfigCounter::*;
 import ConnectalMemory::*;
 import MemTypes::*;
 import Pipe::*;
 import MemUtils::*;
-
 
 module mkMemwriteEngine(MemwriteEngine#(dataWidth, cmdQDepth, numServers))
    provisos( Mul#(TDiv#(dataWidth, 8), 8, dataWidth)
@@ -266,51 +263,44 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
 	  endmethod
        endinterface);
    
-   function MemwriteServer#(dataWidth) toMemwriteServer(Server#(MemengineCmd,Bool) cs, PipeIn#(Bit#(dataWidth)) p) =
-      (interface MemwriteServer;
-	  interface cmdServer = cs;
-	  interface dataPipe  = p;
-       endinterface);
-
-   
-   Vector#(numServers, Server#(MemengineCmd,Bool)) rs;
+   Vector#(numServers, MemwriteServer#(dataWidth)) rs;
    for(Integer i = 0; i < valueOf(numServers); i=i+1)
-      rs[i] = (interface Server#(MemengineCmd,Bool);
-		  interface Put request;
-		     method Action put(MemengineCmd cmd);
-			Bit#(32) bsb = fromInteger(bufferSizeBytes);
+      rs[i] = (interface MemwriteServer#(dataWidth);
+                  interface Put request;
+                     method Action put(MemengineCmd cmd);
+                        Bit#(32) bsb = fromInteger(bufferSizeBytes);
 `ifdef SIMULATION
-			Bit#(32) dw = fromInteger(valueOf(dataWidthBytes));
-			Bit#(32) bl = extend(cmd.burstLen);
-			// this is because bsc lifts the divide operation (below) 
-			// and on startup the simulator gets a floating-point exception
-	  		if (bl ==0)
-			   bl = 1;
-			let mdw0 = ((cmd.len)/bl)*bl != cmd.len;
-			let mdw1 = ((cmd.len)/dw)*dw != cmd.len;
-			let bbl = extend(cmd.burstLen) > bsb;
-			if(bbl || mdw0 || mdw1 || cmd.len == 0) begin
-			   if (bbl)
-			      $display("XXXXXXXXXX mkMemwriteEngineBuff::unsupported burstLen %d %d", bsb, cmd.burstLen);
-			   if (mdw0 || mdw1 || cmd.len == 0)
-			      $display("XXXXXXXXXX mkMemwriteEngineBuff::unsupported len %h mdw0=%d mdw1=%d", cmd.len, mdw0, mdw1);
-			end
-			else begin
+                        Bit#(32) dw = fromInteger(valueOf(dataWidthBytes));
+                        Bit#(32) bl = extend(cmd.burstLen);
+                        // this is because bsc lifts the divide operation (below) 
+                        // and on startup the simulator gets a floating-point exception
+                        if (bl ==0)
+                           bl = 1;
+                        let mdw0 = ((cmd.len)/bl)*bl != cmd.len;
+                        let mdw1 = ((cmd.len)/dw)*dw != cmd.len;
+                        let bbl = extend(cmd.burstLen) > bsb;
+                        if(bbl || mdw0 || mdw1 || cmd.len == 0) begin
+                           if (bbl)
+                              $display("XXXXXXXXXX mkMemwriteEngineBuff::unsupported burstLen %d %d", bsb, cmd.burstLen);
+                           if (mdw0 || mdw1 || cmd.len == 0)
+                              $display("XXXXXXXXXX mkMemwriteEngineBuff::unsupported len %h mdw0=%d mdw1=%d", cmd.len, mdw0, mdw1);
+                        end
+                        else
 `endif
-			   cmds_in[i].enq(cmd);
-			   //$display("(%d) %h %h %h", i, cmd.base, cmd.len, cmd.burstLen);
-`ifdef SIMULATION
-			end
-`endif
- 		     endmethod
-		  endinterface
-		  interface Get response;
-		     method ActionValue#(Bool) get;
-			let rv <- toGet(outfs[i]).get;
-			return rv;
-		     endmethod
-		  endinterface
-	       endinterface);
+                           begin
+                           cmds_in[i].enq(cmd);
+                           //$display("(%d) %h %h %h", i, cmd.base, cmd.len, cmd.burstLen);
+                           end
+                      endmethod
+                  endinterface
+                  interface Get done;
+                     method ActionValue#(Bool) get;
+                        let rv <- toGet(outfs[i]).get;
+                        return rv;
+                     endmethod
+                  endinterface
+                  interface PipeIn data = check_in(write_data_buffs[i], i);
+              endinterface);
    interface MemWriteClient dmaClient;
       interface Get writeReq;
 	 method ActionValue#(MemRequest) get();
@@ -355,5 +345,5 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
 	 endmethod
       endinterface
    endinterface 
-   interface writeServers = zipWith(toMemwriteServer, rs, zipWith(check_in, write_data_buffs, genVector));
+   interface writeServers = rs;
 endmodule

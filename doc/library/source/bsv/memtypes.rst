@@ -174,9 +174,11 @@ Memory Engine Interfaces
 
 .. bsv:interface:: MemwriteServer#(numeric type dataWidth)
 
-   .. bsv:subinterface:: Server#(MemengineCmd,Bool) cmdServer
+   .. bsv:subinterface:: Put#(MemengineCmd)       request
 
-   .. bsv:subinterface:: PipeIn#(Bit#(dataWidth)) dataPipe
+   .. bsv:subinterface:: Get#(Bool)               done
+
+   .. bsv:subinterface:: PipeIn#(Bit#(dataWidth)) data
 
 .. bsv:interface:: MemwriteEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers)
 
@@ -186,9 +188,9 @@ Memory Engine Interfaces
 
 .. bsv:interface:: MemreadServer#(numeric type dataWidth)
 
-   .. bsv:subinterface:: Server#(MemengineCmd,Bool) cmdServer
+   .. bsv:subinterface:: Put#(MemengineCmd)        request
 
-   .. bsv:subinterface:: PipeOut#(Bit#(dataWidth)) dataPipe
+   .. bsv:subinterface:: PipeOut#(Bit#(dataWidth)) data
       
 .. bsv:interface:: MemreadEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers)
 

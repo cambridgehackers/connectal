@@ -58,9 +58,9 @@ module  mkMemreadVectorSource#(MemreadServer#(asz) memreadServer)(VectorSource#(
       memreadServer.request.put(MemengineCmd { sglId: p, base: a << ashift, len: truncate(l << ashift), burstLen: (fromInteger(valueOf(BurstLen)) << ashift), tag: 0});
    endmethod
    method ActionValue#(Bool) finish();
-      return memreadServer.memDataPipe.first().last;
+      return memreadServer.data.first().last;
    endmethod
-   interface PipeOut pipe = mapPipe(unpack, mapPipe(memData_data, memreadServer.memDataPipe));
+   interface PipeOut pipe = mapPipe(unpack, mapPipe(memData_data, memreadServer.data));
 endmodule
 
 interface VectorSink#(numeric type dsz, type a);
@@ -83,9 +83,9 @@ module  mkMemwriteVectorSink#(MemwriteServer#(asz) memwriteServer)(VectorSink#(a
       if (verbose) $display("mkMemwriteVectorSink: start h=%d a=%h l=%h ashift=%d", p, a, l, ashift);
       // I set burstLen==1 so that testmm works for all J,K,N. If we want burst writes we will need to rethink this (mdk)
       let cmd = MemengineCmd { sglId: p, base: a << ashift, len: truncate(l << ashift), burstLen: fromInteger(valueOf(abytes)), tag: 0};
-      memwriteServer.cmdServer.request.put(cmd);
+      memwriteServer.request.put(cmd);
       //$display("mkMemwriteVectorSink: %d %d %d %d", cmd.sglId, cmd.base, cmd.len, cmd.burstLen);
    endmethod
-   method finish = memwriteServer.cmdServer.response.get;
-   interface PipeIn pipe = mapPipeIn(pack, memwriteServer.dataPipe);
+   method finish = memwriteServer.done.get;
+   interface PipeIn pipe = mapPipeIn(pack, memwriteServer.data);
 endmodule

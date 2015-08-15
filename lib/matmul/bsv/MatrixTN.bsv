@@ -220,7 +220,7 @@ module mkRowSource#(MemReadServer#(TMul#(N,32)) vs, Reg#(UInt#(addrwidth)) numRo
       endmethod
       method Bool notEmpty;
 `ifdef TAGGED_TOKENS
-	 return (tagFifo.notEmpty && vs.readServers[0].memDataPipe.notEmpty);
+	 return (tagFifo.notEmpty && vs.readServers[0].data.notEmpty);
 `else
 	 return (read_data_buffer.notEmpty);
 `endif

@@ -63,7 +63,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    endrule
 
    rule check;
-      let v <- toGet(re.readServers[0].memDataPipe).get;
+      let v <- toGet(re.readServers[0].data).get;
       let rval = wordsRead/4;
       let expectedV = {rval+1,rval};
       let misMatch = v.data != expectedV;

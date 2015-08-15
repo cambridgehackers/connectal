@@ -50,18 +50,18 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    MemwriteEngine#(DataBusWidth,2,1)    we <- mkMemwriteEngine;
 
    rule start if (doOnce);
-         we.writeServers[0].cmdServer.request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(numWords), burstLen:truncate(burstLen)});
+         we.writeServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(numWords), burstLen:truncate(burstLen)});
          $display("start");
          doOnce <= False;
    endrule
    rule finish;
          $display("finish");
-         let rv <- we.writeServers[0].cmdServer.response.get;
+         let rv <- we.writeServers[0].done.get;
          indication.writeDone(0);
    endrule
    rule src if (numWords != 0);
          let v = {srcGens+1,srcGens};
-         we.writeServers[0].dataPipe.enq(v);
+         we.writeServers[0].data.enq(v);
          srcGens <= srcGens+2;
          numWords <= numWords - 8;
    endrule

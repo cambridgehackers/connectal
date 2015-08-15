@@ -142,7 +142,7 @@ module mkBRAMWriter#(Integer id,
    FIFO#(void) doneFifo <- mkFIFO;
    
    rule feed_gearbox if (running);
-      let v <- toGet(readServer.memDataPipe).get;
+      let v <- toGet(readServer.data).get;
       if(verbose) $display("mkBRAMWriter::feed_gearbox (%d) %x", id, v.data);
       gb.enq(unpack(v.data));
       if (v.last)
@@ -211,7 +211,7 @@ module mkBRAMWriteClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMWriteClient#
       
    rule drain_geatbox;
       Vector#(nd,Bit#(dsz)) v = gb.first;
-      we.writeServers[0].dataPipe.enq(pack(v));
+      we.writeServers[0].data.enq(pack(v));
       gb.deq;
    endrule
    
@@ -227,14 +227,14 @@ module mkBRAMWriteClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMWriteClient#
    endrule
    
    rule loadReq(i <= n);
-      we.writeServers[0].cmdServer.request.put(MemengineCmd{sglId:ptr, base:off, len:truncate(bus_width_in_bytes), burstLen:truncate(bus_width_in_bytes), tag: 0});
+      we.writeServers[0].request.put(MemengineCmd{sglId:ptr, base:off, len:truncate(bus_width_in_bytes), burstLen:truncate(bus_width_in_bytes), tag: 0});
       off <= off+bus_width_in_bytes;
       i <= i+fromInteger(valueOf(nd));
       //$display("mkBRAMWriteClient::loadReq %h", i);
    endrule
    
    rule loadResp;
-      let __x <- we.writeServers[0].cmdServer.response.get;
+      let __x <- we.writeServers[0].done.get;
       if (i > n)
 	 f.enq(?);
    endrule

@@ -33,7 +33,7 @@ import Pipe::*;
 import ConfigCounter::*;
 
 interface MemReaderPipe#(numeric type dsz);
-   interface PipeOut#(MemData#(dsz)) dataPipe;
+   interface PipeOut#(MemData#(dsz)) data;
    interface MemReadClient#(dsz) readClient;
 endinterface
 
@@ -62,7 +62,7 @@ module mkMemReaderPipe#(Reg#(SGLId) ptrReg,
       tagReg <= tag + 1;
    endrule
 
-   interface dataPipe = toPipeOut(readDataFifo);
+   interface data = toPipeOut(readDataFifo);
    interface MemReadClient readClient;
       interface Get readReq = toGet(readReqFifo);
       interface Put readData;

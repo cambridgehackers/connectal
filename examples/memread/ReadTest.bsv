@@ -72,8 +72,8 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    FIFO#(void)              doneFifo <- mkFIFO;
    rule check;
       // first pipeline stage
-      if (re.readServers[0].memDataPipe.notEmpty()) begin
-	 let md <- toGet(re.readServers[0].memDataPipe).get;
+      if (re.readServers[0].data.notEmpty()) begin
+	 let md <- toGet(re.readServers[0].data).get;
 	 //$display("md v=%h tag=%d first=%d last=%d", md.data, md.tag, md.first, md.last);
 	 let v = md.data;
 	 let rval = bytesRead/4;
