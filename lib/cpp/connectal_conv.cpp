@@ -36,6 +36,31 @@ public:
 };
 static ConvIndication *indication;
 
+static void forward_kernel_hardware(ParamStruct *param, uint32_t p_limit,
+     uint32_t q_limit, float temp, uint32_t bpx, uint32_t wpx, uint32_t outputp)
+{
+    static int once = 1;
+    if (once) {
+        once = 0;
+printf("[%s:%d] create proxy\n", __FUNCTION__, __LINE__);
+        indication = new ConvIndication(IfcNames_ConvIndicationH2S);
+        convRequest = new ConvRequestProxy(IfcNames_ConvRequestS2H);
+    }
+    if (param->objectId_ == -1) {
+        param->objectId_ = 1;
+        ConnectalParamType hparam;
+printf("[%s:%d] element %d\n", __FUNCTION__, __LINE__, param->elementSize_);
+        hparam.bottom_hw = param->conv_in_height_ * param->conv_in_width_ * param->elementSize_;
+        hparam.kernel_hw = param->kernel_h_ * param->kernel_w_ * param->elementSize_;
+        hparam.in_group_size = param->conv_in_channels_ / param->group_;
+        hparam.baseSize = param->elementSize_;
+        hparam.conv_in_width = param->conv_in_width_;
+        hparam.kernel_w = param->kernel_w_;
+        convRequest->init(hparam);
+    }
+    //convRequest->forward_kernel(p_limit, q_limit, temp, bpx, wpx, outputp);
+}
+
 #define MIN(A,B) (((int)(A) < (int)(B)) ? (A) : (B))
 #define MAX(A,B) (((int)(A) > (int)(B)) ? (A) : (B))
 template <typename Dtype>
@@ -97,6 +122,7 @@ ParamType<Dtype> *param = this;
             for (int x = 0; x < width_out_; x++) {
               int p_limit = MIN(param->kernel_h_ - param->pad_h_, conv_in_height_ - y * stride_h_);
               int q_limit = MIN(param->kernel_w_ - param->pad_w_, conv_in_width_ - x * stride_w_);
+              forward_kernel_hardware(this, p_limit, q_limit, bias_val, bpx, wp_item, outputp);
               forward_kernel<Dtype>(this, p_limit, q_limit, bias_val, bpx, wp_item, outputp);
               outputp += sizeof(Dtype);
               bpx += stride_w_ * sizeof(Dtype);
@@ -199,18 +225,10 @@ ParamType<Dtype> *param = this;
 
 extern "C" void *alloc_connectal_conv(int size)
 {
-    static int once = 1;
-    if (once) {
-        once = 0;
-printf("[%s:%d] create proxy\n", __FUNCTION__, __LINE__);
-        indication = new ConvIndication(IfcNames_ConvIndicationH2S);
-        convRequest = new ConvRequestProxy(IfcNames_ConvRequestS2H);
-        //convRequest->say(v);
-    }
     if (size == sizeof(float))
-        return new ParamType<float>;
+        return new ParamType<float>(size);
     else
-        return new ParamType<double>;
+        return new ParamType<double>(size);
 }
 extern "C" void *alloc_portalMem(size_t size, int cached, int *fdptr)
 {

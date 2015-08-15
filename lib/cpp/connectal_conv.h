@@ -27,8 +27,7 @@
 
 #define CACCESS(A) ((Dtype *)(param->basePtr + (A)))
 typedef unsigned long CPtr;
-template <typename Dtype>
-class ParamType {
+class ParamStruct {
 public:
     uint8_t *basePtr;
     CPtr *bottom;
@@ -57,7 +56,9 @@ public:
     int stride_h_, stride_w_;
     int portalFd_;
     int propdone_;
-    ParamType(): bottom(NULL), top_diff(NULL), bottom_diff(NULL), top(NULL),
+    int objectId_;
+    int elementSize_;
+    ParamStruct(): bottom(NULL), top_diff(NULL), bottom_diff(NULL), top(NULL),
         bias_multiplier_(0), weight(0), bias(0), weight_diff(0), bias_diff(0),
         zero_region(0), zero_region_len(0),
         top_size(0), bottom_size(0), weight_diff_count(0),
@@ -65,8 +66,17 @@ public:
         kernel_h_(0), kernel_w_(0), conv_in_height_(0), conv_in_width_(0),
         conv_in_channels_(0), conv_out_channels_(0),
         weight_offset_(0), pad_h_(0), pad_w_(0),
-        stride_h_(0), stride_w_(0), portalFd_(-1), propdone_(0)
+        stride_h_(0), stride_w_(0), portalFd_(-1), propdone_(0), objectId_(-1),
+        elementSize_(0)
         { }
+};
+
+template <typename Dtype>
+class ParamType: public ParamStruct {
+public:
+    ParamType(int size) {
+        elementSize_ = size;
+    }
     virtual void forward_process(void);
     virtual void backward_process(void);
 };
