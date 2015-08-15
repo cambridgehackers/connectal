@@ -72,18 +72,18 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
       indication.mismatch(addr, data);
    endrule
    rule start if (doOnce);
-         we.write_servers[0].cmdServer.request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(numWords), burstLen:truncate(burstLen), tag: 7});
+         we.writeServers[0].cmdServer.request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(numWords), burstLen:truncate(burstLen), tag: 7});
          $display("start");
          doOnce <= False;
    endrule
    rule finish;
          $display("finish");
-         let rv <- we.write_servers[0].cmdServer.response.get;
+         let rv <- we.writeServers[0].cmdServer.response.get;
          indication.writeDone(0);
    endrule
    rule src if (numWords != 0);
          let v = {srcGens+1,srcGens};
-         we.write_servers[0].dataPipe.enq(v);
+         we.writeServers[0].dataPipe.enq(v);
          srcGens <= srcGens+2;
          numWords <= numWords - 8;
    endrule

@@ -73,7 +73,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 
    for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
       rule start (iterCnts[i] > 0);
-	 we.write_servers[i].cmdServer.request.put(MemengineCmd{tag:0, sglId:pointer, base:extend(writeOffset)+(fromInteger(i)*chunk), len:truncate(chunk), burstLen:truncate(burstLen*4)});
+	 we.writeServers[i].cmdServer.request.put(MemengineCmd{tag:0, sglId:pointer, base:extend(writeOffset)+(fromInteger(i)*chunk), len:truncate(chunk), burstLen:truncate(burstLen*4)});
 	 Bit#(32) srcGen = (writeOffset/4)+(fromInteger(i)*truncate(chunk/4));
 	 srcGens[i] <= srcGen;
 	 $display("start %d/%d, %h 0x%x %h", i, valueOf(NumEngineServers), srcGen, iterCnts[i], writeOffset);
@@ -82,14 +82,14 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
       endrule
       rule finish;
 	 $display("finish %d 0x%x", i, iterCnts[i]);
-	 let rv <- we.write_servers[i].cmdServer.response.get;
+	 let rv <- we.writeServers[i].cmdServer.response.get;
 	 finishFifos[i].enq(rv);
       endrule
       rule src if (cfs[i].notEmpty);
 	 Vector#(DataBusWords, Bit#(32)) v;
 	 for (Integer j = 0; j < valueOf(DataBusWords); j = j + 1)
 	    v[j] = srcGens[i]+fromInteger(j);
-	 we.write_servers[i].dataPipe.enq(pack(v));
+	 we.writeServers[i].dataPipe.enq(pack(v));
 	 let new_srcGen = srcGens[i]+fromInteger(valueOf(DataBusWords));
 	 srcGens[i] <= new_srcGen;
 	 if(new_srcGen == (writeOffset/4)+(fromInteger(i+1)*truncate(chunk/4)))

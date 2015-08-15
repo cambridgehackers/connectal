@@ -86,7 +86,7 @@ endinterface
 
 interface MemwriteEngine#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers);
    interface MemWriteClient#(dataWidth) dmaClient;
-   interface Vector#(numServers, MemwriteServer#(dataWidth)) write_servers;
+   interface Vector#(numServers, MemwriteServer#(dataWidth)) writeServers;
 endinterface
 
 typedef struct {
@@ -103,7 +103,7 @@ endinterface
       
 interface MemreadEngine#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers);
    interface MemReadClient#(dataWidth) dmaClient;
-   interface Vector#(numServers, MemreadServer#(dataWidth)) read_servers;
+   interface Vector#(numServers, MemreadServer#(dataWidth)) readServers;
 endinterface
 
 // 

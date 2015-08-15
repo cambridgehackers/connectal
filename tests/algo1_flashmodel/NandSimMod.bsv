@@ -101,11 +101,11 @@ module mkNandSimMod#(NandCfgIndication indication,
    
    MemreadEngine#(64, memengineOuts,  TAdd#(numSlaves,1))  re <- mkMemreadEngine();
    MemwriteEngine#(64, memengineOuts, TAdd#(numSlaves,2))  we <- mkMemwriteEngine();
-   NandSimControl ns <- mkNandSimControl(nand_ctrl_host_rs, re.read_servers[0],
-	 nand_ctrl_host_ws, we.write_servers[0], we.write_servers[1], indication);
+   NandSimControl ns <- mkNandSimControl(nand_ctrl_host_rs, re.readServers[0],
+	 nand_ctrl_host_ws, we.writeServers[0], we.writeServers[1], indication);
    
-   Vector#(numSlaves,MemreadServer#(64)) slave_read_servers  = takeTail(re.read_servers);
-   Vector#(numSlaves,MemwriteServer#(MemengineCmd,Bool)) slave_write_servers = takeTail(we.write_servers);
+   Vector#(numSlaves,MemreadServer#(64)) slave_read_servers  = takeTail(re.readServers);
+   Vector#(numSlaves,MemwriteServer#(MemengineCmd,Bool)) slave_write_servers = takeTail(we.writeServers);
    Vector#(numSlaves,FIFO#(Bit#(MemTagSize)))    slaveWriteTags <- replicateM(mkSizedBRAMFIFO(valueOf(memengineOuts)));
    Vector#(numSlaves,FIFO#(Bit#(MemTagSize)))    slaveReadTags <- replicateM(mkSizedBRAMFIFO(valueOf(memengineOuts)));
    Vector#(numSlaves,Reg#(Bit#(BurstLenSize)))   slaveReadCnts <- replicateM(mkReg(0));

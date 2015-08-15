@@ -68,7 +68,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite#(4));
 		       for(startPtr <= 0; startPtr < 4; startPtr <= startPtr+1)
 			  (action
 			      $display("start:%d %h %d %h (%d)", startPtr, startBase, numWords, burstLen*4, iterCnt);
-			      wes[startPtr].write_servers[0].cmdServer.request.put(MemengineCmd{sglId:pointer, base:extend(startBase), len:numWords, burstLen:truncate(burstLen*4)});
+			      wes[startPtr].writeServers[0].cmdServer.request.put(MemengineCmd{sglId:pointer, base:extend(startBase), len:numWords, burstLen:truncate(burstLen*4)});
 			      startBase <= startBase+numWords;
 			   endaction);
 		    endseq;
@@ -83,7 +83,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite#(4));
    rule finish;
       for(Integer i = 0; i < 4; i=i+1) begin
 	 $display("finish: %d (%d)", i, iterCnt);
-	 let rv <- wes[i].write_servers[0].cmdServer.response.get;
+	 let rv <- wes[i].writeServers[0].cmdServer.response.get;
       end
       if (iterCnt == 0)
 	 indication.writeDone(0);
@@ -93,7 +93,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite#(4));
    
    for(Integer i = 0; i < 4; i=i+1)
       rule src;
-	 wes[i].write_servers[0].dataPipe.enq({srcGens[i]+1,srcGens[i]});
+	 wes[i].writeServers[0].dataPipe.enq({srcGens[i]+1,srcGens[i]});
 	 if (srcGens[i]+2 == fromInteger(i+1)*(numWords>>2)) begin
 	    //$display("src %d %d", i, srcGens[i]+1);
 	    srcGens[i] <= fromInteger(i)*(numWords>>2);

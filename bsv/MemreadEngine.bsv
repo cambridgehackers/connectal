@@ -217,5 +217,5 @@ module mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngine#(dataWidth, 
       endinterface
       interface Put readData = toPut(serverDataFifo);
    endinterface 
-   interface read_servers = rs;
+   interface readServers = rs;
 endmodule

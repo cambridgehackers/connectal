@@ -162,7 +162,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
       dmaendDelay <= dmaend;
    endrule
    rule fromMemread;
-      let v <- toGet(memreadEngine.read_servers[0].memDataPipe).get;
+      let v <- toGet(memreadEngine.readServers[0].memDataPipe).get;
       synchronizer.enq(v.data);
       if (verbose)
           $display("hdmiDisplay: dmadata [%d]=%x cycle %d", transferWord, v.data, transferCycles - transferCyclesSnapshot);
@@ -203,7 +203,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
    //   /dmaReady <= True;
    ///endrule
    //rule startd if (dmaReady && !duringDma &&& referenceReg matches tagged Valid .reference);
-      memreadEngine.read_servers[0].request.put(MemengineCmd{sglId:reference, base:0, len:pack(extend(byteCountReg)), burstLen:fromInteger(valueOf(FrameBufferBurstLenInBytes)), tag: 0});
+      memreadEngine.readServers[0].request.put(MemengineCmd{sglId:reference, base:0, len:pack(extend(byteCountReg)), burstLen:fromInteger(valueOf(FrameBufferBurstLenInBytes)), tag: 0});
       if (traceTransfers)
 	 hdmiDisplayIndication.transferStarted(transferCount);
       transferCyclesSnapshot <= transferCycles;

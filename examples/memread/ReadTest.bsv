@@ -60,7 +60,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    
    rule start (itersToStart > 0);
       $display("Test: request.put");
-      re.read_servers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, tag:0, burstLen:burstLenBytes});
+      re.readServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, tag:0, burstLen:burstLenBytes});
       itersToStart <= itersToStart-1;
    endrule
 
@@ -72,8 +72,8 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    FIFO#(void)              doneFifo <- mkFIFO;
    rule check;
       // first pipeline stage
-      if (re.read_servers[0].memDataPipe.notEmpty()) begin
-	 let md <- toGet(re.read_servers[0].memDataPipe).get;
+      if (re.readServers[0].memDataPipe.notEmpty()) begin
+	 let md <- toGet(re.readServers[0].memDataPipe).get;
 	 //$display("md v=%h tag=%d first=%d last=%d", md.data, md.tag, md.first, md.last);
 	 let v = md.data;
 	 let rval = bytesRead/4;

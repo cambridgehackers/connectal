@@ -58,12 +58,12 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    
    rule start (itersToStart > 0);
       $display("Test: request.put");
-      re.read_servers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, burstLen:burstLenBytes});
+      re.readServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, burstLen:burstLenBytes});
       itersToStart <= itersToStart-1;
    endrule
 
    rule check;
-      let v <- toGet(re.read_servers[0].memDataPipe).get;
+      let v <- toGet(re.readServers[0].memDataPipe).get;
       let rval = wordsRead/4;
       let expectedV = {rval+1,rval};
       let misMatch = v.data != expectedV;

@@ -78,25 +78,25 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
 
    rule start_read(rdIterCnt > 0);
       if (verbose) $display("start_read numWords %d wordsPerBeat %d", numWords, wordsPerBeat);
-      re.read_servers[0].request.put(MemengineCmd{sglId:rdPointer, base:0, len:extend(numWords*4), burstLen:truncate(burstLen*4)});
+      re.readServers[0].request.put(MemengineCmd{sglId:rdPointer, base:0, len:extend(numWords*4), burstLen:truncate(burstLen*4)});
       rdIterCnt <= rdIterCnt-1;
    endrule
 
    rule start_write(wrIterCnt > 0);
       if (verbose) $display("                    start_write numWords %d", numWords);
-      we.write_servers[0].cmdServer.request.put(MemengineCmd{sglId:wrPointer, base:0, len:extend(numWords*4), burstLen:truncate(burstLen*4)});
+      we.writeServers[0].cmdServer.request.put(MemengineCmd{sglId:wrPointer, base:0, len:extend(numWords*4), burstLen:truncate(burstLen*4)});
       wrIterCnt <= wrIterCnt-1;
    endrule
    
    rule write_finish;
       if (verbose) $display("                    write_finish %d", wrIterCnt);
-      let rv1 <- we.write_servers[0].cmdServer.response.get;
+      let rv1 <- we.writeServers[0].cmdServer.response.get;
       if(wrIterCnt==0)
 	 indication.done;
    endrule
    
    rule fill_buffer;
-      let v <- toGet(re.read_servers[0].memDataPipe).get;
+      let v <- toGet(re.readServers[0].memDataPipe).get;
       buffer.enq(v.data);
       if (verbose) $display("fill_buffer %h", v.data);
       if (v.last && verbose) $display("read_finish %d", rdIterCnt);
@@ -104,7 +104,7 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
    
    rule drain_buffer;
       let v <- toGet(buffer).get();
-      we.write_servers[0].dataPipe.enq(v);
+      we.writeServers[0].dataPipe.enq(v);
       //$display("                    drain_buffer %h", buffer.first);
    endrule
 

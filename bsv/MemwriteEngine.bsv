@@ -355,5 +355,5 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
 	 endmethod
       endinterface
    endinterface 
-   interface write_servers = zipWith(toMemwriteServer, rs, zipWith(check_in, write_data_buffs, genVector));
+   interface writeServers = zipWith(toMemwriteServer, rs, zipWith(check_in, write_data_buffs, genVector));
 endmodule

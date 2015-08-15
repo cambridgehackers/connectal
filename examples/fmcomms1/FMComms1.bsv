@@ -74,9 +74,9 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
    
    MemwriteEngine#(64,1,1)        we <- mkMemwriteEngineBuff(64*16);
    
-   mkConnection(adc, we.write_servers[0].dataPipe);
+   mkConnection(adc, we.writeServers[0].dataPipe);
    rule readrule;
-      let v <- toGet(re.read_servers[0].memDataPipe).get;
+      let v <- toGet(re.readServers[0].memDataPipe).get;
       toPut(dac).put(v.data);
       if (v.last && readRun == 0)
 	 indication.readStatus(readIterCount, zeroExtend(readRun));
@@ -84,16 +84,16 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
    
    rule readStart (readRun == 1);
       readIterCount <= readIterCount + 1;
-      re.read_servers[0].request.put(MemengineCmd{sglId:readPointer, base:0, len:readNumWords*4, burstLen:readBurstLen*4});
+      re.readServers[0].request.put(MemengineCmd{sglId:readPointer, base:0, len:readNumWords*4, burstLen:readBurstLen*4});
    endrule
    
    rule writeStart (writeRun == 1);
       writeIterCount <= writeIterCount + 1;
-      we.write_servers[0].cmdServer.request.put(MemengineCmd{sglId:writePointer, base:0, len:writeNumWords*4, burstLen:writeBurstLen*4});
+      we.writeServers[0].cmdServer.request.put(MemengineCmd{sglId:writePointer, base:0, len:writeNumWords*4, burstLen:writeBurstLen*4});
    endrule
    
    rule writeFinish;
-      let rv <- we.write_servers[0].cmdServer.response.get;
+      let rv <- we.writeServers[0].cmdServer.response.get;
       if (writeRun == 0)
 	 indication.writeStatus(writeIterCount, zeroExtend(writeRun));
    endrule

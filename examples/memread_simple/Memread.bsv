@@ -55,12 +55,12 @@ module mkMemread#(MemreadIndication indication) (Memread);
    MemreadEngine#(DataBusWidth,2,1) re <- mkMemreadEngine;
 
    rule start (itersToStart > 0);
-      re.read_servers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, burstLen:burstLenInBytes});
+      re.readServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, burstLen:burstLenInBytes});
       itersToStart <= itersToStart-1;
    endrule
 
    rule check;
-      let v <- toGet(re.read_servers[0].memDataPipe).get;
+      let v <- toGet(re.readServers[0].memDataPipe).get;
       let expectedV = {srcGens+1,srcGens};
       let misMatch = v.data != expectedV;
       mismatchCounts <= mismatchCounts + (misMatch ? 1 : 0);

@@ -94,10 +94,10 @@ module mkSyncBlueScope#(Integer samples, BlueScopeIndication indication, Clock s
       stateReg <= Enabled;
    endrule
 
-   mkConnection(toGet(dfifo), toPut(mwriter.write_servers[0].dataPipe));
+   mkConnection(toGet(dfifo), toPut(mwriter.writeServers[0].dataPipe));
 
    rule writeDone;
-      let tag <- mwriter.write_servers[0].cmdServer.response.get();
+      let tag <- mwriter.writeServers[0].cmdServer.response.get();
    endrule
    
    rule triggerRule if (triggeredPulse.pulse);
@@ -164,7 +164,7 @@ module mkSyncBlueScope#(Integer samples, BlueScopeIndication indication, Clock s
    
    interface BlueScopeRequest requestIfc;
       method Action start(Bit#(32) pointer, Bit#(32) len);
-	 mwriter.write_servers[0].cmdServer.request.put(MemengineCmd {sglId: pointer, base: 0, burstLen: 8*fromInteger(valueOf(TDiv#(dataWidth,8))), len: len, tag: 0});
+	 mwriter.writeServers[0].cmdServer.request.put(MemengineCmd {sglId: pointer, base: 0, burstLen: 8*fromInteger(valueOf(TDiv#(dataWidth,8))), len: len, tag: 0});
 	 startPulse.send();
       endmethod
 

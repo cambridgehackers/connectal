@@ -250,8 +250,8 @@ module  mkRbm#(HostInterface host, RbmIndication rbmInd, SigmoidIndication sigmo
    MemreadEngine#(TMul#(n,32), 2, 9) readEngine  <- mkMemreadEngine;
    MemwriteEngine#(TMul#(n,32),2, 3) writeEngine <- mkMemwriteEngine;
    
-   let res = readEngine.read_servers;
-   let wes = writeEngine.write_servers;
+   let res = readEngine.readServers;
+   let wes = writeEngine.writeServers;
    
    SigmoidIfc#(TMul#(32,n)) sigmoid <- mkSigmoid(takeAt(0,res), takeAt(0,wes)); // 2 read, 1 write
    StatesPipe#(N, DmaSz) states <- mkStatesPipe(takeAt(2,res), takeAt(1,wes));  // 2 read, 1 write

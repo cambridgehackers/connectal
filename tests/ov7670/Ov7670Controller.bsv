@@ -132,7 +132,7 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
       if (sofFifo.notEmpty() && transferDoneReg) begin
 	 sofFifo.deq();
 	 transferDoneReg <= False;
-	 writeEngine.write_servers[0].cmdServer.request.put(MemengineCmd { sglId: pointerReg, base: 0, burstLen: 8*8, len: 640*480, tag: 0});
+	 writeEngine.writeServers[0].cmdServer.request.put(MemengineCmd { sglId: pointerReg, base: 0, burstLen: 8*8, len: 640*480, tag: 0});
 	 ind.frameStarted(pack(first));
       end
 
@@ -146,11 +146,11 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
       dataGearbox.deq();
       //ind.data8(pack(d));
       if (pointerReg != 0)
-	 writeEngine.write_servers[0].dataPipe.enq(pack(d));
+	 writeEngine.writeServers[0].dataPipe.enq(pack(d));
    endrule
 
    rule transferDoneRule;
-      let d <- writeEngine.write_servers[0].cmdServer.response.get();
+      let d <- writeEngine.writeServers[0].cmdServer.response.get();
       transferDoneReg <= True;
       ind.frameTransferred();
    endrule

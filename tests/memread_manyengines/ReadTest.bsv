@@ -69,7 +69,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest#(4));
 		       for(startPtr <= 0; startPtr < 4; startPtr <= startPtr+1)
 			  (action
 			      let cmd = MemengineCmd{sglId:pointer, base:extend(startBase), len:numBytes, burstLen:truncate(burstLenBytes)};
-			      res[startPtr].read_servers[0].request.put(cmd);
+			      res[startPtr].readServers[0].request.put(cmd);
 			      startBase <= startBase+numBytes;
 			      //$display("start:%d %h %d %h (%d)", startPtr, startBase, numBytes, burstLenBytes*4, itersToStart);
 			   endaction);
@@ -103,7 +103,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest#(4));
    
    for(Integer i = 0; i < 4; i=i+1)
       rule check;
-	 let v <- toGet(res[i].read_servers[0].memDataPipe).get;
+	 let v <- toGet(res[i].readServers[0].memDataPipe).get;
 	 let expectedV = {srcGens[i]+3,srcGens[i]+2,srcGens[i]+1,srcGens[i]};
 	 let misMatch = v.data != expectedV;
 	 mismatchCounts[i] <= mismatchCounts[i] + (misMatch ? 1 : 0);

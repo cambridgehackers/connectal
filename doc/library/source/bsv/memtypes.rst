@@ -182,7 +182,7 @@ Memory Engine Interfaces
 
    .. bsv:subinterface:: MemWriteClient#(dataWidth) dmaClient
 
-   .. bsv:subinterface:: Vector#(numServers, MemwriteServer#(dataWidth)) write_servers
+   .. bsv:subinterface:: Vector#(numServers, MemwriteServer#(dataWidth)) writeServers
 
 .. bsv:interface:: MemreadServer#(numeric type dataWidth)
 
@@ -194,7 +194,7 @@ Memory Engine Interfaces
 
    .. bsv:subinterface:: MemReadClient#(dataWidth) dmaClient
 
-   .. bsv:subinterface:: Vector#(numServers, MemreadServer#(dataWidth)) read_servers
+   .. bsv:subinterface:: Vector#(numServers, MemreadServer#(dataWidth)) readServers
 
 
 Memory Traffic Interfaces

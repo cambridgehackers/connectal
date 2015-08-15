@@ -90,7 +90,7 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(haystackBusWidth, configBu
    Reg#(Bit#(32)) setupCnt <- mkReg(0);
    Reg#(Bit#(32)) doneCnt <- mkReg(0);
 
-   let read_servers = zip(haystack_re.read_servers,config_re.read_servers);
+   let read_servers = zip(haystack_re.readServers,config_re.readServers);
    Vector#(p, MPEngine#(haystackBusWidth,configBusWidth)) engines <- mapM(uncurry(mkMPEngine),read_servers);
    Vector#(p, PipeOut#(Int#(32))) locdonePipes;
 

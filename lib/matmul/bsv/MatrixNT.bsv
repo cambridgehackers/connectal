@@ -517,8 +517,8 @@ module  mkDramMatrixMultiply#(HostInterface host)(DramMatrixMultiply#(N,TMul#(N,
    MemreadEngine#(TMul#(N,32), 2, J) rowReadEngine <- mkMemreadEngineBuff(512);
    MemreadEngine#(TMul#(N,32), 2, K) colReadEngine <- mkMemreadEngineBuff(512);
    
-   Vector#(J, MemreadServer#(TMul#(N,32))) rowReadServers = rowReadEngine.read_servers;
-   Vector#(K, MemreadServer#(TMul#(N,32))) colReadServers = colReadEngine.read_servers;
+   Vector#(J, MemreadServer#(TMul#(N,32))) rowReadServers = rowReadEngine.readServers;
+   Vector#(K, MemreadServer#(TMul#(N,32))) colReadServers = colReadEngine.readServers;
       
    MemWriter#(TMul#(32,N)) bogusWriter <- mkMemWriter;
    
