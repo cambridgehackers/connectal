@@ -39,7 +39,7 @@ typedef 8 BurstLen;
 interface VectorSource#(numeric type dsz, type a);
    interface PipeOut#(a) pipe;
    method Action start(SGLId h, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l);
-   //method ActionValue#(Bool) finish();
+   method ActionValue#(Bool) finish();
 endinterface
 
 module  mkMemreadVectorSource#(MemreadServer#(asz) memreadServer)(VectorSource#(asz, a))
@@ -57,7 +57,9 @@ module  mkMemreadVectorSource#(MemreadServer#(asz) memreadServer)(VectorSource#(
       if (verbose) $display("mkMemreadVectorSource: start h=%d a=%h l=%h ashift=%d", p, a, l, ashift);
       memreadServer.request.put(MemengineCmd { sglId: p, base: a << ashift, len: truncate(l << ashift), burstLen: (fromInteger(valueOf(BurstLen)) << ashift), tag: 0});
    endmethod
-   //method finish = memreadServer.cmdServer.response.get;
+   method ActionValue#(Bool) finish();
+      return memreadServer.memDataPipe.first().last;
+   endmethod
    interface PipeOut pipe = mapPipe(unpack, mapPipe(memData_data, memreadServer.memDataPipe));
 endmodule
 
