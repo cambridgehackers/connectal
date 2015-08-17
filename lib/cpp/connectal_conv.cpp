@@ -21,17 +21,21 @@
 // SOFTWARE.
 #include "ConvIndication.h"
 #include "ConvRequest.h"
+#include "dmaManager.h"
 #include "connectal_conv.h"
 
 #define COUNTER_INTERVAL 100000
 static ConvRequestProxy *convRequest;
+static DmaManager *dma;
+static sem_t outputp_sem;
 
 class ConvIndication : public ConvIndicationWrapper
 {
 public:
-    void outputp(float v) {
-        printf("heard an conv: %f\n", v);
+    void outputp(uint32_t addr, float v) {
+        printf("heard an conv: addr %x = %x\n", addr, *(uint32_t *)&v);
 	//convRequest->say2(v, 2*v);
+        sem_post(&outputp_sem);
     }
     ConvIndication(unsigned int id) : ConvIndicationWrapper(id) {}
 };
@@ -46,9 +50,10 @@ static void forward_kernel_hardware(ParamStruct *param, uint32_t p_limit,
 printf("[%s:%d] create proxy\n", __FUNCTION__, __LINE__);
         indication = new ConvIndication(IfcNames_ConvIndicationH2S);
         convRequest = new ConvRequestProxy(IfcNames_ConvRequestS2H);
+        dma = platformInit();
     }
     if (param->objectId_ == -1) {
-        param->objectId_ = 1;
+        param->objectId_ = dma->reference(param->portalFd_);
         ConnectalParamType hparam;
 printf("[%s:%d] element %d\n", __FUNCTION__, __LINE__, param->elementSize_);
         hparam.bottom_hw = param->conv_in_height_ * param->conv_in_width_ * param->elementSize_;
@@ -57,9 +62,12 @@ printf("[%s:%d] element %d\n", __FUNCTION__, __LINE__, param->elementSize_);
         hparam.baseSize = param->elementSize_;
         hparam.conv_in_width = param->conv_in_width_;
         hparam.kernel_w = param->kernel_w_;
+        hparam.objectId = param->objectId_;
         convRequest->init(hparam);
     }
     convRequest->forward_kernel(p_limit, q_limit, temp, bpx, wpx, outputp);
+printf("[%s:%d] before wait\n", __FUNCTION__, __LINE__);
+    sem_wait(&outputp_sem);
 }
 
 #define MIN(A,B) (((int)(A) < (int)(B)) ? (A) : (B))
