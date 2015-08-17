@@ -92,7 +92,7 @@ module mkConv#(ConvIndication indication)(Conv);
            param <= aparam;
        endmethod
        method Action forward_kernel(Bit#(32) ap_limit, Bit#(32) aq_limit, Float atemp, Bit#(32) abpx, Bit#(32) awpx, Bit#(32) aoutputp);
-           //$display("Conv:forward_kernel");
+           $display("Conv:forward_kernel");
            p_limit <= ap_limit;
            q_limit <= aq_limit;
            temp <= atemp;

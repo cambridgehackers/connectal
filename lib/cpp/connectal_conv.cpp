@@ -23,6 +23,7 @@
 #include "ConvRequest.h"
 #include "connectal_conv.h"
 
+#define COUNTER_INTERVAL 100000
 static ConvRequestProxy *convRequest;
 
 class ConvIndication : public ConvIndicationWrapper
@@ -58,7 +59,7 @@ printf("[%s:%d] element %d\n", __FUNCTION__, __LINE__, param->elementSize_);
         hparam.kernel_w = param->kernel_w_;
         convRequest->init(hparam);
     }
-    //convRequest->forward_kernel(p_limit, q_limit, temp, bpx, wpx, outputp);
+    convRequest->forward_kernel(p_limit, q_limit, temp, bpx, wpx, outputp);
 }
 
 #define MIN(A,B) (((int)(A) < (int)(B)) ? (A) : (B))
@@ -98,6 +99,7 @@ ParamType<Dtype> *param = this;
   int bottom_hw = in_group_size * conv_in_height_ * conv_in_width_ * sizeof(Dtype);
   int kernel_hw = in_group_size * kernel_h_ * kernel_w_ * sizeof(Dtype);
   int output_hw = out_group_size * height_out_ * width_out_ * sizeof(Dtype);
+  static int counter = 0;
   // For each input, ...
   CPtr bottom_data = bottom[0];
   CPtr top_data = top[0];
@@ -122,7 +124,10 @@ ParamType<Dtype> *param = this;
             for (int x = 0; x < width_out_; x++) {
               int p_limit = MIN(param->kernel_h_ - param->pad_h_, conv_in_height_ - y * stride_h_);
               int q_limit = MIN(param->kernel_w_ - param->pad_w_, conv_in_width_ - x * stride_w_);
-              forward_kernel_hardware(this, p_limit, q_limit, bias_val, bpx, wp_item, outputp);
+              if (counter-- <= 0) {
+                  forward_kernel_hardware(this, p_limit, q_limit, bias_val, bpx, wp_item, outputp);
+                  counter = COUNTER_INTERVAL;
+              }
               forward_kernel<Dtype>(this, p_limit, q_limit, bias_val, bpx, wp_item, outputp);
               outputp += sizeof(Dtype);
               bpx += stride_w_ * sizeof(Dtype);
