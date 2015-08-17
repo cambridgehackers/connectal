@@ -49,7 +49,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    Reg#(Bit#(BurstLenSize)) burstLenInBytes <- mkReg(0);
    Reg#(Bit#(32))  itersToFinish <- mkReg(0);
    Reg#(Bit#(32))   itersToStart <- mkReg(0);
-   Reg#(Bit#(32))        srcGens <- mkReg(0);
+   Reg#(Bit#(32))      bytesRead <- mkReg(0);
    Reg#(Bit#(32)) mismatchCounts <- mkReg(0);
    MemreadEngine#(DataBusWidth,2,1) re <- mkMemreadEngine;
 
@@ -58,33 +58,31 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
       itersToStart <= itersToStart-1;
    endrule
 
-   function Bit#(32) expectedVal(Integer i); return srcGens+fromInteger(i); endfunction
+   function Bit#(32) expectedVal(Integer i); return (bytesRead/4)+fromInteger(i); endfunction
    rule check;
       let v <- toGet(re.readServers[0].data).get;
-      let expectedV = pack(genWith(expectedVal));
-      let misMatch = v.data != expectedV;
-      mismatchCounts <= mismatchCounts + (misMatch ? 1 : 0);
-      let new_srcGens = srcGens+2;
+      if (v.data != pack(genWith(expectedVal)))
+         mismatchCounts <= mismatchCounts + 1;
+      let new_bytesRead = bytesRead + fromInteger(valueOf(DataBusWidth))/8;
       if (v.last) begin
-	 new_srcGens = 0;
-         if (itersToFinish == 1) begin
+	 new_bytesRead = 0;
+         if (itersToFinish == 1)
 	    indication.readDone(mismatchCounts);
-         end
          itersToFinish <= itersToFinish - 1;
       end
-      srcGens <= new_srcGens;
+      bytesRead <= new_bytesRead;
    endrule
 
    interface dmaClient = cons(re.dmaClient, nil);
    interface ReadTestRequest request;
-      method Action startRead(Bit#(32) rp, Bit#(32) nb, Bit#(32) bl, Bit#(32) ic) if (itersToStart == 0 && itersToFinish == 0);
+      method Action startRead(Bit#(32) rp, Bit#(32) nb, Bit#(32) bl, Bit#(32) ic) if (itersToFinish == 0);
 	 pointer <= rp;
 	 numBytes <= nb;
 	 burstLenInBytes  <= truncate(bl);
 	 itersToFinish <= ic;
 	 itersToStart <= ic;
 	 mismatchCounts <= 0;
-	 srcGens <= 0;
+	 bytesRead <= 0;
       endmethod
    endinterface
 endmodule
