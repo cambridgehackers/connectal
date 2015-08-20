@@ -29,11 +29,11 @@ all: pciedrivers scripts/syntax/parsetab.py
 	echo version "$(VERSION)"
 
 pciedrivers:
-	(cd drivers/pcieportal; make)
+	#(cd drivers/pcieportal; make)
 	make -C pcie
 
 pciedrivers-clean:
-	(cd drivers/pcieportal; make clean)
+	#(cd drivers/pcieportal; make clean)
 	make -C pcie clean
 
 ifneq ("$(DESTDIR)", "")
@@ -48,7 +48,8 @@ install: $(INSTALL_SHARED)
 	    done; \
 	fi
 	echo 'Installing from' $(CURDIR)
-	(cd drivers/pcieportal; CONNECTALDIR=$(CURDIR) make install)
+	#(cd drivers/pcieportal; CONNECTALDIR=$(CURDIR) make install)
+	make -C drivers/pcieportal VERSION=$(VERSION) CONNECTALDIR=$(PWD) install-dkms
 	make -C pcie install
 	install -d -m755 $(DESTDIR)$(UDEV_RULES_DIR)
 	for fname in $(UDEV_RULES) ; do \
