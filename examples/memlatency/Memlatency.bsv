@@ -79,14 +79,12 @@ module mkMemlatency#(MemlatencyIndication indication)(Memlatency);
       rdStartFifo.enq(cycles);
    endrule
 
-   rule finishRead;
-      let rv0 <- re.readServers[0].response.get;
-      let rdStart <- toGet(rdStartFifo).get();
-      rdLatFifo.enq(cycles-rdStart);
-   endrule
-   
    rule readConsume;
-      re.dataPipes[0].deq;
+      let v <- toGet(re.readServers[0].data).get;
+      if (v.last) begin
+         let rdStart <- toGet(rdStartFifo).get();
+         rdLatFifo.enq(cycles-rdStart);
+      end
    endrule
    
    rule startWrite(wrIterCnt > 0);
@@ -96,13 +94,13 @@ module mkMemlatency#(MemlatencyIndication indication)(Memlatency);
    endrule
 
    rule finishWrite;
-      let rv0 <- we.writeServers[0].response.get;
+      let rv0 <- we.writeServers[0].done.get;
       let wrStart <- toGet(wrStartFifo).get();
       wrLatFifo.enq(cycles-wrStart);
    endrule
    
    rule writeProduce;
-      we.dataPipes[0].enq(1);
+      we.writeServers[0].data.enq(1);
    endrule
    
    rule report;

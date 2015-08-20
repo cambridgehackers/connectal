@@ -104,11 +104,12 @@ module mkMPEngine#(MemreadServer#(haystackBusWidth) haystackReader,
    Reg#(Bit#(32)) iReg <- mkReg(0); // offset in needle
    Reg#(Bit#(2))  epochReg <- mkReg(0);
 
-   BRAMWriter#(NeedleIdxWidth,configBusWidth) n2b <- mkBRAMWriter(0, needle.portB, configReader.cmdServer, configReader.dataPipe);
-   BRAMWriter#(NeedleIdxWidth,configBusWidth) mp2b <- mkBRAMWriter(1, mpNext.portB, configReader.cmdServer, configReader.dataPipe);
+   BRAMWriter#(NeedleIdxWidth,configBusWidth) n2b <- mkBRAMWriter(0, needle.portB, configReader);
+   BRAMWriter#(NeedleIdxWidth,configBusWidth) mp2b <- mkBRAMWriter(1, mpNext.portB, configReader);
 
    FIFOF#(Tuple2#(Bit#(2),Bit#(32))) efifo <- mkSizedFIFOF(2);
    FIFOF#(Tripple#(Bit#(32))) ssfifo <- mkFIFOF;
+   FIFO#(void) doneFifo <- mkFIFO;
    
    rule countCycles;
       if (debug) $display("******************************************** %d", cycleCnt);
@@ -117,8 +118,10 @@ module mkMPEngine#(MemreadServer#(haystackBusWidth) haystackReader,
    
    rule haystackResp;
       if (debug) $display("mkMPEngine::haystackResp");
-      let rv <- toGet(haystackReader.dataPipe).get;
-      haystack.enq(unpack(rv));
+      let rv <- toGet(haystackReader.data).get;
+      haystack.enq(unpack(rv.data));
+      if (rv.last)
+         conff.deq;
    endrule
    
    rule haystackDrain(stage != Search);
@@ -282,12 +285,6 @@ module mkMPEngine#(MemreadServer#(haystackBusWidth) haystackReader,
       stage <= Initialized;
    endrule
       
-   rule finish_search;
-      let rv <- haystackReader.cmdServer.response.get;
-      conff.deq;
-      if (verbose) $display("mkMPEngine::finish_search");
-   endrule
-
    rule setup_needle (stage == Config_needle);
       conff.enq(True);
       match {.needle_sglId, .mpNext_sglId, .needle_len} = ssfifo.first;
@@ -317,7 +314,7 @@ module mkMPEngine#(MemreadServer#(haystackBusWidth) haystackReader,
       Bit#(32) haystack_len_ds = haystack_len+fromInteger(valueOf(nc)-1);
       Bit#(TLog#(nc)) zeros = 0;
       Bit#(32) haystack_len_bytes = {zeros,haystack_len_ds[31:valueOf(TLog#(nc))]} * fromInteger(valueOf(nc));
-      haystackReader.cmdServer.request.put(MemengineCmd{sglId:haystack_sglId, base:extend(haystack_base), len:haystack_len_bytes, burstLen:fromInteger(8*valueOf(nc)), tag: 0});
+      haystackReader.request.put(MemengineCmd{sglId:haystack_sglId, base:extend(haystack_base), len:haystack_len_bytes, burstLen:fromInteger(8*valueOf(nc)), tag: 0});
       if (verbose) $display("mkMPEngine::search %d %d %d",  haystack_sglId, haystack_base, haystack_len_bytes);
    endrule
    

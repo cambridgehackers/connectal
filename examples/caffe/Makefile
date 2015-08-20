@@ -1,12 +1,11 @@
 CONNECTALDIR?=../..
 
+S2H_INTERFACES = ConvRequest:Conv.request
+H2S_INTERFACES = Conv:ConvIndication
+MEM_INTERFACES = lConv.readDma,lConv.writeDma
 # Direct convolution/gradient calculation version
 CPPFILES = $(CONNECTALDIR)/lib/cpp/connectal_conv.cpp
-# Matrix multiply version
-#CPPFILES = $(CONNECTALDIR)/lib/cpp/connectal_convmm.cpp
-CONNECTALFLAGS += --shared
-CONNECTALFLAGS += --nohardware
-NUMBER_OF_MASTERS =0
+BSVFILES = Conv.bsv
+CONNECTALFLAGS += --shared --bsvpath $(CONNECTALDIR)/lib/matmul/bsv
 
 include $(CONNECTALDIR)/Makefile.connectal
-

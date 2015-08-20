@@ -64,21 +64,12 @@ module mkNandSim#(NandCfgIndication indication) (NandSim);
 
    MemreadEngine#(64, 1,  3)  re <- mkMemreadEngine();
    MemwriteEngine#(64, 1, 4)  we <- mkMemwriteEngine();
-   NandSimControl ns <- mkNandSimControl(take(re.readServers), take(re.dataPipes), take(we.writeServers), take(we.dataPipes), indication);
-
-   Server#(MemengineCmd,Bool) slave_read_server  = re.readServers[2];
-   PipeOut#(Bit#(64))         slave_read_pipe    = re.dataPipes[2];
-   Server#(MemengineCmd,Bool) slave_write_server = we.writeServers[3];
-   PipeIn#(Bit#(64))          slave_write_pipe   = we.dataPipes[3];
+   NandSimControl ns <- mkNandSimControl(take(re.readServers), take(we.writeServers), indication);
+   let slave_read_server  = re.readServers[2];
+   let slave_write_server = we.writeServers[3];
    FIFO#(Bit#(MemTagSize))    slaveWriteTag <- mkSizedFIFO(1);
    FIFO#(Bit#(MemTagSize))    slaveReadTag <- mkSizedFIFO(1);
    Reg#(Bit#(BurstLenSize))   slaveReadCnt <- mkReg(0);
-
-   rule completeSlaveReadReq;
-      slaveReadTag.deq;
-      let rv <- slave_read_server.response.get;
-      if (verbose) $display("mkNandSim::completeSlaveReadReq");
-   endrule
 
    interface PhysMemSlave memSlave;
       interface PhysMemWriteServer write_server;
@@ -90,12 +81,12 @@ module mkNandSim#(NandCfgIndication indication) (NandSim);
 	 endinterface
 	 interface Put writeData;
 	    method Action put(MemData#(64) wdata);
-	       slave_write_pipe.enq(wdata.data);
+	       slave_write_server.data.enq(wdata.data);
             endmethod
 	 endinterface
 	 interface Get writeDone;
 	    method ActionValue#(Bit#(MemTagSize)) get();
-	       let rv <- slave_write_server.response.get;
+	       let rv <- slave_write_server.done.get;
 	       slaveWriteTag.deq;
 	       return slaveWriteTag.first;
             endmethod
@@ -112,12 +103,14 @@ module mkNandSim#(NandCfgIndication indication) (NandSim);
 	 endinterface
 	 interface Get  readData;
 	    method ActionValue#(MemData#(64)) get();
-	       let rv <- toGet(slave_read_pipe).get;
+	       let rv <- toGet(slave_read_server.data).get;
 	       let new_slaveReadCnt = slaveReadCnt-8;
 	       let last = new_slaveReadCnt==0;
 	       slaveReadCnt <= new_slaveReadCnt;
-	       if (verbose) $display("mkNandSim.memSlave::readData %d %d %d %d", slaveReadTag.first, last, rv, slaveReadCnt);
-	       return MemData{data:rv, tag:slaveReadTag.first,last:last};
+               if (rv.last)
+                  slaveReadTag.deq;
+	       if (verbose) $display("mkNandSim.memSlave::readData %d %d %d %d", slaveReadTag.first, last, rv.data, slaveReadCnt);
+	       return MemData{data:rv.data, tag:slaveReadTag.first,last:last};
             endmethod
 	 endinterface
       endinterface
@@ -128,18 +121,13 @@ module mkNandSim#(NandCfgIndication indication) (NandSim);
 
 endmodule
 
-module mkNandSimControl#(Vector#(2, Server#(MemengineCmd,Bool)) readServers,
-			  Vector#(2, PipeOut#(Bit#(64))) readPipes,
-			  Vector#(3, Server#(MemengineCmd,Bool)) writeServers,
-			  Vector#(3, PipeIn#(Bit#(64))) writePipes,
+module mkNandSimControl#(Vector#(2, MemreadServer#(64)) readSrvs, Vector#(3, MemwriteServer#(64)) writeSrvs,
 			  NandCfgIndication indication) (NandSimControl);
-
-   Server#(MemengineCmd,Bool)  dramReadServer = readServers[0];
-   Server#(MemengineCmd,Bool)  nandReadServer = readServers[1];
-
-   Server#(MemengineCmd,Bool) dramWriteServer = writeServers[0];
-   Server#(MemengineCmd,Bool) nandWriteServer = writeServers[1];
-   Server#(MemengineCmd,Bool) nandEraseServer = writeServers[2];
+   let dramReadServer = readSrvs[0];
+   let nandReadServer = readSrvs[1];
+   let dramWriteServer = writeSrvs[0];
+   let nandWriteServer = writeSrvs[1];
+   let nandEraseServer = writeSrvs[2];
 
    Reg#(Maybe#(Bit#(32)))  nandPointer <- mkReg(tagged Invalid);
    Reg#(Bit#(32))  nandLen       <- mkReg(0);
@@ -150,37 +138,39 @@ module mkNandSimControl#(Vector#(2, Server#(MemengineCmd,Bool)) readServers,
    Reg#(Bit#(32))  writeCountReg <- mkReg(0);
    FIFOF#(Bool)     readDoneFifo <- mkFIFOF();
    FIFOF#(Bool)    writeDoneFifo <- mkFIFOF();
-   rule countNandWrite;
-      let v <- toGet(readPipes[0]).get();
+   FIFO#(void)      dramReadDone <- mkFIFO;
+   FIFO#(void)      nandReadDone <- mkFIFO;
 
+   rule countNandWrite;
+      let v <- toGet(dramReadServer.data).get();
       let count = writeCountReg;
       if (count == 0)
 	 count = writeReqFifo.first();
-
       //$display("write v=%h count=%d", v, count);
-      writePipes[1].enq(v);
-
+      writeSrvs[1].data.enq(v.data);
       if (count == 8) begin
 	 writeReqFifo.deq();
 	 writeDoneFifo.enq(True);
       end
       writeCountReg <= count-8;
+      if (v.last)
+         dramReadDone.enq(?);
    endrule
-   rule countNandRead;
-      let v <- toGet(readPipes[1]).get();
 
+   rule countNandRead;
+      let v <- toGet(nandReadServer.data).get();
       let count = readCountReg;
       if (count == 0)
 	 count = readReqFifo.first();
-
       //$display("read v=%h count=%d", v, count);
-      writePipes[0].enq(v);
-
+      writeSrvs[0].data.enq(v.data);
       if (count == 8) begin
 	 readReqFifo.deq();
 	 readDoneFifo.enq(True);
       end
       readCountReg <= count-8;
+      if (v.last)
+         nandReadDone.enq(?);
    endrule
 
    PipeOut#(Bit#(64)) erasePipe = (interface PipeOut#(Bit#(64));
@@ -188,25 +178,25 @@ module mkNandSimControl#(Vector#(2, Server#(MemengineCmd,Bool)) readServers,
 				       method Action deq(); endmethod
 				       method Bool notEmpty(); return True; endmethod
 				   endinterface);
-   mkConnection(erasePipe, writePipes[2]);
+   mkConnection(erasePipe, writeSrvs[2].data);
 
    rule eraseDone;
-      let done <- nandEraseServer.response.get();
+      let done <- nandEraseServer.done.get();
       $display("eraseDone");
       indication.eraseDone(0);
    endrule
 
    rule writeDone;
-      let nandWriteDone <- nandWriteServer.response.get();
-      let dramReadDone <- dramReadServer.response.get();
+      let nandWriteDone <- nandWriteServer.done.get();
+      dramReadDone.deq;
       let v <- toGet(writeDoneFifo).get();
       $display("writeDone");
       indication.writeDone(0);
    endrule
 
    rule readDone;
-      let nandReadDone <- nandReadServer.response.get();
-      let dramWriteDone <- dramWriteServer.response.get();
+      nandReadDone.deq;
+      let dramWriteDone <- dramWriteServer.done.get();
       let v <- toGet(readDoneFifo).get();
       $display("readDone");
       indication.readDone(0);

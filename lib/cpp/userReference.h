@@ -34,7 +34,7 @@ static int trace_memory = 1;
 
 #include "GeneratedTypes.h" // generated in project directory
 #define DMAsglist(P, A, B, C, D) MMURequest_sglist((P), (A), (B), (C), (D));
-#define DMAregion(P, PTR, B8, I8, B4, I4, B0, I0) MMURequest_region((P), (PTR), (B8), (I8), (B4), (I4), (B0), (I0))
+#define DMAregion(P, PTR, B12, I12, B8, I8, B4, I4, B0, I0) MMURequest_region((P), (PTR), (B12), (I12), (B8), (I8), (B4), (I4), (B0), (I0))
 
 typedef struct {
     long dma_address;
@@ -89,7 +89,7 @@ int send_reference_to_portal(PortalInternal *device, int numEntries, RegionRef *
     PORTAL_PRINTF("regions %d (%x %x %x)\n", id,regions[0], regions[1], regions[2]);
     PORTAL_PRINTF("borders %d (%"PRIx64" %"PRIx64" %"PRIx64")\n", id,borderVal[0], borderVal[1], borderVal[2]);
   }
-  DMAregion(device, id, borderVal[0], indexVal[0], borderVal[1], indexVal[1], borderVal[2], indexVal[2]);
+  DMAregion(device, id, 0, 0, borderVal[0], indexVal[0], borderVal[1], indexVal[1], borderVal[2], indexVal[2]);
 
     return rc;
 }

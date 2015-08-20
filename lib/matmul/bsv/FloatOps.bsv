@@ -36,6 +36,34 @@ interface FloatAlu;
 endinterface
 
 (* synthesize *)
+module mkDoubleToFloat(Server#(Double,Float));
+   FIFO#(Double) requestFifo <- mkFIFO();
+   FIFO#(Float) responseFifo <- mkFIFO();
+   rule cvt;
+      Double d <- toGet(requestFifo).get();
+      Tuple2#(Float,Exception) tpl = convert(d, defaultValue, False);
+      match { .f, .exc } = tpl;
+      responseFifo.enq(f);
+   endrule
+   interface Put request = toPut(requestFifo);
+   interface Get response = toGet(responseFifo);
+endmodule
+
+(* synthesize *)
+module mkFloatToDouble(Server#(Float,Double));
+   FIFO#(Float)  requestFifo <- mkFIFO();
+   FIFO#(Double) responseFifo <- mkFIFO();
+   rule cvt;
+      Float f <- toGet(requestFifo).get();
+      Tuple2#(Double,Exception) tpl = convert(f, defaultValue, False);
+      match { .d, .exc } = tpl;
+      responseFifo.enq(d);
+   endrule
+   interface Put request = toPut(requestFifo);
+   interface Get response = toGet(responseFifo);
+endmodule
+
+(* synthesize *)
 module mkFloatAdder#(RoundMode rmode)(FloatAlu);
 `ifdef BSIM
    let adder <- mkFPAdder(rmode);

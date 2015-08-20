@@ -60,7 +60,11 @@ public:
 MemwriteIndication *deviceIndication;
 int main(int argc, const char **argv)
 {
-    size_t alloc_sz = 4096; //1024*1024;
+#ifdef SIMULATION
+  size_t alloc_sz = 4*1024;
+#else
+  size_t alloc_sz = 16*1024*1024;
+#endif
   MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequestS2H);
   deviceIndication = new MemwriteIndication(IfcNames_MemwriteIndicationH2S);
   DmaManager *dma = platformInit();
@@ -70,7 +74,7 @@ int main(int argc, const char **argv)
 
   sem_init(&done_sem, 1, 0);
 
-  int iters = 64;
+  int iters = 1;
 
   int mismatchCount = 0;
 
@@ -90,10 +94,13 @@ int main(int argc, const char **argv)
       mismatchCount = 0;
       unsigned int ref_dstAlloc = dma->reference(dstAlloc);
       fprintf(stderr, "dma->reference %d\n", ref_dstAlloc);
-      int burstLenBytes = 16*sizeof(uint32_t);
-      device->startWrite(ref_dstAlloc, alloc_sz, alloc_sz / burstLenBytes, burstLenBytes);
+      int burstLenBytes = 32*sizeof(uint32_t);
 
+      portalTimerStart(0);
+      device->startWrite(ref_dstAlloc, alloc_sz, alloc_sz / burstLenBytes, burstLenBytes);
       sem_wait(&done_sem);
+      platformStatistics();
+
       memdump((unsigned char *)dstBuffer, 32, "MEM");
       for (uint32_t i = 0; i < alloc_sz/sizeof(uint32_t); i++) {
 	  if (dstBuffer[i] != i)

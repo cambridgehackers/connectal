@@ -25,6 +25,8 @@
 #include "sock_utils.h"
 #include <assert.h>
 
+static int trace_socket; // = 1;
+
 static unsigned int tag_counter;
 #define MAX_BSIM_TILES     4
 typedef struct bsim_fpga_map_entry{
@@ -65,8 +67,9 @@ static void initialize_bsim_map(void)
       bsim_fpga_map[tile_index][portal_index].name = id;
       bsim_fpga_map[tile_index][portal_index].offset = portal_index;
       bsim_fpga_map[tile_index][portal_index].valid = 1;
-      PORTAL_PRINTF("%s: bsim_fpga_map[%d/%d][%d/%d]=%d (%d)\n", __FUNCTION__, tile_index, num_tiles, portal_index, num_portals,
-          bsim_fpga_map[tile_index][portal_index].name, (portal_index+1==num_portals));
+      if (trace_socket)
+	PORTAL_PRINTF("%s: bsim_fpga_map[%d/%d][%d/%d]=%d (%d)\n", __FUNCTION__, tile_index, num_tiles, portal_index, num_portals,
+		      bsim_fpga_map[tile_index][portal_index].name, (portal_index+1==num_portals));
       portal_index++;
       base_ptr += PORTAL_BASE_OFFSET;
     } while (portal_index < num_portals && portal_index < 32);
@@ -109,7 +112,6 @@ int i;
 
 static pthread_mutex_t socket_mutex;
 int global_sockfd = -1;
-static int trace_socket; // = 1;
 
 void connect_to_bsim(void)
 {
@@ -334,7 +336,6 @@ static void write_fd_portal_bsim(PortalInternal *pint, volatile unsigned int **a
 {
   struct memrequest foo = {pint->fpga_number, 1,*addr,v};
 
-fprintf(stderr, "[%s:%d] fd %d\n", __FUNCTION__, __LINE__, v);
   portalSendFd(global_sockfd, &foo, sizeof(foo), v);
 }
 #else // __KERNEL__
@@ -463,7 +464,7 @@ void write_fd_portal_bsim(struct PortalInternal *pint, volatile unsigned int **a
         return;
     fmem = fget(v);
     foo.addr = fmem->private_data;
-    printk("[%s:%d] fd %x dmabuf %p\n", __FUNCTION__, __LINE__, v, foo.addr);
+    //printk("[%s:%d] fd %x dmabuf %p\n", __FUNCTION__, __LINE__, v, foo.addr);
     fput(fmem);
     down_interruptible(&bsim_avail);
     memcpy(&upreq, &foo, sizeof(upreq));
@@ -476,6 +477,7 @@ static int init_bsim(struct PortalInternal *pint, void *param)
 #ifdef BSIM
     int found = 0;
     int i;
+    initPortalHardware();
     connect_to_bsim();
 #ifndef __KERNEL__
     assert(pint->fpga_number < MAX_BSIM_PORTAL_ID);

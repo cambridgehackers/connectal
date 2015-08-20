@@ -112,7 +112,7 @@ int init_connecting(const char *arg_name, PortalSocketParam *param)
     addrinfo.ai_addr = (struct sockaddr *)&sa;
 
     if (param && param->addr) {
-        fprintf(stderr, "[%s:%d] TCP\n", __FUNCTION__, __LINE__);
+	if (trace_socket) fprintf(stderr, "[%s:%d] TCP\n", __FUNCTION__, __LINE__);
         addr = param->addr;
     }
     if ((sockfd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol)) == -1) {
@@ -131,7 +131,7 @@ int init_connecting(const char *arg_name, PortalSocketParam *param)
             PORTAL_PRINTF( "%s (%s) retrying connection\n",__FUNCTION__, arg_name);
         sleep(1);
     }
-    PORTAL_PRINTF( "%s (%s) connected.  Attempts %d\n",__FUNCTION__, arg_name, connect_attempts);
+    if (trace_socket) PORTAL_PRINTF( "%s (%s) connected.  Attempts %d\n",__FUNCTION__, arg_name, connect_attempts);
     return sockfd;
 }
 
@@ -166,7 +166,7 @@ ssize_t sock_fd_write(int sockfd, void *ptr, size_t nbytes, int sendfd)
     msg.msg_iovlen = 1;
     ssize_t bytesSent = sendmsg(sockfd, &msg, 0);
     if (bytesSent != (ssize_t)nbytes) {
-        fprintf(stderr, "[%s:%d] error in sendmsg %lu %d\n", __FUNCTION__, __LINE__, bytesSent, errno);
+        fprintf(stderr, "[%s:%d] error in sendmsg %ld %d\n", __FUNCTION__, __LINE__, (long)bytesSent, errno);
         exit(1);
     }
     return bytesSent;

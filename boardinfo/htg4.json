@@ -7,7 +7,7 @@
         "TOP" : "PcieTop",
         "constraints": ["constraints/altera/htg4.xdc"],
         "runscript" : "run.pcietest.altera",
-        "CONNECTALFLAGS" : [],
+        "CONNECTALFLAGS" : ["--mainclockperiod=8", "--derivedclockperiod=4", "--pcieclockperiod=8"],
         "rewireclockstring" : ""
     },
     "PCIE": {

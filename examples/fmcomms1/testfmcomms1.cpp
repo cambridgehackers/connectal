@@ -18,6 +18,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#include <sys/mman.h>
+#include <assert.h>
 #include "dmaManager.h"
 #include "FMComms1Request.h"
 #include "FMComms1Indication.h"

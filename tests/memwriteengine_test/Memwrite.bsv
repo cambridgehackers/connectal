@@ -78,12 +78,12 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    endrule
    rule finish;
          $display("finish");
-         let rv <- we.writeServers[0].response.get;
+         let rv <- we.writeServers[0].done.get;
          indication.writeDone(0);
    endrule
    rule src if (numWords != 0);
          let v = {srcGens+1,srcGens};
-         we.dataPipes[0].enq(v);
+         we.writeServers[0].data.enq(v);
          srcGens <= srcGens+2;
          numWords <= numWords - 8;
    endrule

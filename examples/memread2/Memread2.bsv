@@ -62,8 +62,20 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
    FIFOF#(Bit#(64)) outReg1 <- mkFIFOF;
    PipeIn#(Bit#(64)) pi0 = toPipeIn(outReg0);
    PipeIn#(Bit#(64)) pi1 = toPipeIn(outReg1);
-   mkConnection(re0.dataPipes[0], pi0);
-   mkConnection(re1.dataPipes[0], pi1);
+   FIFOF#(Bit#(1)) doneReg0 <- mkFIFOF;
+   FIFOF#(Bit#(1)) doneReg1 <- mkFIFOF;
+   rule re0_read;
+      let v <- toGet(re0.readServers[0].data).get;
+      toPut(pi0).put(v.data);
+      if (v.last)
+         doneReg0.enq(0);
+   endrule
+   rule re1_read;
+      let v <- toGet(re1.readServers[0].data).get;
+      toPut(pi1).put(v.data);
+      if (v.last)
+         doneReg1.enq(0);
+   endrule
 
    Reg#(Bool)         valid0Reg <- mkReg(False);
    Reg#(Bit#(64)) v0Reg <- mkReg(0);
@@ -114,8 +126,8 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
    endrule
    
    rule done;
-      let rv0 <- re0.readServers[0].response.get;
-      let rv1 <- re1.readServers[0].response.get;
+      doneReg0.deq;
+      doneReg1.deq;
       indication.readDone(mismatchCount1+mismatchCount0);
    endrule
    

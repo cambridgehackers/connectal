@@ -75,6 +75,7 @@ argparser.add_argument('--stl', help='STL implementation to use for Android buil
 argparser.add_argument('--floorplan', help='Floorplan XDC', default=None)
 argparser.add_argument('-P', '--partition-module', default=[], help='Modules to separately synthesize/place/route', action='append')
 argparser.add_argument('--cachedir', default=None, help='Cache directory for fpgamake to use')
+argparser.add_argument('--nocache', help='dont use buildcache with fpgamake', action='store_true')
 argparser.add_argument('-v', '--verbose', help='Display verbose information messages', action='store_true')
 argparser.add_argument(      '--dump_map', help='List of portals passed to pcieflat for PCIe trace debug info')
 argparser.add_argument('--nonstrict', help='If nonstrict, pass -Wall to gcc, otherwise -Werror', default=False, action='store_true')
@@ -82,6 +83,9 @@ argparser.add_argument('--prtop', help='Filename of previously synthesized top l
 argparser.add_argument('--prvariant', default=[], help='name of a variant for partial reconfiguration', action='append')
 argparser.add_argument('--reconfig', default=[], help='partial reconfig module names', action='append')
 argparser.add_argument('--bsvpath', default=[], help='directories to add to bsc search path', action='append')
+argparser.add_argument('--mainclockperiod', default=10, help='Clock period of default clock, in nanoseconds', type=int)
+argparser.add_argument('--derivedclockperiod', default=5, help='Clock period of derivedClock, in nanoseconds', type=float)
+argparser.add_argument('--pcieclockperiod', default=None, help='Clock period of PCIE clock, in nanoseconds', type=int)
 
 noisyFlag=False
 
@@ -295,6 +299,12 @@ if __name__=='__main__':
 
     bsvdefines = options.bsvdefine
     bsvdefines.append('project_dir=$(DTOP)')
+    print bsvdefines
+    bsvdefines.append('MainClockPeriod=%d' % options.mainclockperiod)
+    bsvdefines.append('DerivedClockPeriod=%f' % options.derivedclockperiod)
+    if options.pcieclockperiod:
+        bsvdefines.append('PcieClockPeriod=%d' % options.pcieclockperiod)
+    print bsvdefines
 
     if option_info['rewireclockstring'] != '':
         option_info['rewireclockstring'] = tclzynqrewireclock
@@ -432,6 +442,10 @@ if __name__=='__main__':
     if (fpga_vendor == 'altera'):
         options.partition_module = []
 
+    if options.nocache:
+        cachearg = '--cachedir=""'
+    else:
+        cachearg = '--cachedir=%s' % os.path.abspath(options.cachedir) if options.cachedir else ''
     substs = {'partitions': ' '.join(['-s %s' % p for p in options.partition_module]),
 					 'boardname': boardname,
 					 'partname': partname,
@@ -447,7 +461,7 @@ if __name__=='__main__':
 					 'chipscope': ' '.join(['--chipscope=%s' % os.path.abspath(chipscope) for chipscope in options.chipscope]),
 					 'sourceTcl': ' '.join(['--tcl=%s' % os.path.abspath(tcl) for tcl in options.tcl]),
                                          'verilog': ' '.join([os.path.abspath(f) for f in options.verilog]),
-					 'cachedir': '--cachedir=%s' % os.path.abspath(options.cachedir) if options.cachedir else '',
+					 'cachedir': cachearg,
                                          'pin_binding' : ' '.join(['-b %s' % s for s in options.pin_binding]),
                                          'reconfig' : ' '.join(['--reconfig=%s' % rname for rname in options.reconfig]),
                                          'prtop' : ('--prtop=%s' % options.prtop) if options.prtop else ''

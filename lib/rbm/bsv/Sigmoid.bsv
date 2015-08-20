@@ -194,10 +194,8 @@ interface SigmoidIfc#(numeric type dsz);
    method Bit#(32) tableSize;
 endinterface
 
-module  mkSigmoid#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
-		   Vector#(2, PipeOut#(Bit#(TMul#(N,32)))) readPipes,
-		   Vector#(1,Server#(MemengineCmd,Bool)) writeServers,
-		   Vector#(1, PipeIn#(Bit#(TMul#(N,32))))  writePipes ) (SigmoidIfc#(dsz))
+module  mkSigmoid#(Vector#(2,MemreadServer#(TMul#(N,32))) readSrvrs,
+		   Vector#(1,MemwriteServer#(TMul#(N,32))) writeSrvrs) (SigmoidIfc#(dsz))
    provisos (Bits#(Float, fsz)
 	     , Add#(N,0,n)
 	     , Mul#(fsz,N,dmasz)
@@ -206,12 +204,10 @@ module  mkSigmoid#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
 	     , Div#(dsz, 8, dbytes)
 	     , Log#(n,nshift)
 	     );
-   
    let nshift = valueOf(nshift);
-   
    Bool verbose = False;
-   VectorSource#(dmasz, Vector#(n,Float)) source <- mkMemreadVectorSource(readServers[0], readPipes[0]);
-   VectorSource#(dmasz, Vector#(n,Float)) tabsrc <- mkMemreadVectorSource(readServers[1], readPipes[1]);
+   VectorSource#(dmasz, Vector#(n,Float)) source <- mkMemreadVectorSource(readSrvrs[0]);
+   VectorSource#(dmasz, Vector#(n,Float)) tabsrc <- mkMemreadVectorSource(readSrvrs[1]);
 
    Vector#(n, SigmoidTable#(6)) sigmoidTables <- replicateM(mkSigmoidTable);
    Vector#(n, Server#(Float,Float)) sigmoidServers <- mapM(uncurry(mkSigmoidServer), zip(genVector,sigmoidTables));
@@ -221,7 +217,7 @@ module  mkSigmoid#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
 
    PipeOut#(Vector#(4, Float)) tabsrcs <- mkUnfunnel(tabsrc.pipe);
    Reg#(Bit#(32)) count <- mkReg(0);
-   VectorSink#(TMul#(N,32),Vector#(N,Float)) sinkC <- mkMemwriteVectorSink(writeServers[0], writePipes[0]);
+   VectorSink#(TMul#(N,32),Vector#(N,Float)) sinkC <- mkMemwriteVectorSink(writeSrvrs[0]);
 
    rule updateSigmoidTableRule if (updatingSigmoidTable);
       let vs <- toGet(tabsrcs).get;
@@ -252,11 +248,6 @@ module  mkSigmoid#(Vector#(2,Server#(MemengineCmd,Bool)) readServers,
       if (verbose) $display("sigmoid count=%d value=%h", count+1, vs);
       count <= count + 1;
       sinkC.pipe.enq(vs);
-   endrule
-
-
-   rule sourceFinishRule;
-      let b <- source.finish();
    endrule
 
    method Action sigmoidDone;

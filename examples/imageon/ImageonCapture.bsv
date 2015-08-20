@@ -110,11 +110,11 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, HdmiGenerato
         synchronizer.enq(serdes.data.capture);
     endrule
     rule send_data;
-        we.dataPipes[0].enq(synchronizer.first);
+        we.writeServers[0].data.enq(synchronizer.first);
         synchronizer.deq;
     endrule
     rule dma_response;
-        let rv <- we.writeServers[0].response.get;
+        let rv <- we.writeServers[0].done.get;
         serdes_indication.iserdes_dma('hffffffff); // request is all finished
     endrule
 

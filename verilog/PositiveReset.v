@@ -52,9 +52,8 @@ module PositiveReset (
    input              IN_RST ;
    output             OUT_RST ;
 
-   (* dont_touch = "true" *)
+   //(* keep = "true" *)
    reg [RSTDELAY:0]   reset_hold ;
-   (* dont_touch = "true" *)
    wire [RSTDELAY+1:0] next_reset = {reset_hold, 1'b0} ;
 
    assign  OUT_RST = reset_hold[RSTDELAY] ;

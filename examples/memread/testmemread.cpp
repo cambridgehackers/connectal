@@ -53,6 +53,11 @@ public:
         mismatchCount += v;
         sem_post(&test_sem);
     }
+    // memread_4m
+    void started ( const uint32_t numWords ) {
+    }
+    void reportStateDbg ( const uint32_t streamRdCnt, const uint32_t mismatchCount )  {
+    }
     ReadTestIndication(int id, int tile=DEFAULT_TILE) : ReadTestIndicationWrapper(id,tile){}
 };
 
@@ -82,11 +87,11 @@ int main(int argc, const char **argv)
     portalTimerStart(0);
     device->startRead(ref_srcAlloc, numWords * 4, burstLen * 4, iterCnt);
     sem_wait(&test_sem);
+    platformStatistics();
     if (mismatchCount) {
         fprintf(stderr, "Main::first test failed to match %d.\n", mismatchCount);
         test_result++;     // failed
     }
-    platformStatistics();
 
     /* Test 2: check that mismatch is detected */
     srcBuffer[0] = -1;
@@ -96,7 +101,7 @@ int main(int argc, const char **argv)
 
     fprintf(stderr, "Starting second read, mismatches expected\n");
     mismatchCount = 0;
-    device->startRead(ref_srcAlloc, numWords * 4, burstLen * 4, iterCnt);
+    device->startRead(ref_srcAlloc, numWords * 4 / NumberOfMasters, burstLen * 4, iterCnt);
     sem_wait(&test_sem);
     if (mismatchCount != 3/*number of errors introduced above*/ * iterCnt) {
         fprintf(stderr, "Main::second test failed to match mismatchCount=%d (expected %d) iterCnt=%d numWords=%d.\n",

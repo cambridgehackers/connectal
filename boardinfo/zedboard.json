@@ -8,7 +8,7 @@
         "implconstraints": ["constraints/xilinx/zc7z020clg484.xdc"],
         "TOP" : "ZynqTop",
         "runscript" : "run.android",
-        "CONNECTALFLAGS" : [],
+        "CONNECTALFLAGS" : ["--mainclockperiod=10", "--derivedclockperiod=5"],
         "need_pcie" : "unused"
     },
     "fmc1": {

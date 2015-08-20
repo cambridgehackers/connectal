@@ -19,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFO::*;
 import FIFOF::*;
 import Vector::*;
@@ -82,14 +81,14 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
       endrule
       rule finish;
 	 $display("finish %d 0x%x", i, iterCnts[i]);
-	 let rv <- we.writeServers[i].response.get;
+	 let rv <- we.writeServers[i].done.get;
 	 finishFifos[i].enq(rv);
       endrule
       rule src if (cfs[i].notEmpty);
 	 Vector#(DataBusWords, Bit#(32)) v;
 	 for (Integer j = 0; j < valueOf(DataBusWords); j = j + 1)
 	    v[j] = srcGens[i]+fromInteger(j);
-	 we.dataPipes[i].enq(pack(v));
+	 we.writeServers[i].data.enq(pack(v));
 	 let new_srcGen = srcGens[i]+fromInteger(valueOf(DataBusWords));
 	 srcGens[i] <= new_srcGen;
 	 if(new_srcGen == (writeOffset/4)+(fromInteger(i+1)*truncate(chunk/4)))

@@ -55,16 +55,10 @@ module mkMemread#(MemreadIndication indication) (Memread);
 
    let debug = True;
    
-   rule finish;
-      if (debug) $display("finish");
-      let rv <- re.readServers[0].response.get;
-      indication.readDone(mismatchCount);
-   endrule
-   
    rule check;
-      let v <- toGet(re.dataPipes[0]).get;
+      let v <- toGet(re.readServers[0].data).get;
       let expectedV = {srcGen+1,srcGen};
-      let misMatch = v != expectedV;
+      let misMatch = v.data != expectedV;
       if (debug && misMatch) $display("check %h %h", v, expectedV);
       mismatchCount <= mismatchCount + (misMatch ? 1 : 0);
       if (srcGen+2 == numWords) begin
@@ -72,6 +66,10 @@ module mkMemread#(MemreadIndication indication) (Memread);
       end
       else
 	 srcGen <= srcGen+2;
+      if (v.last) begin
+         if (debug) $display("finish");
+         indication.readDone(mismatchCount);
+      end
    endrule
    
    interface dmaClient = re.dmaClient;

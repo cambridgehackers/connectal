@@ -90,10 +90,10 @@ module mkPcieControlAndStatusRegs(PcieControlAndStatusRegs);
    Reg#(TimestampedTlpData) pcieTraceBramResponse <- mkReg(unpack(0));
 
    // Function to return a one-word slice of the tlpTraceBramResponse
-   function Bit#(32) tlpTraceBramResponseSlice(Reg#(TimestampedTlpData) data, Bit#(3) i);
-       Bit#(8) i8 = zeroExtend(i);
+   function Bit#(32) tlpTraceBramResponseSlice(Reg#(TimestampedTlpData) data, Integer i);
+       Bit#(8) i8 = fromInteger(i);
        begin
-           Bit#(192) v = extend(pack(data));
+           Bit#(TMul#(12,32)) v = extend(pack(data));
            return v[31 + (i8*32) : 0 + (i8*32)];
        end
    endfunction
@@ -119,7 +119,7 @@ module mkPcieControlAndStatusRegs(PcieControlAndStatusRegs);
    FIFOF#(AddrBeat#(16)) csrRagBeatFifo <- mkFIFOF();
    FIFOF#(Bool)       csrIsMsixAddrFifo <- mkFIFOF();
    FIFOF#(Bit#(2))     csrOneHotFifo000 <- mkFIFOF();
-   FIFOF#(Bit#(21))    csrOneHotFifo774 <- mkFIFOF();
+   FIFOF#(Bit#(27))    csrOneHotFifo774 <- mkFIFOF();
    FIFOF#(Bit#(2))     csrOneHotFifo992 <- mkFIFOF();
 
    FIFOF#(AddrBeat#(16)) csrWagBeatFifo <- mkFIFOF();
@@ -138,7 +138,7 @@ module mkPcieControlAndStatusRegs(PcieControlAndStatusRegs);
       csrIsMsixAddrFifo.enq(msixaddr >= 0 && msixaddr <= 63);
       Bit#(1024) onehot = (1 << addr[9:0]);
       csrOneHotFifo000.enq(onehot[1:0]);
-      csrOneHotFifo774.enq(onehot[794:774]);
+      csrOneHotFifo774.enq(onehot[800:774]);
       csrOneHotFifo992.enq(onehot[993:992]);
    endrule
    rule readDataRule2;
@@ -182,6 +182,12 @@ module mkPcieControlAndStatusRegs(PcieControlAndStatusRegs);
 	  if (oneHotDecode774[781-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 5);
 	  if (oneHotDecode774[792-774] == 1) data = extend(tlpTraceBramWrAddrReg);
 	  if (oneHotDecode774[794-774] == 1) data = extend(tlpTraceLimitReg);
+	  if (oneHotDecode774[795-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 6);
+	  if (oneHotDecode774[796-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 7);
+	  if (oneHotDecode774[797-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 8);
+	  if (oneHotDecode774[798-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 9);
+	  if (oneHotDecode774[799-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 10);
+	  if (oneHotDecode774[790-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 11);
 
          //******************************** msix_base has to match CONFIG.MXIx_PBA_Offset in scripts/connectal-synth-pcie.tcl
 	  // 4-bit MSIx pending bit field

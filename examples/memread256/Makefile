@@ -1,0 +1,11 @@
+
+CONNECTALDIR?=../..
+S2H_INTERFACES = ReadTestRequest:ReadTest.request
+H2S_INTERFACES = ReadTest:ReadTestIndication
+MEM_INTERFACES = lReadTest.dmaClient,nil
+BSVFILES = ../memread/ReadTest.bsv
+CPPFILES= ../memread/testmemread.cpp
+
+CONNECTALFLAGS += -D DataBusWidth=256
+
+include $(CONNECTALDIR)/Makefile.connectal

@@ -33,6 +33,8 @@ typedef enum {
 
    IfcNames_MMURequestS2H,
    IfcNames_MMUIndicationH2S,
+   IfcNames_AlgoMMURequestS2H,
+   IfcNames_AlgoMMUIndicationH2S,
 
    IfcNames_NandMMURequestS2H,
    IfcNames_NandMMUIndicationH2S,

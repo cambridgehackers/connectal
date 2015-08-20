@@ -38,6 +38,7 @@
 #include <stdarg.h> // for portal_printf
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <libgen.h>  // dirname
 #endif
 #include "drivers/portalmem/portalmem.h" // PA_MALLOC
 
@@ -166,9 +167,12 @@ void initPortalHardware(void)
         exit(-1);
     }
     else if (pid) {
+#ifndef SIMULATION
         int status;
         waitpid(pid, &status, 0);
-#ifdef __arm__
+#endif
+#ifdef SIMULATION
+#elif defined(__arm__)
 	{
 	  int fd;
 	  ssize_t len;
@@ -180,7 +184,7 @@ void initPortalHardware(void)
 	  printf("[%s:%d] fd %d len %lu\n", __FUNCTION__, __LINE__, fd, len);
 	  close(fd);
 	}
-#elif !defined(BSIM) && !defined(BOARD_xsim)
+#else
         while (1) {
             struct stat statbuf;
             int rc = stat("/dev/connectal", &statbuf); /* wait for driver to load */
@@ -190,7 +194,7 @@ void initPortalHardware(void)
             sleep(1);
         }
 #endif
-#if !defined(BSIM) && !defined(BOARD_xsim)
+#ifndef SIMULATION
         checkSignature("/dev/connectal",
 #ifdef ZYNQ
             PORTAL_SIGNATURE
@@ -203,32 +207,75 @@ void initPortalHardware(void)
     }
     else {
 #define MAX_PATH 2000
-        static char buf[MAX_PATH];
-        buf[0] = 0;
-        int rc = readlink("/proc/self/exe", buf, sizeof(buf));
-	if (rc < 0)
-	    fprintf(stderr, "[%s:%d] readlink error %d\n", __FUNCTION__, __LINE__, errno);
-#if !defined(BOARD_bluesim) && !defined(BOARD_xsim)
-        char *serial = getenv("SERIALNO");
-        int ind = 1;
+        static char buf[400000];
+        char *filename = NULL;
         char *argv[] = { (char *)"fpgajtag", NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+        int ind = 1, rc, fd;
+        buf[0] = 0;
+        fd = open("/proc/self/maps", O_RDONLY);
+        while ((rc = read(fd, buf, sizeof(buf)-1)) > 0) {
+            buf[rc] = 0;
+            rc = 0;
+            while(buf[rc]) {
+                char *endptr;
+                long addr = strtol(&buf[rc], &endptr, 16);
+                if (endptr && *endptr == '-') {
+                    char *endptr2;
+                    long addr2 = strtol(endptr+1, &endptr2, 16);
+                    if (addr <= (long)&initPortalHardware && (long)&initPortalHardware <= addr2) {
+                        filename = strstr(endptr2, "  ");
+                        while (*filename == ' ')
+                            filename++;
+                        endptr2 = strstr(filename, "\n");
+                        if (endptr2)
+                            *endptr2 = 0;
+                        printf("buffer %s\n", filename);
+                        goto endloop;
+                    }
+                }
+                while(buf[rc] && buf[rc] != '\n')
+                    rc++;
+                if (buf[rc])
+                    rc++;
+            }
+        }
+endloop:
+	if (!filename) {
+	    fprintf(stderr, "[%s:%d] could not find execution filename\n", __FUNCTION__, __LINE__);
+            exit(0);
+        }
+        if (getenv("NOFPGAJTAG"))
+            exit(0);
+#ifdef BOARD_bluesim
+        char *p = dirname(filename);
+        static char buf2[MAX_PATH];
+        sprintf(buf2, "%s/bsim", p);
+printf("[%s:%d] BSIM %s *******\n", __FUNCTION__, __LINE__, buf2);
+        argv[ind++] = NULL;
+        rc = execvp (buf2, argv);
+#elif defined(BOARD_xsim)
+        argv[ind++] = (char *)"-R";
+        argv[ind++] = (char *)"work.xsimtop";
+printf("[%s:%d] RUNNING XSIM\n", __FUNCTION__, __LINE__);
+        rc = execvp ("xsim", argv);
+printf("[%s:%d] rc %d\n", __FUNCTION__, __LINE__, rc);
+#else
+        char *serial = getenv("SERIALNO");
         if (serial) {
             argv[ind++] = (char *)"-s";
             argv[ind++] = strdup(serial);
         }
-        if (getenv("NOFPGAJTAG"))
-            exit(0);
-        else {
+        {
 #ifdef __arm__
         argv[ind++] = (char *)"-x";
-        argv[ind++] = buf;
+        argv[ind++] = filename;
         execvp ("/fpgajtag", argv);
 #else
-        argv[ind++] = buf;
+        argv[ind++] = filename;
         execvp ("fpgajtag", argv);
 #endif // !__arm__
         }
-#endif
+#endif // SIMULATION
         exit(-1);
     }
 #endif // !__KERNEL__
@@ -261,7 +308,7 @@ int portalAlloc(size_t size, int cached)
 #else
     fd = ioctl(global_pa_fd, PA_MALLOC, &portalAlloc);
 #endif
-    PORTAL_PRINTF("alloc size=%ld fd=%d\n", (unsigned long)size, fd);
+    //PORTAL_PRINTF("alloc size=%ld fd=%d\n", (unsigned long)size, fd);
     if (fd == -1) {
         PORTAL_PRINTF("portalAllocCached: alloc failed size=%ld errno=%d\n", (unsigned long)size, errno);
         exit(-1);

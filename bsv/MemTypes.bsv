@@ -19,9 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
-
-// BSV Libraries
 import FIFOF::*;
 import Adapter::*;
 import Vector::*;
@@ -30,8 +27,6 @@ import BRAMFIFO::*;
 import GetPut::*;
 import ClientServer::*;
 import Pipe::*;
-
-// CONNECTAL Libraries
 import ConnectalMemory::*;
 
 typedef Bit#(32) SGLId;
@@ -61,16 +56,15 @@ typedef struct {
    Bit#(MemTagSize)  tag;
    } MemRequest deriving (Bits);
 
-// memory paylaod
+// memory payload
 typedef struct {
    Bit#(dsz) data;
    Bit#(MemTagSize) tag;
    Bool last;
    } MemData#(numeric type dsz) deriving (Bits);
 
-
 ///////////////////////////////////////////////////////////////////////////////////
-// 
+//
 
 typedef struct {SGLId sglId;
 		Bit#(MemOffsetSize) base;
@@ -80,37 +74,40 @@ typedef struct {SGLId sglId;
 		} MemengineCmd deriving (Eq,Bits);
 
 interface MemwriteServer#(numeric type dataWidth);
-   interface Server#(MemengineCmd,Bool) cmdServer;
-   interface PipeIn#(Bit#(dataWidth)) dataPipe;
+   interface Put#(MemengineCmd)       request;
+   interface Get#(Bool)               done;
+   interface PipeIn#(Bit#(dataWidth)) data;
 endinterface
 
 interface MemwriteEngine#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers);
    interface MemWriteClient#(dataWidth) dmaClient;
-   interface Vector#(numServers, Server#(MemengineCmd,Bool)) writeServers;
-   interface Vector#(numServers, PipeIn#(Bit#(dataWidth))) dataPipes;
-   interface Vector#(numServers, MemwriteServer#(dataWidth)) write_servers;
+   interface Vector#(numServers, MemwriteServer#(dataWidth)) writeServers;
 endinterface
+
+typedef struct {
+   Bit#(dsz) data;
+   Bit#(MemTagSize) tag;
+   Bool first;
+   Bool last;
+   } MemDataF#(numeric type dsz) deriving (Bits);
 
 interface MemreadServer#(numeric type dataWidth);
-   interface Server#(MemengineCmd,Bool) cmdServer;
-   interface PipeOut#(Bit#(dataWidth)) dataPipe;
+   interface Put#(MemengineCmd)             request;
+   interface PipeOut#(MemDataF#(dataWidth)) data;
 endinterface
-      
+
 interface MemreadEngine#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers);
    interface MemReadClient#(dataWidth) dmaClient;
-   interface Vector#(numServers, Server#(MemengineCmd,Bool)) readServers;
-   interface Vector#(numServers, PipeOut#(Bit#(dataWidth))) dataPipes;
-   interface Vector#(numServers, MemreadServer#(dataWidth)) read_servers;
+   interface Vector#(numServers, MemreadServer#(dataWidth)) readServers;
 endinterface
 
-// 
+//
 ///////////////////////////////////////////////////////////////////////////////////
 
 
 ///////////////////////////////////////////////////////////////////////////////////
-// 
+//
 
-			     
 interface MemReadClient#(numeric type dsz);
    interface Get#(MemRequest)    readReq;
    interface Put#(MemData#(dsz)) readData;
@@ -132,19 +129,19 @@ interface MemWriteServer#(numeric type dsz);
    interface Put#(MemData#(dsz))     writeData;
    interface Get#(Bit#(MemTagSize))           writeDone;
 endinterface
-      
+
 //
 ///////////////////////////////////////////////////////////////////////////////////
-// 
+//
 
 interface PhysMemSlave#(numeric type addrWidth, numeric type dataWidth);
    interface PhysMemReadServer#(addrWidth, dataWidth) read_server;
-   interface PhysMemWriteServer#(addrWidth, dataWidth) write_server; 
+   interface PhysMemWriteServer#(addrWidth, dataWidth) write_server;
 endinterface
 
 interface PhysMemMaster#(numeric type addrWidth, numeric type dataWidth);
    interface PhysMemReadClient#(addrWidth, dataWidth) read_client;
-   interface PhysMemWriteClient#(addrWidth, dataWidth) write_client; 
+   interface PhysMemWriteClient#(addrWidth, dataWidth) write_client;
 endinterface
 
 interface PhysMemReadClient#(numeric type asz, numeric type dsz);
@@ -212,7 +209,7 @@ instance Connectable#(PhysMemMaster#(addrWidth, busWidth), PhysMemSlave#(addrWid
    endmodule
 endinstance
 
-// this is used for debugging MemSlaveEngine/MemMasterEngine in BsimTop.bsv
+// this is used for debugging MemToPcie/PcieToMem in BsimTop.bsv
 instance Connectable#(PhysMemMaster#(32, busWidth), PhysMemSlave#(40, busWidth));
    module mkConnection#(PhysMemMaster#(32, busWidth) m, PhysMemSlave#(40, busWidth) s)(Empty);
       //mkConnection(m.read_client.readReq, s.read_server.readReq);
@@ -235,5 +232,3 @@ endinstance
 function Bool isQuadWordAligned(Bit#(7) lower_addr);
    return (lower_addr[2:0]==3'b0);
 endfunction
-
-

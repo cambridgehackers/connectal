@@ -312,7 +312,7 @@ private:
     pthread_mutex_t mutex;
     struct pollfd *portal_fds;
     int pipefd[2];
-    int inited;
+    int startThread;
     int numWrappers;
     int numFds;
 public:
@@ -365,6 +365,8 @@ public:
 };
 
 extern uint64_t poll_enter_time, poll_return_time; // for performance measurement
+extern int mmu_error_limit, mem_error_limit;       // portalMemory
+extern const char *dmaErrors[];                    // portalMemory
 #endif // __cplusplus
 
 #endif /* __PORTAL_OFFSETS_H__ */

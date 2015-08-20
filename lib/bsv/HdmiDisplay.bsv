@@ -21,7 +21,7 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
+import FIFO::*;
 import BRAMFIFO::*;
 import Vector::*;
 import Clocks::*;
@@ -154,6 +154,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
    Reg#(Bool) dumpover <- mkReg(False);
    Reg#(Bool) duringDma <- mkReg(False);
    //Reg#(Bool) dmaReady <- mkReg(False);
+   FIFO#(void)  doneFifo <- mkFIFO;
 
    rule dmaPulserule;
       dmastart <= dmastartPulse.pulse;
@@ -161,12 +162,14 @@ module mkHdmiDisplay#(Clock hdmi_clock,
       dmaendDelay <= dmaend;
    endrule
    rule fromMemread;
-      let v <- toGet(memreadEngine.read_servers[0].dataPipe).get;
-      synchronizer.enq(v);
+      let v <- toGet(memreadEngine.readServers[0].data).get;
+      synchronizer.enq(v.data);
       if (verbose)
-          $display("hdmiDisplay: dmadata [%d]=%x cycle %d", transferWord, v, transferCycles - transferCyclesSnapshot);
+          $display("hdmiDisplay: dmadata [%d]=%x cycle %d", transferWord, v.data, transferCycles - transferCyclesSnapshot);
       transferWord <= transferWord + 1;
       transferLast <= transferCycles;
+      if (v.last)
+         doneFifo.enq(?);
    endrule
 
    rule doPut1 if (evenOdd);
@@ -220,7 +223,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
       transferCycles <= transferCycles + 1;
    endrule
    rule finishTransferRule;
-      let b <- memreadEngine.readServers[0].response.get;
+      doneFifo.deq;
       transferCount <= transferCount + 1;
       let tc = transferCycles - transferCyclesSnapshot;
       transferSumOfCycles <= transferSumOfCycles + extend(tc);

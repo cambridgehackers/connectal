@@ -22,6 +22,7 @@
 //`timescale 1ns / 1ps
 
 import "DPI-C" function void dpi_init();
+import "DPI-C" function bit dpi_finish();
 
 `ifdef BSV_POSITIVE_RESET
   `define BSV_RESET_VALUE 1'b1
@@ -37,6 +38,7 @@ module xsimtop();
    reg RST_N;
    reg DERIVED_RST_N;
    reg [31:0] count;
+   reg finish;
 
    mkXsimTop xsimtop(.CLK(CLK), .RST_N(RST_N), .CLK_derivedClock(DERIVED_CLK), .RST_N_derivedReset(DERIVED_RST_N)); 
    initial begin
@@ -46,6 +48,7 @@ module xsimtop();
       DERIVED_RST_N = `BSV_RESET_VALUE;
       $display("asserting reset to value %d", `BSV_RESET_VALUE);
       count = 0;
+      finish = 0;
       dpi_init();
    end
 
@@ -60,6 +63,9 @@ module xsimtop();
    
    always @(posedge CLK) begin
       count <= count + 1;
+      finish <= dpi_finish();
+      if (finish)
+	$finish();
    end
    always @(`BSV_RESET_EDGE CLK) begin
       if (count == 20) begin
@@ -83,7 +89,7 @@ module XsimSource( input CLK, input CLK_GATE, input RST, input [31:0] portal, in
    end
 endmodule
 
-import "DPI-C" function void dpi_msgSink_beat(input int portal, output int beat, output int src_rdy);
+import "DPI-C" function void dpi_msgSink_beat(input int portal, output int beat, output bit src_rdy);
 module XsimSink(input CLK, input CLK_GATE, input RST, input [31:0] portal, output reg src_rdy, output reg [31:0] beat);
    always @(posedge CLK) begin
       dpi_msgSink_beat(portal, beat, src_rdy);
@@ -165,14 +171,14 @@ module XsimDmaReadWrite(input CLK,
 endmodule
 
 
-import "DPI-C" function int  bsimLinkUp(input int linknumber, input int listening);
-import "DPI-C" function void bsimLinkOpen(input int linknumber, input int listening);
-import "DPI-C" function int bsimLinkCanReceive(input int linknumber, input int listening);
-import "DPI-C" function int bsimLinkCanTransmit(input int linknumber, input int listening);
-import "DPI-C" function int bsimLinkReceive32(input int linknumber, input int listening);
-import "DPI-C" function void bsimLinkTransmit32(input int linknumber, input int listening, input int val);
-import "DPI-C" function longint bsimLinkReceive64(input int linknumber, input int listening);
-import "DPI-C" function void bsimLinkTransmit64(input int linknumber, input int listening, input longint val);
+import "DPI-C" function int  bsimLinkUp(input int linknumber, input bit listening);
+import "DPI-C" function void bsimLinkOpen(input int linknumber, input bit listening);
+import "DPI-C" function int bsimLinkCanReceive(input int linknumber, input bit listening);
+import "DPI-C" function int bsimLinkCanTransmit(input int linknumber, input bit listening);
+import "DPI-C" function int bsimLinkReceive32(input int linknumber, input bit listening);
+import "DPI-C" function void bsimLinkTransmit32(input int linknumber, input bit listening, input int val);
+import "DPI-C" function longint bsimLinkReceive64(input int linknumber, input bit listening);
+import "DPI-C" function void bsimLinkTransmit64(input int linknumber, input bit listening, input longint val);
 
 module XsimLink #(parameter DATAWIDTH=32) (
 		 input RST,

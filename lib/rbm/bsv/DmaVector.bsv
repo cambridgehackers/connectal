@@ -42,7 +42,7 @@ interface VectorSource#(numeric type dsz, type a);
    method ActionValue#(Bool) finish();
 endinterface
 
-module  mkMemreadVectorSource#(Server#(MemengineCmd,Bool) memreadServer, PipeOut#(Bit#(asz)) pipeOut)(VectorSource#(asz, a))
+module  mkMemreadVectorSource#(MemreadServer#(asz) memreadServer)(VectorSource#(asz, a))
    provisos (Bits#(a,asz),
 	     Div#(asz,8,abytes),
 	     Log#(abytes,ashift),
@@ -51,14 +51,16 @@ module  mkMemreadVectorSource#(Server#(MemengineCmd,Bool) memreadServer, PipeOut
    Bool verbose = False;
    let asz = valueOf(asz);
    let ashift = valueOf(ashift);
+   function Bit#(dataWidth) memData_data(MemDataF#(dataWidth) d); return d.data; endfunction
+
    method Action start(SGLId p, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l);
-      if (verbose) $display("VectorSource.start h=%d a=%h l=%h ashift=%d", p, a, l, ashift);
+      if (verbose) $display("mkMemreadVectorSource: start h=%d a=%h l=%h ashift=%d", p, a, l, ashift);
       memreadServer.request.put(MemengineCmd { sglId: p, base: a << ashift, len: truncate(l << ashift), burstLen: (fromInteger(valueOf(BurstLen)) << ashift), tag: 0});
-      // Bit#(8) foo = (fromInteger(valueOf(BurstLen)) << ashift);
-      // $display("feck %d", foo);
    endmethod
-   method finish = memreadServer.response.get;
-   interface PipeOut pipe = mapPipe(unpack, pipeOut);
+   method ActionValue#(Bool) finish();
+      return memreadServer.data.first().last;
+   endmethod
+   interface PipeOut pipe = mapPipe(unpack, mapPipe(memData_data, memreadServer.data));
 endmodule
 
 interface VectorSink#(numeric type dsz, type a);
@@ -67,7 +69,7 @@ interface VectorSink#(numeric type dsz, type a);
    method ActionValue#(Bool) finish();
 endinterface
 
-module  mkMemwriteVectorSink#(Server#(MemengineCmd,Bool) memwriteServer, PipeIn#(Bit#(asz)) pipeIn)(VectorSink#(asz, a))
+module  mkMemwriteVectorSink#(MemwriteServer#(asz) memwriteServer)(VectorSink#(asz, a))
    provisos (Bits#(a,asz),
 	     Div#(asz,8,abytes),
 	     Log#(abytes,ashift),
@@ -76,13 +78,14 @@ module  mkMemwriteVectorSink#(Server#(MemengineCmd,Bool) memwriteServer, PipeIn#
    Bool verbose = False;
    let asz = valueOf(asz);
    let ashift = valueOf(ashift);
+
    method Action start(SGLId p, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l);
-      if (verbose) $display("VectorSink.start h=%d a=%h l=%h ashift=%d", p, a, l, ashift);
+      if (verbose) $display("mkMemwriteVectorSink: start h=%d a=%h l=%h ashift=%d", p, a, l, ashift);
       // I set burstLen==1 so that testmm works for all J,K,N. If we want burst writes we will need to rethink this (mdk)
       let cmd = MemengineCmd { sglId: p, base: a << ashift, len: truncate(l << ashift), burstLen: fromInteger(valueOf(abytes)), tag: 0};
       memwriteServer.request.put(cmd);
-      //$display("%d %d %d %d", cmd.sglId, cmd.base, cmd.len, cmd.burstLen);
+      //$display("mkMemwriteVectorSink: %d %d %d %d", cmd.sglId, cmd.base, cmd.len, cmd.burstLen);
    endmethod
-   method finish = memwriteServer.response.get;
-   interface PipeIn pipe = mapPipeIn(pack, pipeIn);
+   method finish = memwriteServer.done.get;
+   interface PipeIn pipe = mapPipeIn(pack, memwriteServer.data);
 endmodule

@@ -106,13 +106,13 @@ static void *pthread_worker(void *p)
     return rc;
 }
 
-MMUIndicationCb MMUIndication_cbTable = {
+static MMUIndicationCb TestMMUIndication_cbTable = {
     portal_disconnect,
     MMUIndicationWrapperidResponse_cb,
     MMUIndicationWrapperconfigResp_cb,
     MMUIndicationWrappererror_cb,
 };
-ReadTestIndicationCb ReadTestIndication_cbTable = {
+static ReadTestIndicationCb TestReadTestIndication_cbTable = {
     portal_disconnect,
     ReadTestIndicationWrapperreadDone_cb,
 };
@@ -124,8 +124,8 @@ int main(int argc, const char **argv)
     unsigned int i;
     pthread_t tid = 0;
 
-    init_portal_internal(&intarr[0], IfcNames_MMUIndicationH2S,     0, MMUIndication_handleMessage, &MMUIndication_cbTable, NULL, NULL, MMUIndication_reqinfo);// fpga1
-    init_portal_internal(&intarr[1], IfcNames_ReadTestIndicationH2S,0, ReadTestIndication_handleMessage, &ReadTestIndication_cbTable, NULL, NULL, ReadTestIndication_reqinfo); // fpga2
+    init_portal_internal(&intarr[0], IfcNames_MMUIndicationH2S,     0, MMUIndication_handleMessage, &TestMMUIndication_cbTable, NULL, NULL, MMUIndication_reqinfo);// fpga1
+    init_portal_internal(&intarr[1], IfcNames_ReadTestIndicationH2S,0, ReadTestIndication_handleMessage, &TestReadTestIndication_cbTable, NULL, NULL, ReadTestIndication_reqinfo); // fpga2
     init_portal_internal(&intarr[2], IfcNames_MMURequestS2H,     0, NULL, NULL, NULL, NULL, MMURequest_reqinfo); // fpga3
     init_portal_internal(&intarr[3], IfcNames_ReadTestRequestS2H,0, NULL, NULL, NULL, NULL, ReadTestRequest_reqinfo);    // fpga4
 

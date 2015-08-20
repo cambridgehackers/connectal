@@ -30,8 +30,6 @@ import PcieSplitter      :: *;
 import Xilinx            :: *;
 import Portal            :: *;
 import Top               :: *;
-import MemSlaveEngine    :: *;
-import MemMasterEngine   :: *;
 import PcieCsr           :: *;
 import MemTypes          :: *;
 import Bscan             :: *;

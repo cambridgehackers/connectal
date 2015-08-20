@@ -121,8 +121,7 @@ endmodule
 
 module mkBRAMWriter#(Integer id,
 		     BRAMServer#(Bit#(bramIdxWidth),d) br, 
-		     Server#(MemengineCmd,Bool) readServer, 
-		     PipeOut#(Bit#(busWidth)) readPipe)(BRAMWriter#(bramIdxWidth,busWidth))
+		     MemreadServer#(busWidth) readServer)(BRAMWriter#(bramIdxWidth,busWidth))
    provisos(Bits#(d,dsz),
 	    Div#(busWidth,dsz,nd),
 	    Mul#(nd,dsz,busWidth),
@@ -140,11 +139,14 @@ module mkBRAMWriter#(Integer id,
    Reg#(Bit#(cntW)) n <- mkReg(0);
    Gearbox#(nd,1,d) gb <- mkNto1Gearbox(clk,rst,clk,rst);
    Reg#(Bool) running <- mkReg(False);
+   FIFO#(void) doneFifo <- mkFIFO;
    
    rule feed_gearbox if (running);
-      let v <- toGet(readPipe).get;
-      if(verbose) $display("mkBRAMWriter::feed_gearbox (%d) %x", id, v);
-      gb.enq(unpack(v));
+      let v <- toGet(readServer.data).get;
+      if(verbose) $display("mkBRAMWriter::feed_gearbox (%d) %x", id, v.data);
+      gb.enq(unpack(v.data));
+      if (v.last)
+          doneFifo.enq(?);
    endrule
    
    rule load(j <= n);
@@ -158,7 +160,7 @@ module mkBRAMWriter#(Integer id,
       gb.deq;
       if(verbose) $display("mkBRAMWriter::discard (%d) %x", id, j);
    endrule
-   
+
    method Action start(SGLId h, Bit#(MemOffsetSize) b, Bit#(bramIdxWidth) start_idx, Bit#(bramIdxWidth) finish_idx) if (!running);
       if(verbose) $display("mkBRAMWriter::start (%d) %d, %d, %d %d", id, h, b, start_idx, finish_idx);
       Bit#(BurstLenSize) burst_len_bytes = fromInteger(valueOf(bwbytes));
@@ -173,10 +175,10 @@ module mkBRAMWriter#(Integer id,
       n <= extend(finish_idx);
       running <= True;
    endmethod
-   
+
    method ActionValue#(Bool) finish() if (running);
       if(verbose) $display("mkBRAMWriter::finish (%d)", id);
-      let rv <- readServer.response.get;
+      doneFifo.deq;
       running <= False;
       return True;
    endmethod
@@ -209,7 +211,7 @@ module mkBRAMWriteClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMWriteClient#
       
    rule drain_geatbox;
       Vector#(nd,Bit#(dsz)) v = gb.first;
-      we.dataPipes[0].enq(pack(v));
+      we.writeServers[0].data.enq(pack(v));
       gb.deq;
    endrule
    
@@ -232,7 +234,7 @@ module mkBRAMWriteClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMWriteClient#
    endrule
    
    rule loadResp;
-      let __x <- we.writeServers[0].response.get;
+      let __x <- we.writeServers[0].done.get;
       if (i > n)
 	 f.enq(?);
    endrule

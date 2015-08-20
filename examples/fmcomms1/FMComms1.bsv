@@ -74,18 +74,17 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
    
    MemwriteEngine#(64,1,1)        we <- mkMemwriteEngineBuff(64*16);
    
-   mkConnection(adc, we.dataPipes[0]);
-   mkConnection(re.dataPipes[0], dac);
+   mkConnection(adc, we.writeServers[0].data);
+   rule readrule;
+      let v <- toGet(re.readServers[0].data).get;
+      toPut(dac).put(v.data);
+      if (v.last && readRun == 0)
+	 indication.readStatus(readIterCount, zeroExtend(readRun));
+   endrule
    
    rule readStart (readRun == 1);
       readIterCount <= readIterCount + 1;
       re.readServers[0].request.put(MemengineCmd{sglId:readPointer, base:0, len:readNumWords*4, burstLen:readBurstLen*4});
-   endrule
-   
-   rule readFinish;
-      let rv <- re.readServers[0].response.get;
-      if (readRun == 0)
-	 indication.readStatus(readIterCount, zeroExtend(readRun));
    endrule
    
    rule writeStart (writeRun == 1);
@@ -94,7 +93,7 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
    endrule
    
    rule writeFinish;
-      let rv <- we.writeServers[0].response.get;
+      let rv <- we.writeServers[0].done.get;
       if (writeRun == 0)
 	 indication.writeStatus(writeIterCount, zeroExtend(writeRun));
    endrule

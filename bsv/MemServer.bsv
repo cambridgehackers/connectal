@@ -120,6 +120,7 @@ module mkMemServer#(Vector#(numReadClients, MemReadClient#(dataWidth)) readClien
    provisos(Mul#(TDiv#(numWriteClients, nMasters),nMasters,nws)
 	    ,Mul#(TDiv#(numReadClients, nMasters),nMasters,nrs)
 	    ,Add#(TLog#(TDiv#(dataWidth, 8)), d__, 8)
+	    ,Add#(TLog#(TDiv#(dataWidth, 8)), e__, BurstLenSize)
 	    ,Add#(c__, addrWidth, 64)
 	    ,Add#(numWriteClients, a__, nws)
 	    ,Add#(numReadClients, b__, nrs)
@@ -166,6 +167,7 @@ module mkMemServerRead#(MemServerIndication indication,
    provisos(Mul#(nrc, numClients, numServers)
 	    ,Add#(a__, addrWidth, 64)
 	    ,Add#(TLog#(TDiv#(dataWidth, 8)), b__, 8)
+	    ,Add#(TLog#(TDiv#(dataWidth, 8)), c__, BurstLenSize)
 	    );
 
    FIFO#(Bit#(32))   addrReqFifo <- mkFIFO;
@@ -248,6 +250,7 @@ module mkMemServerWrite#(MemServerIndication indication,
    provisos(Mul#(nwc, numClients, numServers)
 	    ,Add#(a__, addrWidth, 64)
 	    ,Add#(TLog#(TDiv#(dataWidth, 8)), b__, 8)
+	    ,Add#(TLog#(TDiv#(dataWidth, 8)), c__, BurstLenSize)
 	    );
    
    FIFO#(Bit#(32))   addrReqFifo <- mkFIFO;
@@ -330,6 +333,7 @@ module mkMemServerWithMMU#(Vector#(numReadClients, MemReadClient#(dataWidth)) re
 			  MMUIndication mmuIndication)(MemServerWithMMU#(addrWidth, dataWidth,nMasters))
 
    provisos(Add#(TLog#(TDiv#(dataWidth, 8)), e__, 8)
+	    ,Add#(TLog#(TDiv#(dataWidth, 8)), f__, BurstLenSize)
 	    ,Add#(c__, addrWidth, 64)
 	    ,Add#(d__, addrWidth, 44)
 	    ,Add#(numWriteClients, a__, TMul#(TDiv#(numWriteClients, nMasters),nMasters))

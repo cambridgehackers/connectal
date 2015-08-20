@@ -44,7 +44,7 @@ interface ReadTestIndication;
    method Action readDone(Bit#(32) mismatchCount);
 endinterface
 
-typedef 12 NumOutstandingRequests;
+typedef 14 NumOutstandingRequests;
 typedef TMul#(NumOutstandingRequests,TMul#(32,4)) BufferSizeBytes;
 module mkReadTest#(ReadTestIndication indication) (ReadTest);
 
@@ -69,10 +69,13 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    Reg#(Bool)               validReg <- mkReg(False);
    Reg#(Bit#(32))           bytesToRead <- mkReg(0);
    Reg#(Bool)               lastReg <- mkReg(False);
+   FIFO#(void)              doneFifo <- mkFIFO;
    rule check;
       // first pipeline stage
-      if (re.dataPipes[0].notEmpty()) begin
-	 let v <- toGet(re.dataPipes[0]).get;
+      if (re.readServers[0].data.notEmpty()) begin
+	 let md <- toGet(re.readServers[0].data).get;
+	 //$display("md v=%h tag=%d first=%d last=%d", md.data, md.tag, md.first, md.last);
+	 let v = md.data;
 	 let rval = bytesRead/4;
 	 function Bit#(32) expectedVal(Integer i); return rval+fromInteger(i); endfunction
 	 let expectedV = pack(genWith(expectedVal));
@@ -81,15 +84,16 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
 	 validReg <= True;
 	 let next_bytesRead = bytesRead + fromInteger(valueOf(DataBusWidth))/8;
 	 let next_bytesToRead = bytesToRead - fromInteger(valueOf(DataBusWidth))/8;
-	 let last = (bytesToRead <= fromInteger(valueOf(DataBusWidth))/8);
 	 //$display("check next_bytesRead=%d next_bytesToRead=%d last=%d", next_bytesRead, next_bytesToRead, last);
-	 if (last) begin
+	 if (md.last) begin
 	    next_bytesRead = 0;
 	    next_bytesToRead = numBytes;
 	 end
-	 lastReg <= last;
+	 lastReg <= md.last;
 	 bytesRead <= next_bytesRead;
 	 bytesToRead <= next_bytesToRead;
+         if (md.last)
+             doneFifo.enq(?);
       end
       else begin
 	 validReg <= False;
@@ -111,7 +115,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    rule finish if (itersToFinish > 0);
       $display("Test: response.get itersToFinish %x", itersToFinish);
       let mc <- toGet(checkDoneFifo).get();
-      let rv <- re.readServers[0].response.get;
+      doneFifo.deq;
       if (itersToFinish == 1) begin
 	 indication.readDone(mismatchCounts);
       end

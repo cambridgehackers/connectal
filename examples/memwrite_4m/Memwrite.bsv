@@ -83,7 +83,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite#(4));
    rule finish;
       for(Integer i = 0; i < 4; i=i+1) begin
 	 $display("finish: %d (%d)", i, iterCnt);
-	 let rv <- wes[i].writeServers[0].response.get;
+	 let rv <- wes[i].writeServers[0].done.get;
       end
       if (iterCnt == 0)
 	 indication.writeDone(0);
@@ -93,7 +93,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite#(4));
    
    for(Integer i = 0; i < 4; i=i+1)
       rule src;
-	 wes[i].dataPipes[0].enq({srcGens[i]+1,srcGens[i]});
+	 wes[i].writeServers[0].data.enq({srcGens[i]+1,srcGens[i]});
 	 if (srcGens[i]+2 == fromInteger(i+1)*(numWords>>2)) begin
 	    //$display("src %d %d", i, srcGens[i]+1);
 	    srcGens[i] <= fromInteger(i)*(numWords>>2);
@@ -102,7 +102,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite#(4));
 	    srcGens[i] <= srcGens[i]+2;
       endrule
 
-   function MemWriteClient#(64) dc(MemwriteEngine#(64,1,1) we) = we.dmaClient;
+   function MemWriteClient#(64) dc(MemwriteEngine#(64,2,1) we) = we.dmaClient;
    interface dmaClients = map(dc,wes);
    interface MemwriteRequest request;
       method Action startWrite(Bit#(32) wp, Bit#(32) ofs, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);

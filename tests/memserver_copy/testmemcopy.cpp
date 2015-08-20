@@ -57,7 +57,11 @@ public:
 
 int main(int argc, const char **argv)
 {
-  size_t alloc_sz = 4096;
+#ifdef SIMULATION
+  size_t alloc_sz = 4*1024;
+#else
+  size_t alloc_sz = 10*1024*1024;
+#endif
   MemcopyRequestProxy *device = new MemcopyRequestProxy(IfcNames_MemcopyRequestS2H);
   MemcopyIndication deviceIndication(IfcNames_MemcopyIndicationH2S);
   DmaManager *dma = platformInit();
@@ -81,10 +85,13 @@ int main(int argc, const char **argv)
   fprintf(stderr, "parent::starting write\n");
   unsigned int ref_srcAlloc = dma->reference(srcAlloc);
   unsigned int ref_dstAlloc = dma->reference(dstAlloc);
-  int burstLenBytes = 16*sizeof(uint32_t);
-  device->startCopy(ref_srcAlloc, ref_dstAlloc, alloc_sz, alloc_sz / burstLenBytes, burstLenBytes);
+  int burstLenBytes = 32*sizeof(uint32_t);
 
+  portalTimerStart(0);
+  device->startCopy(ref_srcAlloc, ref_dstAlloc, alloc_sz, alloc_sz / burstLenBytes, burstLenBytes);
   sem_wait(&done_sem);
+  platformStatistics();
+
   memdump((unsigned char *)dstBuffer, 32, "MEM");
   int mismatchCount = 0;
   for (size_t i = 0; i < alloc_sz/sizeof(uint32_t); i++) {

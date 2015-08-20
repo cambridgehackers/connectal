@@ -22,7 +22,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-void testi2c(char *i2cdevice, int deviceid);
+void testi2c(const char *i2cdevice, int deviceid);
 #ifdef __cplusplus
 }
 #endif

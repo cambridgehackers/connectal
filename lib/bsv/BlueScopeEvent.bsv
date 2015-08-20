@@ -112,10 +112,10 @@ module mkSyncBlueScopeEvent#(Integer samples, BlueScopeEventIndication indicatio
    
 //   (* descending_urgency = "resetState, startState" *)
 
-   mkConnection(toGet(dfifo), toPut(mwriter.dataPipes[0]));
+   mkConnection(toGet(dfifo), toPut(mwriter.writeServers[0].data));
 
    rule writeDone;
-      let tag <- mwriter.writeServers[0].response.get();
+      let tag <- mwriter.writeServers[0].done.get();
       indication.dmaDone;
    endrule
 

@@ -174,35 +174,29 @@ Memory Engine Interfaces
 
 .. bsv:interface:: MemwriteServer#(numeric type dataWidth)
 
-   .. bsv:subinterface:: Server#(MemengineCmd,Bool) cmdServer
+   .. bsv:subinterface:: Put#(MemengineCmd)       request
 
-   .. bsv:subinterface:: PipeIn#(Bit#(dataWidth)) dataPipe
+   .. bsv:subinterface:: Get#(Bool)               done
 
-.. bsv:interface:: MemwriteEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers)
+   .. bsv:subinterface:: PipeIn#(Bit#(dataWidth)) data
+
+.. bsv:interface:: MemwriteEngine#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers)
 
    .. bsv:subinterface:: MemWriteClient#(dataWidth) dmaClient
 
-   .. bsv:subinterface:: Vector#(numServers, Server#(MemengineCmd,Bool)) writeServers
-
-   .. bsv:subinterface:: Vector#(numServers, PipeIn#(Bit#(dataWidth))) dataPipes
-
-   .. bsv:subinterface:: Vector#(numServers, MemwriteServer#(dataWidth)) write_servers
+   .. bsv:subinterface:: Vector#(numServers, MemwriteServer#(dataWidth)) writeServers
 
 .. bsv:interface:: MemreadServer#(numeric type dataWidth)
 
-   .. bsv:subinterface:: Server#(MemengineCmd,Bool) cmdServer
+   .. bsv:subinterface:: Put#(MemengineCmd)        request
 
-   .. bsv:subinterface:: PipeOut#(Bit#(dataWidth)) dataPipe
+   .. bsv:subinterface:: PipeOut#(Bit#(dataWidth)) data
       
-.. bsv:interface:: MemreadEngineV#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers)
+.. bsv:interface:: MemreadEngine#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers)
 
    .. bsv:subinterface:: MemReadClient#(dataWidth) dmaClient
 
-   .. bsv:subinterface:: Vector#(numServers, Server#(MemengineCmd,Bool)) readServers
-
-   .. bsv:subinterface:: Vector#(numServers, PipeOut#(Bit#(dataWidth))) dataPipes
-
-   .. bsv:subinterface:: Vector#(numServers, MemreadServer#(dataWidth)) read_servers
+   .. bsv:subinterface:: Vector#(numServers, MemreadServer#(dataWidth)) readServers
 
 
 Memory Traffic Interfaces

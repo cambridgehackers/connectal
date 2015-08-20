@@ -66,7 +66,7 @@ int fmcomms1_get_version(int fd, int device, unsigned char *datap, int size)
 
 unsigned char version_data[256];
 unsigned char msgbuf[256];
-void testi2c(char *i2cdevice, int deviceid)
+void testi2c(const char *i2cdevice, int deviceid)
 {
    
 

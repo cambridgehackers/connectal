@@ -64,15 +64,15 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
    let verbose = False;
 
    rule updateReqHeadTail if (state == Idle && readyReg);
-      readEngine.cmdServer.request.put(
+      readEngine.request.put(
           MemengineCmd {sglId: sglIdReg, base: 0, burstLen: 16, len: 16, tag: 0});
       state <= HeadRequested;
    endrule
 
    rule receiveReqHeadTail if (state == HeadRequested || state == TailRequested);
-      let data <- toGet(readEngine.dataPipe).get();
-      let w0 = data[31:0];
-      let w1 = data[63:32];
+      let v <- toGet(readEngine.data).get();
+      let w0 = v.data[31:0];
+      let w1 = v.data[63:32];
       let head = headReg;
       let tail = tailReg;
       if (state == HeadRequested) begin
@@ -109,14 +109,14 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
       if (verbose) $display("requestMessage id=%d tail=%h head=%h wordCount=%d", sglIdReg, tailReg, headReg, wordCount);
       tailReg <= tail;
       countReg <= truncate(wordCount);
-      readEngine.cmdServer.request.put( MemengineCmd
+      readEngine.request.put( MemengineCmd
           {sglId: sglIdReg, base: extend(tailReg << 2), burstLen: 16, len: wordCount << 2, tag: 0});
       state <= MessageHeaderRequested;
    endrule
 
    rule demuxwords if (readMifo.enqReady());
-      let data <- toGet(readEngine.dataPipe).get();
-      Vector#(2,Bit#(32)) dvec = unpack(data);
+      let v <- toGet(readEngine.data).get();
+      Vector#(2,Bit#(32)) dvec = unpack(v.data);
       let enqCount = 2;
       Vector#(4,Bit#(32)) dvec4;
       dvec4[0] = dvec[0];
@@ -176,19 +176,15 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
       if (verbose)
          $display("updateTail: tail=%d", tailReg);
       // update the tail pointer
-      writeEngine.cmdServer.request.put(
+      writeEngine.request.put(
           MemengineCmd {sglId: sglIdReg, base: 8, len: 8, burstLen: 8, tag: 0});
-      writeEngine.dataPipe.enq(extend(tailReg));
+      writeEngine.data.enq(extend(tailReg));
       state <= Waiting;
    endrule
 
    rule waiting if (state == Waiting);
-      let done <- writeEngine.cmdServer.response.get();
+      let done <- writeEngine.done.get();
       state <= Idle;
-   endrule
-
-   rule consumeResponse;
-      let response <- readEngine.cmdServer.response.get();
    endrule
 
    interface SharedMemoryPortalConfig cfg;
@@ -229,13 +225,13 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
    end
 
    rule updateIndHeadTail if (state == Idle && readyReg);
-      readEngine.cmdServer.request.put(
+      readEngine.request.put(
           MemengineCmd {sglId: sglIdReg, base: 0, burstLen: 16, len: 16, tag: 0});
       state <= HeadRequested;
    endrule
 
    rule receiveIndHeadTail if (state == HeadRequested || state == TailRequested);
-      let data <- toGet(readEngine.dataPipe).get();
+      let data <- toGet(readEngine.data).get();
       let w0 = data[31:0];
       let w1 = data[63:32];
       let head = headReg;
@@ -263,7 +259,7 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
    rule send64bits;
       let v = gb.first;
       gb.deq();
-      writeEngine.dataPipe.enq(pack(v));
+      writeEngine.data.enq(pack(v));
    endrule
 
    rule sendHeader if (state == SendHeader && interruptStatus);
@@ -280,7 +276,7 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
       messageWordsReg <= numWords;
       methodIdReg <= readyChannel;
       gb.enq(replicate(hdr));
-      writeEngine.cmdServer.request.put( MemengineCmd
+      writeEngine.request.put( MemengineCmd
           {sglId: sglIdReg, base: extend(headReg) << 2, burstLen: 8, len: extend(totalWords) << 2, tag: 0});
       state <= SendMessage;
    endrule
@@ -308,7 +304,7 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
    rule updateHead if (state == UpdateHead);
       $display("updateIndHead limit=%d head=%d", limitReg, headReg);
       gb.enq(replicate(extend(limitReg)));
-      writeEngine.cmdServer.request.put(
+      writeEngine.request.put(
              MemengineCmd {sglId: sglIdReg, base: 0 << 2, burstLen: 8, len: 2 << 2, tag: 0});
       state <= UpdateHead2;
    endrule
@@ -320,7 +316,7 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
    endrule
 
    rule done;
-      let done <- writeEngine.cmdServer.response.get();
+      let done <- writeEngine.done.get();
    endrule
 
    interface SharedMemoryPortalConfig cfg;

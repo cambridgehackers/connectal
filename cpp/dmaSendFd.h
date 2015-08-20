@@ -32,7 +32,7 @@ static int shifts[] = {PAGE_SHIFT12, PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
 #define NO_WRAPPER_FUNCTIONS
 #include "MMURequest.c"
 #endif
-static int trace_memory = 1;
+static int trace_memory = 0;
 
 #include "GeneratedTypes.h" // generated in project directory
 
@@ -53,9 +53,7 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
     struct scatterlist *sg;
     struct file *fmem;
     struct sg_table *sgtable;
-PORTAL_PRINTF("[%s:%d]\n", __FUNCTION__, __LINE__);
     fmem = fget(fd);
-PORTAL_PRINTF("[%s:%d]\n", __FUNCTION__, __LINE__);
     sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
 #elif !defined(BSIM) && !defined(BOARD_xsim)
 #error
@@ -123,7 +121,6 @@ PORTAL_PRINTF("[%s:%d]\n", __FUNCTION__, __LINE__);
     PORTAL_PRINTF("borders %d (%"PRIx64" %"PRIx64" %"PRIx64" %"PRIx64")\n", id,borderVal[0], borderVal[1], borderVal[2], borderVal[3]);
   }
   MMURequest_region(device, id, borderVal[0], indexVal[0], borderVal[1], indexVal[1], borderVal[2], indexVal[2], borderVal[3], indexVal[3]);
-PORTAL_PRINTF("[%s:%d]\n", __FUNCTION__, __LINE__);
   /* ifdefs here to supress warning during kernel build */
 #ifndef __KERNEL__
 retlab:

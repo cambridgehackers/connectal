@@ -27,7 +27,7 @@ interface ConfigCounter#(numeric type count_sz);
    method ActionValue#(Bool) maybeDecrement(UInt#(count_sz) x);
    method Action increment(UInt#(count_sz) x);
    method UInt#(count_sz) read();
-   method UInt#(count_sz) read_bypass();
+   //method UInt#(count_sz) read_bypass();
    method Bool positive();
 endinterface
 

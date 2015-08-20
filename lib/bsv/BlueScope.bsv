@@ -94,10 +94,10 @@ module mkSyncBlueScope#(Integer samples, BlueScopeIndication indication, Clock s
       stateReg <= Enabled;
    endrule
 
-   mkConnection(toGet(dfifo), toPut(mwriter.dataPipes[0]));
+   mkConnection(toGet(dfifo), toPut(mwriter.writeServers[0].data));
 
    rule writeDone;
-      let tag <- mwriter.writeServers[0].response.get();
+      let tag <- mwriter.writeServers[0].done.get();
    endrule
    
    rule triggerRule if (triggeredPulse.pulse);

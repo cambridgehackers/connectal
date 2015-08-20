@@ -18,7 +18,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
+#include <sys/mman.h>
+#include <iostream>
+#include <fstream>
 
 sem_t test_sem;
 int sw_match_cnt = 0;

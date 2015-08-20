@@ -30,9 +30,18 @@
 #define PLATFORM_TILE 0
 
 class PortalPoller;
-#ifndef NO_CPP_PORTAL_CODE
-static int mmu_error_limit = 20;
-static int mem_error_limit = 20;
+int mmu_error_limit = 20;
+int mem_error_limit = 20;
+const char *dmaErrors[] = {
+				"None",
+				"SGL Id out of range for read",
+				"SGL Id out of range for write",
+				"MMU out of range for read",
+				"MMU out of range for write",
+				"Offset out of range",
+				"SGL Id invalid",
+				"Tile tag out of range"
+				};
 class MMUIndication : public MMUIndicationWrapper
 {
   DmaManager *portalMemory;
@@ -40,11 +49,10 @@ class MMUIndication : public MMUIndicationWrapper
   MMUIndication(DmaManager *pm, unsigned int  id, int tile=PLATFORM_TILE) : MMUIndicationWrapper(id,tile), portalMemory(pm) {}
   MMUIndication(DmaManager *pm, unsigned int  id, PortalTransportFunctions *item, void *param) : MMUIndicationWrapper(id, item, param), portalMemory(pm) {}
   virtual void configResp(uint32_t pointer){
-    fprintf(stderr, "MMUIndication::configResp: %x\n", pointer);
     portalMemory->confResp(pointer);
   }
   virtual void error (uint32_t code, uint32_t pointer, uint64_t offset, uint64_t extra) {
-    fprintf(stderr, "MMUIndication::error(code=0x%x, pointer=0x%x, offset=0x%"PRIx64" extra=-0x%"PRIx64"\n", code, pointer, offset, extra);
+    fprintf(stderr, "MMUIndication::error(code=0x%x:%s, pointer=0x%x, offset=0x%"PRIx64" extra=0x%"PRIx64"\n", code, dmaErrors[code], pointer, offset, extra);
     if (--mmu_error_limit < 0)
         exit(-1);
   }
@@ -116,9 +124,13 @@ void platformStatistics(void)
 {
     uint64_t cycles = portalTimerLap(0);
     hostMemServerRequest->memoryTraffic(ChannelType_Read);
-    uint64_t beats = hostMemServerIndication->receiveMemoryTraffic();
-    float read_util = (float)beats/(float)cycles;
-    fprintf(stderr, "   beats: %llx\n", (long long)beats);
-    fprintf(stderr, "memory utilization (beats/cycle): %f\n", read_util);
+    uint64_t read_beats = hostMemServerIndication->receiveMemoryTraffic();
+    float read_util = (float)read_beats/(float)cycles;
+    hostMemServerRequest->memoryTraffic(ChannelType_Write);
+    uint64_t write_beats = hostMemServerIndication->receiveMemoryTraffic();
+    float write_util = (float)write_beats/(float)cycles;
+    fprintf(stderr, "   read_beats: %lld\n", (long long)read_beats);
+    fprintf(stderr, "  write_beats: %lld\n", (long long)write_beats);
+    fprintf(stderr, "       cycles: %lld\n", (long long)cycles);
+    fprintf(stderr, "memory utilization (beats/cycle): read %f write %f\n", read_util, write_util);
 }
-#endif
