@@ -1,3 +1,9 @@
+connectal (15.08.5-1precise1) precise; urgency=medium
+
+  * Releasing 15.08.5
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 20 Aug 2015 16:33:38 -0400
+
 connectal (15.08.4-1precise1) precise; urgency=medium
 
   * Fixed DMA write path through MemSlaveEngine post Altera merge
