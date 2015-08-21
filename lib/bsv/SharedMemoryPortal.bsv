@@ -231,7 +231,8 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
    endrule
 
    rule receiveIndHeadTail if (state == HeadRequested || state == TailRequested);
-      let data <- toGet(readEngine.data).get();
+      let md <- toGet(readEngine.data).get();
+      let data = md.data;
       let w0 = data[31:0];
       let w1 = data[63:32];
       let head = headReg;
