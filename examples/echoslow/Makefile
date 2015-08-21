@@ -1,5 +1,5 @@
 CONNECTALDIR?=../..
-S2H_INTERFACES = EchoRequest:Echo.request:host.derivedClock,host.derivedReset
+S2H_INTERFACES = EchoRequest:Echo.request
 H2S_INTERFACES = Echo:EchoIndication:host.derivedClock,host.derivedReset
 
 BSVFILES = Echo.bsv
