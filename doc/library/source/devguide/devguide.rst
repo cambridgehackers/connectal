@@ -7,4 +7,4 @@ Connectal Developer's Guide
    design.rst
    projectstructure.rst
    compilingproject.rst
-
+   clocks.rst
