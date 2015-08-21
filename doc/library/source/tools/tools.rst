@@ -7,3 +7,5 @@ Connectal Tools
    :numbered:
 
    makefilegen.rst
+   pcieflat.rst
+   topgen.rst
