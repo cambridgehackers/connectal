@@ -7,5 +7,6 @@ Connectal Tools
    :numbered:
 
    makefilegen.rst
+   generate-constraints.rst
    pcieflat.rst
    topgen.rst
