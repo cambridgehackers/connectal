@@ -7,6 +7,6 @@ MEM_INTERFACES = "cons(lSharereadEngine.dmaClient,nil),cons(lSharewriteEngine.dm
 
 BSVFILES = Simple.bsv $(CONNECTALDIR)/bsv/Portal.bsv
 CPPFILES=testsimple.cpp $(CONNECTALDIR)/cpp/transportShared.c
-AUTOTOP = --importfiles SharedMemoryPortal --importfiles SharedMemoryPortalConfig
+AUTOTOP = --importfiles SharedMemoryPortal --importfiles SharedMemoryPortalConfig --importfiles MemTypes --importfiles MemreadEngine --importfiles MemwriteEngine
 
 include $(CONNECTALDIR)/Makefile.connectal
