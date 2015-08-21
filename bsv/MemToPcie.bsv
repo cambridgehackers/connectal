@@ -297,7 +297,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
             TLPTag tag = hdr_completion.tag;
             lastTag <= tag;
             if (!dataInSecondTlp) begin
-               vec = reverse(rotateBy(tlpvec, 3));
+               vec[0] = hdr_3dw.data;
                wordCount = hdr_3dw.length - 1;
                completionMimo.enq(1, vec);
                completionTagMimo.enq(1, replicate(tag));
