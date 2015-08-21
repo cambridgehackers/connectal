@@ -184,7 +184,7 @@ images: source/devguide/connectalbuild-1.png
 
 install:
 	sudo apt-get install poppler-utils
-	pip install docutils sphinx sphinxcontrib-makedomain
+	pip install docutils sphinx sphinxcontrib-makedomain sphinx-argparse
 
 publish: images html latexpdf
 	rsync -avz build/html/* ../../../doc/current/ref
