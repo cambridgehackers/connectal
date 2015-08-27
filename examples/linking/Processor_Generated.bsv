@@ -1,7 +1,7 @@
 // To be auto generated from Linking.bsv
 
 import LinkerLib::*;
-import Linking::*;
+import Processor::*;
   
 //================================================================================
 // Parts corresponding to Cache interface
@@ -21,11 +21,11 @@ instance Connectable#(Cache, CacheInverse);
    endmodule
 endinstance  
     
-// module to allow Cache Parameter. This needs to have the same schedulign restrictions as the
+// module to create Cache Inverter. This needs to have the same schedulign restrictions as the
 // initial parameter
-module mkCacheParam(Param#(Cache, CacheInverse));
-  GetLinked  requestlink <- mkGetParam(); // one for each sub component in Cache interface
-  PutLinked responselink <- mkPutParam();
+module mkCacheInverter(Inverter#(Cache, CacheInverse));
+  GetLinked  requestlink <- mkGetInverter(); // one for each sub component in Cache interface
+  PutLinked responselink <- mkPutInverter();
   
   interface Cache mod;
     interface Get  request = requestlink.mod;
@@ -42,13 +42,13 @@ endmodule
 // Parts corresponding to mkCache    
 
 //linked version of mkCache. Hooks ups missing memory module
-module mkCacheSynth(SynthParam1IFC#(MemoryInverse, Cache));
+module mkCacheSynth(SynthInverter1IFC#(MemoryInverse, Cache));
   // parameter setup
-  let memoryParam <- mkMemoryParam()
+  let memoryInverter <- mkMemoryInverter()
   // build base module (use linked version)
-  let cache <- mkCacheLink(memoryParam.mod);
+  let cache <- mkCacheLink(memoryInverter.mod);
   // hook up interface
-  interface arg1 = memoryParam.inverse;
+  interface arg1 = memoryInverter.inverse;
   interface mod  = cache;
 endmodule
 
@@ -63,11 +63,11 @@ endmodule
 // Parts Corresponding to mkProcessor
   
 // This is the module we can synthesize
-module mkProcessorSynth(SynthParam2IFC#(CacheInverse, PeripheralsInverse, Processor));
+module mkProcessorSynth(SynthInverter2IFC#(CacheInverse, PeripheralsInverse, Processor));
    //instantiate param versions of modules
-   let cacheparam       <- mkCacheParam();
+   let cacheparam       <- mkCacheInverter();
    let cache = cacheparam.mod;
-   let peripheralsparam  <- mkPeripheralsParam();
+   let peripheralsparam  <- mkPeripheralsInverter();
    let peripherals = peripheralsparam.mod;  
    //instantiate actual module
    let processor <- mkProcessor(cache, peripherals);
@@ -86,7 +86,7 @@ endmodule
     
 //====================================================================================================================
 
-module mkTopLevelSynth(SynthParam0IFC#(Pins));
+module mkTopLevelSynth(SynthInverter0IFC#(Pins));
    Memory memory <- mkMemoryLink();
    Cache  cache  <- mkCacheLink(memory); // standard parameter use example
 

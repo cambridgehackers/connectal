@@ -5,27 +5,27 @@ typeclass InverseIFC#(type a, type b)
 endtypeclass
 
 
-interface Param#(interface ifcType, interface invifcType);
+interface Inverter#(interface ifcType, interface invifcType);
   interface ifcType mod;
   interface invifcType inverse;
 endinterface
     
-interface SynthParam0IFC#(interface ifcType);
+interface SynthInverter0IFC#(interface ifcType);
   interface ifcType mod;
 endinterface
   
-interface SynthParam1IFC#(interface param1, interface ifcType);
+interface SynthInverter1IFC#(interface param1, interface ifcType);
   interface param1  arg1;
   interface ifcType mod;
 endinterface  
   
-interface SynthParam2IFC#(interface param1, interface param2, interface ifcType);
+interface SynthInverter2IFC#(interface param1, interface param2, interface ifcType);
   interface param1 arg1;
   interface param2 arg2;
   interface ifcType mod;
 endinterface    
   
-interface SynthParam3IFC#(interface param1, interface param2, interface param3, interface ifcType);
+interface SynthInverter3IFC#(interface param1, interface param2, interface param3, interface ifcType);
   interface param1 arg1;
   interface param2 arg2;
   interface param3 arg3;
