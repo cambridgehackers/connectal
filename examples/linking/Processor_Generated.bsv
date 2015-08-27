@@ -24,8 +24,8 @@ endinstance
 // module to create Cache Inverter. This needs to have the same schedulign restrictions as the
 // initial parameter
 module mkCacheInverter(Inverter#(Cache, CacheInverse));
-  GetLinked  requestlink <- mkGetInverter(); // one for each sub component in Cache interface
-  PutLinked responselink <- mkPutInverter();
+  GetInverse  requestlink <- mkGetInverter(); // one for each sub component in Cache interface
+  PutInverse responselink <- mkPutInverter();
   
   interface Cache mod;
     interface Get  request = requestlink.mod;
