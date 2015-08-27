@@ -5,6 +5,70 @@ typeclass InverseIFC#(type a, type b)
 endtypeclass
 
 
+interface GetInverse#(type a);
+   interface Get#(a) mod;
+   interface Put#(a) inverse;
+endinterface
+
+interface PutInverse#(type a);
+   interface Put#(a) mod;
+   interface Get#(a) inverse;
+endinterface
+
+import "BVI" GetInverse =
+module mkGetInverseBvi(GetInverse#(Bits#(asz)));
+   param DATA_SIZE = asz;
+   default_clock (CLK);
+   default_rest (RST);
+   interface Get mod;
+      method get get() enable(EN_get) ready (RDY_get);
+   endinterface
+   interface Put inverse;
+      method put(put) enable (EN_put) ready (RDY_put);
+   endinterface
+endmodule
+module mkGetInverse(GetInverse#(a)) provisos (Bits#(a, asz));
+   inverter <- mkGetInverseBvi();
+   interface Get mod;
+      method a get();
+	 let v <- inverter.mod.get();
+	 return unpack(v);
+      endmethod
+   endinterface
+   interface Put inverse;
+      method Action put(a v);
+	 inverter.inverse.put(pack(v));
+      endmethod
+   endinterface
+endinterface
+
+import "BVI" PutInverse =
+module mkPutInverseBvi(PutInverse#(Bits#(asz)));
+   param DATA_SIZE = asz;
+   default_clock (CLK);
+   default_rest (RST);
+   interface Put mod;
+      method put(put) enable(EN_put) ready (RDY_put);
+   endinterface
+   interface Get inverse;
+      method get get() enable (EN_get) ready (RDY_get);
+   endinterface
+endmodule
+module mkPutInverse(PutInverse#(a)) provisos (Bits#(a, asz));
+   inverter <- mkPutInverseBvi();
+   interface Put mod;
+      method Action put(a v);
+	 inverter.mod.put(pack(v));
+      endmethod
+   endinterface
+   interface Get inverse;
+      method a get();
+	 let v <- inverter.inverse.get();
+	 return unpack(v);
+      endmethod
+   endinterface
+endinterface
+
 interface Inverter#(interface ifcType, interface invifcType);
   interface ifcType mod;
   interface invifcType inverse;
