@@ -45,14 +45,14 @@ endmodule
 module mkCacheSynth(SynthInverter1IFC#(MemoryInverse, Cache));
   // parameter setup
   let memoryInverter <- mkMemoryInverter()
-  // build base module (use linked version)
-  let cache <- mkCacheLink(memoryInverter.mod);
+  // build base module (use original version)
+  let cache <- Cache::mkCache(memoryInverter.mod);
   // hook up interface
   interface arg1 = memoryInverter.inverse;
   interface mod  = cache;
 endmodule
 
-module mkCacheLink#(Memory arg1)(Cache);
+module mkCache#(Memory arg1)(Cache);
   let x <- mkCacheSynth; // It would be great if we could check schedule here. 
   mkConnection(x.arg1, arg1);
   return x.mod;
@@ -70,37 +70,17 @@ module mkProcessorSynth(SynthInverter2IFC#(CacheInverse, PeripheralsInverse, Pro
    let peripheralsparam  <- mkPeripheralsInverter();
    let peripherals = peripheralsparam.mod;  
    //instantiate actual module
-   let processor <- mkProcessor(cache, peripherals);
+   let processor <- Processor::mkProcessor(cache, peripherals);
    //hook params and return ifc
    interface mod        = processor;
    interface arg1       = cacheparam.inverse;
    interface arg2       = peripheralsparam.inverse;
 endmodule
    
-module mkProcessorLink(Cache arg1, Peripherals arg2)(Processor);
+module mkProcessor(Cache arg1, Peripherals arg2)(Processor);
    let x <- mkProcessorSynth();
    mkConnection(cache, x.arg1);
    mkConnection(peripherals, x.arg2);  
    return x.mod;
 endmodule  
     
-//====================================================================================================================
-
-module mkTopLevelSynth(SynthInverter0IFC#(Pins));
-   Memory memory <- mkMemoryLink();
-   Cache  cache  <- mkCacheLink(memory); // standard parameter use example
-
-   Vector#(NumProcessors,Processor) processors <- replicateM(mkProcessorLink(cache)); // 
-   
-   Vector#(NumCaches, Memory) mems <- replicateM(mkMemoryLink);
-   Vector#(NumCaches, Cache)  caches <- mapM(mkCacheLink, mems);
-  
-   interface mod;
-     interface pins = memory.pins;  
-   endinterface
-endmodule
- 
-module mkTopLevelLink(Pins);
-  let x <- mkTopLevelSynth();
-  return x.mod;
-endmodule
