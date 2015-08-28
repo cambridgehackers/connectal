@@ -52,8 +52,13 @@ module mkCacheSynth(SynthInverter1IFC#(MemoryInverse, Cache));
   interface mod  = cache;
 endmodule
 
+import "BVI" mkCacheSynth =
+module mkCacheBVI(Cache);
+...
+endmodule
+
 module mkCache#(Memory arg1)(Cache);
-  let x <- mkCacheSynth; // It would be great if we could check schedule here. 
+  let x <- mkCacheBVI; // It would be great if we could check schedule here. 
   mkConnection(x.arg1, arg1);
   return x.mod;
 endmodule
@@ -77,8 +82,13 @@ module mkProcessorSynth(SynthInverter2IFC#(CacheInverse, PeripheralsInverse, Pro
    interface arg2       = peripheralsparam.inverse;
 endmodule
    
+// to enable separate compilation
+import "BVI" mkProcessorSynth =
+   module mkProcessorBVI(...)
+   endmodule
+
 module mkProcessor(Cache arg1, Peripherals arg2)(Processor);
-   let x <- mkProcessorSynth();
+   let x <- mkProcessorBVI();
    mkConnection(cache, x.arg1);
    mkConnection(peripherals, x.arg2);  
    return x.mod;
