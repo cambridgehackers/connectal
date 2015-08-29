@@ -34,6 +34,7 @@ import Gearbox::*;
 import GearboxGetPut::*;
 import DefaultValue::*;
 import Pipe::*;
+import ClientServer::*;
 
 typedef struct {
     Bit#(32) bottom_hw;
@@ -143,6 +144,7 @@ module mkWordFloat(WordFloat);
         let vw <- toGet(lToSb).get;
         Float btemp = unpack(vb);
         Float wtemp = unpack(vw);
+        $display("READRES32: %f %f", btemp, wtemp);
         return DotType{a: btemp, b: wtemp};
     endmethod
 
@@ -173,16 +175,24 @@ module mkConv#(ConvIndication indication)(Conv);
     Reg#(Bit#(32)) waitFinish <- mkReg(0);
     Reg#(Bool) dtypeFloat <- mkReg(False);
     Reg#(Bool) dumpStart <- mkReg(False);
+    Server#(Double,Float) d2fb <- mkDoubleToFloat;
+    Server#(Double,Float) d2fw <- mkDoubleToFloat;
+
+    rule readconv;
+        let vb <- d2fb.response.get();
+        let vw <- d2fw.response.get();
+        $display("READRES64: %f %f", vb, vw);
+        toPut(dotp.inVal).put(DotType{a: vb, b: vw});
+    endrule
 
     rule readresd if (!dtypeFloat);
         let vb <- toGet(re.readServers[0].data).get;
         let vw <- toGet(re.readServers[1].data).get;
         Double btempd = unpack(vb.data);
         Double wtempd = unpack(vw.data);
-        Float btemp = unpack(truncate(vb.data));
-        Float wtemp = unpack(truncate(vw.data));
-        $display("READRES64: %x %x", vb.data, vw.data);
-        toPut(dotp.inVal).put(DotType{a: btemp, b: wtemp});
+        d2fb.request.put(btempd);
+        d2fw.request.put(wtempd);
+        //$display("READRES64: %x %x", btempd, wtempd);
         toPut(dotp.lastF).put(LastType{odd: False, last: vb.last && waitFinish == 1});
         if (vb.last)
             waitFinish <= waitFinish - 1;
@@ -198,7 +208,6 @@ module mkConv#(ConvIndication indication)(Conv);
 
     rule readgear;
         let vd <- toGet(wf.outVal).get;
-        $display("READRES32: %x %x", vd.a, vd.b);
         toPut(dotp.inVal).put(vd);
         let vf <- toGet(wf.outLast).get;
         toPut(dotp.lastF).put(vf);

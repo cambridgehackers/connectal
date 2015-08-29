@@ -31,13 +31,21 @@ static sem_t outputp_sem;
 
 class ConvIndication : public ConvIndicationWrapper
 {
+    ParamStruct *param;
 public:
     void outputp(uint32_t addr, float v) {
-        printf("heard an conv: addr %x = %x\n", addr, *(uint32_t *)&v);
+        if (param->elementSize_ == sizeof(float)) {
+            printf("heard an conv: addr %x = %f; ", addr, *(float *)&v);
+            printf(" current F=%f\n", *(float *)(param->basePtr + addr));
+        }
+        else {
+            printf("heard an conv: addr %x = %f; ", addr, *(float *)&v);
+            printf(" current D=%f\n", *(double *)(param->basePtr + addr));
+        }
 	//convRequest->say2(v, 2*v);
         sem_post(&outputp_sem);
     }
-    ConvIndication(unsigned int id) : ConvIndicationWrapper(id) {}
+    ConvIndication(unsigned int id, ParamStruct *p) : ConvIndicationWrapper(id), param(p) {}
 };
 static ConvIndication *indication;
 
@@ -48,7 +56,7 @@ static void forward_kernel_hardware(ParamStruct *param, uint32_t p_limit,
     if (once) {
         once = 0;
 printf("[%s:%d] create proxy\n", __FUNCTION__, __LINE__);
-        indication = new ConvIndication(IfcNames_ConvIndicationH2S);
+        indication = new ConvIndication(IfcNames_ConvIndicationH2S, param);
         convRequest = new ConvRequestProxy(IfcNames_ConvRequestS2H);
         dma = platformInit();
     }
@@ -132,11 +140,11 @@ ParamType<Dtype> *param = this;
             for (int x = 0; x < width_out_; x++) {
               int p_limit = MIN(param->kernel_h_ - param->pad_h_, conv_in_height_ - y * stride_h_);
               int q_limit = MIN(param->kernel_w_ - param->pad_w_, conv_in_width_ - x * stride_w_);
+              forward_kernel<Dtype>(this, p_limit, q_limit, bias_val, bpx, wp_item, outputp);
               if (counter-- <= 0) {
                   forward_kernel_hardware(this, p_limit, q_limit, bias_val, bpx, wp_item, outputp);
                   counter = COUNTER_INTERVAL;
               }
-              forward_kernel<Dtype>(this, p_limit, q_limit, bias_val, bpx, wp_item, outputp);
               outputp += sizeof(Dtype);
               bpx += stride_w_ * sizeof(Dtype);
             }
