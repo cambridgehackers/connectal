@@ -24,6 +24,8 @@ import GetPut::*;
 import ClientServer::*;
 import Gearbox::*;
 import MIFO::*;
+import DefaultValue::*;
+import MIMO::*;
 import Pipe::*;
 import Portal::*;
 import MemTypes::*;
@@ -59,7 +61,8 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
    Reg#(SharedMemoryPortalState) state <- mkReg(Idle);
    Reg#(Bit#(32)) sglIdReg <- mkReg(0);
    Reg#(Bool)     readyReg   <- mkReg(False);
-   MIFO#(4,1,4,Bit#(32)) readMifo <- mkMIFO();
+   MIMOConfiguration mimoConfig = defaultValue;
+   MIMO#(4,1,4,Bit#(32)) readMimo <- mkMIMO(mimoConfig);
 
    let verbose = False;
 
@@ -114,20 +117,20 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
       state <= MessageHeaderRequested;
    endrule
 
-   rule demuxwords if (state != HeadRequested && state != TailRequested && readMifo.enqReady());
+   let enqCount = 2;
+   rule demuxwords if (state != HeadRequested && state != TailRequested && readMimo.enqReadyN(enqCount));
       let v <- toGet(readEngine.data).get();
       Vector#(2,Bit#(32)) dvec = unpack(v.data);
-      let enqCount = 2;
       Vector#(4,Bit#(32)) dvec4;
       dvec4[0] = dvec[0];
       dvec4[1] = dvec[1];
       dvec4[2] = 0;
       dvec4[3] = 0;
-      readMifo.enq(enqCount, dvec4);
+      readMimo.enq(enqCount, dvec4);
    endrule
 
    rule receiveMessageHeader if (state == MessageHeaderRequested);
-      let vec <- toGet(readMifo).get();
+      let vec <- toGet(toPipeOut(readMimo)).get();
       let hdr = vec[0];
       let methodId = hdr[31:16];
       let messageWords = hdr[15:0];
@@ -151,14 +154,14 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
    endrule
 
    rule drain if (state == Drain);
-      let vec <- toGet(readMifo).get();
+      let vec <- toGet(readMimo).get();
       if (countReg == 1)
          state <= UpdateTail;
       countReg <= countReg - 1;
    endrule
 
    rule receiveMessage if (state == MessageRequested);
-      let vec <- toGet(readMifo).get();
+      let vec <- toGet(toPipeOut(readMimo)).get();
       let data = vec[0];
       if (verbose)
          $display("receiveMessage data=%x messageWords=%d wordCount=%d", data, messageWordsReg, countReg);
