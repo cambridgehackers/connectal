@@ -200,4 +200,4 @@ To remount /system read/write:
 
 
 
-[![Analytics](https://ga-beacon.appspot.com/UA-15845210-2/connectal/README.md)](https://github.com/igrigorik/ga-beacon)
+[![Analytics](https://ga-beacon.appspot.com/UA-15845210-3/connectal/README.md)](https://github.com/igrigorik/ga-beacon)
