@@ -114,7 +114,7 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
       state <= MessageHeaderRequested;
    endrule
 
-   rule demuxwords if (readMifo.enqReady());
+   rule demuxwords if (state != HeadRequested && state != TailRequested && readMifo.enqReady());
       let v <- toGet(readEngine.data).get();
       Vector#(2,Bit#(32)) dvec = unpack(v.data);
       let enqCount = 2;
