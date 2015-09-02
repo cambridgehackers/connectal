@@ -35,12 +35,15 @@ class ConvIndication : public ConvIndicationWrapper
 public:
     void outputp(uint32_t addr, float v) {
         if (param->elementSize_ == sizeof(float)) {
-            printf("heard an conv: addr %x = %f; ", addr, *(float *)&v);
-            printf(" current F=%f\n", *(float *)(param->basePtr + addr));
+            printf("heard an conv: [%x] = %f/%x; ", addr, v, *(uint32_t *)&v);
+            printf(" current F[%p]=%f\n", param->basePtr + addr, *(float *)(param->basePtr + addr));
+            *(float *)(param->basePtr + addr) = v;
         }
         else {
-            printf("heard an conv: addr %x = %f; ", addr, *(float *)&v);
-            printf(" current D=%f\n", *(double *)(param->basePtr + addr));
+            printf("heard an conv: [%x] = %f/%x; ", addr, v, *(uint32_t *)&v);
+            printf(" current D[%p]=%f", param->basePtr + addr, *(double *)(param->basePtr + addr));
+            printf("/%lx\n", *(uint64_t *)(param->basePtr + addr));
+            *(double *)(param->basePtr + addr) = v;
         }
 	//convRequest->say2(v, 2*v);
         sem_post(&outputp_sem);
@@ -77,7 +80,7 @@ printf("[%s:%d] element %d\n", __FUNCTION__, __LINE__, param->elementSize_);
     int len = q_limit* param->elementSize_;
     int alen = ((len + MIN_XFER - 1) / MIN_XFER) * MIN_XFER;
     convRequest->forward_kernel(p_limit, alen, alen != len, temp, bpx, wpx, outputp);
-printf("[%s:%d] before wait q_limit %d\n", __FUNCTION__, __LINE__, q_limit);
+//printf("[%s:%d] before wait q_limit %d\n", __FUNCTION__, __LINE__, q_limit);
     sem_wait(&outputp_sem);
 }
 
@@ -98,9 +101,9 @@ void forward_kernel(const ParamType<Dtype> *param, int p_limit, int q_limit, Dty
       for (int q = 0; q < q_limit; q++) {
         float foo = *CACCESS(bp) * *CACCESS(wp);
         temp += foo;
-        if (trace) {
-printf("[%s:%d] b[%lx] %x/%f w[%lx] %x/%f q_limit %d foo %x\n", __FUNCTION__, __LINE__, bp, *(uint32_t *)CACCESS(bp), *CACCESS(bp), wp, *(uint32_t *)CACCESS(wp), *CACCESS(wp), q_limit, *(uint32_t *)&foo);
-        }
+        //if (trace) {
+//printf("[%s:%d] b[%lx] %x/%f w[%lx] %x/%f q_limit %d foo %x\n", __FUNCTION__, __LINE__, bp, *(uint32_t *)CACCESS(bp), *CACCESS(bp), wp, *(uint32_t *)CACCESS(wp), *CACCESS(wp), q_limit, *(uint32_t *)&foo);
+        //}
         bp += sizeof(Dtype);
         wp += sizeof(Dtype);
       }
@@ -111,6 +114,8 @@ printf("[%s:%d] b[%lx] %x/%f w[%lx] %x/%f q_limit %d foo %x\n", __FUNCTION__, __
     wpx += kernel_hw;
   }
   // Write convolution result into output (image, channel, y, x)
+//if (trace)
+//printf("[%s:%d] result [%lx;%p]=%f\n", __FUNCTION__, __LINE__, outputp, param->basePtr + outputp, (double)temp);
   *CACCESS(outputp) = temp;
 }
 template <typename Dtype>
@@ -150,7 +155,9 @@ ParamType<Dtype> *param = this;
               int q_limit = MIN(param->kernel_w_ - param->pad_w_, conv_in_width_ - x * stride_w_);
               forward_kernel<Dtype>(this, p_limit, q_limit, bias_val, bpx, wp_item, outputp, run_hardware);
               if (run_hardware) {
+//printf("[%s:%d] result [%lx;%p]=%f\n", __FUNCTION__, __LINE__, outputp, param->basePtr + outputp, (double)*CACCESS(outputp));
                   forward_kernel_hardware(this, p_limit, q_limit, bias_val, bpx, wp_item, outputp);
+//printf("[%s:%d] result [%lx;%p]=%f\n", __FUNCTION__, __LINE__, outputp, param->basePtr + outputp, (double)*CACCESS(outputp));
                   counter = COUNTER_INTERVAL;
               }
               outputp += sizeof(Dtype);
