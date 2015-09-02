@@ -68,20 +68,23 @@ printf("[%s:%d] element %d\n", __FUNCTION__, __LINE__, param->elementSize_);
         hparam.kernel_hw = param->kernel_h_ * param->kernel_w_ * param->elementSize_;
         hparam.in_group_size = param->conv_in_channels_ / param->group_;
         hparam.baseSize = param->elementSize_;
-        hparam.conv_in_width = param->conv_in_width_;
-        hparam.kernel_w = param->kernel_w_;
+        hparam.conv_in_width = param->conv_in_width_ * param->elementSize_;
+        hparam.kernel_w = param->kernel_w_ * param->elementSize_;
         hparam.objectId = param->objectId_;
         convRequest->init(hparam);
     }
-    convRequest->forward_kernel(p_limit, q_limit, temp, bpx, wpx, outputp);
-printf("[%s:%d] before wait\n", __FUNCTION__, __LINE__);
+#define MIN_XFER 8
+    int len = q_limit* param->elementSize_;
+    int alen = ((len + MIN_XFER - 1) / MIN_XFER) * MIN_XFER;
+    convRequest->forward_kernel(p_limit, alen, alen != len, temp, bpx, wpx, outputp);
+printf("[%s:%d] before wait q_limit %d\n", __FUNCTION__, __LINE__, q_limit);
     sem_wait(&outputp_sem);
 }
 
 #define MIN(A,B) (((int)(A) < (int)(B)) ? (A) : (B))
 #define MAX(A,B) (((int)(A) > (int)(B)) ? (A) : (B))
 template <typename Dtype>
-void forward_kernel(const ParamType<Dtype> *param, int p_limit, int q_limit, Dtype temp, CPtr bpx, CPtr wpx, CPtr outputp)
+void forward_kernel(const ParamType<Dtype> *param, int p_limit, int q_limit, Dtype temp, CPtr bpx, CPtr wpx, CPtr outputp, int trace)
 {
   int bottom_hw = param->conv_in_height_ * param->conv_in_width_ * sizeof(Dtype);
   int kernel_hw = param->kernel_h_ * param->kernel_w_ * sizeof(Dtype);
@@ -93,7 +96,11 @@ void forward_kernel(const ParamType<Dtype> *param, int p_limit, int q_limit, Dty
     for (int p = 0; p < p_limit; p++) {
       CPtr bp = bpk, wp = wpk;
       for (int q = 0; q < q_limit; q++) {
-        temp += *CACCESS(bp) * *CACCESS(wp);
+        float foo = *CACCESS(bp) * *CACCESS(wp);
+        temp += foo;
+        if (trace) {
+printf("[%s:%d] b[%lx] %x/%f w[%lx] %x/%f q_limit %d foo %x\n", __FUNCTION__, __LINE__, bp, *(uint32_t *)CACCESS(bp), *CACCESS(bp), wp, *(uint32_t *)CACCESS(wp), *CACCESS(wp), q_limit, *(uint32_t *)&foo);
+        }
         bp += sizeof(Dtype);
         wp += sizeof(Dtype);
       }
@@ -138,10 +145,11 @@ ParamType<Dtype> *param = this;
           for (int y = 0; y < height_out_; y++) {
             CPtr bpx = bpg;
             for (int x = 0; x < width_out_; x++) {
+              int run_hardware = (counter-- <= 0);
               int p_limit = MIN(param->kernel_h_ - param->pad_h_, conv_in_height_ - y * stride_h_);
               int q_limit = MIN(param->kernel_w_ - param->pad_w_, conv_in_width_ - x * stride_w_);
-              forward_kernel<Dtype>(this, p_limit, q_limit, bias_val, bpx, wp_item, outputp);
-              if (counter-- <= 0) {
+              forward_kernel<Dtype>(this, p_limit, q_limit, bias_val, bpx, wp_item, outputp, run_hardware);
+              if (run_hardware) {
                   forward_kernel_hardware(this, p_limit, q_limit, bias_val, bpx, wp_item, outputp);
                   counter = COUNTER_INTERVAL;
               }
