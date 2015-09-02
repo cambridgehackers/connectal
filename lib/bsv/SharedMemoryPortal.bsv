@@ -166,10 +166,10 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
          portal.requests[methodIdReg].enq(data);
       messageWordsReg <= messageWordsReg - 1;
       countReg <= countReg - 1;
-      if (messageWordsReg == 1)
-         state <= MessageHeaderRequested;
-      else if (countReg <= 1)
+      if (countReg <= 1)
          state <= UpdateTail;
+      else if (messageWordsReg == 1)
+         state <= MessageHeaderRequested;
    endrule
 
    rule updateTail if (state == UpdateTail);
