@@ -140,6 +140,9 @@ int main(int argc, const char **argv)
     PortalSharedParam paramr = {FF, alloc_sz, SHARED_HARDWARE(IfcNames_SimpleRequestPipesS2H)};
     SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequestS2H, &transportShared, &paramr);
 
+    // currently no interrupts on shared memory portals, so timeout after 1ms
+    defaultPoller->timeout = 1;
+
     for (int i = 0; i < numtimes; i++) {
       if (verbose) fprintf(stderr, "Main::calling say1(%d)\n", v1a);
       device->say1(v1a);  
