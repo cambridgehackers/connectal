@@ -72,7 +72,7 @@ module mkSharedMemoryRequestPipeOut#(Vector#(2, MemreadServer#(64)) readEngine, 
    Reg#(Bit#(32)) sglIdReg <- mkReg(0);
    Reg#(Bool)     readyReg   <- mkReg(False);
    MIMOConfiguration mimoConfig = defaultValue;
-   MIMO#(4,1,4,Bit#(32)) readMimo <- mkMIMO(mimoConfig);
+   MIMO#(2,1,2,Bit#(32)) readMimo <- mkMIMO(mimoConfig);
    FIFOF#(Bit#(32)) dataFifo <- mkSizedFIFOF(32);
 
    let verbose = True;
@@ -135,12 +135,7 @@ module mkSharedMemoryRequestPipeOut#(Vector#(2, MemreadServer#(64)) readEngine, 
    rule demuxwords if (readMimo.enqReadyN(enqCount));
       let v <- toGet(readEngine[1].data).get();
       Vector#(2,Bit#(32)) dvec = unpack(v.data);
-      Vector#(4,Bit#(32)) dvec4;
-      dvec4[0] = dvec[0];
-      dvec4[1] = dvec[1];
-      dvec4[2] = 0;
-      dvec4[3] = 0;
-      readMimo.enq(enqCount, dvec4);
+      readMimo.enq(enqCount, dvec);
    endrule
 
    rule receiveMessageHeader if (state == MessageHeaderRequested);
