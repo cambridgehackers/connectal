@@ -69,16 +69,15 @@ typedef struct {
 
 interface DotProd;
     interface PipeIn#(DotType) sendPair;
-    interface PipeOut#(void)   done;
+    interface PipeOut#(Float)   done;
     method Action init(Float atemp);
-    method Float result();
 endinterface
 
 (* synthesize *)
 module mkDotProd(DotProd);
     FIFOF#(DotType) dotFifo <- mkFIFOF;
     FIFOF#(Bool) lastFifo <- mkFIFOF1;
-    FIFOF#(void) innerDone <- mkFIFOF;
+    FIFOF#(Float) innerDone <- mkFIFOF;
     FloatAlu adder <- mkFloatAdder(defaultValue);
     FloatAlu mul <- mkFloatMultiplier(defaultValue);
     Reg#(Float)    temp <- mkReg(0);
@@ -99,49 +98,23 @@ module mkDotProd(DotProd);
         match {.resp,.*} <- adder.response.get;
         temp <= resp;
         if (v)
-            innerDone.enq(?);
+            innerDone.enq(resp);
     endrule
     interface sendPair = toPipeIn(dotFifo);
     interface done = toPipeOut(innerDone);
     method Action init(Float atemp);
         temp <= atemp;
     endmethod
-    method Float result();
-        return temp;
-    endmethod
-endmodule
-
-interface GearFloat;
-    method Action startConversion(Bit#(DataBusWidth) vb, Bit#(DataBusWidth) vw, Bool last);
-    method ActionValue#(DotType) outVal();
-endinterface
-
-(* synthesize *)
-module mkGearFloat(GearFloat);
-    Clock defaultClock <- exposeCurrentClock();
-    Reset defaultReset <- exposeCurrentReset();
-    Gearbox#(2, 1, Bit#(32)) lToSa <- mkNto1Gearbox(defaultClock, defaultReset, defaultClock, defaultReset);
-    Gearbox#(2, 1, Bit#(32)) lToSb <- mkNto1Gearbox(defaultClock, defaultReset, defaultClock, defaultReset);
-    Gearbox#(2, 1, Bool) lToLast <- mkNto1Gearbox(defaultClock, defaultReset, defaultClock, defaultReset);
-
-    method Action startConversion(Bit#(DataBusWidth) vb, Bit#(DataBusWidth) vw, Bool last);
-        lToSa.enq(unpack(vb));
-        lToSb.enq(unpack(vw));
-        Vector#(2, Bool) vl = replicate(last);
-        lToLast.enq(vl);
-    endmethod
-
-    method ActionValue#(DotType) outVal();
-        let vb <- toGet(lToSa).get;
-        let vw <- toGet(lToSb).get;
-        let vl <- toGet(lToLast).get;
-        return DotType{a: unpack(vb), b: unpack(vw), last: vl};
-    endmethod
 endmodule
 
 module mkConv#(ConvIndication indication)(Conv);
+    Clock defaultClock <- exposeCurrentClock();
+    Reset defaultReset <- exposeCurrentReset();
+    Gearbox#(2, 1, DotType) floatGear <- mkNto1Gearbox(defaultClock, defaultReset, defaultClock, defaultReset);
+    MemreadEngine#(DataBusWidth,2,2) rEngine <- mkMemreadEngine;
+    MemwriteEngine#(DataBusWidth,2,1) wEngine <- mkMemwriteEngine;
+    Vector#(2, Server#(Double,Float)) dToF <- replicateM(mkDoubleToFloat);
     DotProd dotp <- mkDotProd;
-    GearFloat gear <- mkGearFloat;
     Reg#(ConnectalParamType) param <- mkReg(unpack(0));
     Reg#(Bit#(32)) p_limit <- mkReg(0);
     Reg#(Bit#(32)) q_limit <- mkReg(0);
@@ -154,48 +127,52 @@ module mkConv#(ConvIndication indication)(Conv);
     Reg#(Bit#(32)) bp <- mkReg(0);
     Reg#(Bit#(32)) wp <- mkReg(0);
     Reg#(Bool)     fsmRunning <- mkReg(False);
-    MemreadEngine#(DataBusWidth,2,2) rEngine <- mkMemreadEngine;
-    MemwriteEngine#(DataBusWidth,2,1) wEngine <- mkMemwriteEngine;
     Reg#(Bit#(BurstLenSize)) burstLenInBytes <- mkReg(8);
     Reg#(Bit#(32)) waitFinish <- mkReg(0);
     Reg#(Bool) dtypeFloat <- mkReg(False);
     Reg#(Bool) dumpStart <- mkReg(False);
-    Server#(Double,Float) d2fb <- mkDoubleToFloat;
-    Server#(Double,Float) d2fw <- mkDoubleToFloat;
     FIFOF#(Bool) dLast <- mkFIFOF;
 
-    rule readconv;
-        let vb <- d2fb.response.get();
-        let vw <- d2fw.response.get();
+    rule readResD if (!dtypeFloat);
+        let vb <- toGet(rEngine.readServers[0].data).get;
+        let vw <- toGet(rEngine.readServers[1].data).get;
+        dToF[0].request.put(unpack(vb.data));
+        dToF[1].request.put(unpack(vw.data));
+        toPut(dLast).put(vb.last);
+    endrule
+
+    rule pushDotD;
+        let vb <- dToF[0].response.get();
+        let vw <- dToF[1].response.get();
         let vl <- toGet(dLast).get();
         toPut(dotp.sendPair).put(DotType{a: vb, b: vw, last: vl});
     endrule
 
-    rule readresd if (!dtypeFloat);
+    rule readResF if (dtypeFloat);
         let vb <- toGet(rEngine.readServers[0].data).get;
         let vw <- toGet(rEngine.readServers[1].data).get;
-        d2fb.request.put(unpack(vb.data));
-        d2fw.request.put(unpack(vw.data));
-        toPut(dLast).put(vb.last && waitFinish == 1);
-        if (vb.last)
-            waitFinish <= waitFinish - 1;
+        Vector#(2, DotType) temp;
+        temp[0] = DotType{a: unpack(vb.data[31:0]), b: unpack(vw.data[31:0]), last: False};
+        temp[1] = DotType{a: unpack(vb.data[63:32]), b: unpack(vw.data[63:32]), last: vb.last};
+        if (vb.last && skip != 0)
+            temp[1].a = 0;
+        floatGear.enq(temp);
     endrule
 
-    rule readresf if (dtypeFloat);
-        let vb <- toGet(rEngine.readServers[0].data).get;
-        let vw <- toGet(rEngine.readServers[1].data).get;
-        let bdata = vb.data;
-        if (vb.last) begin
-            if (skip != 0)
-                bdata = extend(bdata[31:0]);
-            waitFinish <= waitFinish - 1;
+    rule pushDotF;
+        let vb <- toGet(floatGear).get;
+        toPut(dotp.sendPair).put(vb);
+    endrule
+
+    rule finishProcessing;
+        let v <- toGet(dotp.done).get;
+        waitFinish <= waitFinish - 1;
+        if (waitFinish == 1) begin
+            // Write convolution result into output (image, channel, y, x)
+            //  *CACCESS(outputp) = v;
+            indication.outputp(outputp, v);
+            fsmRunning <= False;
         end
-        gear.startConversion(bdata, vw.data, vb.last && waitFinish == 1);
-    endrule
-
-    rule readgear;
-        let vd <- toGet(gear.outVal).get;
-        toPut(dotp.sendPair).put(vd);
     endrule
 
     FSM fsm <- mkFSM(seq
@@ -217,14 +194,6 @@ module mkConv#(ConvIndication indication)(Conv);
             wpx <= wpx + param.kernel_hw;
         endseq
         endseq);
-
-    rule finishProcessing;
-        dotp.done.deq;
-        // Write convolution result into output (image, channel, y, x)
-        //  *CACCESS(outputp) = temp;
-        indication.outputp(outputp, dotp.result());
-        fsmRunning <= False;
-    endrule
 
     interface ConvRequest request;
         method Action init(ConnectalParamType aparam);

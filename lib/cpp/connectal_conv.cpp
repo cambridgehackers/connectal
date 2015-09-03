@@ -36,17 +36,10 @@ class ConvIndication : public ConvIndicationWrapper
     ParamStruct *param;
 public:
     void outputp(uint32_t addr, float v) {
-        if (param->elementSize_ == sizeof(float)) {
-            printf("heard an conv: [%x] = %f/%x; ", addr, v, *(uint32_t *)&v);
-            printf(" current F[%p]=%f\n", param->basePtr + addr, *(float *)(param->basePtr + addr));
+        if (param->elementSize_ == sizeof(float))
             *(float *)(param->basePtr + addr) = v;
-        }
-        else {
-            printf("heard an conv: [%x] = %f/%x; ", addr, v, *(uint32_t *)&v);
-            printf(" current D[%p]=%f", param->basePtr + addr, *(double *)(param->basePtr + addr));
-            printf("/%lx\n", *(uint64_t *)(param->basePtr + addr));
+        else
             *(double *)(param->basePtr + addr) = v;
-        }
         sem_post(&outputp_sem);
     }
     ConvIndication(unsigned int id, ParamStruct *p) : ConvIndicationWrapper(id), param(p) {}
@@ -86,7 +79,7 @@ printf("[%s:%d] create proxy\n", __FUNCTION__, __LINE__);
 #define MAX(A,B) (((int)(A) > (int)(B)) ? (A) : (B))
 template <typename Dtype>
 void forward_kernel(const ParamType<Dtype> *param, int p_limit, int q_limit, float temp,
-    CPtr bpx, CPtr wpx, CPtr outputp, int trace)
+    CPtr bpx, CPtr wpx, CPtr outputp, int run_hardware)
 {
   int bottom_hw = param->conv_in_height_ * param->conv_in_width_ * param->elementSize_;
   int kernel_hw = param->kernel_h_ * param->kernel_w_ * param->elementSize_;
@@ -109,6 +102,11 @@ void forward_kernel(const ParamType<Dtype> *param, int p_limit, int q_limit, flo
     wpx += kernel_hw;
   }
   // Write convolution result into output (image, channel, y, x)
+  if (run_hardware) {
+     if (*CACCESS(outputp) != temp)
+         printf("[%s:%d] [%lx] hardware %f software %f\n", __FUNCTION__, __LINE__, outputp, (double)*CACCESS(outputp), (double)temp);
+  }
+  else
   *CACCESS(outputp) = temp;
 }
 template <typename Dtype>
@@ -150,8 +148,7 @@ ParamType<Dtype> *param = this;
                   forward_kernel_hardware(this, p_limit, q_limit, bias_val, bpx, wp_item, outputp);
                   counter = COUNTER_INTERVAL;
               }
-              else
-                  forward_kernel<Dtype>(this, p_limit, q_limit, bias_val, bpx, wp_item, outputp, run_hardware);
+              forward_kernel<Dtype>(this, p_limit, q_limit, bias_val, bpx, wp_item, outputp, run_hardware);
               outputp += elementSize_;
               bpx += stride_w_ * elementSize_;
             }
