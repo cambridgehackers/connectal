@@ -67,7 +67,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest#(4));
 		       startBase <= 0;
 		       for(startPtr <= 0; startPtr < 4; startPtr <= startPtr+1)
 			  (action
-			      let cmd = MemengineCmd{sglId:pointer, base:extend(startBase), len:numBytes, burstLen:burstLenBytes};
+			      let cmd = MemengineCmd{sglId:pointer, base:extend(startBase), len:numBytes, burstLen:burstLenBytes, tag:0};
 			      res[startPtr].readServers[0].request.put(cmd);
 			      startBase <= startBase+numBytes;
 			      //$display("start:%d %h %d %h (%d)", startPtr, startBase, numBytes, burstLenBytes, itersToStart);

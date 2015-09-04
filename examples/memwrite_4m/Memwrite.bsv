@@ -68,7 +68,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite#(4));
 		       for(startPtr <= 0; startPtr < 4; startPtr <= startPtr+1)
 			  (action
 			      $display("start:%d %h %d %h (%d)", startPtr, startBase, numWords, burstLen*4, iterCnt);
-			      wes[startPtr].writeServers[0].request.put(MemengineCmd{sglId:pointer, base:extend(startBase), len:numWords, burstLen:truncate(burstLen*4)});
+			      wes[startPtr].writeServers[0].request.put(MemengineCmd{sglId:pointer, base:extend(startBase), len:numWords, burstLen:truncate(burstLen*4), tag:0});
 			      startBase <= startBase+numWords;
 			   endaction);
 		    endseq;

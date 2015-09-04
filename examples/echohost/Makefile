@@ -8,7 +8,5 @@ CPPFILES= ../echo/testecho.cpp
 FPGAMAKE_CONNECTALFLAGS += -P mkEchoIndicationProxySynth -P mkEchoRequestWrapperMemPortalPipes
 PORTAL_DUMP_MAP = "EchoIndication:EchoRequest:SwallowRequest"
 CONNECTALFLAGS += -D IMPORT_HOSTIF
-NUMBER_OF_MASTERS =0
 
 include $(CONNECTALDIR)/Makefile.connectal
-

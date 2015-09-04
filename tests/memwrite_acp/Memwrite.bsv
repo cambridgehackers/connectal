@@ -50,7 +50,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    MemwriteEngine#(DataBusWidth,2,1)    we <- mkMemwriteEngine;
 
    rule start if (doOnce);
-         we.writeServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(numWords), burstLen:truncate(burstLen)});
+         we.writeServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(numWords), burstLen:truncate(burstLen), tag:0});
          $display("start");
          doOnce <= False;
    endrule

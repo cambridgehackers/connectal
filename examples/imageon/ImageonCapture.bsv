@@ -229,7 +229,7 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, HdmiGenerato
             serdes.data.start_capture();
         endmethod
         method Action startWrite(Bit#(32) pointer, Bit#(32) numBytes);
-            we.writeServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(numBytes), burstLen:8});
+            we.writeServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(numBytes), burstLen:8, tag:0});
             dmaRun <= True;
         endmethod
 	method Action set_host_oe(Bit#(1) v);

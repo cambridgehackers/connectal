@@ -58,7 +58,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    
    rule start (itersToStart > 0);
       $display("Test: request.put");
-      re.readServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, burstLen:burstLenBytes});
+      re.readServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, burstLen:burstLenBytes, tag:0});
       itersToStart <= itersToStart-1;
    endrule
 

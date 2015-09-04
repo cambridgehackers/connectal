@@ -1,9 +1,9 @@
-
 CONNECTALDIR?=../..
 INTERFACES = SharedMemoryPortalConfig
 S2H_INTERFACES = /SimpleRequest:Simple.request
 H2S_INTERFACES = /Simple:SimpleRequest
-MEM_INTERFACES = "cons(lSharereadEngine.dmaClient,nil),cons(lSharewriteEngine.dmaClient,nil)"
+MEM_READ_INTERFACES = "cons(lSharereadEngine.dmaClient,nil)"
+MEM_WRITE_INTERFACES = "cons(lSharewriteEngine.dmaClient,nil)"
 
 CONNECTALFLAGS += -D USE_ACP
 BSVFILES = Simple.bsv $(CONNECTALDIR)/bsv/Portal.bsv

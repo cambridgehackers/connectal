@@ -1,7 +1,7 @@
 CONNECTALDIR?=../..
 S2H_INTERFACES = ReadTestRequest:ReadTest.request
 H2S_INTERFACES = ReadTest:ReadTestIndication
-MEM_INTERFACES = lReadTest.dmaClient,nil
+MEM_READ_INTERFACES = lReadTest.dmaClient
 
 BSVFILES = ReadTest.bsv
 CPPFILES=memread_manual_manager.c

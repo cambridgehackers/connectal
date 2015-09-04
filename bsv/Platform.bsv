@@ -35,8 +35,7 @@ import MMURequest::*;
 import MMUIndication::*;
 import MemServerIndication::*;
 import MemServerRequest::*;
-//import IfcNames::*;
-import PlatformTypes::*;
+import IfcNames::*;
 import `PinTypeInclude::*;
 
 interface Platform;
@@ -92,7 +91,7 @@ module renameWrites#(Integer tile, MemWriteClient#(DataBusWidth) writer, MemServ
    endinterface
 endmodule
 
-module mkPlatform#(Vector#(NumberOfUserTiles, Tile) tiles)(Platform);
+module mkPlatform#(Vector#(NumberOfUserTiles, ConnectalTop) tiles)(Platform);
    /////////////////////////////////////////////////////////////
    // connecting up the tiles
 
@@ -102,7 +101,8 @@ module mkPlatform#(Vector#(NumberOfUserTiles, Tile) tiles)(Platform);
    Vector#(NumberOfUserTiles, Vector#(NumWriteClients, MemWriteClient#(DataBusWidth))) tile_write_clients;
    for(Integer i = 0; i < valueOf(NumberOfUserTiles); i=i+1) begin
       tile_slaves[i] = tiles[i].slave;
-      ReadOnly#(Bool) imux = tiles[i].interrupt;
+      let imux <- mkInterruptMux(tiles[i].interrupt);
+      //ReadOnly#(Bool) imux = tiles[i].interrupt;
       tile_interrupts[i] = imux;
       tile_read_clients[i] = tiles[i].readers;
       tile_write_clients[i] = tiles[i].writers;

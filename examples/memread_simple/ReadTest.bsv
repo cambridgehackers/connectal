@@ -54,7 +54,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    MemreadEngine#(DataBusWidth,2,1) re <- mkMemreadEngine;
 
    rule start (itersToStart > 0);
-      re.readServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, burstLen:burstLenInBytes});
+      re.readServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, burstLen:burstLenInBytes, tag: 0});
       itersToStart <= itersToStart-1;
    endrule
 

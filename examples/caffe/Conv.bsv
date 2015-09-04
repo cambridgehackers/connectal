@@ -183,9 +183,9 @@ module mkConv#(ConvIndication indication)(Conv);
             // Calculate single 2D filter convolution
             for ( p <= 0; p < p_limit; p <= p + 1) action
                 rEngine.readServers[0].request.put(MemengineCmd{sglId:param.objectId,
-                    base:extend(bp), len:q_limit, burstLen:burstLenInBytes});
+                    base:extend(bp), len:q_limit, burstLen:burstLenInBytes, tag: 0});
                 rEngine.readServers[1].request.put(MemengineCmd{sglId:param.objectId,
-                    base:extend(wp), len:q_limit, burstLen:burstLenInBytes});
+                    base:extend(wp), len:q_limit, burstLen:burstLenInBytes, tag: 0});
                 waitFinish <= waitFinish + 1;
                 bp <= bp + param.conv_in_width;
                 wp <= wp + param.kernel_w;

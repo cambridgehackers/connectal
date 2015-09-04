@@ -1,10 +1,9 @@
-
 CONNECTALDIR?=../..
 #S2H_INTERFACES = MainRequest:Main.request
 #H2S_INTERFACES = Main:MainRequest
+
 BSVFILES = ELink.bsv ParallellaLibDefs.bsv
 CPPFILES=testmain.cpp
-NUMBER_OF_MASTERS =0
 PARDIR=/scratch/stewart/parallella/parallella-hw/fpga/src
 PIN_TYPE = ParallellaLibDefs::ParallellaPins
 PIN_TYPE_INCLUDE = ParallellaLibDefs
@@ -40,4 +39,3 @@ Parallella.bsv: parallella.v
 	parallella.v
 
 include $(CONNECTALDIR)/Makefile.connectal
-

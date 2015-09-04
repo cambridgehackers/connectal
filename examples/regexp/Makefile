@@ -1,8 +1,7 @@
-
 CONNECTALDIR?=../..
 S2H_INTERFACES = RegexpRequest:Regexp.request
 H2S_INTERFACES = Regexp\#\(64\):RegexpIndication
-MEM_INTERFACES = "append(lRegexp.config_read_client,lRegexp.haystack_read_client),nil"
+MEM_READ_INTERFACES = "append(lRegexp.config_read_client,lRegexp.haystack_read_client)"
 
 BSVFILES = $(CONNECTALDIR)/lib/regexp/bsv/Regexp.bsv
 CPPFILES=testregexp.cpp

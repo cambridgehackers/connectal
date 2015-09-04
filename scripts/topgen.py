@@ -88,7 +88,8 @@ module mkConnectalTop
    Vector#(NumReadClients,MemReadClient#(DataBusWidth)) nullReaders = replicate(null_mem_read_client());
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
-   interface masters = %(portalMaster)s;
+   interface readers = take(%(portalReaders)s);
+   interface writers = take(%(portalWriters)s);
 %(exportedInterfaces)s
 endmodule : mkConnectalTop
 %(exportedNames)s
@@ -302,6 +303,8 @@ if __name__=='__main__':
     pipeInstantiate = []
     connectInstantiate = []
     instantiateRequest = {}
+    for item in ['IfcNames_MemServerRequestS2H', 'IfcNames_MMURequestS2H', 'IfcNames_MemServerIndicationH2S', 'IfcNames_MMUIndicationH2S']:
+        options.portname.append(item)
     requestList = []
     indicationList = []
     portalList = []

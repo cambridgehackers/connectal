@@ -1,11 +1,10 @@
-
 CONNECTALDIR?=../..
 INTERFACES = AuroraRequest AuroraIndication
+
 BSVFILES = Aurora.bsv Top.bsv
 CPPFILES=testaurora.cpp
 PIN_TYPE = AuroraPins
 PIN_TYPE_INCLUDE = BviAurora
-NUMBER_OF_MASTERS =0
 CONNECTALFLAGS += -C $(BOARD)/sources/aurora-$(BOARD).xdc -C aurora-clocks.xdc --tcl clock.tcl
 
 AURORA_V = $(CONNECTALDIR)/generated/xilinx/$(BOARD)/aurora_64b66b_0/aurora_64b66b_0_stub.v

@@ -5,7 +5,6 @@ H2S_INTERFACES = MaxSonarController:MaxSonarCtrlIndication
 ZBR = $(CONNECTALDIR)/lib/zedboard_robot
 BSVFILES = $(ZBR)/bsv/MaxSonarController.bsv
 CPPFILES= test_maxsonar.cpp $(ZBR)/cpp/read_buffer.cpp
-NUMBER_OF_MASTERS=0
 AUTOTOP = --interface pins:MaxSonarController.pins
 
 PIN_TYPE = MaxSonarSimplePins

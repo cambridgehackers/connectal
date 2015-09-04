@@ -238,7 +238,7 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 			let offset = tpl_2(dmaWriteRefs[tag]);
 			Bit#(32) burstOffset = (dmaWrReqCnts[b]<<log2(dmaBurstBytes)) + offset;
 			let dmaCmd = MemengineCmd {
-								tag: ?, //TODO: this was added in the new connectal
+								tag: 0, //TODO: this was added in the new connectal
 								sglId: sglId, 
 								base: zeroExtend(burstOffset),
 								len:fromInteger(dmaBurstBytes), 
@@ -315,7 +315,7 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 			let offset = tpl_2(dmaReadRefs[tag]);
 			Bit#(32) burstOffset = (dmaRdReqCnts[b]<<log2(dmaBurstBytes)) + offset;
 			let dmaCmd = MemengineCmd {
-								tag: ?, //TODO: this was added in the new connectal
+								tag: 0, //TODO: this was added in the new connectal
 								sglId: sglId, 
 								base: zeroExtend(burstOffset),
 								len:fromInteger(dmaBurstBytes), 

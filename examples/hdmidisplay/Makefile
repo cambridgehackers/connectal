@@ -1,15 +1,13 @@
-
 CONNECTALDIR?=../..
-LIBBSVDIR=$(CONNECTALDIR)/lib/bsv
 ifeq ($(BOARD),bluesim)
 H2S_INTERFACES = HdmiDisplay:HdmiDisplayIndication,HdmiGeneratorIndication:defaultClock
 else
 H2S_INTERFACES = HdmiDisplay:HdmiDisplayIndication,HdmiGeneratorIndication:host.ps7.fclkclk\[1\]
 endif
 S2H_INTERFACES = HdmiDisplayRequest:HdmiDisplay.displayRequest HdmiGeneratorRequest:HdmiDisplay.internalRequest
-MEM_INTERFACES = lHdmiDisplay.dmaClient,nil
-AUTOTOP = --importfiles HDMI --importfiles PS7LIB --interface pins:HdmiDisplay.hdmi
+MEM_READ_INTERFACES = lHdmiDisplay.dmaClient
 
+LIBBSVDIR=$(CONNECTALDIR)/lib/bsv
 BSVFILES = $(LIBBSVDIR)/HdmiDisplay.bsv $(LIBBSVDIR)/HDMI.bsv $(CONNECTALDIR)/lib/deprecated/DmaUtils.bsv HDMI16.bsv
 CPPFILES= testhdmidisplay.cpp
 CONNECTALFLAGS = -C hdmidisplay-$(BOARD).xdc -D IMPORT_HOSTIF
@@ -25,6 +23,7 @@ CONNECTALFLAGS += -D BSIMRESPONDER=mkResponder -m $(CONNECTALDIR)/examples/hdmid
 
 CONNECTALFLAGS += -C $(BOARD)/sources/hdmi.xdc
 CONNECTALFLAGS += -D SIM_DMA_READ_LATENCY=1 -D SIM_DMA_WRITE_LATENCY=1
+AUTOTOP = --importfiles HDMI --importfiles PS7LIB --interface pins:HdmiDisplay.hdmi
 
 gentarget:: $(BOARD)/sources/hdmi.xdc
 

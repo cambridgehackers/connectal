@@ -1,7 +1,7 @@
-
 S2H_INTERFACES += RbmRequest:Rbm.rbmRequest MmRequestTN:Rbm.mmRequest SigmoidRequest:Rbm.sigmoidRequest TimerRequest:Rbm.timerRequest
 H2S_INTERFACES += Rbm\#\(TDiv\#\(DataBusWidth,32\)\):RbmIndication,SigmoidIndication,MmIndication,TimerIndication:host
-MEM_INTERFACES = lRbm.readClients,lRbm.writeClients
+MEM_READ_INTERFACES = lRbm.readClients
+MEM_WRITE_INTERFACES = lRbm.writeClients
 
 gen:: $(RBMDIR)/datasets
 
@@ -18,8 +18,6 @@ CONNECTALFLAGS += -I$(RBMDIR)/cpp
 
 BSVFILES += $(CONNECTALDIR)/lib/rbm/bsv/Rbm.bsv
 CPPFILES += $(CONNECTALDIR)/lib/rbm/cpp/rbm.cpp
-
-NUMBER_OF_MASTERS=1
 
 prebuild:: $(RBMDIR)/datasets
 	cp -fv $(RBMDIR)/datasets/train-images-idx3-ubyte .

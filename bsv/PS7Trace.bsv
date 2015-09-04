@@ -29,6 +29,7 @@ import AxiMasterSlave::*;
 import AxiDma::*;
 import AxiBits::*;
 import AxiGather::*;
+import Platform::*;
 
 `ifdef USE_ACP
 typedef 1 NumAcp;
@@ -36,10 +37,10 @@ typedef 1 NumAcp;
 typedef 0 NumAcp;
 `endif
 
-instance ConnectableWithTrace#(PS7, ConnectalTop, traceType)
+instance ConnectableWithTrace#(PS7, Platform, traceType)
    provisos (ConnectableWithTrace::ConnectableWithTrace#(AxiMasterSlave::Axi3Master#(32,64,6),AxiMasterSlave::Axi3Slave#(32, 64, 6),traceType),
              ConnectableWithTrace::ConnectableWithTrace#(AxiMasterSlave::Axi3Master#(32,32,12),AxiMasterSlave::Axi3Slave#(32,32,12),traceType));
-   module mkConnectionWithTrace#(PS7 ps7, ConnectalTop top, traceType readout)(Empty)
+   module mkConnectionWithTrace#(PS7 ps7, Platform top, traceType readout)(Empty)
       provisos (ConnectableWithTrace#(Axi3Master#(32,64,6), Axi3Slave#(32,64,6),traceType));
 
       Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(top.slave);
