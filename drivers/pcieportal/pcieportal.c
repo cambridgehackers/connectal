@@ -490,7 +490,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		  do {  // loop over all portals in a tile
 		    int freep;
 		    uint32_t iid = *(volatile uint32_t *)(pportal + PCR_IID_OFFSET);
-		    tPortal *this_portal = &this_board->portal[portal_index];
+		    tPortal *this_portal = &this_board->portal[fpn];
 		    printk("%s:%d num_tiles %x/%x num_portals %x/%x fpn %x iid=%d\n", __FUNCTION__, __LINE__, tile_index, num_tiles, portal_index, num_portals, fpn, iid);
 		    traceInfo.intval[fpn] = ioread32(this_board->bar0io + CSR_MSIX_MSG_DATA  + 16*fpn);
 		    traceInfo.name[fpn] = iid;
@@ -503,23 +503,23 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		    }
 		    else
 		        portalp[freep] = 1;
-		    this_board->portal[fpn].device_number = freep;
-		    this_board->portal[fpn].device_tile = tile_index;
-		    this_board->portal[fpn].portal_number = fpn;
-		    this_board->portal[fpn].device_name = iid;
-		    this_board->portal[fpn].board = this_board;
-		    this_board->portal[fpn].regs = (volatile uint32_t *)pportal;
+		    this_portal->device_number = freep;
+		    this_portal->device_tile = tile_index;
+		    this_portal->portal_number = fpn;
+		    this_portal->device_name = iid;
+		    this_portal->board = this_board;
+		    this_portal->regs = (volatile uint32_t *)pportal;
 		    /* add the device operations */
-		    cdev_init(&this_board->portal[fpn].extra->cdev, &pcieportal_fops);
-		    this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + this_portal->device_number);
-		    if (cdev_add(&this_board->portal[fpn].extra->cdev, this_device_number, 1)) {
+		    cdev_init(&this_portal->extra->cdev, &pcieportal_fops);
+		    this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + fpn);
+		    if (cdev_add(&this_portal->extra->cdev, this_device_number, 1)) {
 		      printk(KERN_ERR "%s: cdev_add %x failed\n",
 			     DEV_NAME, this_device_number);
 		      err = -EFAULT;
 		    } else {
 		      /* create a device node via udev */
-		      device_create(pcieportal_class, NULL,
-				    this_device_number, this_portal, "%s_%d_%d", DEV_NAME, this_portal->device_tile, this_portal->device_name);
+		      device_create(pcieportal_class, &dev->dev, this_device_number,
+			    this_portal, "%s_%d_%d", DEV_NAME, this_portal->device_tile, this_portal->device_name);
 		      printk(KERN_INFO "%s: /dev/%s_%d_%d = %x created\n",
 			     DEV_NAME, DEV_NAME, this_portal->device_tile, this_portal->device_name, this_device_number);
 		    }
@@ -539,7 +539,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		if (cdev_add(&this_board->extra->cdev, this_device_number, 1)) {
 		    printk(KERN_ERR "%s: cdev_add board failed\n", DEV_NAME);
                 }
-		device_create(pcieportal_class, NULL, this_device_number, NULL, "connectal");
+		device_create(pcieportal_class, &dev->dev, this_device_number, NULL, "connectal");
                 if (err == 0)
                     return err; /* if board activated correctly, return */
         } /* end of if(activate) */
