@@ -118,7 +118,7 @@ endmodule
 
 module mkBRAMWriter#(Integer id,
 		     BRAMServer#(Bit#(bramIdxWidth),d) br, 
-		     MemReadServer#(busWidth) readServer)(BRAMWriter#(bramIdxWidth,busWidth))
+		     MemReadEngineServer#(busWidth) readServer)(BRAMWriter#(bramIdxWidth,busWidth))
    provisos(Bits#(d,dsz),
 	    Div#(busWidth,dsz,nd),
 	    Mul#(nd,dsz,busWidth),

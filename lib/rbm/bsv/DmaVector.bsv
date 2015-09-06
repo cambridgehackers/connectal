@@ -41,7 +41,7 @@ interface VectorSource#(numeric type dsz, type a);
    method ActionValue#(Bool) finish();
 endinterface
 
-module  mkMemReadVectorSource#(MemReadServer#(asz) memreadServer)(VectorSource#(asz, a))
+module  mkMemReadVectorSource#(MemReadEngineServer#(asz) memreadServer)(VectorSource#(asz, a))
    provisos (Bits#(a,asz),
 	     Div#(asz,8,abytes),
 	     Log#(abytes,ashift),
@@ -68,7 +68,7 @@ interface VectorSink#(numeric type dsz, type a);
    method ActionValue#(Bool) finish();
 endinterface
 
-module  mkMemWriteVectorSink#(MemWriteServer#(asz) memwriteServer)(VectorSink#(asz, a))
+module  mkMemWriteVectorSink#(MemWriteEngineServer#(asz) memwriteServer)(VectorSink#(asz, a))
    provisos (Bits#(a,asz),
 	     Div#(asz,8,abytes),
 	     Log#(abytes,ashift),

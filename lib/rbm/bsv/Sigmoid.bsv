@@ -194,8 +194,8 @@ interface SigmoidIfc#(numeric type dsz);
    method Bit#(32) tableSize;
 endinterface
 
-module  mkSigmoid#(Vector#(2,MemReadServer#(TMul#(N,32))) readSrvrs,
-		   Vector#(1,MemWriteServer#(TMul#(N,32))) writeSrvrs) (SigmoidIfc#(dsz))
+module  mkSigmoid#(Vector#(2,MemReadEngineServer#(TMul#(N,32))) readSrvrs,
+		   Vector#(1,MemWriteEngineServer#(TMul#(N,32))) writeSrvrs) (SigmoidIfc#(dsz))
    provisos (Bits#(Float, fsz)
 	     , Add#(N,0,n)
 	     , Mul#(fsz,N,dmasz)

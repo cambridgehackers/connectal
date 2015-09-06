@@ -58,7 +58,7 @@ typedef Bit#(8) Char;
 typedef Bit#(64) DWord;
 typedef Bit#(32) Word;
 
-module mkRegexpEngine#(Pair#(MemReadServer#(64)) readers, Integer iid)(RegexpEngine#(tw))
+module mkRegexpEngine#(Pair#(MemReadEngineServer#(64)) readers, Integer iid)(RegexpEngine#(tw))
    provisos(Log#(`MAX_NUM_STATES,5),
 	    Log#(`MAX_NUM_CHARS,5),
 	    Div#(64,8,nc),

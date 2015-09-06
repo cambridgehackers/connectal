@@ -76,8 +76,8 @@ endmodule
    
    
    
-module  mkStatesPipe#(Vector#(2,MemReadServer#(TMul#(N,32))) readSrvrs,
-		      Vector#(1,MemWriteServer#(TMul#(N,32))) writeSrvrs)(StatesPipe#(N, DmaSz))
+module  mkStatesPipe#(Vector#(2,MemReadEngineServer#(TMul#(N,32))) readSrvrs,
+		      Vector#(1,MemWriteEngineServer#(TMul#(N,32))) writeSrvrs)(StatesPipe#(N, DmaSz))
    provisos ( Bits#(Vector#(N, Float), DmaSz)
 	     ,Log#(N,nshift));
    
@@ -110,8 +110,8 @@ interface UpdateWeights#(numeric type n, numeric type dmasz);
    method ActionValue#(Bool) finish();
 endinterface
 
-module  mkUpdateWeights#(Vector#(3,MemReadServer#(TMul#(N,32))) readSrvrs,
-			    Vector#(1,MemWriteServer#(TMul#(N,32))) writeSrvrs)(UpdateWeights#(N, DmaSz))
+module  mkUpdateWeights#(Vector#(3,MemReadEngineServer#(TMul#(N,32))) readSrvrs,
+			    Vector#(1,MemWriteEngineServer#(TMul#(N,32))) writeSrvrs)(UpdateWeights#(N, DmaSz))
    provisos ( Bits#(Vector#(N, Float), DmaSz)
 	     ,Log#(N,nshift));
 
@@ -188,7 +188,7 @@ interface SumOfErrorSquared#(numeric type n, numeric type dmasz);
    interface SumOfErrorSquaredDebug debug;
 endinterface
 
-module  mkSumOfErrorSquared#(Vector#(2,MemReadServer#(TMul#(N,32))) readSrvrs)(SumOfErrorSquared#(N, DmaSz))
+module  mkSumOfErrorSquared#(Vector#(2,MemReadEngineServer#(TMul#(N,32))) readSrvrs)(SumOfErrorSquared#(N, DmaSz))
    provisos ( Bits#(Vector#(N, Float), DmaSz)
 	     ,Log#(N,nshift));
    
