@@ -33,7 +33,7 @@ import MemTypes::*;
 import Pipe::*;
 import MemUtils::*;
 
-module mkMemwriteEngine(MemwriteEngine#(dataWidth, cmdQDepth, numServers))
+module mkMemWriteEngine(MemWriteEngine#(dataWidth, cmdQDepth, numServers))
    provisos( Mul#(TDiv#(dataWidth, 8), 8, dataWidth)
 	    ,Add#(1, a__, numServers)
 	    ,Add#(b__, TLog#(numServers), TAdd#(1, TLog#(TMul#(cmdQDepth,numServers))))
@@ -45,7 +45,7 @@ module mkMemwriteEngine(MemwriteEngine#(dataWidth, cmdQDepth, numServers))
 	    ,FunnelPipesPipelined#(1, numServers,Tuple3#(Bit#(TLog#(numServers)), Bit#(dataWidth), Bool), TMin#(2,TLog#(numServers)))
 	    ,Add#(e__, TLog#(numServers), 6)
 	    );
-   let rv <- mkMemwriteEngineBuff(valueOf(TExp#(BurstLenSize)));
+   let rv <- mkMemWriteEngineBuff(valueOf(TExp#(BurstLenSize)));
    return rv;
 endmodule
 
@@ -156,7 +156,7 @@ module mkBurstFunnel#(Integer maxBurstLen)(BurstFunnel#(k,w))
    interface PipeOut dataOut = toPipeOut(exit_data);
 endmodule
 
-module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth, cmdQDepth, numServers))
+module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(dataWidth, cmdQDepth, numServers))
    provisos ( Div#(dataWidth,8,dataWidthBytes)
 	     ,Mul#(dataWidthBytes,8,dataWidth)
 	     ,Log#(dataWidthBytes,beatShift)
@@ -263,9 +263,9 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
 	  endmethod
        endinterface);
    
-   Vector#(numServers, MemwriteServer#(dataWidth)) rs;
+   Vector#(numServers, MemWriteEngineServer#(dataWidth)) rs;
    for(Integer i = 0; i < valueOf(numServers); i=i+1)
-      rs[i] = (interface MemwriteServer#(dataWidth);
+      rs[i] = (interface MemWriteEngineServer#(dataWidth);
                   interface Put request;
                      method Action put(MemengineCmd cmd);
                         Bit#(32) bsb = fromInteger(bufferSizeBytes);
@@ -281,9 +281,9 @@ module mkMemwriteEngineBuff#(Integer bufferSizeBytes)(MemwriteEngine#(dataWidth,
                         let bbl = extend(cmd.burstLen) > bsb;
                         if(bbl || mdw0 || mdw1 || cmd.len == 0) begin
                            if (bbl)
-                              $display("XXXXXXXXXX mkMemwriteEngineBuff::unsupported burstLen %d %d", bsb, cmd.burstLen);
+                              $display("XXXXXXXXXX mkMemWriteEngineBuff::unsupported burstLen %d %d", bsb, cmd.burstLen);
                            if (mdw0 || mdw1 || cmd.len == 0)
-                              $display("XXXXXXXXXX mkMemwriteEngineBuff::unsupported len %h mdw0=%d mdw1=%d", cmd.len, mdw0, mdw1);
+                              $display("XXXXXXXXXX mkMemWriteEngineBuff::unsupported len %h mdw0=%d mdw1=%d", cmd.len, mdw0, mdw1);
                         end
                         else
 `endif

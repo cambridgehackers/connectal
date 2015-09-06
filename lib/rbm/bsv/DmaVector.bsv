@@ -19,15 +19,14 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import Connectable::*;
 import GetPut::*;
 import ClientServer::*;
 import FIFOF::*;
 import ConnectalMemory::*;
 import MemTypes::*;
-import MemreadEngine::*;
-import MemwriteEngine::*;
+import MemReadEngine::*;
+import MemWriteEngine::*;
 import Adapter::*;
 import BRAM::*;
 import Pipe::*;
@@ -42,7 +41,7 @@ interface VectorSource#(numeric type dsz, type a);
    method ActionValue#(Bool) finish();
 endinterface
 
-module  mkMemreadVectorSource#(MemreadServer#(asz) memreadServer)(VectorSource#(asz, a))
+module  mkMemReadVectorSource#(MemReadServer#(asz) memreadServer)(VectorSource#(asz, a))
    provisos (Bits#(a,asz),
 	     Div#(asz,8,abytes),
 	     Log#(abytes,ashift),
@@ -54,7 +53,7 @@ module  mkMemreadVectorSource#(MemreadServer#(asz) memreadServer)(VectorSource#(
    function Bit#(dataWidth) memData_data(MemDataF#(dataWidth) d); return d.data; endfunction
 
    method Action start(SGLId p, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l);
-      if (verbose) $display("mkMemreadVectorSource: start h=%d a=%h l=%h ashift=%d", p, a, l, ashift);
+      if (verbose) $display("mkMemReadVectorSource: start h=%d a=%h l=%h ashift=%d", p, a, l, ashift);
       memreadServer.request.put(MemengineCmd { sglId: p, base: a << ashift, len: truncate(l << ashift), burstLen: (fromInteger(valueOf(BurstLen)) << ashift), tag: 0});
    endmethod
    method ActionValue#(Bool) finish();
@@ -69,7 +68,7 @@ interface VectorSink#(numeric type dsz, type a);
    method ActionValue#(Bool) finish();
 endinterface
 
-module  mkMemwriteVectorSink#(MemwriteServer#(asz) memwriteServer)(VectorSink#(asz, a))
+module  mkMemWriteVectorSink#(MemWriteServer#(asz) memwriteServer)(VectorSink#(asz, a))
    provisos (Bits#(a,asz),
 	     Div#(asz,8,abytes),
 	     Log#(abytes,ashift),
@@ -80,11 +79,11 @@ module  mkMemwriteVectorSink#(MemwriteServer#(asz) memwriteServer)(VectorSink#(a
    let ashift = valueOf(ashift);
 
    method Action start(SGLId p, Bit#(MemOffsetSize) a, Bit#(MemOffsetSize) l);
-      if (verbose) $display("mkMemwriteVectorSink: start h=%d a=%h l=%h ashift=%d", p, a, l, ashift);
+      if (verbose) $display("mkMemWriteVectorSink: start h=%d a=%h l=%h ashift=%d", p, a, l, ashift);
       // I set burstLen==1 so that testmm works for all J,K,N. If we want burst writes we will need to rethink this (mdk)
       let cmd = MemengineCmd { sglId: p, base: a << ashift, len: truncate(l << ashift), burstLen: fromInteger(valueOf(abytes)), tag: 0};
       memwriteServer.request.put(cmd);
-      //$display("mkMemwriteVectorSink: %d %d %d %d", cmd.sglId, cmd.base, cmd.len, cmd.burstLen);
+      //$display("mkMemWriteVectorSink: %d %d %d %d", cmd.sglId, cmd.base, cmd.len, cmd.burstLen);
    endmethod
    method finish = memwriteServer.done.get;
    interface PipeIn pipe = mapPipeIn(pack, memwriteServer.data);

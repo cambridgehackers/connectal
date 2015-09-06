@@ -1,4 +1,3 @@
-
 // Copyright (c) 2012 Nokia, Inc.
 // Copyright (c) 2013 Quanta Research Cambridge, Inc.
 
@@ -29,7 +28,7 @@ import GetPut::*;
 import ClientServer::*;
 import Connectable::*;
 import MemTypes::*;
-import MemreadEngine::*;
+import MemReadEngine::*;
 import HDMI::*;
 import XADC::*;
 import YUV::*;
@@ -86,7 +85,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
    Reg#(Bit#(1)) bozobit <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
 
    Reg#(Maybe#(Bit#(32))) referenceReg <- mkReg(tagged Invalid);
-   MemreadEngine#(64,NumOutstandingRequests,1) memreadEngine <- mkMemreadEngine;
+   MemReadEngine#(64,NumOutstandingRequests,1) memreadEngine <- mkMemReadEngine;
 
    HdmiGenerator#(Rgb888) hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
 			startDMA, hdmiGeneratorIndication, clocked_by hdmi_clock, reset_by hdmi_reset);

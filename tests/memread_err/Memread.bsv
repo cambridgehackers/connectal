@@ -25,9 +25,8 @@ import Vector::*;
 import StmtFSM::*;
 import GetPut::*;
 import ClientServer::*;
-
 import MemTypes::*;
-import MemreadEngine::*;
+import MemReadEngine::*;
 import Pipe::*;
 
 interface MemreadRequest;
@@ -51,7 +50,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    
    Reg#(Bit#(32))           srcGen <- mkReg(0);
    Reg#(Bit#(32))    mismatchCount <- mkReg(0);
-   MemreadEngine#(64,1,1)         re <- mkMemreadEngine;
+   MemReadEngine#(64,1,1)         re <- mkMemReadEngine;
 
    let debug = True;
    

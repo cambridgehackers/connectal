@@ -1,13 +1,13 @@
-MemreadEngine Package
+MemReadEngine Package
 =====================
 
-.. bsv:package:: MemreadEngine
+.. bsv:package:: MemReadEngine
 
-.. bsv:module:: mkMemreadEngine(MemreadEngineV#(dataWidth, cmdQDepth, numServers))
+.. bsv:module:: mkMemReadEngine(MemReadEngineV#(dataWidth, cmdQDepth, numServers))
 
-   Creates a MemreadEngine with default 256 bytes of buffer per server.
+   Creates a MemReadEngine with default 256 bytes of buffer per server.
 
-.. bsv:module:: mkMemreadEngineBuff#(Integer bufferSizeBytes) (MemreadEngineV#(dataWidth, cmdQDepth, numServers))
+.. bsv:module:: mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngineV#(dataWidth, cmdQDepth, numServers))
 
-   Creates a MemreadEngine with the specified buffer size.
+   Creates a MemReadEngine with the specified buffer size.
 

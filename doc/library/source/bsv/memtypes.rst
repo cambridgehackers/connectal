@@ -147,7 +147,7 @@ Memory Engine Types
 
 .. bsv:struct:: MemengineCmd
 
-   A read or write request for a MemreadEngine or a MemwriteEngine. Memread and Memwrite engines will issue one or more burst requests to satisfy the overall length of the request.
+   A read or write request for a MemReadEngine or a MemWriteEngine. MemRead and MemWrite engines will issue one or more burst requests to satisfy the overall length of the request.
 
    .. bsv:field:: SGLId sglId
 
@@ -172,7 +172,7 @@ Memory Engine Types
 Memory Engine Interfaces
 ------------------------
 
-.. bsv:interface:: MemwriteServer#(numeric type dataWidth)
+.. bsv:interface:: MemWriteServer#(numeric type dataWidth)
 
    .. bsv:subinterface:: Put#(MemengineCmd)       request
 
@@ -180,23 +180,23 @@ Memory Engine Interfaces
 
    .. bsv:subinterface:: PipeIn#(Bit#(dataWidth)) data
 
-.. bsv:interface:: MemwriteEngine#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers)
+.. bsv:interface:: MemWriteEngine#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers)
 
    .. bsv:subinterface:: MemWriteClient#(dataWidth) dmaClient
 
-   .. bsv:subinterface:: Vector#(numServers, MemwriteServer#(dataWidth)) writeServers
+   .. bsv:subinterface:: Vector#(numServers, MemWriteServer#(dataWidth)) writeServers
 
-.. bsv:interface:: MemreadServer#(numeric type dataWidth)
+.. bsv:interface:: MemReadServer#(numeric type dataWidth)
 
    .. bsv:subinterface:: Put#(MemengineCmd)        request
 
    .. bsv:subinterface:: PipeOut#(Bit#(dataWidth)) data
       
-.. bsv:interface:: MemreadEngine#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers)
+.. bsv:interface:: MemReadEngine#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers)
 
    .. bsv:subinterface:: MemReadClient#(dataWidth) dmaClient
 
-   .. bsv:subinterface:: Vector#(numServers, MemreadServer#(dataWidth)) readServers
+   .. bsv:subinterface:: Vector#(numServers, MemReadServer#(dataWidth)) readServers
 
 
 Memory Traffic Interfaces

@@ -20,7 +20,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import Clocks            :: *;
 import Connectable       :: *;
 import DefaultValue      :: *;
@@ -28,14 +27,13 @@ import FIFO              :: *;
 import GetPut            :: *;
 import FIFOF             :: *;
 import Vector            :: *;
-
 import AxiCsr            :: *;
 import PCIE              :: *;
 import AxiSlaveEngine    :: *;
 import Portal            :: *;
 import MemServer         :: *;
 import SGList::*;
-import MemreadEngine     :: *;
+import MemReadEngine     :: *;
 import AxiDma            :: *;
 import MemTypes          :: *;
 import AxiMasterSlave    :: *;

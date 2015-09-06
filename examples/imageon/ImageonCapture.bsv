@@ -26,7 +26,7 @@ import BRAMFIFO::*;
 import MemTypes::*;
 import ClientServer::*;
 import Pipe::*;
-import MemwriteEngine::*;
+import MemWriteEngine::*;
 import IserdesDatadeser::*;
 import IserdesDatadeserIF::*;
 import Connectable :: *;
@@ -104,7 +104,7 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, HdmiGenerato
 			clocked_by imageon_clock, reset_by imageon_reset);
 
     // mem capture
-    MemwriteEngine#(64,1,1) we <- mkMemwriteEngine();
+    MemWriteEngine#(64,1,1) we <- mkMemWriteEngine();
     SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncBRAMFIFO(10, imageon_clock, imageon_reset, defaultClock, defaultReset);
     rule sync_data if (dmaRun);
         synchronizer.enq(serdes.data.capture);

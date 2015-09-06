@@ -327,8 +327,8 @@ taking care of address translation transparently.
 
 To fully exploit the data parallelism, {\tt mkStrStr} partitions the
 search space into $p$ partitions. It instantiates two memory read
-trees from the Connectal library ({\tt MemreadEngineV}, discussed in
-Section :ref:`Sec-MemreadEngine`, each with $p$ read servers.  One set
+trees from the Connectal library ({\tt MemReadEngineV}, discussed in
+Section :ref:`Sec-MemReadEngine`, each with $p$ read servers.  One set
 is used by the search kernels to read the configuration data from the
 host memory, while the other is used to read the ``haystack'' from
 flash.

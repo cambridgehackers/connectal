@@ -19,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFO::*;
 import FIFOF::*;
 import GetPut::*;
@@ -30,8 +29,8 @@ import Connectable::*;
 import Pipe::*;
 import MemTypes::*;
 import HostInterface::*;
-import MemreadEngine::*;
-import MemwriteEngine::*;
+import MemReadEngine::*;
+import MemWriteEngine::*;
 
 interface NandCfgRequest;
    method Action startRead(Bit#(32) drampointer, Bit#(32) dramOffset, Bit#(32) nandAddr, Bit#(32) numBytes, Bit#(32) burstLen);
@@ -62,8 +61,8 @@ endinterface
 module mkNandSim#(NandCfgIndication indication) (NandSim);
    let verbose = False;
 
-   MemreadEngine#(64, 1,  3)  re <- mkMemreadEngine();
-   MemwriteEngine#(64, 1, 4)  we <- mkMemwriteEngine();
+   MemReadEngine#(64, 1,  3)  re <- mkMemReadEngine();
+   MemWriteEngine#(64, 1, 4)  we <- mkMemWriteEngine();
    NandSimControl ns <- mkNandSimControl(take(re.readServers), take(we.writeServers), indication);
    let slave_read_server  = re.readServers[2];
    let slave_write_server = we.writeServers[3];
@@ -121,7 +120,7 @@ module mkNandSim#(NandCfgIndication indication) (NandSim);
 
 endmodule
 
-module mkNandSimControl#(Vector#(2, MemreadServer#(64)) readSrvs, Vector#(3, MemwriteServer#(64)) writeSrvs,
+module mkNandSimControl#(Vector#(2, MemReadServer#(64)) readSrvs, Vector#(3, MemWriteServer#(64)) writeSrvs,
 			  NandCfgIndication indication) (NandSimControl);
    let dramReadServer = readSrvs[0];
    let nandReadServer = readSrvs[1];
@@ -241,4 +240,3 @@ module mkNandSimControl#(Vector#(2, MemreadServer#(64)) readSrvs, Vector#(3, Mem
       endmethod
    endinterface
 endmodule
-

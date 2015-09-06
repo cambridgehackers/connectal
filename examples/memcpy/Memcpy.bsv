@@ -19,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import Vector::*;
 import BuildVector::*;
 import FIFOF::*;
@@ -27,12 +26,11 @@ import FIFO::*;
 import BRAMFIFO::*;
 import GetPut::*;
 import ClientServer::*;
-
 import HostInterface::*;
 import ConnectalMemory::*;
 import MemTypes::*;
-import MemreadEngine::*;
-import MemwriteEngine::*;
+import MemReadEngine::*;
+import MemWriteEngine::*;
 import Pipe::*;
 
 interface MemcpyRequest;
@@ -60,8 +58,8 @@ typedef TDiv#(DataBusWidth,32) WordsPerBeat;
 
 module mkMemcpy#(MemcpyIndication indication)(Memcpy);
 
-   MemreadEngine#(DataBusWidth,CmdQDepth,1)  re <- mkMemreadEngineBuff(valueOf(CmdQDepth)*512);
-   MemwriteEngine#(DataBusWidth,CmdQDepth,1) we <- mkMemwriteEngineBuff(valueOf(CmdQDepth)*512);
+   MemReadEngine#(DataBusWidth,CmdQDepth,1)  re <- mkMemReadEngineBuff(valueOf(CmdQDepth)*512);
+   MemWriteEngine#(DataBusWidth,CmdQDepth,1) we <- mkMemWriteEngineBuff(valueOf(CmdQDepth)*512);
 
    Integer wordsPerBeat = valueOf(WordsPerBeat);
 

@@ -1,4 +1,3 @@
-
 // Copyright (c) 2014 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
@@ -20,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import Clocks            :: *;
 import Connectable       :: *;
 import DefaultValue      :: *;
@@ -28,18 +26,16 @@ import FIFO              :: *;
 import GetPut            :: *;
 import FIFOF             :: *;
 import Vector            :: *;
-
 import AxiCsr            :: *;
 import PCIE              :: *;
 import AxiSlaveEngine    :: *;
 import Portal            :: *;
 import MemServer         :: *;
 import SGList::*;
-import MemreadEngine     :: *;
+import MemReadEngine     :: *;
 import AxiDma            :: *;
 import MemTypes          :: *;
 import AxiMasterSlave    :: *;
-
 import MemServerRequestWrapper::*;
 import SGListConfigRequestWrapper::*;
 import MemServerIndicationProxy::*;
@@ -140,7 +136,7 @@ module mkPcieTestBench#(PcieTestBenchIndication indication)(PcieTestBench#(40,64
    
    // memread state
    FIFOF#(Bit#(64)) readFifo <- mkFIFOF;
-   let     re <- mkMemreadEngine(1, readFifo);
+   let     re <- mkMemReadEngine(1, readFifo);
    
    // dma state
    SGListConfigIndicationProxy hostmemSGListConfigIndicationProxy <- mkSGListConfigIndicationProxy(HostmemSGListConfigIndication);

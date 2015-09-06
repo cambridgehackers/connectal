@@ -58,8 +58,8 @@ typedef enum {Config_needle, Config_mpNext, Initialized, Search} Stage deriving 
 
 
 
-module mkMPEngine#(MemreadServer#(haystackBusWidth) haystackReader,
-		   MemreadServer#(configBusWidth) configReader) (MPEngine#(haystackBusWidth,configBusWidth))
+module mkMPEngine#(MemReadServer#(haystackBusWidth) haystackReader,
+		   MemReadServer#(configBusWidth) configReader) (MPEngine#(haystackBusWidth,configBusWidth))
 
    provisos(Add#(a__, 8, haystackBusWidth),
 	    Div#(haystackBusWidth,8,nc),

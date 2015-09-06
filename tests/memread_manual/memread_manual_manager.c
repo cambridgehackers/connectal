@@ -125,9 +125,9 @@ int main(int argc, const char **argv)
     pthread_t tid = 0;
 
     init_portal_internal(&intarr[0], IfcNames_MMUIndicationH2S,     0, MMUIndication_handleMessage, &TestMMUIndication_cbTable, NULL, NULL, MMUIndication_reqinfo);// fpga1
-    init_portal_internal(&intarr[1], IfcNames_ReadTestIndicationH2S,0, ReadTestIndication_handleMessage, &TestReadTestIndication_cbTable, NULL, NULL, ReadTestIndication_reqinfo); // fpga2
+    init_portal_internal(&intarr[1], IfcNames_ReadTestIndicationH2S,DEFAULT_TILE, ReadTestIndication_handleMessage, &TestReadTestIndication_cbTable, NULL, NULL, ReadTestIndication_reqinfo); // fpga2
     init_portal_internal(&intarr[2], IfcNames_MMURequestS2H,     0, NULL, NULL, NULL, NULL, MMURequest_reqinfo); // fpga3
-    init_portal_internal(&intarr[3], IfcNames_ReadTestRequestS2H,0, NULL, NULL, NULL, NULL, ReadTestRequest_reqinfo);    // fpga4
+    init_portal_internal(&intarr[3], IfcNames_ReadTestRequestS2H,DEFAULT_TILE, NULL, NULL, NULL, NULL, ReadTestRequest_reqinfo);    // fpga4
 
     sem_init(&test_sem, 0, 0);
     DmaManager_init(&priv, &intarr[2]);

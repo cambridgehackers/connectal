@@ -19,13 +19,11 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFO::*;
 import FIFOF::*;
 import Vector::*;
-
 import MemTypes::*;
-import MemreadEngine::*;
+import MemReadEngine::*;
 
 interface MemreadRequest;
    method Action startRead(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen, Bit#(32) iterCnt);
@@ -53,7 +51,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    Reg#(Bit#(32))           srcGen <- mkReg(0);
    Reg#(Bit#(32))    mismatchCount <- mkReg(0);
    FIFOF#(Bit#(64))       readFifo <- mkFIFOF;
-   let                          re <- mkMemreadEngine(1, readFifo);
+   let                          re <- mkMemReadEngine(1, readFifo);
    
    rule start (iterCnt > 0);
       iterCnt <= iterCnt-1;
@@ -95,5 +93,3 @@ module mkMemread#(MemreadIndication indication) (Memread);
       endmethod
    endinterface
 endmodule
-
-

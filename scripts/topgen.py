@@ -20,7 +20,6 @@
 ## ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 ## CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ## SOFTWARE.
-
 import os, sys, shutil, string
 import argparse
 import util
@@ -47,8 +46,8 @@ import Portal::*;
 import CtrlMux::*;
 import HostInterface::*;
 import Connectable::*;
-import MemreadEngine::*;
-import MemwriteEngine::*;
+import MemReadEngine::*;
+import MemWriteEngine::*;
 import MemTypes::*;
 import MemServer::*;
 import IfcNames::*;
@@ -191,8 +190,8 @@ class iReq:
 
 memShareInst = '''   SharedMemoryPortalConfigInput%(tparam)s l%(modname)sCW <- mkSharedMemoryPortalConfigInput;'''
 
-memEngineInst = '''   MemreadEngine#(64,2,%(clientCount)s) lSharereadEngine <- mkMemreadEngine();
-   MemwriteEngine#(64,2,%(clientCount)s) lSharewriteEngine <- mkMemwriteEngine();'''
+memEngineInst = '''   MemReadEngine#(64,2,%(clientCount)s) lSharereadEngine <- mkMemReadEngine();
+   MemWriteEngine#(64,2,%(clientCount)s) lSharewriteEngine <- mkMemWriteEngine();'''
 
 memModuleInstantiation = '''   SharedMemoryPortal#(64) l%(modname)sShare <- mkSharedMemory%(stype)sPortal(l%(modname)s.portalIfc,
            lSharereadEngine.readServers[%(clientCount)s], lSharewriteEngine.writeServers[%(clientCount)s]);'''

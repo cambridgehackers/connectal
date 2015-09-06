@@ -1,4 +1,3 @@
-
 // Copyright (c) 2013 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
@@ -33,16 +32,14 @@
 // One can request a DMA write from the FiFo to system memory, at a given
 // address, for a given count.
 // One can reset the fifo and counter.
-
 import Clocks::*;
 import FIFO::*;
 import FIFOF::*;
 import BRAMFIFO::*;
 import GetPut::*;
 import Connectable::*;
-
 import MemTypes::*;
-import MemwriteEngine::*;
+import MemWriteEngine::*;
 import ClientServer::*;
 
 // This version records timestamped events
@@ -108,7 +105,7 @@ module mkSyncBlueScopeEvent#(Integer samples, BlueScopeEventIndication indicatio
    Reg#(Bit#(dataWidth)) olddata <- mkReg(0, clocked_by sClk, reset_by sRst);
 
 
-   MemwriteEngine#(64,2,1) mwriter <- mkMemwriteEngine;
+   MemWriteEngine#(64,2,1) mwriter <- mkMemWriteEngine;
    
 //   (* descending_urgency = "resetState, startState" *)
 

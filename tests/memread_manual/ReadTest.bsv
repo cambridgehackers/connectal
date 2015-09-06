@@ -25,10 +25,9 @@ import Vector::*;
 import BuildVector::*;
 import GetPut::*;
 import ClientServer::*;
-
 import Pipe::*;
 import MemTypes::*;
-import MemreadEngine::*;
+import MemReadEngine::*;
 import Pipe::*;
 import HostInterface::*;
 
@@ -54,7 +53,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    Reg#(Bit#(32))   itersToStart <- mkReg(0);
    Reg#(Bit#(32))        wordsRead <- mkReg(0);
    Reg#(Bit#(32)) mismatchCounts <- mkReg(0);
-   MemreadEngine#(DataBusWidth,1,1) re <- mkMemreadEngine;
+   MemReadEngine#(DataBusWidth,1,1) re <- mkMemReadEngine;
    
    rule start (itersToStart > 0);
       $display("Test: request.put");

@@ -19,16 +19,14 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFO::*;
 import FIFOF::*;
 import Vector::*;
 import ClientServer::*;
 import GetPut::*;
-
 import MemTypes::*;
-import MemreadEngine::*;
-import MemwriteEngine::*;
+import MemReadEngine::*;
+import MemWriteEngine::*;
 import Pipe::*;
 import Connectable::*;
 
@@ -64,7 +62,7 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
    Reg#(Bit#(BurstLenSize)) readBurstLen <- mkReg(0);
    Reg#(Bit#(1))          readRun <- mkReg(0);
 
-   MemreadEngine#(64,1,1)         re <- mkMemreadEngineBuff(64*16);
+   MemReadEngine#(64,1,1)         re <- mkMemReadEngineBuff(64*16);
 
    Reg#(SGLId)     writePointer <- mkReg(0);
    Reg#(Bit#(32))         writeNumWords <- mkReg(0);
@@ -72,7 +70,7 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
    Reg#(Bit#(BurstLenSize)) writeBurstLen <- mkReg(0);
    Reg#(Bit#(1))          writeRun <- mkReg(0);
    
-   MemwriteEngine#(64,1,1)        we <- mkMemwriteEngineBuff(64*16);
+   MemWriteEngine#(64,1,1)        we <- mkMemWriteEngineBuff(64*16);
    
    mkConnection(adc, we.writeServers[0].data);
    rule readrule;
@@ -127,5 +125,3 @@ module mkFMComms1#(FMComms1Indication indication, PipeIn#(Bit#(64)) dac, PipeOut
       endmethod
    endinterface
 endmodule
-
-

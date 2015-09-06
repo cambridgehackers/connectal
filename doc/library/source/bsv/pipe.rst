@@ -214,7 +214,7 @@ Funnel Pipes
 
 Fork and Join with tree-based fanout and fanin for scalability.
 
-These are used by MemreadEngine and MemwriteEngine.
+These are used by MemReadEngine and MemWriteEngine.
 
 .. bsv:typedef:: Vector#(j,PipeOut#(a))   FunnelPipe#(numeric type j, numeric type k, type a, numeric type bitsPerCycle)
 
@@ -289,5 +289,5 @@ Delimited Pipes
 
 .. bsv:module:: mkRangePipeOut#()(RangePipeIfc#(a))
 
-   Creates a Pipe of values from xbase to xlimit by xstep. Used by Memread.
+   Creates a Pipe of values from xbase to xlimit by xstep. Used by MemRead.
 

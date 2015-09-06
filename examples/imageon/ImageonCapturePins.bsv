@@ -20,28 +20,9 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 import Vector::*;
-//import GetPut::*;
-//import Clocks :: *;
-//import BRAMFIFO::*;
-//import MemTypes::*;
-//import ClientServer::*;
-//import Pipe::*;
-//import MemwriteEngine::*;
-//import IserdesDatadeser::*;
 import IserdesDatadeserIF::*;
-//import Connectable :: *;
-//import FIFO::*;
-//import MemServer::*;
-//import MMU::*;
-//import Portal::*;
-//import XilinxCells::*;
-//import ConnectalClocks::*;
-//import Gearbox::*;
 import ConnectalSpi::*;
-//import ImageonVita::*;
 import HDMI::*;
-//import YUV::*;
-//import ConnectalXilinxCells::*;
 
 interface ImageonCapturePins;
     method Bit#(1) io_vita_clk_pll();

@@ -19,8 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
-
 import BRAM::*;
 import FIFO::*;
 import Vector::*;
@@ -29,9 +27,8 @@ import FIFOF::*;
 import SpecialFIFOs::*;
 import GetPut::*;
 import ClientServer::*;
-
 import MemTypes::*;
-import MemwriteEngine::*;
+import MemWriteEngine::*;
 import MemUtils::*;
 import Pipe::*;
 
@@ -206,7 +203,7 @@ module mkBRAMWriteClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMWriteClient#
    Reg#(Bit#(MemOffsetSize)) off <- mkReg(0);
    Gearbox#(1,nd,Bit#(dsz)) gb <- mk1toNGearbox(clk,rst,clk,rst);
    
-   MemwriteEngine#(busWidth,1,1) we <- mkMemwriteEngine;
+   MemWriteEngine#(busWidth,1,1) we <- mkMemWriteEngine;
    Bit#(MemOffsetSize) bus_width_in_bytes = fromInteger(valueOf(busWidth)/8);
       
    rule drain_geatbox;
@@ -253,8 +250,5 @@ module mkBRAMWriteClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMWriteClient#
       f.deq;
       return True;
    endmethod
-   
    interface dmaClient = we.dmaClient;
-
 endmodule
-

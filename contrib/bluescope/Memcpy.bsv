@@ -19,21 +19,18 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import Vector::*;
 import FIFOF::*;
 import GetPut::*;
 import FIFO::*;
 import Connectable::*;
 import ClientServer::*;
-
 import ConnectalMemory::*;
 import MemTypes::*;
 import BlueScope::*;
-import MemreadEngine::*;
-import MemwriteEngine::*;
+import MemReadEngine::*;
+import MemWriteEngine::*;
 import Pipe::*;
-
 
 interface MemcpyRequest;
    method Action startCopy(Bit#(32) wrPointer, Bit#(32) rdPointer, Bit#(32) numWords, Bit#(32) burstLen);
@@ -53,8 +50,8 @@ endinterface
 module mkMemcpyRequest#(MemcpyIndication indication,
 			BlueScope#(64) bs)(Memcpy);
    
-   MemreadEngine#(64,1,1)  re <- mkMemreadEngine;
-   MemwriteEngine#(64,1,1) we <- mkMemwriteEngine;
+   MemReadEngine#(64,1,1)  re <- mkMemReadEngine;
+   MemWriteEngine#(64,1,1) we <- mkMemWriteEngine;
 
    Reg#(Bit#(32))          iterCnt <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
@@ -100,4 +97,3 @@ module mkMemcpyRequest#(MemcpyIndication indication,
    interface readClient = re.dmaClient;
    interface writeClient = we.dmaClient;
 endmodule
-

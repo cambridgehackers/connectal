@@ -24,7 +24,7 @@ import FIFOF::*;
 import ClientServer::*;
 import GetPut::*;
 import MemTypes::*;
-import MemwriteEngine::*;
+import MemWriteEngine::*;
 import Pipe::*;
 import HostInterface::*;
 
@@ -47,7 +47,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    Reg#(Bit#(32))       burstLen <- mkReg(0);
    Reg#(Bit#(32))         srcGens <- mkReg(0);
    Reg#(Bool)              doOnce <- mkReg(False);
-   MemwriteEngine#(DataBusWidth,2,1)    we <- mkMemwriteEngine;
+   MemWriteEngine#(DataBusWidth,2,1)    we <- mkMemWriteEngine;
 
    rule start if (doOnce);
          we.writeServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(numWords), burstLen:truncate(burstLen), tag:0});

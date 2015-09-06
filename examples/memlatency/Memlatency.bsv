@@ -19,19 +19,17 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFOF::*;
 import FIFO::*;
 import ClientServer::*;
 import GetPut::*;
 import BRAMFIFO::*;
 import Vector::*;
-
 import Pipe::*;
 import ConnectalMemory::*;
 import MemTypes::*;
-import MemreadEngine::*;
-import MemwriteEngine::*;
+import MemReadEngine::*;
+import MemWriteEngine::*;
 
 interface MemlatencyRequest;
    method Action start(Bit#(32) wrPointer, Bit#(32) rdPointer, Bit#(32) burstLen);
@@ -54,8 +52,8 @@ endinterface
 module mkMemlatency#(MemlatencyIndication indication)(Memlatency);
 
 
-   MemreadEngine#(64,1,1)  re <- mkMemreadEngine;
-   MemwriteEngine#(64,2,1) we <- mkMemwriteEngine;
+   MemReadEngine#(64,1,1)  re <- mkMemReadEngine;
+   MemWriteEngine#(64,2,1) we <- mkMemWriteEngine;
    
    Reg#(Bit#(32))        rdIterCnt <- mkReg(0);
    Reg#(Bit#(32))        wrIterCnt <- mkReg(0);
@@ -114,7 +112,6 @@ module mkMemlatency#(MemlatencyIndication indication)(Memlatency);
 	 indication.readDone;
    endrule
 
-   
    interface MemlatencyRequest request;
    method Action start(Bit#(32) wp, Bit#(32) rp, Bit#(32) bl) if (rdIterCnt == 0 && wrIterCnt == 0);
       $display("start wrPointer=%d rdPointer=%d burstLen=%d", wp, rp, bl);
@@ -129,5 +126,4 @@ module mkMemlatency#(MemlatencyIndication indication)(Memlatency);
    endinterface
    interface MemReadClient dmaReadClient = cons(re.dmaClient, nil);
    interface MemWriteClient dmaWriteClient = cons(we.dmaClient, nil);
-   
 endmodule

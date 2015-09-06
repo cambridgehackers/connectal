@@ -19,15 +19,13 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFOF::*;
 import Vector::*;
 import GetPut::*;
 import ClientServer::*;
 import Connectable::*;
-
 import MemTypes::*;
-import MemreadEngine::*;
+import MemReadEngine::*;
 import Pipe::*;
 
 interface Memread2Request;
@@ -55,8 +53,8 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
    Reg#(Bit#(32))     srcGen1 <- mkReg(0);
    Reg#(Bit#(32)) mismatchCount0 <- mkReg(0);
    Reg#(Bit#(32)) mismatchCount1 <- mkReg(0);
-   MemreadEngine#(64,1,1) re0 <- mkMemreadEngine;
-   MemreadEngine#(64,1,1) re1 <- mkMemreadEngine;
+   MemReadEngine#(64,1,1) re0 <- mkMemReadEngine;
+   MemReadEngine#(64,1,1) re1 <- mkMemReadEngine;
 
    FIFOF#(Bit#(64)) outReg0 <- mkFIFOF;
    FIFOF#(Bit#(64)) outReg1 <- mkFIFOF;

@@ -19,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import HostInterface::*;
 import CtrlMux::*;
 import Vector::*;
@@ -28,9 +27,9 @@ import ClientServer::*;
 import GetPut::*;
 import Connectable::*;
 import MemTypes::*;
-import MemwriteEngine::*;
+import MemWriteEngine::*;
 import Pipe::*;
-import MemwriteEngineTest::*;
+import MemWriteEngineTest::*;
 
 interface MemwriteRequest;
    method Action startWrite(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen);
@@ -54,8 +53,8 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    Reg#(Bit#(32))       burstLen <- mkReg(0);
    Reg#(Bit#(32))         srcGens <- mkReg(0);
    Reg#(Bool)              doOnce <- mkReg(False);
-   MemwriteEngine#(64,2,1)    we <- mkMemwriteEngine;
-   MemwriteEngineTest         wet <- mkMemwriteEngineTest();
+   MemWriteEngine#(64,2,1)    we <- mkMemWriteEngine;
+   MemWriteEngineTest         wet <- mkMemWriteEngineTest();
    mkConnection(we.dmaClient, wet.dmaServer);
 
    rule reqRule;
@@ -99,4 +98,3 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    endinterface
    interface Vector dmaClients = cons(wet.dmaClient,nil);
 endmodule
-

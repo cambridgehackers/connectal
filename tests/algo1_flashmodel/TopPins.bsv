@@ -18,36 +18,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-//import SpecialFIFOs::*;
-//import Vector::*;
-//import BuildVector::*;
-//import StmtFSM::*;
-//import FIFO::*;
-//import BRAM::*;
-//import DefaultValue::*;
-//import Connectable::*;
-//import CtrlMux::*;
-//import Portal::*;
-//import ConnectalMemory::*;
-//import MemTypes::*;
-//import MemServer::*;
-//import MemServerInternal::*;
-//import MMU::*;
-//import MemreadEngine::*;
-//import MemwriteEngine::*;
-//import HostInterface::*;
-//import MMURequest::*;
-//import StrstrRequest::*;
-//import MemServerIndication::*;
-//import MMUIndication::*;
-//import StrstrIndication::*;
-//import NandSimNames::*;
-//import Strstr::*;
 import AuroraCommon::*;
-//import FlashTop::*;
-//import ControllerTypes::*;
-//import FlashRequest::*;
-//import FlashIndication::*;
 
 interface Top_Pins;
 	interface Aurora_Pins#(4) aurora_fmc1;
