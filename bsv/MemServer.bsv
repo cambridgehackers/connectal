@@ -19,8 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
-// BSV Libraries
 import FIFO::*;
 import Vector::*;
 import List::*;
@@ -30,59 +28,11 @@ import Assert::*;
 import StmtFSM::*;
 import SpecialFIFOs::*;
 import Connectable::*;
-
-// CONNECTAL Libraries
 import HostInterface::*;
 import MemTypes::*;
 import ConnectalMemory::*;
 import MMU::*;
 import MemServerInternal::*;
-
-function Put#(t) null_put();
-   return (interface Put;
-              method Action put(t x) if (False);
-                 noAction;
-              endmethod
-           endinterface);
-endfunction
-
-function Get#(t) null_get();
-   return (interface Get;
-              method ActionValue#(t) get() if (False);
-                 return ?;
-              endmethod
-           endinterface);
-endfunction
-
-function  PhysMemWriteClient#(addrWidth, busWidth) null_phys_mem_write_client();
-   return (interface PhysMemWriteClient;
-              interface Get writeReq = null_get;
-              interface Get writeData = null_get;
-              interface Put writeDone = null_put;
-           endinterface);
-endfunction
-
-function  PhysMemReadClient#(addrWidth, busWidth) null_phys_mem_read_client();
-   return (interface PhysMemReadClient;
-              interface Get readReq = null_get;
-              interface Put readData = null_put;
-           endinterface);
-endfunction
-
-function  MemWriteClient#(busWidth) null_mem_write_client();
-   return (interface MemWriteClient;
-              interface Get writeReq = null_get;
-              interface Get writeData = null_get;
-              interface Put writeDone = null_put;
-           endinterface);
-endfunction
-
-function  MemReadClient#(busWidth) null_mem_read_client();
-   return (interface MemReadClient;
-              interface Get readReq = null_get;
-              interface Put readData = null_put;
-           endinterface);
-endfunction
 
 interface MemServer#(numeric type addrWidth, numeric type dataWidth, numeric type nMasters);
    interface MemServerRequest request;
@@ -133,9 +83,9 @@ module mkMemServer#(Vector#(numReadClients, MemReadClient#(dataWidth)) readClien
    zipWithM(mkConnection,writeClients,take(writer.servers));
    
    function PhysMemMaster#(addrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(addrWidth,dataWidth);
-								     interface PhysMemReadClient read_client = reader.clients[i];
-								     interface PhysMemWriteClient write_client = writer.clients[i];
-								  endinterface);
+		     interface PhysMemReadClient read_client = reader.clients[i];
+		     interface PhysMemWriteClient write_client = writer.clients[i];
+		  endinterface);
 
    interface MemServerRequest request;
       method Action setTileState(TileControl tc);
@@ -347,7 +297,4 @@ module mkMemServerWithMMU#(Vector#(numReadClients, MemReadClient#(dataWidth)) re
    interface MemServerRequest memServerRequest = dma.request;
    interface MMURequest mmuRequest = hostMMU.request;
    interface Vector masters = dma.masters;
-
 endmodule
-
-

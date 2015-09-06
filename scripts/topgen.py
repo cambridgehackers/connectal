@@ -106,6 +106,7 @@ import CnocPortal::*;
 import Connectable::*;
 import HostInterface::*;
 import IfcNames::*;
+import MemTypes::*;
 %(generatedImport)s
 
 %(generatedTypedefs)s
@@ -138,9 +139,13 @@ module mkCnocTop
 %(connectInstantiate)s
 
 %(portalList)s
+   Vector#(NumWriteClients,MemWriteClient#(DataBusWidth)) nullWriters = replicate(null_mem_write_client());
+   Vector#(NumReadClients,MemReadClient#(DataBusWidth)) nullReaders = replicate(null_mem_read_client());
+
    interface requests = %(requestList)s;
    interface indications = %(indicationList)s;
-   interface masters = %(portalMaster)s;
+   interface readers = take(%(portalReaders)s);
+   interface writers = take(%(portalWriters)s);
 %(exportedInterfaces)s
 endmodule : mkCnocTop
 %(exportedNames)s

@@ -46,7 +46,8 @@ interface CnocTop#(numeric type numRequests, numeric type numIndications,
 		   );
    interface Vector#(numRequests, PortalMsgRequest) requests;
    interface Vector#(numIndications, PortalMsgIndication) indications;
-   interface Vector#(numMasters,PhysMemMaster#(addrWidth, dataWidth)) masters;
+   interface Vector#(NumReadClients,MemReadClient#(DataBusWidth)) readers;
+   interface Vector#(NumWriteClients,MemWriteClient#(DataBusWidth)) writers;
    interface pins pins;
 endinterface
 
