@@ -569,7 +569,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
         iowrite32(1, this_board->bar0io + CSR_MSIX_MASKED);
         disable_irq(this_board->irq_num);
 	for (i = 0; i < num_entries; i++) 
-		free_irq(this_board->irq_num + i, (void *) &this_board->portal[i]);
+		free_irq(this_board->irq_num + i, (void *) &this_board->tile[i]);
 MSI_ENABLED_label:
         /* disable MSI/MSIX */
         pci_disable_msix(dev);
