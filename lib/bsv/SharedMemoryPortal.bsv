@@ -50,7 +50,7 @@ typedef enum {
    } SharedMemoryPortalState deriving (Bits,Eq);
 
 module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32) portal,
-    MemReadServer#(64) readEngine, MemWriteServer#(64) writeEngine)(SharedMemoryPortal#(64));
+    MemReadEngineServer#(64) readEngine, MemWriteEngineServer#(64) writeEngine)(SharedMemoryPortal#(64));
    // read the head and tail pointers, if they are different, then read a request
    Reg#(Bit#(32)) limitReg <- mkReg(0);
    Reg#(Bit#(32)) headReg <- mkReg(0);
@@ -199,7 +199,7 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
 endmodule
 
 module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 32) portal,
-    MemReadServer#(64) readEngine, MemWriteServer#(64) writeEngine)(SharedMemoryPortal#(64));
+    MemReadEngineServer#(64) readEngine, MemWriteEngineServer#(64) writeEngine)(SharedMemoryPortal#(64));
    let defaultClock <- exposeCurrentClock;
    let defaultReset <- exposeCurrentReset;
    // read the head and tail pointers, if they are different, then read a request
