@@ -103,9 +103,14 @@ static tTraceInfo traceInfo;
  */
 static irqreturn_t intr_handler(int irq, void *p)
 {
-        tPortal *this_portal = p;
-        //printk(KERN_INFO "%s_%d: interrupt! (num:%d name:%d)\n", DEV_NAME, this_portal->portal_number, this_portal->portal_number, this_portal->device_name);
-        wake_up_interruptible(&(this_portal->extra->wait_queue)); 
+        tTile *this_tile = p;
+        tBoard *this_board = this_tile->board;
+	int i;
+        printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_tile->device_tile-1);
+	for (i = 0; i < MAX_NUM_PORTALS; i++)
+            if (this_tile->device_tile-1 == this_board->portal[i].device_tile
+              && this_board->portal[i].extra)
+                wake_up_interruptible(&(this_board->portal[i].extra->wait_queue)); 
         return IRQ_HANDLED;
 }
 
@@ -120,11 +125,11 @@ static int pcieportal_open(struct inode *inode, struct file *filp)
         tPortal *this_portal = ((extra_info *)inode->i_cdev)->portal;
 
         if (!this_portal) {
-        printk("pcieportal_open: device_number=%x /dev/connectal\n", device_number);
+        printk("pcieportal_open: basedevice_number=%x /dev/connectal\n", device_number);
         }
         else {
-        printk("pcieportal_open: device_number=%x device_name=%d device_tile=%d\n",
-	       device_number, this_portal->device_name, this_portal->device_tile);
+        printk("pcieportal_open: basedevice_number=%x tile=%d name=%d\n",
+	       device_number, this_portal->device_tile, this_portal->device_name);
 //printk("[%s:%d] inode %p filp %p portal %p priv %p privp %p extra %p\n", __FUNCTION__, __LINE__, inode, filp, this_portal, filp->private_data, privp, this_portal->extra);
         init_waitqueue_head(&(this_portal->extra->wait_queue));
         /* increment the open file count */
@@ -142,10 +147,8 @@ static int pcieportal_release(struct inode *inode, struct file *filp)
 {
         tPortal *this_portal = (tPortal *) filp->private_data;
         if (this_portal) {
-	tBoard  *this_board  = this_portal->board;
 	struct list_head *pmlist;
-	PortalInternal devptr = {.map_base = (volatile int *)(this_board->bar2io + PORTAL_BASE_OFFSET * this_portal->portal_number),
-				 .item = &kernelfunc};
+	PortalInternal devptr = {.map_base = this_portal->regs, .item = &kernelfunc};
 
         /* decrement the open file count */
         init_waitqueue_head(&(this_portal->extra->wait_queue));
@@ -165,20 +168,19 @@ static int pcieportal_release(struct inode *inode, struct file *filp)
 /* poll operation to predict blocking of reads & writes */
 static unsigned int pcieportal_poll(struct file *filp, poll_table *poll_table)
 {
-        unsigned int mask = 0;
-        uint32_t intr_status = 0;
         tPortal *this_portal = (tPortal *) filp->private_data;
-        //tBoard *this_board = this_portal->board;
+        unsigned int mask = 0;
+        uint32_t status = 0;
 
-        //printk(KERN_INFO "%s_%d_%d: poll function called\n", DEV_NAME, this_portal->device_tile, this_portal->device_name);
+        printk(KERN_INFO "%s_%d_%d: poll function called\n", DEV_NAME, this_portal->device_tile, this_portal->device_name);
         poll_wait(filp, &this_portal->extra->wait_queue, poll_table);
 	if (this_portal->regs) {
-            intr_status = *this_portal->regs;
+            status = *this_portal->regs;
         }
-        if (intr_status)
+        if (status)
             mask |= POLLIN  | POLLRDNORM; /* readable */
         //mask |= POLLOUT | POLLWRNORM; /* writable */
-        //printk(KERN_INFO "%s_%d_%d: poll return status is %x\n", DEV_NAME, this_portal->device_tile, this_portal->device_name, mask);
+        printk(KERN_INFO "%s_%d_%d: poll return status is %x\n", DEV_NAME, this_portal->device_tile, this_portal->device_name, mask);
         return mask;
 }
 
@@ -247,8 +249,7 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 /* pushd down allocated fd */
 		tSendFd sendFd;
 		struct pmentry *pmentry;
-                PortalInternal devptr = {.map_base = (volatile int *)(this_board->bar2io + PORTAL_BASE_OFFSET * this_portal->portal_number),
-                    .item = &kernelfunc};
+                PortalInternal devptr = {.map_base = this_portal->regs, .item = &kernelfunc};
 
                 err = copy_from_user(&sendFd, (void __user *) arg, sizeof(sendFd));
                 if (err)
@@ -268,8 +269,7 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
         case PCIE_DEREFERENCE: {
 		int id = arg;
 		struct list_head *pmlist, *n;
-		PortalInternal devptr = {.map_base = (volatile int *)(this_board->bar2io + PORTAL_BASE_OFFSET * this_portal->portal_number),
-					 .item = &kernelfunc};
+		PortalInternal devptr = {.map_base = this_portal->regs, .item = &kernelfunc};
 		err = -ENOENT;
 		MMURequest_idReturn(&devptr, id);
 		list_for_each_safe(pmlist, n, &this_portal->pmlist) {
@@ -323,7 +323,7 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
         if (vma->vm_pgoff > (~0UL >> PAGE_SHIFT))
                 return -EINVAL;
         if (vma->vm_pgoff < 16) {
-                off = pci_dev->resource[2].start + PORTAL_BASE_OFFSET * this_portal->portal_number;
+                off = pci_dev->resource[2].start + this_portal->offset;
                 printk("portal_mmap portal_number=%d board_start=%012lx portal_start=%012lx\n",
                      this_portal->portal_number, (long) pci_dev->resource[2].start, off);
                 vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
@@ -468,7 +468,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 			printk(KERN_INFO "%s: msix_entries[%d] vector=%d entry=%08x\n", DEV_NAME, i, msix_entries[i].vector, msix_entries[i].entry);
 		/* install the IRQ handler */
 		for (i = 0; i < num_entries; i++) {
-			if (request_irq(this_board->irq_num + i, intr_handler, 0, DEV_NAME, (void *) &this_board->portal[i])) {
+			if (request_irq(this_board->irq_num + i, intr_handler, 0, DEV_NAME, (void *) &this_board->tile[i])) {
 				printk(KERN_ERR "%s: Failed to get requested IRQ %d\n", DEV_NAME, this_board->irq_num);
 				err = -EBUSY;
 				goto MSI_ENABLED_label;
@@ -487,11 +487,14 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		  void __iomem *pportal = ptile;
 		  int num_portals = *(volatile uint32_t *)(pportal + PCR_NUM_PORTALS_OFFSET);
 		  int portal_index = 0;
+		  this_board->tile[tile_index].board = this_board;
+		  this_board->tile[tile_index].device_tile = tile_index + 1;
 		  do {  // loop over all portals in a tile
 		    int freep;
 		    uint32_t iid = *(volatile uint32_t *)(pportal + PCR_IID_OFFSET);
 		    tPortal *this_portal = &this_board->portal[fpn];
-		    printk("%s:%d num_tiles %x/%x num_portals %x/%x fpn %x iid=%d\n", __FUNCTION__, __LINE__, tile_index, num_tiles, portal_index, num_portals, fpn, iid);
+		    unsigned long offs = ((unsigned long)pportal) - ((unsigned long)this_board->bar2io);
+		    printk("%s:%d num_tiles %x/%x num_portals %x/%x fpn %x iid=%d pportal %p offset %lx\n", __FUNCTION__, __LINE__, tile_index, num_tiles, portal_index, num_portals, fpn, iid, pportal, offs);
 		    traceInfo.intval[fpn] = ioread32(this_board->bar0io + CSR_MSIX_MSG_DATA  + 16*fpn);
 		    traceInfo.name[fpn] = iid;
 		    for (freep = 0; freep < sizeof(portalp)/sizeof(portalp[0]); freep++)
@@ -509,6 +512,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		    this_portal->device_name = iid;
 		    this_portal->board = this_board;
 		    this_portal->regs = (volatile uint32_t *)pportal;
+		    this_portal->offset = offs;
 		    /* add the device operations */
 		    cdev_init(&this_portal->extra->cdev, &pcieportal_fops);
 		    this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + fpn);
