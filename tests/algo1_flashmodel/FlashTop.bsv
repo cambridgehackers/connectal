@@ -110,8 +110,8 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 
 
 	//Create read/write engines with NUM_BUSES memservers
-	MemReadEngine#(WordSz, 1, NUM_BUSES) re <- mkMemReadEngine;
-	MemWriteEngine#(WordSz, 1, NUM_BUSES) we <- mkMemWriteEngine;
+	MemReadEngine#(WordSz,WordSz,1, NUM_BUSES) re <- mkMemReadEngine;
+	MemWriteEngine#(WordSz,WordSz,1, NUM_BUSES) we <- mkMemWriteEngine;
 
 	Vector#(NUM_BUSES, Reg#(Bit#(16))) dmaWBurstCnts <- replicateM(mkReg(0));
 	Vector#(NUM_BUSES, Reg#(Bit#(16))) memSlaveCnts <- replicateM(mkReg(0));

@@ -52,8 +52,8 @@ endinterface
 module mkMemlatency#(MemlatencyIndication indication)(Memlatency);
 
 
-   MemReadEngine#(64,1,1)  re <- mkMemReadEngine;
-   MemWriteEngine#(64,2,1) we <- mkMemWriteEngine;
+   MemReadEngine#(64,64,1,1)  re <- mkMemReadEngine;
+   MemWriteEngine#(64,64,2,1) we <- mkMemWriteEngine;
    
    Reg#(Bit#(32))        rdIterCnt <- mkReg(0);
    Reg#(Bit#(32))        wrIterCnt <- mkReg(0);

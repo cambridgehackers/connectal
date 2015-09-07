@@ -77,8 +77,8 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(haystackBusWidth, configBu
    let verbose = True;
 
    Reg#(Bit#(32)) needleLen <- mkReg(0);
-   MemReadEngine#(haystackBusWidth, 1, p) haystack_re <- mkMemReadEngineBuff(1024);
-   MemReadEngine#(configBusWidth, 1, p) config_re <- mkMemReadEngineBuff(1024);
+   MemReadEngine#(haystackBusWidth,haystackBusWidth,1,p) haystack_re <- mkMemReadEngineBuff(1024);
+   MemReadEngine#(configBusWidth,configBusWidth,1,p) config_re <- mkMemReadEngineBuff(1024);
    
    Reg#(Bit#(32)) needleSGLId <- mkReg(0);
    Reg#(Bit#(32)) mpNextSGLId <- mkReg(0);

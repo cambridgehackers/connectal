@@ -105,7 +105,7 @@ module mkSyncBlueScopeEvent#(Integer samples, BlueScopeEventIndication indicatio
    Reg#(Bit#(dataWidth)) olddata <- mkReg(0, clocked_by sClk, reset_by sRst);
 
 
-   MemWriteEngine#(64,2,1) mwriter <- mkMemWriteEngine;
+   MemWriteEngine#(64,64,2,1) mwriter <- mkMemWriteEngine;
    
 //   (* descending_urgency = "resetState, startState" *)
 

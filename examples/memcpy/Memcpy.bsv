@@ -58,8 +58,8 @@ typedef TDiv#(DataBusWidth,32) WordsPerBeat;
 
 module mkMemcpy#(MemcpyIndication indication)(Memcpy);
 
-   MemReadEngine#(DataBusWidth,CmdQDepth,1)  re <- mkMemReadEngineBuff(valueOf(CmdQDepth)*512);
-   MemWriteEngine#(DataBusWidth,CmdQDepth,1) we <- mkMemWriteEngineBuff(valueOf(CmdQDepth)*512);
+   MemReadEngine#(DataBusWidth,DataBusWidth,CmdQDepth,1)  re <- mkMemReadEngineBuff(valueOf(CmdQDepth)*512);
+   MemWriteEngine#(DataBusWidth,DataBusWidth,CmdQDepth,1) we <- mkMemWriteEngineBuff(valueOf(CmdQDepth)*512);
 
    Integer wordsPerBeat = valueOf(WordsPerBeat);
 

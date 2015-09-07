@@ -172,31 +172,31 @@ Memory Engine Types
 Memory Engine Interfaces
 ------------------------
 
-.. bsv:interface:: MemWriteServer#(numeric type dataWidth)
+.. bsv:interface:: MemWriteEngineServer#(numeric type busWidth)
 
    .. bsv:subinterface:: Put#(MemengineCmd)       request
 
    .. bsv:subinterface:: Get#(Bool)               done
 
-   .. bsv:subinterface:: PipeIn#(Bit#(dataWidth)) data
+   .. bsv:subinterface:: PipeIn#(Bit#(busWidth)) data
 
-.. bsv:interface:: MemWriteEngine#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers)
+.. bsv:interface:: MemWriteEngine#(numeric type busWidth, numeric type userWidth, numeric type cmdQDepth, numeric type numServers)
 
-   .. bsv:subinterface:: MemWriteClient#(dataWidth) dmaClient
+   .. bsv:subinterface:: MemWriteClient#(busWidth) dmaClient
 
-   .. bsv:subinterface:: Vector#(numServers, MemWriteServer#(dataWidth)) writeServers
+   .. bsv:subinterface:: Vector#(numServers, MemWriteEngineServer#(busWidth)) writeServers
 
-.. bsv:interface:: MemReadServer#(numeric type dataWidth)
+.. bsv:interface:: MemReadEngineServer#(numeric type busWidth)
 
    .. bsv:subinterface:: Put#(MemengineCmd)        request
 
-   .. bsv:subinterface:: PipeOut#(Bit#(dataWidth)) data
+   .. bsv:subinterface:: PipeOut#(Bit#(busWidth)) data
       
-.. bsv:interface:: MemReadEngine#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers)
+.. bsv:interface:: MemReadEngine#(numeric type busWidth, numeric type userWidth, numeric type cmdQDepth, numeric type numServers)
 
-   .. bsv:subinterface:: MemReadClient#(dataWidth) dmaClient
+   .. bsv:subinterface:: MemReadClient#(busWidth) dmaClient
 
-   .. bsv:subinterface:: Vector#(numServers, MemReadServer#(dataWidth)) readServers
+   .. bsv:subinterface:: Vector#(numServers, MemReadEngineServer#(busWidth)) readServers
 
 
 Memory Traffic Interfaces

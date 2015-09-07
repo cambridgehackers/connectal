@@ -50,7 +50,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    
    Reg#(Bit#(32))           srcGen <- mkReg(0);
    Reg#(Bit#(32))    mismatchCount <- mkReg(0);
-   MemReadEngine#(64,1,1)         re <- mkMemReadEngine;
+   MemReadEngine#(64,64,1,1)         re <- mkMemReadEngine;
 
    let debug = True;
    

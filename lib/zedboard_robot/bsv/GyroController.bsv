@@ -73,7 +73,7 @@ module mkGyroController#(GyroCtrlIndication ind)(GyroController);
    let clk <- exposeCurrentClock;
    let rst <- exposeCurrentReset;
    Gearbox#(1,8,Bit#(8)) gb   <- mk1toNGearbox(clk,rst,clk,rst);
-   MemWriteEngine#(64, 1, 1) we <- mkMemWriteEngine;
+   MemWriteEngine#(64,64,1,1) we <- mkMemWriteEngine;
 
    
    Reg#(Bit#(32))  en_memwr   <- mkReg(maxBound);

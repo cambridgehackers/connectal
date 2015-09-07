@@ -53,7 +53,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    Reg#(Bit#(32))   itersToStart <- mkReg(0);
    Reg#(Bit#(32))        wordsRead <- mkReg(0);
    Reg#(Bit#(32)) mismatchCounts <- mkReg(0);
-   MemReadEngine#(DataBusWidth,1,1) re <- mkMemReadEngine;
+   MemReadEngine#(DataBusWidth,DataBusWidth,1,1) re <- mkMemReadEngine;
    
    rule start (itersToStart > 0);
       $display("Test: request.put");

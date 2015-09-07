@@ -105,8 +105,8 @@ endmodule
 module mkSharedMemoryFifoImpl(FIFO#(Bit#(32)));
    FIFO#(Bit#(32)) dataFifo <- mkFIFO();
 
-   MemReadEngine#(64, 4, 2)  readEngine <- mkMemReadEngine();
-   MemWriteEngine#(64, 4, 2) writeEngine <- mkMemWriteEngine();
+   MemReadEngine#(64,64,4, 2)  readEngine <- mkMemReadEngine();
+   MemWriteEngine#(64,64,4, 2) writeEngine <- mkMemWriteEngine();
    let mem <- mkMemory(readEngine.dmaClient, writeEngine.dmaClient);
 
    Reg#(Bit#(32)) dataReg <- mkReg(0);

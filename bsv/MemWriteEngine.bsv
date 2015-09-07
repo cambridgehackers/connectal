@@ -33,16 +33,16 @@ import MemTypes::*;
 import Pipe::*;
 import MemUtils::*;
 
-module mkMemWriteEngine(MemWriteEngine#(dataWidth, cmdQDepth, numServers))
-   provisos( Mul#(TDiv#(dataWidth, 8), 8, dataWidth)
+module mkMemWriteEngine(MemWriteEngine#(busWidth, userWidth, cmdQDepth, numServers))
+   provisos( Mul#(TDiv#(busWidth, 8), 8, busWidth)
 	    ,Add#(1, a__, numServers)
 	    ,Add#(b__, TLog#(numServers), TAdd#(1, TLog#(TMul#(cmdQDepth,numServers))))
 	    ,Pipe::FunnelPipesPipelined#(1, numServers,Tuple2#(Bit#(TLog#(numServers)), MemTypes::MemengineCmd), TMin#(2,TLog#(numServers)))
-	    ,Pipe::FunnelPipesPipelined#(1, numServers,Tuple2#(Bit#(dataWidth),Bool),TMin#(2, TLog#(numServers)))
+	    ,Pipe::FunnelPipesPipelined#(1, numServers,Tuple2#(Bit#(busWidth),Bool),TMin#(2, TLog#(numServers)))
 	    ,Add#(c__, TLog#(numServers), TLog#(TMul#(cmdQDepth, numServers)))
-	    ,Add#(1, d__, dataWidth)
-	    ,FunnelPipesPipelined#(1, numServers, Tuple3#(Bit#(2),Bit#(dataWidth),Bool), TMin#(2, TLog#(numServers)))
-	    ,FunnelPipesPipelined#(1, numServers,Tuple3#(Bit#(TLog#(numServers)), Bit#(dataWidth), Bool), TMin#(2,TLog#(numServers)))
+	    ,Add#(1, d__, busWidth)
+	    ,FunnelPipesPipelined#(1, numServers, Tuple3#(Bit#(2),Bit#(busWidth),Bool), TMin#(2, TLog#(numServers)))
+	    ,FunnelPipesPipelined#(1, numServers,Tuple3#(Bit#(TLog#(numServers)), Bit#(busWidth), Bool), TMin#(2,TLog#(numServers)))
 	    ,Add#(e__, TLog#(numServers), 6)
 	    );
    let rv <- mkMemWriteEngineBuff(valueOf(TExp#(BurstLenSize)));
@@ -156,10 +156,10 @@ module mkBurstFunnel#(Integer maxBurstLen)(BurstFunnel#(k,w))
    interface PipeOut dataOut = toPipeOut(exit_data);
 endmodule
 
-module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(dataWidth, cmdQDepth, numServers))
-   provisos ( Div#(dataWidth,8,dataWidthBytes)
-	     ,Mul#(dataWidthBytes,8,dataWidth)
-	     ,Log#(dataWidthBytes,beatShift)
+module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, userWidth, cmdQDepth, numServers))
+   provisos ( Div#(busWidth,8,busWidthBytes)
+	     ,Mul#(busWidthBytes,8,busWidth)
+	     ,Log#(busWidthBytes,beatShift)
 	     ,Log#(cmdQDepth,logCmdQDepth)
 	     ,Mul#(cmdQDepth,numServers,cmdBuffSz)
 	     ,Log#(cmdBuffSz, cmdBuffAddrSz)
@@ -171,16 +171,16 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(dataWidth,
 	     ,Add#(a__, serverIdxSz, cmdBuffAddrSz)
 	     ,Min#(2,TLog#(numServers),bpc)
 	     ,FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(serverIdxSz),MemengineCmd),bpc)
-	     ,FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(dataWidth),Bool),bpc)
-	     ,FunnelPipesPipelined#(1, numServers, Tuple3#(Bit#(2),Bit#(dataWidth),Bool), TMin#(2, serverIdxSz))
-	     ,Add#(1, d__, dataWidth)
-	     ,FunnelPipesPipelined#(1, numServers, Tuple3#(Bit#(serverIdxSz),Bit#(dataWidth), Bool), TMin#(2, serverIdxSz))
+	     ,FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(busWidth),Bool),bpc)
+	     ,FunnelPipesPipelined#(1, numServers, Tuple3#(Bit#(2),Bit#(busWidth),Bool), TMin#(2, serverIdxSz))
+	     ,Add#(1, d__, busWidth)
+	     ,FunnelPipesPipelined#(1, numServers, Tuple3#(Bit#(serverIdxSz),Bit#(busWidth), Bool), TMin#(2, serverIdxSz))
 	     ,Add#(f__, TLog#(numServers), TAdd#(1, serverIdxSz))
 	     ,Add#(g__, serverIdxSz, 6)
 	     );
    
    
-   Integer bufferSizeBeats = bufferSizeBytes/valueOf(dataWidthBytes);
+   Integer bufferSizeBeats = bufferSizeBytes/valueOf(busWidthBytes);
    Vector#(numServers, Reg#(Bool))               outs1 <- replicateM(mkReg(False));
    Vector#(numServers, ConfigCounter#(16))        buffCap <- replicateM(mkConfigCounter(0));
    Vector#(numServers, Reg#(MemengineCmd))        cmdRegs <- replicateM(mkReg(unpack(0)));
@@ -193,7 +193,7 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(dataWidth,
    
    Vector#(numServers, FIFO#(Bool))              outfs <- replicateM(mkSizedFIFO(1));
    Vector#(numServers, FIFOF#(MemengineCmd))    cmds_in <- replicateM(mkSizedFIFOF(1));
-   Vector#(numServers, FIFOF#(Bit#(dataWidth)))  write_data_buffs <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
+   Vector#(numServers, FIFOF#(Bit#(busWidth)))  write_data_buffs <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
       
    Reg#(Bit#(8))                    respCnt <- mkReg(0);
    Reg#(Bit#(TAdd#(1,serverIdxSz))) loadIdx <- mkReg(0);
@@ -263,14 +263,14 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(dataWidth,
 	  endmethod
        endinterface);
    
-   Vector#(numServers, MemWriteEngineServer#(dataWidth)) rs;
+   Vector#(numServers, MemWriteEngineServer#(busWidth)) rs;
    for(Integer i = 0; i < valueOf(numServers); i=i+1)
-      rs[i] = (interface MemWriteEngineServer#(dataWidth);
+      rs[i] = (interface MemWriteEngineServer#(busWidth);
                   interface Put request;
                      method Action put(MemengineCmd cmd);
                         Bit#(32) bsb = fromInteger(bufferSizeBytes);
 `ifdef SIMULATION
-                        Bit#(32) dw = fromInteger(valueOf(dataWidthBytes));
+                        Bit#(32) dw = fromInteger(valueOf(busWidthBytes));
                         Bit#(32) bl = extend(cmd.burstLen);
                         // this is because bsc lifts the divide operation (below) 
                         // and on startup the simulator gets a floating-point exception
@@ -318,7 +318,7 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(dataWidth,
 	 endmethod
       endinterface
       interface Get writeData;
-	 method ActionValue#(MemData#(dataWidth)) get;
+	 method ActionValue#(MemData#(busWidth)) get;
 	    match {.rc, .new_tag, .last} = workf.first;
 	    Bit#(serverIdxSz) idx = truncate(new_tag);
 	    let new_respCnt = respCnt+1;

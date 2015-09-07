@@ -190,8 +190,8 @@ class iReq:
 
 memShareInst = '''   SharedMemoryPortalConfigInput%(tparam)s l%(modname)sCW <- mkSharedMemoryPortalConfigInput;'''
 
-memEngineInst = '''   MemReadEngine#(64,2,%(clientCount)s) lSharereadEngine <- mkMemReadEngine();
-   MemWriteEngine#(64,2,%(clientCount)s) lSharewriteEngine <- mkMemWriteEngine();'''
+memEngineInst = '''   MemReadEngine#(64,64,2,%(clientCount)s) lSharereadEngine <- mkMemReadEngine();
+   MemWriteEngine#(64,64,2,%(clientCount)s) lSharewriteEngine <- mkMemWriteEngine();'''
 
 memModuleInstantiation = '''   SharedMemoryPortal#(64) l%(modname)sShare <- mkSharedMemory%(stype)sPortal(l%(modname)s.portalIfc,
            lSharereadEngine.readServers[%(clientCount)s], lSharewriteEngine.writeServers[%(clientCount)s]);'''

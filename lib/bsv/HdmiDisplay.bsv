@@ -85,7 +85,7 @@ module mkHdmiDisplay#(Clock hdmi_clock,
    Reg#(Bit#(1)) bozobit <- mkReg(0, clocked_by hdmi_clock, reset_by hdmi_reset);
 
    Reg#(Maybe#(Bit#(32))) referenceReg <- mkReg(tagged Invalid);
-   MemReadEngine#(64,NumOutstandingRequests,1) memreadEngine <- mkMemReadEngine;
+   MemReadEngine#(64,64,NumOutstandingRequests,1) memreadEngine <- mkMemReadEngine;
 
    HdmiGenerator#(Rgb888) hdmiGen <- mkHdmiGenerator(defaultClock, defaultReset,
 			startDMA, hdmiGeneratorIndication, clocked_by hdmi_clock, reset_by hdmi_reset);

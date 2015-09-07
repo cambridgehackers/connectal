@@ -54,7 +54,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    Reg#(Bit#(32))   itersToStart <- mkReg(0);
    Reg#(Bit#(32))        bytesRead <- mkReg(0);
    Reg#(Bit#(32)) mismatchCounts <- mkReg(0);
-   MemReadEngine#(DataBusWidth,NumOutstandingRequests,1)        re <- mkMemReadEngineBuff(valueOf(BufferSizeBytes));
+   MemReadEngine#(DataBusWidth,DataBusWidth,NumOutstandingRequests,1)        re <- mkMemReadEngineBuff(valueOf(BufferSizeBytes));
    FIFO#(Bit#(32)) checkDoneFifo <- mkFIFO();
    
    rule start (itersToStart > 0);

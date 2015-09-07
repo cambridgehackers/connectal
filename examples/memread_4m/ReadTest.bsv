@@ -55,7 +55,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest#(4));
    Reg#(Bit#(3))          startPtr <- mkReg(0);
    Reg#(Bit#(3))         finishPtr <- mkReg(0);
    Reg#(Bit#(32))    mismatchAccum <- mkReg(0);
-   Vector#(4,MemReadEngine#(DataBusWidth,1,1))      res <- replicateM(mkMemReadEngine);
+   Vector#(4,MemReadEngine#(DataBusWidth,DataBusWidth,1,1))      res <- replicateM(mkMemReadEngine);
    FIFO#(void)           startFifo <- mkFIFO;
    
    Vector#(4,Reg#(Bit#(32)))        srcGens <- replicateM(mkReg(0));
@@ -116,7 +116,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest#(4));
          end
       endrule
    
-   function MemReadClient#(DataBusWidth) dc(MemReadEngine#(DataBusWidth,1,1) re) = re.dmaClient;
+   function MemReadClient#(DataBusWidth) dc(MemReadEngine#(DataBusWidth,DataBusWidth,1,1) re) = re.dmaClient;
    interface dmaClients = map(dc,res);
    interface ReadTestRequest request;
       method Action startRead(Bit#(32) rp, Bit#(32) nb, Bit#(32) bl, Bit#(32) ic);

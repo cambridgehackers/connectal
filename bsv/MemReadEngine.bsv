@@ -34,8 +34,8 @@ import MemTypes::*;
 import Pipe::*;
 import MemUtils::*;
 
-module mkMemReadEngine(MemReadEngine#(dataWidth, cmdQDepth, numServers))
-   provisos( Mul#(TDiv#(dataWidth, 8), 8, dataWidth)
+module mkMemReadEngine(MemReadEngine#(busWidth, userWidth, cmdQDepth, numServers))
+   provisos( Mul#(TDiv#(busWidth, 8), 8, busWidth)
 	    ,Add#(1, a__, numServers)
 	    ,Add#(b__, TLog#(numServers), TAdd#(1, TLog#(TMul#(cmdQDepth,numServers))))
 	    ,Add#(c__, TLog#(numServers), TLog#(TMul#(cmdQDepth, numServers)))
@@ -45,10 +45,10 @@ module mkMemReadEngine(MemReadEngine#(dataWidth, cmdQDepth, numServers))
    return rv;
 endmodule
 
-module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(dataWidth, cmdQDepth, numServers))
-   provisos (Div#(dataWidth,8,dataWidthBytes),
-	     Mul#(dataWidthBytes,8,dataWidth),
-	     Log#(dataWidthBytes,beatShift),
+module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, userWidth, cmdQDepth, numServers))
+   provisos (Div#(busWidth,8,busWidthBytes),
+	     Mul#(busWidthBytes,8,busWidth),
+	     Log#(busWidthBytes,beatShift),
 	     Log#(cmdQDepth,logCmdQDepth),
 	     Mul#(cmdQDepth,numServers,cmdBuffSz),
 	     Log#(cmdBuffSz, cmdBuffAddrSz),
@@ -64,7 +64,7 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(dataWidth, 
 
    let verbose = False;
 
-   Integer bufferSizeBeats = bufferSizeBytes/valueOf(dataWidthBytes);
+   Integer bufferSizeBeats = bufferSizeBytes/valueOf(busWidthBytes);
    Vector#(numServers, Reg#(Bool))          clientInFlight <- replicateM(mkReg(False));
    Vector#(numServers, ConfigCounter#(16))  clientAvail <- replicateM(mkConfigCounter(fromInteger(bufferSizeBeats)));
    Vector#(numServers, Reg#(MemengineCmd))  clientCommand <- replicateM(mkReg(unpack(0)));
@@ -77,11 +77,11 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(dataWidth, 
 
    Vector#(numServers, FIFO#(MemengineCmd)) clientRequest <- replicateM(mkFIFO());
 
-   FIFOF#(MemData#(dataWidth))                       serverDataFifo <- mkFIFOF;
-   Vector#(numServers, FIFOF#(MemDataF#(dataWidth))) clientDataFifo <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
-   function PipeOut#(MemDataF#(dataWidth)) mem_data_out(PipeOut#(MemDataF#(dataWidth)) inpipe, Integer i) = 
+   FIFOF#(MemData#(busWidth))                       serverDataFifo <- mkFIFOF;
+   Vector#(numServers, FIFOF#(MemDataF#(busWidth))) clientDataFifo <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
+   function PipeOut#(MemDataF#(busWidth)) mem_data_out(PipeOut#(MemDataF#(busWidth)) inpipe, Integer i) = 
       (interface PipeOut;
-	  method MemDataF#(dataWidth) first;
+	  method MemDataF#(busWidth) first;
 	     return inpipe.first;
 	  endmethod
 	  method Action deq;
@@ -91,7 +91,7 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(dataWidth, 
 	  endmethod
 	  method Bool notEmpty = inpipe.notEmpty;
        endinterface);
-   Vector#(numServers, PipeOut#(MemDataF#(dataWidth))) memDataPipes = zipWith(mem_data_out, map(toPipeOut,clientDataFifo), genVector);
+   Vector#(numServers, PipeOut#(MemDataF#(busWidth))) memDataPipes = zipWith(mem_data_out, map(toPipeOut,clientDataFifo), genVector);
 
    Reg#(Bit#(8))                    respCnt <- mkReg(0);
    Reg#(Bit#(TAdd#(1,serverIdxSz))) loadIdx <- mkReg(0);
@@ -180,14 +180,14 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(dataWidth, 
       clientDataFifo[idx].enq(MemDataF { data: d.data, tag: d.tag, first: first, last: d.last});
    endrule
 
-   Vector#(numServers, MemReadEngineServer#(dataWidth)) rs;
+   Vector#(numServers, MemReadEngineServer#(busWidth)) rs;
    for(Integer i = 0; i < valueOf(numServers); i=i+1)
-      rs[i] = (interface MemReadEngineServer#(dataWidth);
+      rs[i] = (interface MemReadEngineServer#(busWidth);
 		  interface Put request;
 		     method Action put(MemengineCmd cmd);
 			Bit#(32) bsb = fromInteger(bufferSizeBytes);
 `ifdef SIMULATION
-			Bit#(32) dw = fromInteger(valueOf(dataWidthBytes));
+			Bit#(32) dw = fromInteger(valueOf(busWidthBytes));
 			let mdw = ((cmd.len)/dw)*dw != cmd.len;
 			let bbl = extend(cmd.burstLen) > bsb;
 			if(bbl || mdw) begin

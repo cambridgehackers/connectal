@@ -512,9 +512,9 @@ interface DramMatrixMultiply#(numeric type n, numeric type dmasz, numeric type n
 endinterface
 
 module  mkDramMatrixMultiply#(HostInterface host)(DramMatrixMultiply#(N,TMul#(N,32),2));
-   MemWriteEngine#(TMul#(N,32),2, J)   writeEngine <- mkMemWriteEngine();
-   MemReadEngine#(TMul#(N,32), 2, J) rowReadEngine <- mkMemReadEngineBuff(512);
-   MemReadEngine#(TMul#(N,32), 2, K) colReadEngine <- mkMemReadEngineBuff(512);
+   MemWriteEngine#(TMul#(N,32),TMul#(N,32),2, J)   writeEngine <- mkMemWriteEngine();
+   MemReadEngine#(TMul#(N,32), TMul#(N,32), 2, J) rowReadEngine <- mkMemReadEngineBuff(512);
+   MemReadEngine#(TMul#(N,32), TMul#(N,32), 2, K) colReadEngine <- mkMemReadEngineBuff(512);
    
    Vector#(J, MemReadServer#(TMul#(N,32))) rowReadServers = rowReadEngine.readServers;
    Vector#(K, MemReadServer#(TMul#(N,32))) colReadServers = colReadEngine.readServers;

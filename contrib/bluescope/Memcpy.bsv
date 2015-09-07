@@ -50,8 +50,8 @@ endinterface
 module mkMemcpyRequest#(MemcpyIndication indication,
 			BlueScope#(64) bs)(Memcpy);
    
-   MemReadEngine#(64,1,1)  re <- mkMemReadEngine;
-   MemWriteEngine#(64,1,1) we <- mkMemWriteEngine;
+   MemReadEngine#(64,64,1,1)  re <- mkMemReadEngine;
+   MemWriteEngine#(64,64,1,1) we <- mkMemWriteEngine;
 
    Reg#(Bit#(32))          iterCnt <- mkReg(0);
    Reg#(Bit#(32))         numWords <- mkReg(0);
