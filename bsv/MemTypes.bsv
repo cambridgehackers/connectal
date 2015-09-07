@@ -73,15 +73,15 @@ typedef struct {SGLId sglId;
 		Bit#(MemTagSize) tag;
 		} MemengineCmd deriving (Eq,Bits);
 
-interface MemWriteEngineServer#(numeric type busWidth);
+interface MemWriteEngineServer#(numeric type userWidth);
    interface Put#(MemengineCmd)       request;
    interface Get#(Bool)               done;
-   interface PipeIn#(Bit#(busWidth)) data;
+   interface PipeIn#(Bit#(userWidth)) data;
 endinterface
 
 interface MemWriteEngine#(numeric type busWidth, numeric type userWidth, numeric type cmdQDepth, numeric type numServers);
    interface MemWriteClient#(busWidth) dmaClient;
-   interface Vector#(numServers, MemWriteEngineServer#(busWidth)) writeServers;
+   interface Vector#(numServers, MemWriteEngineServer#(userWidth)) writeServers;
 endinterface
 
 typedef struct {
@@ -91,14 +91,14 @@ typedef struct {
    Bool last;
    } MemDataF#(numeric type dsz) deriving (Bits);
 
-interface MemReadEngineServer#(numeric type busWidth);
+interface MemReadEngineServer#(numeric type userWidth);
    interface Put#(MemengineCmd)             request;
-   interface PipeOut#(MemDataF#(busWidth)) data;
+   interface PipeOut#(MemDataF#(userWidth)) data;
 endinterface
 
 interface MemReadEngine#(numeric type busWidth, numeric type userWidth, numeric type cmdQDepth, numeric type numServers);
    interface MemReadClient#(busWidth) dmaClient;
-   interface Vector#(numServers, MemReadEngineServer#(busWidth)) readServers;
+   interface Vector#(numServers, MemReadEngineServer#(userWidth)) readServers;
 endinterface
 
 //

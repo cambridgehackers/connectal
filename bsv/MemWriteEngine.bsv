@@ -41,6 +41,7 @@ module mkMemWriteEngine(MemWriteEngine#(busWidth, userWidth, cmdQDepth, numServe
 	    ,Pipe::FunnelPipesPipelined#(1, numServers,Tuple2#(Bit#(busWidth),Bool),TMin#(2, TLog#(numServers)))
 	    ,Add#(c__, TLog#(numServers), TLog#(TMul#(cmdQDepth, numServers)))
 	    ,Add#(1, d__, busWidth)
+	    ,Add#(userWidth, 0, busWidth)
 	    ,FunnelPipesPipelined#(1, numServers, Tuple3#(Bit#(2),Bit#(busWidth),Bool), TMin#(2, TLog#(numServers)))
 	    ,FunnelPipesPipelined#(1, numServers,Tuple3#(Bit#(TLog#(numServers)), Bit#(busWidth), Bool), TMin#(2,TLog#(numServers)))
 	    ,Add#(e__, TLog#(numServers), 6)
@@ -174,6 +175,7 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
 	     ,FunnelPipesPipelined#(1,numServers,Tuple2#(Bit#(busWidth),Bool),bpc)
 	     ,FunnelPipesPipelined#(1, numServers, Tuple3#(Bit#(2),Bit#(busWidth),Bool), TMin#(2, serverIdxSz))
 	     ,Add#(1, d__, busWidth)
+	     ,Add#(userWidth, 0, busWidth)
 	     ,FunnelPipesPipelined#(1, numServers, Tuple3#(Bit#(serverIdxSz),Bit#(busWidth), Bool), TMin#(2, serverIdxSz))
 	     ,Add#(f__, TLog#(numServers), TAdd#(1, serverIdxSz))
 	     ,Add#(g__, serverIdxSz, 6)
@@ -193,7 +195,7 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
    
    Vector#(numServers, FIFO#(Bool))              outfs <- replicateM(mkSizedFIFO(1));
    Vector#(numServers, FIFOF#(MemengineCmd))    cmds_in <- replicateM(mkSizedFIFOF(1));
-   Vector#(numServers, FIFOF#(Bit#(busWidth)))  write_data_buffs <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
+   Vector#(numServers, FIFOF#(Bit#(userWidth)))  write_data_buffs <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
       
    Reg#(Bit#(8))                    respCnt <- mkReg(0);
    Reg#(Bit#(TAdd#(1,serverIdxSz))) loadIdx <- mkReg(0);
@@ -263,9 +265,9 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
 	  endmethod
        endinterface);
    
-   Vector#(numServers, MemWriteEngineServer#(busWidth)) rs;
+   Vector#(numServers, MemWriteEngineServer#(userWidth)) rs;
    for(Integer i = 0; i < valueOf(numServers); i=i+1)
-      rs[i] = (interface MemWriteEngineServer#(busWidth);
+      rs[i] = (interface MemWriteEngineServer#(userWidth);
                   interface Put request;
                      method Action put(MemengineCmd cmd);
                         Bit#(32) bsb = fromInteger(bufferSizeBytes);

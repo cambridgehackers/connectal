@@ -37,6 +37,7 @@ import MemUtils::*;
 module mkMemReadEngine(MemReadEngine#(busWidth, userWidth, cmdQDepth, numServers))
    provisos( Mul#(TDiv#(busWidth, 8), 8, busWidth)
 	    ,Add#(1, a__, numServers)
+	    ,Add#(busWidth, 0, userWidth)
 	    ,Add#(b__, TLog#(numServers), TAdd#(1, TLog#(TMul#(cmdQDepth,numServers))))
 	    ,Add#(c__, TLog#(numServers), TLog#(TMul#(cmdQDepth, numServers)))
 	    ,Add#(d__, TLog#(numServers), 6)
@@ -53,6 +54,7 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
 	     Mul#(cmdQDepth,numServers,cmdBuffSz),
 	     Log#(cmdBuffSz, cmdBuffAddrSz),
 	     Log#(numServers, serverIdxSz),
+	     Add#(busWidth, 0, userWidth),
 	     Add#(1,logCmdQDepth, outCntSz),
 	     Add#(1, c__, numServers),
 	     Add#(b__, TLog#(numServers), cmdBuffAddrSz),
@@ -78,10 +80,10 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
    Vector#(numServers, FIFO#(MemengineCmd)) clientRequest <- replicateM(mkFIFO());
 
    FIFOF#(MemData#(busWidth))                       serverDataFifo <- mkFIFOF;
-   Vector#(numServers, FIFOF#(MemDataF#(busWidth))) clientDataFifo <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
-   function PipeOut#(MemDataF#(busWidth)) mem_data_out(PipeOut#(MemDataF#(busWidth)) inpipe, Integer i) = 
+   Vector#(numServers, FIFOF#(MemDataF#(userWidth))) clientDataFifo <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
+   function PipeOut#(MemDataF#(userWidth)) mem_data_out(PipeOut#(MemDataF#(userWidth)) inpipe, Integer i) = 
       (interface PipeOut;
-	  method MemDataF#(busWidth) first;
+	  method MemDataF#(userWidth) first;
 	     return inpipe.first;
 	  endmethod
 	  method Action deq;
@@ -91,7 +93,7 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
 	  endmethod
 	  method Bool notEmpty = inpipe.notEmpty;
        endinterface);
-   Vector#(numServers, PipeOut#(MemDataF#(busWidth))) memDataPipes = zipWith(mem_data_out, map(toPipeOut,clientDataFifo), genVector);
+   Vector#(numServers, PipeOut#(MemDataF#(userWidth))) memDataPipes = zipWith(mem_data_out, map(toPipeOut,clientDataFifo), genVector);
 
    Reg#(Bit#(8))                    respCnt <- mkReg(0);
    Reg#(Bit#(TAdd#(1,serverIdxSz))) loadIdx <- mkReg(0);
@@ -180,9 +182,9 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
       clientDataFifo[idx].enq(MemDataF { data: d.data, tag: d.tag, first: first, last: d.last});
    endrule
 
-   Vector#(numServers, MemReadEngineServer#(busWidth)) rs;
+   Vector#(numServers, MemReadEngineServer#(userWidth)) rs;
    for(Integer i = 0; i < valueOf(numServers); i=i+1)
-      rs[i] = (interface MemReadEngineServer#(busWidth);
+      rs[i] = (interface MemReadEngineServer#(userWidth);
 		  interface Put request;
 		     method Action put(MemengineCmd cmd);
 			Bit#(32) bsb = fromInteger(bufferSizeBytes);
