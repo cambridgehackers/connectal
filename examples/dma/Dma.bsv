@@ -99,6 +99,7 @@ module mkDma#(DmaIndication indication)(Dma);
 						      len: bytes,
 						      tag: truncate(tag)
 						      });
+	 writeTags.enq(tag);
       endmethod
    endinterface
    interface readData = vec(toPipeOut(readFifo));
