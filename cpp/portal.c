@@ -134,8 +134,8 @@ static void checkSignature(const char *filename, int ioctlnum)
         while(filesignature[i].md5) {
             if (!strcmp(filesignature[i].filename, signature.filename)) {
                 if (strcmp(filesignature[i].md5, signature.md5))
-                    printf("%s: driver '%s' signature mismatch %s %s\n", __FUNCTION__,
-                        signature.filename, signature.md5, filesignature[i].md5);
+		  fprintf(stderr, "%s: driver '%s' signature mismatch %s %s\n", __FUNCTION__,
+			  signature.filename, signature.md5, filesignature[i].md5);
                 break;
             }
             i++;
@@ -164,7 +164,7 @@ void initPortalHardware(void)
      */
     int pid = fork();
     if (pid == -1) {
-        printf("[%s:%d] fork error\n", __FUNCTION__, __LINE__);
+	fprintf(stderr, "[%s:%d] fork error\n", __FUNCTION__, __LINE__);
         exit(-1);
     }
     else if (pid) {
@@ -182,7 +182,7 @@ void initPortalHardware(void)
 	      exit(-1);
 	  fd = open("/dev/connectal", O_RDONLY); /* scan the fpga directory */
 	  len = read(fd, &status, sizeof(status));
-	  printf("[%s:%d] fd %d len %lu\n", __FUNCTION__, __LINE__, fd, len);
+	  fprintf(stderr, "[%s:%d] fd %d len %lu\n", __FUNCTION__, __LINE__, fd, len);
 	  close(fd);
 	}
 #else
@@ -191,7 +191,7 @@ void initPortalHardware(void)
             int rc = stat("/dev/connectal", &statbuf); /* wait for driver to load */
             if (rc != -1)
                 break;
-            printf("[%s:%d] waiting for '/dev/connectal'\n", __FUNCTION__, __LINE__);
+            fprintf(stderr, "[%s:%d] waiting for '/dev/connectal'\n", __FUNCTION__, __LINE__);
             sleep(1);
         }
 #endif
@@ -230,7 +230,7 @@ void initPortalHardware(void)
                         endptr2 = strstr(filename, "\n");
                         if (endptr2)
                             *endptr2 = 0;
-                        printf("buffer %s\n", filename);
+                        fprintf(stderr, "buffer %s\n", filename);
                         goto endloop;
                     }
                 }
@@ -251,15 +251,15 @@ endloop:
         char *p = dirname(filename);
         static char buf2[MAX_PATH];
         sprintf(buf2, "%s/bsim", p);
-printf("[%s:%d] BSIM %s *******\n", __FUNCTION__, __LINE__, buf2);
+fprintf(stderr, "[%s:%d] BSIM %s *******\n", __FUNCTION__, __LINE__, buf2);
         argv[ind++] = NULL;
         rc = execvp (buf2, argv);
 #elif defined(BOARD_xsim)
         argv[ind++] = (char *)"-R";
         argv[ind++] = (char *)"work.xsimtop";
-printf("[%s:%d] RUNNING XSIM\n", __FUNCTION__, __LINE__);
+fprintf(stderr, "[%s:%d] RUNNING XSIM\n", __FUNCTION__, __LINE__);
         rc = execvp ("xsim", argv);
-printf("[%s:%d] rc %d\n", __FUNCTION__, __LINE__, rc);
+fprintf(stderr, "[%s:%d] rc %d\n", __FUNCTION__, __LINE__, rc);
 #else
         char *serial = getenv("SERIALNO");
         if (serial) {

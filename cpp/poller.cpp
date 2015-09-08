@@ -143,7 +143,7 @@ void PortalPoller::stop(void)
 void PortalPoller::end(void)
 {
     stopping = 1;
-    printf("%s: don't disable interrupts when stopping\n", __FUNCTION__);
+    fprintf(stderr, "%s: don't disable interrupts when stopping\n", __FUNCTION__);
     return;
     pthread_mutex_lock(&mutex);
     for (int i = 0; i < numWrappers; i++) {
@@ -204,7 +204,7 @@ void* PortalPoller::threadFn(void* __x)
             rc = event();
     }
     end();
-    printf("[%s] thread ending\n", __FUNCTION__);
+    fprintf(stderr, "[%s] thread ending\n", __FUNCTION__);
     return rc;
 }
 
