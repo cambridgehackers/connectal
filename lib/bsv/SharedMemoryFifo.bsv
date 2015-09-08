@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 import Vector::*;
+import BuildVector::*;
 import GetPut::*;
 import ClientServer::*;
 import Gearbox::*;
@@ -123,7 +124,7 @@ module mkSharedMemoryRequestPipeOut#(Vector#(2, MemreadServer#(64)) readEngine, 
          wordCount = limitReg - rdPtrReg;
          rdPtr = 4;
       end
-      if (verbose) $display("requestMessage id=%d rdPtr=%h wrPtr=%h wordCount=%d", sglIdReg, rdPtrReg, wrPtrReg, wordCount);
+      if (verbose) $display("requestMessage id=%d rdPtr=%d wrPtr=%d wordCount=%d", sglIdReg, rdPtrReg, wrPtrReg, wordCount);
       rdPtrReg <= rdPtr;
       countReg <= truncate(wordCount);
       readEngine[1].request.put( MemengineCmd
@@ -290,7 +291,7 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
       wrPtrReg <= wrPtrReg + totalWords;
       messageWordsReg <= numWords;
       methodIdReg <= readyChannel;
-      gb.enq(replicate(hdr));
+      gb.enq(vec(hdr));
       writeEngine[0].request.put( MemengineCmd
           {sglId: sglIdReg, base: extend(wrPtrReg) << 2, burstLen: 8, len: extend(totalWords) << 2, tag: 0});
       state <= SendMessage;
@@ -300,7 +301,7 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
       messageWordsReg <= messageWordsReg - 1;
       let v = portal.indications[methodIdReg].first;
       portal.indications[methodIdReg].deq();
-      gb.enq(replicate(v));
+      gb.enq(vec(v));
       $display("sendMessage v=%h messageWords=%d", v, messageWordsReg);
       if (messageWordsReg == 1) begin
          if (paddingReg)
@@ -312,13 +313,13 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
 
    rule sendPadding if (state == SendPadding);
       $display("sendPadding");
-      gb.enq(replicate(32'hffff0001));
+      gb.enq(vec(32'hffff0001));
       state <= UpdateWrPtr;
    endrule
 
    rule updateWrPtr if (state == UpdateWrPtr);
       $display("updateIndWrPtr limit=%d wrPtr=%d", limitReg, wrPtrReg);
-      gb.enq(replicate(extend(limitReg)));
+      gb.enq(vec(extend(limitReg)));
       writeEngine[0].request.put(
              MemengineCmd {sglId: sglIdReg, base: 0 << 2, burstLen: 8, len: 2 << 2, tag: 0});
       state <= UpdateWrPtr2;
@@ -326,7 +327,7 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
 
    rule updateWrPtr2 if (state == UpdateWrPtr2);
       $display("updateIndWrPtr2");
-      gb.enq(replicate(extend(wrPtrReg)));
+      gb.enq(vec(extend(wrPtrReg)));
       state <= SendHeader;
    endrule
 
