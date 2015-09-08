@@ -200,11 +200,13 @@ memConnection = '''   mkConnection(l%(modname)sCW.pipes, l%(modname)sShare.cfg);
 
 connectUser = '''   mkConnection(lSimpleRequestInput.pipes, %(args)s);'''
 
-pipeInstantiation = '''   %(modname)s%(tparam)s l%(modname)s <- mk%(modname)s;'''
+connectIndication = '''   mkConnection(l%(usermod)s.inverseIfc, l%(modname)s.methods);'''
+
+pipeInstantiation = '''   %(modname)s%(inverse)s%(tparam)s l%(modname)s <- mk%(modname)s%(inverse)s;'''
 
 connectInstantiation = '''   mkConnection(l%(modname)s.pipes, l%(userIf)s);'''
 
-def instMod(args, modname, modext, constructor, tparam, memFlag):
+def instMod(args, modname, modext, constructor, tparam, memFlag, inverseFlag):
     global clientCount
     if not modname:
         return
@@ -238,6 +240,8 @@ def instMod(args, modname, modext, constructor, tparam, memFlag):
             clientCount += 1
         elif modext == 'Output':
             pipeInstantiate.append(pipeInstantiation % pmap)
+            if inverseFlag:
+                connectInstantiate.append(connectIndication % pmap)
         else:
             pipeInstantiate.append(pipeInstantiation % pmap)
             connectInstantiate.append(connectInstantiation % pmap)
@@ -283,8 +287,8 @@ def toVectorLiteral(l):
 
 def parseParam(pitem, proxy):
     p = pitem.split(':')
-    pmap = {'tparam': '', 'xparam': '', 'uparam': '', 'memFlag': 'Pipes' if p[0][0] == '/' else ''}
-    pmap['usermod'] = p[0].replace('/','')
+    pmap = {'tparam': '', 'xparam': '', 'uparam': '', 'memFlag': 'Pipes' if p[0][0] == '/' else '', 'inverse': 'Pipes' if p[0][0] == '!' else ''}
+    pmap['usermod'] = p[0].replace('/','').replace('!','')
     pmap['name'] = p[1]
     ind = pmap['usermod'].find('#')
     if ind > 0:
@@ -331,11 +335,11 @@ if __name__=='__main__':
         pmap = parseParam(pitem, True)
         ptemp = pmap['name']
         for pmap['name'] in ptemp.split(','):
-            instMod('', pmap['name'], 'Output', '', '', pmap['memFlag'])
-            argstr = pmap['uparam'] + 'l%(name)sOutput.ifc'
+            instMod('', pmap['name'], 'Output', '', '', pmap['memFlag'], pmap['inverse'])
+            argstr = pmap['uparam'] + ('l%(name)sOutput.ifc' if not pmap['inverse'] else '')
             if pmap['uparam'] and pmap['uparam'][0] == '/':
                 argstr = 'l%(name)sOutput.ifc, ' + pmap['uparam'][1:-2]
-            instMod(argstr, pmap['usermod'], '', '', pmap['xparam'], False)
+            instMod(argstr, pmap['usermod'], '', '', pmap['xparam'], False, pmap['inverse'])
             pmap['uparam'] = ''
     for pitem in options.wrapper:
         pmap = parseParam(pitem, False)
@@ -344,9 +348,9 @@ if __name__=='__main__':
         pr = pmap['userIf'].split('.')
         pmap['usermod'] = pr[0]
         if pmap['usermod'] not in instantiatedModules:
-            instMod(pmap['uparam'], pmap['usermod'], '', '', pmap['xparam'], False)
+            instMod(pmap['uparam'], pmap['usermod'], '', '', pmap['xparam'], False, False)
         flushModules(pmap['usermod'])
-        instMod('', pmap['name'], 'Input', '', '', pmap['memFlag'])
+        instMod('', pmap['name'], 'Input', '', '', pmap['memFlag'], pmap['inverse'])
         portalInstantiate.append('')
     for key in instantiatedModules:
         flushModules(key)

@@ -248,6 +248,15 @@ instance Connectable#(PipeOut#(a),Put#(a));
    endmodule
 endinstance
 
+instance Connectable#(ActionValue#(a),PipeIn#(a));
+   module mkConnection#(ActionValue#(a) in, PipeIn#(a) out)(Empty);
+      rule connect;
+	 let v <- in;
+	 out.enq(v);
+      endrule
+   endmodule
+endinstance
+
 instance Connectable#(PipeOut#(a),PipeIn#(a));
    module mkConnection#(PipeOut#(a) in, PipeIn#(a) out)(Empty);
       rule connect;
