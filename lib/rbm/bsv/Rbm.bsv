@@ -19,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import Vector::*;
 import FIFO::*;
 import FIFOF::*;
@@ -29,22 +28,19 @@ import ClientServer::*;
 import Connectable::*;
 import FloatingPoint::*;
 import BRAM::*;
-
 import ConnectalMemory::*;
 import MemTypes::*;
 import DmaVector::*;
 import HostInterface::*;
-import MemreadEngine::*;
-import MemwriteEngine::*;
+import MemReadEngine::*;
+import MemWriteEngine::*;
 import MatrixTN::*;
 import Timer::*;
-
 import Sigmoid::*;
 import FloatOps::*;
 import Pipe::*;
 import RbmTypes::*;
 import DotProdServer::*;
-
 
 function Float tokenValue(MmToken v) = v.v;
 
@@ -80,16 +76,16 @@ endmodule
    
    
    
-module  mkStatesPipe#(Vector#(2,MemreadServer#(TMul#(N,32))) readSrvrs,
-		      Vector#(1,MemwriteServer#(TMul#(N,32))) writeSrvrs)(StatesPipe#(N, DmaSz))
+module  mkStatesPipe#(Vector#(2,MemReadEngineServer#(TMul#(N,32))) readSrvrs,
+		      Vector#(1,MemWriteEngineServer#(TMul#(N,32))) writeSrvrs)(StatesPipe#(N, DmaSz))
    provisos ( Bits#(Vector#(N, Float), DmaSz)
 	     ,Log#(N,nshift));
    
    let verbose = True;
    let nshift = valueOf(nshift);
    
-   Vector#(2, VectorSource#(DmaSz, Vector#(N,Float))) statesources <- mapM(mkMemreadVectorSource, readSrvrs);
-   VectorSink#(DmaSz, Vector#(N, Float)) dmaStatesSink <- mkMemwriteVectorSink(writeSrvrs[0]);
+   Vector#(2, VectorSource#(DmaSz, Vector#(N,Float))) statesources <- mapM(mkMemReadVectorSource, readSrvrs);
+   VectorSink#(DmaSz, Vector#(N, Float)) dmaStatesSink <- mkMemWriteVectorSink(writeSrvrs[0]);
    PipeOut#(Vector#(N, Float)) dmaStatesPipe <- mkComputeStatesPipe(statesources[0].pipe, statesources[1].pipe, dmaStatesSink.pipe);
 
    method Action start(Bit#(32) readPointer, Bit#(32) readOffset,
@@ -114,12 +110,12 @@ interface UpdateWeights#(numeric type n, numeric type dmasz);
    method ActionValue#(Bool) finish();
 endinterface
 
-module  mkUpdateWeights#(Vector#(3,MemreadServer#(TMul#(N,32))) readSrvrs,
-			    Vector#(1,MemwriteServer#(TMul#(N,32))) writeSrvrs)(UpdateWeights#(N, DmaSz))
+module  mkUpdateWeights#(Vector#(3,MemReadEngineServer#(TMul#(N,32))) readSrvrs,
+			    Vector#(1,MemWriteEngineServer#(TMul#(N,32))) writeSrvrs)(UpdateWeights#(N, DmaSz))
    provisos ( Bits#(Vector#(N, Float), DmaSz)
 	     ,Log#(N,nshift));
 
-   Vector#(3, VectorSource#(DmaSz, Vector#(N,Float))) sources <- mapM(mkMemreadVectorSource, readSrvrs);
+   Vector#(3, VectorSource#(DmaSz, Vector#(N,Float))) sources <- mapM(mkMemReadVectorSource, readSrvrs);
 
    let n = valueOf(N);
    let nshift = valueOf(nshift);
@@ -129,7 +125,7 @@ module  mkUpdateWeights#(Vector#(3,MemreadServer#(TMul#(N,32))) readSrvrs,
    Vector#(N, FloatAlu) adders <- replicateM(mkFloatAdder(defaultValue));
    Vector#(N, FloatAlu) adders2 <- replicateM(mkFloatAdder(defaultValue));
    Vector#(N, FloatAlu) multipliers <- replicateM(mkFloatMultiplier(defaultValue));
-   VectorSink#(DmaSz, Vector#(N, Float)) sink <- mkMemwriteVectorSink(writeSrvrs[0]);
+   VectorSink#(DmaSz, Vector#(N, Float)) sink <- mkMemWriteVectorSink(writeSrvrs[0]);
 
 // weights += learningRate * (pos_associations - neg_associations) / num_examples;
    rule sub;
@@ -192,11 +188,11 @@ interface SumOfErrorSquared#(numeric type n, numeric type dmasz);
    interface SumOfErrorSquaredDebug debug;
 endinterface
 
-module  mkSumOfErrorSquared#(Vector#(2,MemreadServer#(TMul#(N,32))) readSrvrs)(SumOfErrorSquared#(N, DmaSz))
+module  mkSumOfErrorSquared#(Vector#(2,MemReadEngineServer#(TMul#(N,32))) readSrvrs)(SumOfErrorSquared#(N, DmaSz))
    provisos ( Bits#(Vector#(N, Float), DmaSz)
 	     ,Log#(N,nshift));
    
-   Vector#(2, VectorSource#(DmaSz, Vector#(N,Float))) sources <- mapM(mkMemreadVectorSource, readSrvrs);
+   Vector#(2, VectorSource#(DmaSz, Vector#(N,Float))) sources <- mapM(mkMemReadVectorSource, readSrvrs);
    let n = valueOf(N);
    let nshift = valueOf(nshift);
    SharedDotProdServer#(1) dotprod <- mkSharedInterleavedDotProdServerConfig(0);
@@ -247,8 +243,8 @@ module  mkRbm#(HostInterface host, RbmIndication rbmInd, SigmoidIndication sigmo
    let n = valueOf(n);
    
    // TODO: figure out the correct amount of buffering required
-   MemreadEngine#(TMul#(n,32), 2, 9) readEngine  <- mkMemreadEngine;
-   MemwriteEngine#(TMul#(n,32),2, 3) writeEngine <- mkMemwriteEngine;
+   MemReadEngine#(TMul#(n,32),TMul#(n,32),2, 9) readEngine  <- mkMemReadEngine;
+   MemWriteEngine#(TMul#(n,32),TMul#(n,32),2, 3) writeEngine <- mkMemWriteEngine;
    
    let res = readEngine.readServers;
    let wes = writeEngine.writeServers;
@@ -417,5 +413,4 @@ module  mkRbm#(HostInterface host, RbmIndication rbmInd, SigmoidIndication sigmo
    endinterface
    interface Vector readClients = cons(readEngine.dmaClient,mm.readClients);
    interface Vector writeClients = cons(writeEngine.dmaClient,mm.writeClients);
-
 endmodule

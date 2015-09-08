@@ -55,7 +55,9 @@ Auto Top
 
 .. make:var:: H2S_INTERFACES
 
-.. make:var:: MEM_INTERFACES
+.. make:var:: MEM_READ_INTERFACES
+
+.. make:var:: MEM_WRITE_INTERFACES
 
 
 

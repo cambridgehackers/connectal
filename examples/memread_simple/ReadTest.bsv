@@ -26,7 +26,7 @@ import GetPut::*;
 import ClientServer::*;
 import Pipe::*;
 import MemTypes::*;
-import MemreadEngine::*;
+import MemReadEngine::*;
 import Pipe::*;
 import HostInterface::*; // for DataBusWidth
 
@@ -51,10 +51,10 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    Reg#(Bit#(32))   itersToStart <- mkReg(0);
    Reg#(Bit#(32))      bytesRead <- mkReg(0);
    Reg#(Bit#(32)) mismatchCounts <- mkReg(0);
-   MemreadEngine#(DataBusWidth,2,1) re <- mkMemreadEngine;
+   MemReadEngine#(DataBusWidth,DataBusWidth,2,1) re <- mkMemReadEngine;
 
    rule start (itersToStart > 0);
-      re.readServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, burstLen:burstLenInBytes});
+      re.readServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:numBytes, burstLen:burstLenInBytes, tag: 0});
       itersToStart <= itersToStart-1;
    endrule
 

@@ -77,10 +77,16 @@ typedef struct {
         unsigned int      device_name;
         struct tBoard    *board;
         void             *virt;
-        volatile uint32_t *regs;
+        volatile uint32_t *regs;  // Pointer to access portal from kernel
+        unsigned long     offset; // Offset from base of BAR2
         struct extra_info *extra;
 	struct list_head pmlist;
 } tPortal;
+
+typedef struct {
+        unsigned int      device_tile;
+        struct tBoard    *board;
+} tTile;
 
 struct pmentry {
 	struct file     *fmem;
@@ -99,6 +105,7 @@ typedef struct tBoard {
         }                 info; /* board identification fields */
         unsigned int      irq_num;
         unsigned int      open_count;
+        tTile             tile[MAX_NUM_PORTALS];
         struct extra_info *extra;
 } tBoard;
 

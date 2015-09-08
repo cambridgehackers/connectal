@@ -1,7 +1,7 @@
 CONNECTALDIR?=../..
 S2H_INTERFACES = ReadTestRequest:ReadTest.request
 H2S_INTERFACES = ReadTest\#\(\`NumberOfMasters\):ReadTestIndication
-MEM_INTERFACES = lReadTest.dmaClients,nil
+MEM_READ_INTERFACES = lReadTest.dmaClients
 
 BSVFILES = ReadTest.bsv
 CPPFILES=../memread/testmemread.cpp

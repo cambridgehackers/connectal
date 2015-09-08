@@ -19,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFO::*;
 import FIFOF::*;
 import MIMO::*;
@@ -29,8 +28,8 @@ import Vector::*;
 import BRAM::*;
 import ConnectalMemory::*;
 import MemTypes::*;
-import MemreadEngine::*;
-import MemwriteEngine::*;
+import MemReadEngine::*;
+import MemWriteEngine::*;
 import MemUtils::*;
 import FloatingPoint::*;
 import Pipe::*;

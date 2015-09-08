@@ -140,7 +140,7 @@ aggregates, Connectal provides address translation support to hardware
 accelerators in the FPGA, similar to the MMU functionality on the CPU
 side.
 
-.. _Sec-MemreadEngine:
+.. _Sec-MemReadEngine:
 
 Distributed Access to Memory Ports
 ----------------------------------

@@ -24,6 +24,8 @@ import GetPut::*;
 import ClientServer::*;
 import Gearbox::*;
 import MIFO::*;
+import DefaultValue::*;
+import MIMO::*;
 import Pipe::*;
 import Portal::*;
 import MemTypes::*;
@@ -48,7 +50,7 @@ typedef enum {
    } SharedMemoryPortalState deriving (Bits,Eq);
 
 module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32) portal,
-    MemreadServer#(64) readEngine, MemwriteServer#(64) writeEngine)(SharedMemoryPortal#(64));
+    MemReadEngineServer#(64) readEngine, MemWriteEngineServer#(64) writeEngine)(SharedMemoryPortal#(64));
    // read the head and tail pointers, if they are different, then read a request
    Reg#(Bit#(32)) limitReg <- mkReg(0);
    Reg#(Bit#(32)) headReg <- mkReg(0);
@@ -59,7 +61,8 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
    Reg#(SharedMemoryPortalState) state <- mkReg(Idle);
    Reg#(Bit#(32)) sglIdReg <- mkReg(0);
    Reg#(Bool)     readyReg   <- mkReg(False);
-   MIFO#(4,1,4,Bit#(32)) readMifo <- mkMIFO();
+   MIMOConfiguration mimoConfig = defaultValue;
+   MIMO#(4,1,4,Bit#(32)) readMimo <- mkMIMO(mimoConfig);
 
    let verbose = False;
 
@@ -114,20 +117,20 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
       state <= MessageHeaderRequested;
    endrule
 
-   rule demuxwords if (readMifo.enqReady());
+   let enqCount = 2;
+   rule demuxwords if (state != HeadRequested && state != TailRequested && readMimo.enqReadyN(enqCount));
       let v <- toGet(readEngine.data).get();
       Vector#(2,Bit#(32)) dvec = unpack(v.data);
-      let enqCount = 2;
       Vector#(4,Bit#(32)) dvec4;
       dvec4[0] = dvec[0];
       dvec4[1] = dvec[1];
       dvec4[2] = 0;
       dvec4[3] = 0;
-      readMifo.enq(enqCount, dvec4);
+      readMimo.enq(enqCount, dvec4);
    endrule
 
    rule receiveMessageHeader if (state == MessageHeaderRequested);
-      let vec <- toGet(readMifo).get();
+      let vec <- toGet(toPipeOut(readMimo)).get();
       let hdr = vec[0];
       let methodId = hdr[31:16];
       let messageWords = hdr[15:0];
@@ -151,14 +154,14 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
    endrule
 
    rule drain if (state == Drain);
-      let vec <- toGet(readMifo).get();
+      let vec <- toGet(readMimo).get();
       if (countReg == 1)
          state <= UpdateTail;
       countReg <= countReg - 1;
    endrule
 
    rule receiveMessage if (state == MessageRequested);
-      let vec <- toGet(readMifo).get();
+      let vec <- toGet(toPipeOut(readMimo)).get();
       let data = vec[0];
       if (verbose)
          $display("receiveMessage data=%x messageWords=%d wordCount=%d", data, messageWordsReg, countReg);
@@ -166,10 +169,10 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
          portal.requests[methodIdReg].enq(data);
       messageWordsReg <= messageWordsReg - 1;
       countReg <= countReg - 1;
-      if (messageWordsReg == 1)
-         state <= MessageHeaderRequested;
-      else if (countReg <= 1)
+      if (countReg <= 1)
          state <= UpdateTail;
+      else if (messageWordsReg == 1)
+         state <= MessageHeaderRequested;
    endrule
 
    rule updateTail if (state == UpdateTail);
@@ -196,7 +199,7 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
 endmodule
 
 module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 32) portal,
-    MemreadServer#(64) readEngine, MemwriteServer#(64) writeEngine)(SharedMemoryPortal#(64));
+    MemReadEngineServer#(64) readEngine, MemWriteEngineServer#(64) writeEngine)(SharedMemoryPortal#(64));
    let defaultClock <- exposeCurrentClock;
    let defaultReset <- exposeCurrentReset;
    // read the head and tail pointers, if they are different, then read a request
@@ -231,7 +234,8 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 
    endrule
 
    rule receiveIndHeadTail if (state == HeadRequested || state == TailRequested);
-      let data <- toGet(readEngine.data).get();
+      let md <- toGet(readEngine.data).get();
+      let data = md.data;
       let w0 = data[31:0];
       let w1 = data[63:32];
       let head = headReg;

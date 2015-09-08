@@ -19,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFO::*;
 import FIFOF::*;
 import SpecialFIFOs::*;
@@ -30,7 +29,7 @@ import Connectable::*;
 import StmtFSM::*;
 import MemTypes::*;
 import MPEngine::*;
-import MemreadEngine::*;
+import MemReadEngine::*;
 import Pipe::*;
 
 interface StrstrRequest;
@@ -78,8 +77,8 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(haystackBusWidth, configBu
    let verbose = True;
 
    Reg#(Bit#(32)) needleLen <- mkReg(0);
-   MemreadEngine#(haystackBusWidth, 1, p) haystack_re <- mkMemreadEngineBuff(1024);
-   MemreadEngine#(configBusWidth, 1, p) config_re <- mkMemreadEngineBuff(1024);
+   MemReadEngine#(haystackBusWidth,haystackBusWidth,1,p) haystack_re <- mkMemReadEngineBuff(1024);
+   MemReadEngine#(configBusWidth,configBusWidth,1,p) config_re <- mkMemReadEngineBuff(1024);
    
    Reg#(Bit#(32)) needleSGLId <- mkReg(0);
    Reg#(Bit#(32)) mpNextSGLId <- mkReg(0);
@@ -184,5 +183,3 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(haystackBusWidth, configBu
    interface config_read_client = cons(config_re.dmaClient, nil);
    interface haystack_read_client = cons(haystack_re.dmaClient, nil);
 endmodule
-   
-   

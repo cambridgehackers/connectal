@@ -29,7 +29,7 @@
 typedef unsigned long CPtr;
 class ParamStruct {
 public:
-    uint8_t *basePtr;
+    volatile uint8_t *basePtr;
     CPtr *bottom;
     CPtr *top_diff;
     CPtr *bottom_diff;

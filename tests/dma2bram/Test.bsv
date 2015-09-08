@@ -19,20 +19,17 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import Vector::*;
 import BuildVector::*;
 import ClientServer::*;
 import BRAM::*;
-
 import ConnectalMemory::*;
 import MemTypes::*;
 import BlueScope::*;
-import MemreadEngine::*;
-import MemwriteEngine::*;
+import MemReadEngine::*;
+import MemWriteEngine::*;
 import Dma2BRAM::*;
 import Pipe::*;
-
 
 interface TestRequest;
    method Action startWrite(Bit#(32) sglId);
@@ -49,7 +46,7 @@ endinterface
 
 module mkTest#(TestIndication indication)(Test);
    
-   MemreadEngine#(64,1,1)  re <- mkMemreadEngine;
+   MemReadEngine#(64,64,1,1)  re <- mkMemReadEngine;
    BRAM1Port#(Bit#(10),Bit#(8)) bram <- mkBRAM1Server(defaultValue);
    BRAMWriter#(10,64) bramWriter <- mkBRAMWriter(2, bram.portA, re.readServers[0]);
       
@@ -65,4 +62,3 @@ module mkTest#(TestIndication indication)(Test);
    endinterface
    interface dmaClient = vec(re.dmaClient);
 endmodule
-

@@ -1,8 +1,8 @@
-CONNECTAL
+Connectal
 ====
 
 
-CONNECTAL provides a hardware-software interface for applications split
+Connectal provides a hardware-software interface for applications split
 between user mode code and custom hardware in an FPGA.  Portal can
 automatically build the software and hardware glue for a message based
 interface and also provides for configuring and using shared memory
@@ -18,18 +18,20 @@ independently. A portal is specified by a BSV interface declaration,
 from which `connectalgen` generates BSV and C++ wrappers and
 proxies.
 
-CONNECTAL has a mailing list:
+Connectal has a mailing list:
    https://groups.google.com/forum/#!forum/connectal
 
+See the documentation for more details:
+   http://www.connectal.org/doc/current/ref/
 
 Supported Platforms
 -------------------
 
-CONNECTAL supports Android on Zynq platforms, including zedboard and zc702.
+Connectal supports Android on Zynq platforms, including zedboard and zc702.
 
-CONNECTAL supports Linux on x86 with PCIe-attached Virtex and Kintex boards (vc707, kc705).
+Connectal supports Linux on x86 with PCIe-attached Virtex and Kintex boards (vc707, kc705).
 
-CONNECTAL supports bluesim as a simulated hardware platform. 
+Connectal supports bluesim as a simulated hardware platform. 
 
 
 Installation
@@ -46,7 +48,7 @@ It appears that this requires buildcache to be checked out also:
 
 Add USE_BUILDCACHE=1 to your calls to make to enable it to cache, otherwise it will rerun all compilation steps.
 
-1. Install the Bluespec compiler. CONNECTAL is known to work with 2013.09.beta1, 2014.05.beta1, and 2014.07.A
+1. Install the Bluespec compiler. Connectal is known to work with 2013.09.beta1, 2014.05.beta1, and 2014.07.A
 
 Install the bluespec compiler. Make sure the BLUESPECDIR environment
 variable is set appropriately:
@@ -70,7 +72,7 @@ Preparation for Zynq
 0. Get [http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2013-2.html](Vivado 2013.2)
 
 [Note]
-CONNECTAL for Zynq also works with 2013.4 and 2014.1.
+Connectal for Zynq also works with 2013.4 and 2014.1.
 
 1. Download the Android Native Development Kit (NDK) from: 
      http://developer.android.com/tools/sdk/ndk/index.html
@@ -78,7 +80,7 @@ CONNECTAL for Zynq also works with 2013.4 and 2014.1.
          http://dl.google.com/android/ndk/android-ndk-r9d-linux-x86_64.tar.bz2
      )
 
-   CONNECTAL uses NDK to compile code to run on Zynq platforms.
+   Connectal uses NDK to compile code to run on Zynq platforms.
 
    Add the NDK to your PATH.
 
@@ -89,7 +91,7 @@ CONNECTAL for Zynq also works with 2013.4 and 2014.1.
 
 2. Download and install ADB from the Android Development Tools.
 
-   The Android Debug Bridge (adb) is packaged in platform-tools. CONNECTAL
+   The Android Debug Bridge (adb) is packaged in platform-tools. Connectal
    uses [adb](http://developer.android.com/tools/help/adb.html) to
    transfer files to and from the Zedboard over ethernet and to run
    commands on the Zedboard.
@@ -198,3 +200,4 @@ To remount /system read/write:
 
 
 
+[![Analytics](https://ga-beacon.appspot.com/UA-15845210-3/connectal/README.md)](https://github.com/igrigorik/ga-beacon)

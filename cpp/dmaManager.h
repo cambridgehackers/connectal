@@ -91,6 +91,14 @@ class DmaManager
 };
 extern "C" DmaManager *platformInit(void);
 extern "C" void platformStatistics(void);
+#else
+struct DmaManager
+{
+  DmaManagerPrivate priv;
+};
+typedef struct DmaManager DmaManager;
+DmaManager *platformInit(void);
+void platformStatistics(void);
 #endif
 #endif
 #endif // _PORTAL_MEMORY_H_

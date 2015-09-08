@@ -19,15 +19,13 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFOF::*;
 import Vector::*;
 import GetPut::*;
 import ClientServer::*;
 import Connectable::*;
-
 import MemTypes::*;
-import MemreadEngine::*;
+import MemReadEngine::*;
 import Pipe::*;
 
 interface Memread2Request;
@@ -55,8 +53,8 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
    Reg#(Bit#(32))     srcGen1 <- mkReg(0);
    Reg#(Bit#(32)) mismatchCount0 <- mkReg(0);
    Reg#(Bit#(32)) mismatchCount1 <- mkReg(0);
-   MemreadEngine#(64,1,1) re0 <- mkMemreadEngine;
-   MemreadEngine#(64,1,1) re1 <- mkMemreadEngine;
+   MemReadEngine#(64,64,1,1) re0 <- mkMemReadEngine;
+   MemReadEngine#(64,64,1,1) re1 <- mkMemReadEngine;
 
    FIFOF#(Bit#(64)) outReg0 <- mkFIFOF;
    FIFOF#(Bit#(64)) outReg1 <- mkFIFOF;
@@ -134,8 +132,8 @@ module mkMemread2#(Memread2Indication indication) (Memread2);
    interface Memread2Request request;
        method Action startRead(Bit#(32) pointer, Bit#(32) pointer2, Bit#(32) numWords, Bit#(32) bl);
 	  $display("startRead(%d %d %d %d)", pointer, pointer2, numWords, bl);
-	  re0.readServers[0].request.put(MemengineCmd{sglId:pointer,  base:0, len:numWords*4, burstLen:truncate(bl*4)});
-	  re1.readServers[0].request.put(MemengineCmd{sglId:pointer2, base:0, len:numWords*4, burstLen:truncate(bl*4)});
+	  re0.readServers[0].request.put(MemengineCmd{sglId:pointer,  base:0, len:numWords*4, burstLen:truncate(bl*4), tag:0});
+	  re1.readServers[0].request.put(MemengineCmd{sglId:pointer2, base:0, len:numWords*4, burstLen:truncate(bl*4), tag:0});
 	  indication.started(numWords);
        endmethod
 

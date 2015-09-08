@@ -60,13 +60,13 @@ run.%:
 	$(MAKE) -C $* --no-print-directory run
 
 IPDIR?=$(CONNECTALDIR)/out
-# zynq driver needs debugging for tiles
-NUMBER_OF_USER_TILES?=0
+NUMBER_OF_USER_TILES?=1
 SLAVE_DATA_BUS_WIDTH?=32
 SLAVE_CONTROL_ADDR_WIDTH?=5
 NUMBER_OF_MASTERS?=1
 PIN_TYPE?=Empty
-PIN_TYPE_INCLUDE?=HostInterface
+PIN_TYPE_INCLUDE?=Misc
+#need to import into HostInterface, can't use HostInterface
 
 ifndef BURST_LEN_SIZE
 BURST_LEN_SIZE=8
@@ -94,6 +94,12 @@ ifneq ($(H2S_INTERFACES),)
 USE_AUTOTOP = 1
 endif
 ifneq ($(MEM_INTERFACES),)
+$(error Convert use of MEM_INTERFACES into MEM_READ_INTERFACES and MEM_WRITE_INTERFACES)
+endif
+ifneq ($(MEM_READ_INTERFACES),)
+USE_AUTOTOP = 1
+endif
+ifneq ($(MEM_WRITE_INTERFACES),)
 USE_AUTOTOP = 1
 endif
 
@@ -103,10 +109,6 @@ ifneq ($(NUMBER_OF_MASTERS), 0)
 CPPFILES += $(CONNECTALDIR)/cpp/dmaManager.c $(CONNECTALDIR)/cpp/platformMemory.cpp
 ifneq ($(CPPFILES2),)
 CPPFILES2 += $(CONNECTALDIR)/cpp/dmaManager.c $(CONNECTALDIR)/cpp/platformMemory.cpp
-endif
-ifneq ($(USE_AUTOTOP),)
-S2H_INTERFACES += MMURequest:MMU.request MemServerRequest:MemServer.request
-H2S_INTERFACES += MMU\#\(PhysAddrWidth\):MMUIndication:0,True
 endif
 endif
 
@@ -224,8 +226,7 @@ ifneq ($(USE_AUTOTOP),)
 	    $(foreach f, $(S2H_INTERFACES), --wrapper $f) \
 	    $(foreach f, $(H2S_INTERFACES), --proxy $f)   \
  	    $(foreach f, $(MEM_READ_INTERFACES), --memread $f)   \
- 	    $(foreach f, $(MEM_WRITE_INTERFACES), --memwrite $f) \
-	    $(foreach f, $(MEM_INTERFACES), --proxy MemServer\#\(PhysAddrWidth,DataBusWidth,\`NumberOfMasters\):MemServerIndication:$f,cons\(lMMU,nil\))
+ 	    $(foreach f, $(MEM_WRITE_INTERFACES), --memwrite $f)
 endif
 
 generate_altera_custom::

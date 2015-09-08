@@ -74,13 +74,22 @@ interface %(Dut)s;
     interface %(Package)s%(Ifc)s ifc;
 endinterface
 
+interface %(Ifc)sOutputPipeMethods;
+%(indicationMethodDecls)s
+endinterface
+
+interface %(Ifc)sOutputPipes;
+    interface %(Ifc)sOutputPipeMethods methods;
+    interface PipePortal#(0, %(channelCount)s, SlaveDataBusWidth) portalIfc;
+endinterface
+
 (* synthesize *)
-module mk%(Ifc)sOutput(%(Ifc)sOutput);
+module mk%(Ifc)sOutputPipes(%(Ifc)sOutputPipes);
     Vector#(%(channelCount)s, PipeOut#(Bit#(SlaveDataBusWidth))) indicationPipes;
 %(indicationMethodRules)s
     PortalInterrupt#(SlaveDataBusWidth) intrInst <- mkPortalInterrupt(indicationPipes);
-    interface %(Package)s%(Ifc)s ifc;
-%(indicationMethods)s
+    interface %(Ifc)sOutputPipeMethods methods;
+%(indicationMethodAssigns)s
     endinterface
     interface PipePortal portalIfc;
         interface PortalSize messageSize;
@@ -93,6 +102,14 @@ module mk%(Ifc)sOutput(%(Ifc)sOutput);
         interface Vector indications = indicationPipes;
         interface PortalInterrupt intr = intrInst;
     endinterface
+endmodule
+
+module mk%(Ifc)sOutput(%(Ifc)sOutput);
+    let indicationPipes <- mk%(Ifc)sOutputPipes;
+    interface %(Package)s%(Ifc)s ifc;
+%(indicationMethods)s
+    endinterface
+    interface PipePortal portalIfc = indicationPipes.portalIfc;
 endmodule
 
 // synthesizeable proxy MemPortal
@@ -233,9 +250,15 @@ indicationRuleTemplate='''
     indicationPipes[%(channelNumber)s] = %(methodName)s_responseAdapter.out;
 '''
 
+indicationDeclTemplate='''    interface PipeIn#(%(MethodName)s_Message) %(methodName)s;
+'''
+
+indicationAssignTemplate='''    interface %(methodName)s = %(methodName)s_responseAdapter.in;
+'''
+
 indicationMethodTemplate='''
     method Action %(methodName)s(%(formals)s);
-        %(methodName)s_responseAdapter.in.enq(%(MethodName)s_Message {%(structElements)s});
+        indicationPipes.methods.%(methodName)s.enq(%(MethodName)s_Message {%(structElements)s});
         //$display(\"indicationMethod \'%(methodName)s\' invoked\");
     endmethod'''
 
@@ -304,6 +327,8 @@ def fixupSubsts(item, suffix):
     substs['outputPipes'] = '\n'.join(outputPipes)
     substs['mkConnectionMethodRules'] = ''.join(mkConnectionMethodRules)
     substs['indicationMethodRules'] = collectElements(dlist, indicationRuleTemplate, name)
+    substs['indicationMethodDecls'] = collectElements(dlist, indicationDeclTemplate, name)
+    substs['indicationMethodAssigns'] = collectElements(dlist, indicationAssignTemplate, name)
     substs['indicationMethods'] = collectElements(dlist, indicationMethodTemplate, name)
     substs['requestElements'] = collectElements(dlist, requestStructTemplate, name)
     substs['methodRules'] = collectElements(dlist, requestRuleTemplate, name)

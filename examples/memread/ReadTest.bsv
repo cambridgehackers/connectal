@@ -25,10 +25,9 @@ import Vector::*;
 import BuildVector::*;
 import GetPut::*;
 import ClientServer::*;
-
 import Pipe::*;
 import MemTypes::*;
-import MemreadEngine::*;
+import MemReadEngine::*;
 import HostInterface::*;
 
 interface ReadTestRequest;
@@ -55,7 +54,7 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
    Reg#(Bit#(32))   itersToStart <- mkReg(0);
    Reg#(Bit#(32))        bytesRead <- mkReg(0);
    Reg#(Bit#(32)) mismatchCounts <- mkReg(0);
-   MemreadEngine#(DataBusWidth,NumOutstandingRequests,1)        re <- mkMemreadEngineBuff(valueOf(BufferSizeBytes));
+   MemReadEngine#(DataBusWidth,DataBusWidth,NumOutstandingRequests,1)        re <- mkMemReadEngineBuff(valueOf(BufferSizeBytes));
    FIFO#(Bit#(32)) checkDoneFifo <- mkFIFO();
    
    rule start (itersToStart > 0);

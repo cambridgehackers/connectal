@@ -19,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import Vector::*;
 import BuildVector::*;
 import FIFOF::*;
@@ -27,12 +26,11 @@ import FIFO::*;
 import BRAMFIFO::*;
 import GetPut::*;
 import ClientServer::*;
-
 import HostInterface::*;
 import ConnectalMemory::*;
 import MemTypes::*;
-import MemreadEngine::*;
-import MemwriteEngine::*;
+import MemReadEngine::*;
+import MemWriteEngine::*;
 import Pipe::*;
 
 interface MemcpyRequest;
@@ -60,8 +58,8 @@ typedef TDiv#(DataBusWidth,32) WordsPerBeat;
 
 module mkMemcpy#(MemcpyIndication indication)(Memcpy);
 
-   MemreadEngine#(DataBusWidth,CmdQDepth,1)  re <- mkMemreadEngineBuff(valueOf(CmdQDepth)*512);
-   MemwriteEngine#(DataBusWidth,CmdQDepth,1) we <- mkMemwriteEngineBuff(valueOf(CmdQDepth)*512);
+   MemReadEngine#(DataBusWidth,DataBusWidth,CmdQDepth,1)  re <- mkMemReadEngineBuff(valueOf(CmdQDepth)*512);
+   MemWriteEngine#(DataBusWidth,DataBusWidth,CmdQDepth,1) we <- mkMemWriteEngineBuff(valueOf(CmdQDepth)*512);
 
    Integer wordsPerBeat = valueOf(WordsPerBeat);
 
@@ -77,14 +75,14 @@ module mkMemcpy#(MemcpyIndication indication)(Memcpy);
    Bool verbose = False; //True;
 
    rule start_read(rdIterCnt > 0);
-      if (verbose) $display("start_read numWords %d wordsPerBeat %d", numWords, wordsPerBeat);
-      re.readServers[0].request.put(MemengineCmd{sglId:rdPointer, base:0, len:extend(numWords*4), burstLen:truncate(burstLen*4)});
+      if (verbose) $display("start_read obj %d numWords %d wordsPerBeat %d", rdPointer, numWords, wordsPerBeat);
+      re.readServers[0].request.put(MemengineCmd{sglId:rdPointer, base:0, len:extend(numWords*4), burstLen:truncate(burstLen*4), tag:0});
       rdIterCnt <= rdIterCnt-1;
    endrule
 
    rule start_write(wrIterCnt > 0);
-      if (verbose) $display("                    start_write numWords %d", numWords);
-      we.writeServers[0].request.put(MemengineCmd{sglId:wrPointer, base:0, len:extend(numWords*4), burstLen:truncate(burstLen*4)});
+      if (verbose) $display("                    start_write obj %d numWords %d", wrPointer, numWords);
+      we.writeServers[0].request.put(MemengineCmd{sglId:wrPointer, base:0, len:extend(numWords*4), burstLen:truncate(burstLen*4), tag:0});
       wrIterCnt <= wrIterCnt-1;
    endrule
    

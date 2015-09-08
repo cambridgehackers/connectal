@@ -20,22 +20,25 @@
 ## ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 ## CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ## SOFTWARE.
-
 import os, sys, shutil, string
 import argparse
 import util
 
-argparser = argparse.ArgumentParser("Generate Top.bsv for an project.")
-argparser.add_argument('--project-dir', help='project directory')
-argparser.add_argument('--interface', default=[], help='exported interface declaration', action='append')
-argparser.add_argument('--board', help='Board type')
-argparser.add_argument('--importfiles', default=[], help='added imports', action='append')
-argparser.add_argument('--portname', default=[], help='added portal names to enum list', action='append')
-argparser.add_argument('--wrapper', default=[], help='exported wrapper interfaces', action='append')
-argparser.add_argument('--proxy', default=[], help='exported proxy interfaces', action='append')
-argparser.add_argument('--memread', default=[], help='memory read interfaces', action='append')
-argparser.add_argument('--memwrite', default=[], help='memory read interfaces', action='append')
-argparser.add_argument('--cnoc', help='generate mkCnocTop', action='store_true')
+def newArgparser():
+    argparser = argparse.ArgumentParser("Generate Top.bsv for an project.")
+    argparser.add_argument('--project-dir', help='project directory')
+    argparser.add_argument('--interface', default=[], help='exported interface declaration', action='append')
+    argparser.add_argument('--board', help='Board type')
+    argparser.add_argument('--importfiles', default=[], help='added imports', action='append')
+    argparser.add_argument('--portname', default=[], help='added portal names to enum list', action='append')
+    argparser.add_argument('--wrapper', default=[], help='exported wrapper interfaces', action='append')
+    argparser.add_argument('--proxy', default=[], help='exported proxy interfaces', action='append')
+    argparser.add_argument('--memread', default=[], help='memory read interfaces', action='append')
+    argparser.add_argument('--memwrite', default=[], help='memory read interfaces', action='append')
+    argparser.add_argument('--cnoc', help='generate mkCnocTop', action='store_true')
+    return argparser
+
+argparser = newArgparser()
 
 topTemplate='''
 import Vector::*;
@@ -43,8 +46,8 @@ import Portal::*;
 import CtrlMux::*;
 import HostInterface::*;
 import Connectable::*;
-import MemreadEngine::*;
-import MemwriteEngine::*;
+import MemReadEngine::*;
+import MemWriteEngine::*;
 import MemTypes::*;
 import MemServer::*;
 import IfcNames::*;
@@ -84,7 +87,8 @@ module mkConnectalTop
    Vector#(NumReadClients,MemReadClient#(DataBusWidth)) nullReaders = replicate(null_mem_read_client());
    interface interrupt = getInterruptVector(portals);
    interface slave = ctrl_mux;
-   interface masters = %(portalMaster)s;
+   interface readers = take(%(portalReaders)s);
+   interface writers = take(%(portalWriters)s);
 %(exportedInterfaces)s
 endmodule : mkConnectalTop
 %(exportedNames)s
@@ -101,6 +105,7 @@ import CnocPortal::*;
 import Connectable::*;
 import HostInterface::*;
 import IfcNames::*;
+import MemTypes::*;
 %(generatedImport)s
 
 %(generatedTypedefs)s
@@ -133,9 +138,13 @@ module mkCnocTop
 %(connectInstantiate)s
 
 %(portalList)s
+   Vector#(NumWriteClients,MemWriteClient#(DataBusWidth)) nullWriters = replicate(null_mem_write_client());
+   Vector#(NumReadClients,MemReadClient#(DataBusWidth)) nullReaders = replicate(null_mem_read_client());
+
    interface requests = %(requestList)s;
    interface indications = %(indicationList)s;
-   interface masters = %(portalMaster)s;
+   interface readers = take(%(portalReaders)s);
+   interface writers = take(%(portalWriters)s);
 %(exportedInterfaces)s
 endmodule : mkCnocTop
 %(exportedNames)s
@@ -181,13 +190,13 @@ class iReq:
 
 memShareInst = '''   SharedMemoryPortalConfigInput%(tparam)s l%(modname)sCW <- mkSharedMemoryPortalConfigInput;'''
 
-memEngineInst = '''   MemreadEngineV#(64,2,%(clientCount)s) lSharereadEngine <- mkMemreadEngine();
-   MemwriteEngineV#(64,2,%(clientCount)s) lSharewriteEngine <- mkMemwriteEngine();'''
+memEngineInst = '''   MemReadEngine#(64,64,2,%(clientCount)s) lSharereadEngine <- mkMemReadEngine();
+   MemWriteEngine#(64,64,2,%(clientCount)s) lSharewriteEngine <- mkMemWriteEngine();'''
 
 memModuleInstantiation = '''   SharedMemoryPortal#(64) l%(modname)sShare <- mkSharedMemory%(stype)sPortal(l%(modname)s.portalIfc,
            lSharereadEngine.readServers[%(clientCount)s], lSharewriteEngine.writeServers[%(clientCount)s]);'''
 
-memConnection = '''   mkConnection(l%(modname)sCW, l%(modname)sShare.cfg);'''
+memConnection = '''   mkConnection(l%(modname)sCW.pipes, l%(modname)sShare.cfg);'''
 
 connectUser = '''   mkConnection(lSimpleRequestInput.pipes, %(args)s);'''
 
@@ -298,6 +307,8 @@ if __name__=='__main__':
     pipeInstantiate = []
     connectInstantiate = []
     instantiateRequest = {}
+    for item in ['IfcNames_MemServerRequestS2H', 'IfcNames_MMURequestS2H', 'IfcNames_MemServerIndicationH2S', 'IfcNames_MMUIndicationH2S']:
+        options.portname.append(item)
     requestList = []
     indicationList = []
     portalList = []

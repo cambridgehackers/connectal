@@ -19,14 +19,13 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFO::*;
 import FIFOF::*;
 import Vector::*;
 import ClientServer::*;
 import GetPut::*;
 import MemTypes::*;
-import MemwriteEngine::*;
+import MemWriteEngine::*;
 import Pipe::*;
 import Arith::*;
 import MemUtils::*;
@@ -61,14 +60,14 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite#(4));
    FIFO#(void)           startFifo <- mkFIFO;
 
    Vector#(4,Reg#(Bit#(32)))      srcGens <- replicateM(mkReg(0));
-   Vector#(4,MemwriteEngine#(64,2,1))   wes <- replicateM(mkMemwriteEngine);
+   Vector#(4,MemWriteEngine#(64,64,2,1))   wes <- replicateM(mkMemWriteEngine);
 
    Stmt startStmt = seq
 		       startBase <= 0;
 		       for(startPtr <= 0; startPtr < 4; startPtr <= startPtr+1)
 			  (action
 			      $display("start:%d %h %d %h (%d)", startPtr, startBase, numWords, burstLen*4, iterCnt);
-			      wes[startPtr].writeServers[0].request.put(MemengineCmd{sglId:pointer, base:extend(startBase), len:numWords, burstLen:truncate(burstLen*4)});
+			      wes[startPtr].writeServers[0].request.put(MemengineCmd{sglId:pointer, base:extend(startBase), len:numWords, burstLen:truncate(burstLen*4), tag:0});
 			      startBase <= startBase+numWords;
 			   endaction);
 		    endseq;
@@ -102,7 +101,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite#(4));
 	    srcGens[i] <= srcGens[i]+2;
       endrule
 
-   function MemWriteClient#(64) dc(MemwriteEngine#(64,2,1) we) = we.dmaClient;
+   function MemWriteClient#(64) dc(MemWriteEngine#(64,64,2,1) we) = we.dmaClient;
    interface dmaClients = map(dc,wes);
    interface MemwriteRequest request;
       method Action startWrite(Bit#(32) wp, Bit#(32) ofs, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);

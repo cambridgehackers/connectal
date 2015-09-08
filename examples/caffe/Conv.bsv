@@ -26,14 +26,15 @@ import FIFOF::*;
 import Vector::*;
 import StmtFSM::*;
 import MemTypes::*;
-import MemreadEngine::*;
-import MemwriteEngine::*;
+import MemReadEngine::*;
+import MemWriteEngine::*;
 import HostInterface::*;
 import FloatOps::*;
 import Gearbox::*;
 import GearboxGetPut::*;
 import DefaultValue::*;
 import Pipe::*;
+import ClientServer::*;
 
 typedef struct {
     Bit#(32) bottom_hw;
@@ -51,7 +52,7 @@ endinterface
 
 interface ConvRequest;
     method Action init(ConnectalParamType param);
-    method Action forward_kernel(Bit#(32) p_limit, Bit#(32) q_limit, Float temp, Bit#(32) bpx, Bit#(32) wpx, Bit#(32) outputp);
+    method Action forward_kernel(Bit#(32) ap_limit, Bit#(32) aq_limit, Bit#(1) askip, Float atemp, Bit#(32) abpx, Bit#(32) awpx, Bit#(32) aoutputp);
 endinterface
 
 interface Conv;
@@ -63,26 +64,20 @@ endinterface
 typedef struct {
     Float a;
     Float b;
+    Bool  last;
 } DotType deriving (Bits, Eq);
 
-typedef struct {
-    Bool  odd;
-    Bool  last;
-} LastType deriving (Bits, Eq);
-
 interface DotProd;
-    interface PipeIn#(DotType) inVal;
-    interface PipeIn#(LastType) lastF;
-    interface PipeOut#(void)   done;
+    interface PipeIn#(DotType) sendPair;
+    interface PipeOut#(Float)   done;
     method Action init(Float atemp);
-    method Float result();
 endinterface
 
 (* synthesize *)
 module mkDotProd(DotProd);
     FIFOF#(DotType) dotFifo <- mkFIFOF;
-    FIFOF#(LastType) lastFifo <- mkFIFOF;
-    FIFOF#(void) innerDone <- mkFIFOF;
+    FIFOF#(Bool) lastFifo <- mkFIFOF1;
+    FIFOF#(Float) innerDone <- mkFIFOF;
     FloatAlu adder <- mkFloatAdder(defaultValue);
     FloatAlu mul <- mkFloatMultiplier(defaultValue);
     Reg#(Float)    temp <- mkReg(0);
@@ -90,6 +85,7 @@ module mkDotProd(DotProd);
     rule dotrule;
         let v <- toGet(dotFifo).get;
         mul.request.put(tuple2(v.a, v.b));
+        toPut(lastFifo).put(v.last);
     endrule
 
     rule addrule;
@@ -100,108 +96,83 @@ module mkDotProd(DotProd);
     rule storerule;
         let v <- toGet(lastFifo).get;
         match {.resp,.*} <- adder.response.get;
-        temp <= resp;                //ERROR -> not atomic
-        if (v.last)
-            innerDone.enq(?);
+        temp <= resp;
+        if (v)
+            innerDone.enq(resp);
     endrule
-    interface inVal = toPipeIn(dotFifo);
-    interface lastF = toPipeIn(lastFifo);
+    interface sendPair = toPipeIn(dotFifo);
     interface done = toPipeOut(innerDone);
     method Action init(Float atemp);
         temp <= atemp;
     endmethod
-    method Float result();
-        return temp;
-    endmethod
-endmodule
-
-interface WordFloat;
-    method Action inVal(Bit#(DataBusWidth) vb, Bit#(DataBusWidth) vw, Bool odd, Bool last);
-    method ActionValue#(DotType) outVal();
-    method ActionValue#(LastType) outLast();
-endinterface
-
-(* synthesize *)
-module mkWordFloat(WordFloat);
-    Clock defaultClock <- exposeCurrentClock();
-    Reset defaultReset <- exposeCurrentReset();
-    Gearbox#(2, 1, Bit#(32)) lToSa <- mkNto1Gearbox(defaultClock, defaultReset, defaultClock, defaultReset);
-    Gearbox#(2, 1, Bit#(32)) lToSb <- mkNto1Gearbox(defaultClock, defaultReset, defaultClock, defaultReset);
-    Gearbox#(2, 1, LastType) lToLast <- mkNto1Gearbox(defaultClock, defaultReset, defaultClock, defaultReset);
-
-    method Action inVal(Bit#(DataBusWidth) vb, Bit#(DataBusWidth) vw, Bool odd, Bool last);
-        lToSa.enq(unpack(vb));
-        lToSb.enq(unpack(vw));
-        Vector#(2, LastType) vl;
-        vl[0] = LastType{odd: odd, last: last && odd};
-        vl[1] = LastType{odd: odd, last: last};
-        lToLast.enq(vl);
-    endmethod
-
-    method ActionValue#(DotType) outVal();
-        let vb <- toGet(lToSa).get;
-        let vw <- toGet(lToSb).get;
-        Float btemp = unpack(vb);
-        Float wtemp = unpack(vw);
-        return DotType{a: btemp, b: wtemp};
-    endmethod
-
-    method ActionValue#(LastType) outLast();
-        let v <- toGet(lToLast).get;
-        return v;
-    endmethod
 endmodule
 
 module mkConv#(ConvIndication indication)(Conv);
+    Clock defaultClock <- exposeCurrentClock();
+    Reset defaultReset <- exposeCurrentReset();
+    Gearbox#(2, 1, DotType) floatGear <- mkNto1Gearbox(defaultClock, defaultReset, defaultClock, defaultReset);
+    MemReadEngine#(DataBusWidth,DataBusWidth,2,2) rEngine <- mkMemReadEngine;
+    MemWriteEngine#(DataBusWidth,DataBusWidth,2,1) wEngine <- mkMemWriteEngine;
+    Vector#(2, Server#(Double,Float)) dToF <- replicateM(mkDoubleToFloat);
     DotProd dotp <- mkDotProd;
-    WordFloat wf <- mkWordFloat;
     Reg#(ConnectalParamType) param <- mkReg(unpack(0));
     Reg#(Bit#(32)) p_limit <- mkReg(0);
     Reg#(Bit#(32)) q_limit <- mkReg(0);
+    Reg#(Bit#(1)) skip <- mkReg(0);
     Reg#(Bit#(32)) bpx <- mkReg(0);
     Reg#(Bit#(32)) wpx <- mkReg(0);
     Reg#(Bit#(32)) outputp <- mkReg(0);
     Reg#(Bit#(32)) k <- mkReg(0);
     Reg#(Bit#(32)) p <- mkReg(0);
-    Reg#(Bit#(32)) q <- mkReg(0);
     Reg#(Bit#(32)) bp <- mkReg(0);
     Reg#(Bit#(32)) wp <- mkReg(0);
     Reg#(Bool)     fsmRunning <- mkReg(False);
-    MemreadEngine#(DataBusWidth,2,2) re <- mkMemreadEngine;
-    MemwriteEngine#(DataBusWidth,2,1) wr <- mkMemwriteEngine;
     Reg#(Bit#(BurstLenSize)) burstLenInBytes <- mkReg(8);
     Reg#(Bit#(32)) waitFinish <- mkReg(0);
     Reg#(Bool) dtypeFloat <- mkReg(False);
     Reg#(Bool) dumpStart <- mkReg(False);
+    FIFOF#(Bool) dLast <- mkFIFOF;
 
-    rule readresd if (!dtypeFloat);
-        let vb <- toGet(re.readServers[0].data).get;
-        let vw <- toGet(re.readServers[1].data).get;
-        Double btempd = unpack(vb.data);
-        Double wtempd = unpack(vw.data);
-        Float btemp = unpack(truncate(vb.data));
-        Float wtemp = unpack(truncate(vw.data));
-        $display("READRES64: %x %x", vb.data, vw.data);
-        toPut(dotp.inVal).put(DotType{a: btemp, b: wtemp});
-        toPut(dotp.lastF).put(LastType{odd: False, last: vb.last && waitFinish == 1});
-        if (vb.last)
-            waitFinish <= waitFinish - 1;
+    rule readResD if (!dtypeFloat);
+        let vb <- toGet(rEngine.readServers[0].data).get;
+        let vw <- toGet(rEngine.readServers[1].data).get;
+        dToF[0].request.put(unpack(vb.data));
+        dToF[1].request.put(unpack(vw.data));
+        toPut(dLast).put(vb.last);
     endrule
 
-    rule readresf if (dtypeFloat);
-        let vb <- toGet(re.readServers[0].data).get;
-        let vw <- toGet(re.readServers[1].data).get;
-        wf.inVal(vb.data, vw.data, False, vb.last && waitFinish == 1);
-        if (vb.last)
-            waitFinish <= waitFinish - 1;
+    rule pushDotD;
+        let vb <- dToF[0].response.get();
+        let vw <- dToF[1].response.get();
+        let vl <- toGet(dLast).get();
+        toPut(dotp.sendPair).put(DotType{a: vb, b: vw, last: vl});
     endrule
 
-    rule readgear;
-        let vd <- toGet(wf.outVal).get;
-        $display("READRES32: %x %x", vd.a, vd.b);
-        toPut(dotp.inVal).put(vd);
-        let vf <- toGet(wf.outLast).get;
-        toPut(dotp.lastF).put(vf);
+    rule readResF if (dtypeFloat);
+        let vb <- toGet(rEngine.readServers[0].data).get;
+        let vw <- toGet(rEngine.readServers[1].data).get;
+        Vector#(2, DotType) temp;
+        temp[0] = DotType{a: unpack(vb.data[31:0]), b: unpack(vw.data[31:0]), last: False};
+        temp[1] = DotType{a: unpack(vb.data[63:32]), b: unpack(vw.data[63:32]), last: vb.last};
+        if (vb.last && skip != 0)
+            temp[1].a = 0;
+        floatGear.enq(temp);
+    endrule
+
+    rule pushDotF;
+        let vb <- toGet(floatGear).get;
+        toPut(dotp.sendPair).put(vb);
+    endrule
+
+    rule finishProcessing;
+        let v <- toGet(dotp.done).get;
+        waitFinish <= waitFinish - 1;
+        if (waitFinish == 1) begin
+            // Write convolution result into output (image, channel, y, x)
+            //  *CACCESS(outputp) = v;
+            indication.outputp(outputp, v);
+            fsmRunning <= False;
+        end
     endrule
 
     FSM fsm <- mkFSM(seq
@@ -210,51 +181,45 @@ module mkConv#(ConvIndication indication)(Conv);
             bp <= bpx;
             wp <= wpx;
             // Calculate single 2D filter convolution
-            for ( p <= 0; p < p_limit; p <= p + 1) seq
-                $display("FSM: k %d p %d/%d q %d", k, p, p_limit, q_limit);
-                re.readServers[0].request.put(MemengineCmd{sglId:param.objectId,
-                    base:extend(bp), len:q_limit, burstLen:burstLenInBytes});
-                re.readServers[1].request.put(MemengineCmd{sglId:param.objectId,
-                    base:extend(wp), len:q_limit, burstLen:burstLenInBytes});
+            for ( p <= 0; p < p_limit; p <= p + 1) action
+                rEngine.readServers[0].request.put(MemengineCmd{sglId:param.objectId,
+                    base:extend(bp), len:q_limit, burstLen:burstLenInBytes, tag: 0});
+                rEngine.readServers[1].request.put(MemengineCmd{sglId:param.objectId,
+                    base:extend(wp), len:q_limit, burstLen:burstLenInBytes, tag: 0});
                 waitFinish <= waitFinish + 1;
                 bp <= bp + param.conv_in_width;
                 wp <= wp + param.kernel_w;
-            endseq
+            endaction
             bpx <= bpx + param.bottom_hw;
             wpx <= wpx + param.kernel_hw;
         endseq
-        dotp.done.deq;
-        // Write convolution result into output (image, channel, y, x)
-        //  *CACCESS(outputp) = temp;
-        indication.outputp(outputp, dotp.result());
-        fsmRunning <= False;
         endseq);
 
-   interface ConvRequest request;
-       method Action init(ConnectalParamType aparam);
-           $display("Conv:init");
-           param <= aparam;
-           dtypeFloat <= (aparam.baseSize == 4);
-           if (!dumpStart) begin
-              $dumpon;
-              dumpStart <= True;
-           end
-       endmethod
+    interface ConvRequest request;
+        method Action init(ConnectalParamType aparam);
+            param <= aparam;
+            dtypeFloat <= (aparam.baseSize == 4);
+            if (!dumpStart) begin
+               //$dumpon;
+               dumpStart <= True;
+            end
+        endmethod
 
-       method Action forward_kernel(Bit#(32) ap_limit, Bit#(32) aq_limit, Float atemp, Bit#(32) abpx, Bit#(32) awpx, Bit#(32) aoutputp) if (!fsmRunning);
-           $display("Conv:forward_kernel");
-           p_limit <= ap_limit;
-           q_limit <= (((aq_limit + 1) / 2) * 2) * param.baseSize;
-           dotp.init(atemp);
-           bpx <= extend(abpx);
-           wpx <= extend(awpx);
-           outputp <= aoutputp;
-           fsm.start();
-           fsmRunning <= True;
-       endmethod
-   endinterface
-   interface readDma = cons(re.dmaClient, nil);
-   interface writeDma = cons(wr.dmaClient, nil);
+        method Action forward_kernel(Bit#(32) ap_limit, Bit#(32) aq_limit, Bit#(1) askip, Float atemp, Bit#(32) abpx, Bit#(32) awpx, Bit#(32) aoutputp) if (!fsmRunning);
+            p_limit <= ap_limit;
+            q_limit <= aq_limit;
+            skip <= askip;
+            dotp.init(atemp);
+            bpx <= extend(abpx);
+            wpx <= extend(awpx);
+            outputp <= aoutputp;
+            fsmRunning <= True;
+            fsm.start();
+        endmethod
+    endinterface
+    interface readDma = cons(rEngine.dmaClient, nil);
+    interface writeDma = cons(wEngine.dmaClient, nil);
+endmodule
 
 //void backward_bias(const ParamType<Dtype> *param, CPtr tptr)
 //{
@@ -288,4 +253,3 @@ module mkConv#(ConvIndication indication)(Conv);
 //    }
 //  }
 //}
-endmodule

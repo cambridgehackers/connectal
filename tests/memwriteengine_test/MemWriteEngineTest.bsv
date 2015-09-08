@@ -19,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFO::*;
 import FIFOF::*;
 import Vector::*;
@@ -29,7 +28,7 @@ import BRAMFIFO::*;
 import MemTypes::*;
 import AddressGenerator::*;
 
-interface MemwriteEngineTest;
+interface MemWriteEngineTest;
    interface MemWriteServer#(64) dmaServer; // connect this to memwrite engine
    interface MemWriteClient#(64) dmaClient; // connect this to memserver
    interface Get#(Bit#(32))                   req;
@@ -38,7 +37,7 @@ interface MemwriteEngineTest;
 endinterface
 
 (* synthesize *)
-module mkMemwriteEngineTest(MemwriteEngineTest);
+module mkMemWriteEngineTest(MemWriteEngineTest);
 
    FIFO#(MemRequest) writeReqInFifo <- mkSizedBRAMFIFO(32);
    FIFO#(MemData#(64)) writeDataInFifo <- mkSizedBRAMFIFO(128);

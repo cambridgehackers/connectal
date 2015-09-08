@@ -20,7 +20,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import Vector::*;
 import BuildVector::*;
 import Clocks::*;
@@ -30,10 +29,9 @@ import SCCB::*;
 import FIFOF::*;
 import BRAMFIFO::*;
 import Gearbox::*;
-
 import MemTypes::*;
 import HostInterface::*;
-import MemwriteEngine::*;
+import MemWriteEngine::*;
 import Pipe::*;
 import ConnectalClocks::*;
 import ConnectalXilinxCells::*;
@@ -58,7 +56,7 @@ module mkOv7670Controller#(Ov7670ControllerIndication ind)(Ov7670Controller);
    SyncFIFOIfc#(Tuple3#(Bool, Bool, Bit#(8))) dataFifo <- mkSyncBRAMFIFO(16384, pclk, preset, defaultClock, defaultReset);
    Gearbox#(1, 8, Bit#(8))                  dataGearbox <- mk1toNGearbox(defaultClock, defaultReset, defaultClock, defaultReset);
 
-   MemwriteEngine#(DataBusWidth,8,1) writeEngine <- mkMemwriteEngineBuff(2048);
+   MemWriteEngine#(DataBusWidth,DataBusWidth,8,1) writeEngine <- mkMemWriteEngineBuff(2048);
    FIFOF#(Bool)        sofFifo    <- mkFIFOF();
    Reg#(Bit#(32))      pointerReg <- mkReg(0);
    Reg#(Bool)     transferDoneReg <- mkReg(False);

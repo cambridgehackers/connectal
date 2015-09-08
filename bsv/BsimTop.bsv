@@ -38,7 +38,7 @@ import PcieToMem   :: *;
 import PCIE              :: *;
 import SimDma            :: *;
 import `PinTypeInclude::*;
-//import Platform          :: *;
+import Platform          :: *;
 
 // implemented in BsimCtrl.cpp
 import "BDPI" function Action                 initPortal();
@@ -129,15 +129,16 @@ module  mkBsimTop(Empty);
    let single_reset <- mkReset(2, True, singleClock);
    Reset singleReset = single_reset.new_rst;
    BsimHost#(32,32,12,PhysAddrWidth,DataBusWidth,6,NumberOfMasters) host <- mkBsimHost(clocked_by singleClock, reset_by singleReset, derivedClock, derivedReset);
-   ConnectalTop top <- mkConnectalTop(
+   Vector#(NumberOfUserTiles,ConnectalTop) ts <- replicateM(mkConnectalTop(
 `ifdef IMPORT_HOSTIF
        host,
 `else
 `ifdef IMPORT_HOST_CLOCKS
-      host.derivedClock, host.derivedReset,
+       host.derivedClock, host.derivedReset,
 `endif
 `endif
-       clocked_by singleClock, reset_by singleReset);
+       clocked_by singleClock, reset_by singleReset));
+   Platform top <- mkPlatform(ts, clocked_by singleClock, reset_by singleReset);
    mapM(uncurry(mkConnection),zip(top.masters, host.mem_servers), clocked_by singleClock, reset_by singleReset);
 `ifndef BSIM_EXERCISE_MEM_MASTER_SLAVE
    mkConnection(host.mem_client, top.slave, clocked_by singleClock, reset_by singleReset);

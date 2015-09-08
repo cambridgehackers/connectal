@@ -19,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFO::*;
 import FIFOF::*;
 import SpecialFIFOs::*;
@@ -31,7 +30,7 @@ import ClientServer::*;
 import GetPut::*;
 import Probe::*;
 import MemTypes::*;
-import MemreadEngine::*;
+import MemReadEngine::*;
 import Pipe::*;
 import Dma2BRAM::*;
 
@@ -59,7 +58,7 @@ typedef Bit#(8) Char;
 typedef Bit#(64) DWord;
 typedef Bit#(32) Word;
 
-module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEngine#(tw))
+module mkRegexpEngine#(Pair#(MemReadEngineServer#(64)) readers, Integer iid)(RegexpEngine#(tw))
    provisos(Log#(`MAX_NUM_STATES,5),
 	    Log#(`MAX_NUM_CHARS,5),
 	    Div#(64,8,nc),
@@ -263,4 +262,3 @@ module mkRegexpEngine#(Pair#(MemreadServer#(64)) readers, Integer iid)(RegexpEng
    interface PipeOut ldr = toPipeOut(ldrFIFO);
 
 endmodule
-

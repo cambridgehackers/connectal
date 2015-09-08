@@ -29,7 +29,7 @@
 #define TEST_ASSERT(A) {}
 #endif
 
-int v1a = 42;
+uint32_t v1a = 42;
 int v2a = 2;
 int v2b = 4;
 S2 s2 = {7, 8, 9};
@@ -41,7 +41,7 @@ uint32_t v6a = 0xBBBBBBBB;
 uint64_t v6b = 0x000000EFFECAFECA;
 uint32_t v6c = 0xCCCCCCCC;
 uint32_t v7a = 0xDADADADA;
-E1 v7b = E1_E1Choice2;
+E1 v7b = E1Choice2;
 S3 s3 = { a: v7a, e1: v7b };
 
 class Simple : public SimpleRequestWrapper
@@ -124,21 +124,24 @@ public:
   Simple(unsigned int id, unsigned int numtimes=1, PortalTransportFunctions *item=0, void *param = 0) : SimpleRequestWrapper(id, item, param), cnt(0), times(numtimes){}
 };
 
+DmaManager *dma;
+Simple *indication;
 int main(int argc, const char **argv)
 {
     int verbose = 1;
     int numtimes = 10;
-    int alloc_sz = 4096;
-    int32_t testval = 0x1234abcd, v1arg1[4], v1arg2[4];
-    int16_t v2v[16], v3count;
-    DmaManager *dma = platformInit();
+    uint32_t alloc_sz = 4096;
+    dma = platformInit();
 
 //#define FF {dma}
 #define FF SHARED_DMA(IfcNames_MMURequestS2H, IfcNames_MMUIndicationH2S)
     PortalSharedParam parami = {FF, alloc_sz, SHARED_HARDWARE(IfcNames_SimpleRequestPipesH2S)};
-    Simple *indication = new Simple(IfcNames_SimpleRequestH2S, numtimes, &transportShared, &parami);
+    indication = new Simple(IfcNames_SimpleRequestH2S, numtimes, &transportShared, &parami);
     PortalSharedParam paramr = {FF, alloc_sz, SHARED_HARDWARE(IfcNames_SimpleRequestPipesS2H)};
     SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequestS2H, &transportShared, &paramr);
+
+    // currently no interrupts on shared memory portals, so timeout after 1ms
+    defaultPoller->timeout = 1;
 
     for (int i = 0; i < numtimes; i++) {
       if (verbose) fprintf(stderr, "Main::calling say1(%d)\n", v1a);

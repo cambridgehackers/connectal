@@ -183,7 +183,8 @@ images: source/devguide/connectalbuild-1.png
 	make -C source/design all
 
 install:
-	pip install sphinx sphinxcontrib-makedomain
+	sudo apt-get install poppler-utils
+	pip install docutils sphinx sphinxcontrib-makedomain sphinx-argparse
 
 publish: images html latexpdf
 	rsync -avz build/html/* ../../../doc/current/ref

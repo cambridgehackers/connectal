@@ -19,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFOF::*;
 import FIFO::*;
 import FIFOLevel::*;
@@ -27,35 +26,23 @@ import BRAMFIFO::*;
 import BRAM::*;
 import GetPut::*;
 import ClientServer::*;
-
 import Vector::*;
 import BuildVector::*;
 import List::*;
-
 import ConnectalMemory::*;
 import MemTypes::*;
-import MemreadEngine::*;
-import MemwriteEngine::*;
+import MemReadEngine::*;
+import MemWriteEngine::*;
 import Pipe::*;
-
 import Clocks :: *;
 import Xilinx       :: *;
 `ifndef BSIM
 import XilinxCells ::*;
 `endif
-
 import AuroraImportFmc1::*;
-
 import AuroraCommon::*;
 import ControllerTypes::*;
-//import AuroraExtArbiter::*;
-//import AuroraExtImport::*;
-//import AuroraExtImport117::*;
-
-//import PageCache::*;
-//import DMABurstHelper::*;
 import ControllerTypes::*;
-//import FlashCtrlVirtex::*;
 import FlashCtrlModel::*;
 import PageBuffers::*;
 
@@ -123,8 +110,8 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 
 
 	//Create read/write engines with NUM_BUSES memservers
-	MemreadEngine#(WordSz, 1, NUM_BUSES) re <- mkMemreadEngine;
-	MemwriteEngine#(WordSz, 1, NUM_BUSES) we <- mkMemwriteEngine;
+	MemReadEngine#(WordSz,WordSz,1, NUM_BUSES) re <- mkMemReadEngine;
+	MemWriteEngine#(WordSz,WordSz,1, NUM_BUSES) we <- mkMemWriteEngine;
 
 	Vector#(NUM_BUSES, Reg#(Bit#(16))) dmaWBurstCnts <- replicateM(mkReg(0));
 	Vector#(NUM_BUSES, Reg#(Bit#(16))) memSlaveCnts <- replicateM(mkReg(0));
@@ -238,7 +225,7 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 			let offset = tpl_2(dmaWriteRefs[tag]);
 			Bit#(32) burstOffset = (dmaWrReqCnts[b]<<log2(dmaBurstBytes)) + offset;
 			let dmaCmd = MemengineCmd {
-								tag: ?, //TODO: this was added in the new connectal
+								tag: 0, //TODO: this was added in the new connectal
 								sglId: sglId, 
 								base: zeroExtend(burstOffset),
 								len:fromInteger(dmaBurstBytes), 
@@ -315,7 +302,7 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 			let offset = tpl_2(dmaReadRefs[tag]);
 			Bit#(32) burstOffset = (dmaRdReqCnts[b]<<log2(dmaBurstBytes)) + offset;
 			let dmaCmd = MemengineCmd {
-								tag: ?, //TODO: this was added in the new connectal
+								tag: 0, //TODO: this was added in the new connectal
 								sglId: sglId, 
 								base: zeroExtend(burstOffset),
 								len:fromInteger(dmaBurstBytes), 
@@ -524,9 +511,6 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 
    interface MemWriteClient hostMemWriteClient = vec(we.dmaClient);
    interface MemReadClient hostMemReadClient = vec(re.dmaClient);
-
    interface Aurora_Pins aurora_fmc1 = flashCtrl.aurora;
    interface Aurora_Clock_Pins aurora_clk_fmc1 = gtx_clk_fmc1.aurora_clk;
-
 endmodule
-

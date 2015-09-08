@@ -30,7 +30,6 @@ import ClientServer::*;
 import Assert::*;
 import BRAM::*;
 import RegFile::*;
-import EHR::*;
 
 // CONNECTAL Libraries
 import MemTypes::*;
@@ -43,13 +42,6 @@ interface TagGen#(numeric type numTags);
    method ActionValue#(Bit#(TLog#(numTags))) complete;
 endinterface
 
-//(* synthesize *)
-module mkTagEHR (EHR2BSV#(Bit#(numTags)));
-   EHR#(2,Bit#(numTags)) ehr <- mkEHR(0);
-   interface r1 = ehr[0];
-   interface r2 = ehr[1];
-endmodule
-
 module mkTagGen(TagGen#(numTags))
    provisos(Log#(numTags,tsz));
    
@@ -57,7 +49,7 @@ module mkTagGen(TagGen#(numTags))
    cfg.outFIFODepth = 1;
    //BRAM2Port#(Bit#(tsz),Bool) tags <- mkBRAM2Server(cfg);
    //Vector#(numTags, Reg#(Bool)) tags <- replicateM(mkReg(False));
-   EHR2BSV#(Bit#(numTags)) tags <- mkTagEHR();
+   Reg#(Bit#(numTags))     tags[2] <- mkCReg(2, 0);
    Reg#(Bit#(tsz))        head_ptr <- mkReg(0);
    Reg#(Bit#(tsz))        tail_ptr <- mkReg(0);
    Reg#(Bool)               inited <- mkReg(False);
@@ -75,7 +67,7 @@ module mkTagGen(TagGen#(numTags))
    rule complete_rule1 (comp_state[0] != 0);
       //let rv <- tags.portB.response.get;
       //let rv = tags[tail_ptr];
-      let rv = tags.r2[tail_ptr] == 1;
+      let rv = tags[1][tail_ptr] == 1;
       if (!rv) begin
 	 tail_ptr <= tail_ptr+1;
 	 counter.increment(1);
@@ -92,9 +84,9 @@ module mkTagGen(TagGen#(numTags))
       //tags.portB.request.put(BRAMRequest{write:True, responseOnWrite:False, address:tag, datain:False});
       //tags[tag] <= False;
       begin
-	 let t = tags.r1;
+	 let t = tags[0];
 	 t[tag] = 0;
-	 tags.r1 <= t;
+	 tags[0] <= t;
       end
       comp_state <= 1 | (comp_state << 1);
    endrule
@@ -110,9 +102,9 @@ module mkTagGen(TagGen#(numTags))
       //tags.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, address:head_ptr, datain:True});
       //tags[head_ptr] <= True;
       begin
-	 let t = tags.r2;
+	 let t = tags[1];
 	 t[head_ptr] = 1;
-	 tags.r2 <= t;
+	 tags[1] <= t;
       end
       head_ptr <= head_ptr+1;
       tagFifo.enq(head_ptr);

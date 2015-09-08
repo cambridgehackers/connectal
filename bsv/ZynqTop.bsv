@@ -35,8 +35,9 @@ import CtrlMux::*;
 import AxiDma            :: *;
 import Top               :: *;
 import Bscan             :: *;
-import HostInterface::*;
+import HostInterface     :: *;
 import `PinTypeInclude::*;
+import Platform          :: *;
 
 interface I2C_Pins;
    interface Inout#(Bit#(1)) scl;
@@ -86,8 +87,8 @@ module mkZynqTop(ZynqTop);
 
    BscanTop bscan <- mkBscanTop(3, clocked_by mainclock, reset_by mainreset); // Use USER3  (JTAG IDCODE address 0x22)
    BscanLocal lbscan <- mkBscanLocal(bscan, clocked_by bscan.tck, reset_by bscan.rst);
+   Vector#(NumberOfUserTiles,ConnectalTop) ts <- replicateM(mkConnectalTop(
 `ifdef IMPORT_HOSTIF
-   ConnectalTop top <- mkConnectalTop(
       (interface HostInterface;
           interface ps7 = ps7;
 	  interface portalClock = mainclock;
@@ -95,14 +96,14 @@ module mkZynqTop(ZynqTop);
 	  interface derivedClock = ps7.derivedClock;
 	  interface derivedReset = ps7.derivedReset;
           interface bscan = lbscan.loc[0];
-      endinterface), clocked_by mainclock, reset_by mainreset);
-`else
-`ifdef IMPORT_HOST_CLOCKS // enables synthesis boundary
-   ConnectalTop top <- mkConnectalTop(ps7.derivedClock, ps7.derivedReset, clocked_by mainclock, reset_by mainreset);
-`else // no parameters, enables synthesis boundary
-   ConnectalTop top <- mkConnectalTop(clocked_by mainclock, reset_by mainreset);
+      endinterface),
+`else                  // enables synthesis boundary
+`ifdef IMPORT_HOST_CLOCKS
+      ps7.derivedClock, ps7.derivedReset,
 `endif
 `endif
+      clocked_by mainclock, reset_by mainreset));
+   Platform top <- mkPlatform(ts, clocked_by mainclock, reset_by mainreset);
    mkConnectionWithTrace(ps7, top, lbscan.loc[1], clocked_by mainclock, reset_by mainreset);
 
    let intr_mux <- mkInterruptMux(top.interrupt);

@@ -21,7 +21,6 @@ and the libraries to use for the hardware and software compilation::
     INTERFACES = LedControllerRequest
     BSVFILES = LedController.bsv Top.bsv
     CPPFILES= testleds.cpp
-    NUMBER_OF_MASTERS =0
     include \$(CONNECTALDIR)/Makefile.connectal
 
 ``BSVFILES`` is a list of bsv files containing interface
@@ -40,8 +39,8 @@ defined in Connectal libraries which may be included in this list.
 
 ``NUMBER_OF_MASTERS`` is used to designate the number of host
 bus masters the hardware components will instantiate.  For PCIe-based
-platforms, this value can be set to 0 or 1, while on Zynq-based
-platforms values from 0 to 4 are valid.
+platforms, this value can be set to 1, while on Zynq-based
+platforms values from 1 to 4 are valid.
 
 ``CONNECTALDIR`` must be set so that the top-level Connectal
 makefile can be included, defining the makefile build targets for the project.

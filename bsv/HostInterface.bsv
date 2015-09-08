@@ -19,6 +19,7 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+import `PinTypeInclude::*;
 
 ////////////////////////////// common /////////////////////////////////
 
@@ -35,7 +36,7 @@ typedef `NumberOfUserTiles NumberOfUserTiles;
 typedef TAdd#(`NumberOfUserTiles,1) NumberOfTiles;
 typedef 2 NumReadClients;
 typedef 2 NumWriteClients;
-typedef Empty TileExtType;
+typedef `PinType TileExtType;
 typedef 16 MaxNumberOfPortals;
 
 ////////////////////////////// Bsim /////////////////////////////////

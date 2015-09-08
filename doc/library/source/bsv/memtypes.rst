@@ -147,7 +147,7 @@ Memory Engine Types
 
 .. bsv:struct:: MemengineCmd
 
-   A read or write request for a MemreadEngine or a MemwriteEngine. Memread and Memwrite engines will issue one or more burst requests to satisfy the overall length of the request.
+   A read or write request for a MemReadEngine or a MemWriteEngine. MemRead and MemWrite engines will issue one or more burst requests to satisfy the overall length of the request.
 
    .. bsv:field:: SGLId sglId
 
@@ -172,31 +172,31 @@ Memory Engine Types
 Memory Engine Interfaces
 ------------------------
 
-.. bsv:interface:: MemwriteServer#(numeric type dataWidth)
+.. bsv:interface:: MemWriteEngineServer#(numeric type userWidth)
 
    .. bsv:subinterface:: Put#(MemengineCmd)       request
 
    .. bsv:subinterface:: Get#(Bool)               done
 
-   .. bsv:subinterface:: PipeIn#(Bit#(dataWidth)) data
+   .. bsv:subinterface:: PipeIn#(Bit#(userWidth)) data
 
-.. bsv:interface:: MemwriteEngine#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers)
+.. bsv:interface:: MemWriteEngine#(numeric type busWidth, numeric type userWidth, numeric type cmdQDepth, numeric type numServers)
 
-   .. bsv:subinterface:: MemWriteClient#(dataWidth) dmaClient
+   .. bsv:subinterface:: MemWriteClient#(busWidth) dmaClient
 
-   .. bsv:subinterface:: Vector#(numServers, MemwriteServer#(dataWidth)) writeServers
+   .. bsv:subinterface:: Vector#(numServers, MemWriteEngineServer#(userWidth)) writeServers
 
-.. bsv:interface:: MemreadServer#(numeric type dataWidth)
+.. bsv:interface:: MemReadEngineServer#(numeric type userWidth)
 
    .. bsv:subinterface:: Put#(MemengineCmd)        request
 
-   .. bsv:subinterface:: PipeOut#(Bit#(dataWidth)) data
+   .. bsv:subinterface:: PipeOut#(Bit#(userWidth)) data
       
-.. bsv:interface:: MemreadEngine#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers)
+.. bsv:interface:: MemReadEngine#(numeric type busWidth, numeric type userWidth, numeric type cmdQDepth, numeric type numServers)
 
-   .. bsv:subinterface:: MemReadClient#(dataWidth) dmaClient
+   .. bsv:subinterface:: MemReadClient#(busWidth) dmaClient
 
-   .. bsv:subinterface:: Vector#(numServers, MemreadServer#(dataWidth)) readServers
+   .. bsv:subinterface:: Vector#(numServers, MemReadEngineServer#(userWidth)) readServers
 
 
 Memory Traffic Interfaces

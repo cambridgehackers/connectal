@@ -1,9 +1,8 @@
-
 CONNECTALDIR?=../..
 INTERFACES = Simple ZynqPcieTestIndication ZynqPcieTestRequest
+
 BSVFILES = SimpleIF.bsv ZynqPcieTestIF.bsv Top.bsv
 CPPFILES=testzynqpcie.cpp
-NUMBER_OF_MASTERS =0
 PIN_TYPE=ZynqPcie
 PIN_TYPE_INCLUDE = ZynqPcieTestIF
 CONNECTALFLAGS += -D PcieHostIF=1 -D PCIE_NO_BSCAN=1 --bscflags="+RTS -K96000000 -RTS"
@@ -21,6 +20,5 @@ prebuild:: synth-ip.tcl
 $(BOARD)/sources/zynqpcie.xdc: zynqpcie.json $(CONNECTALDIR)/boardinfo/$(BOARD).json
 	mkdir -p $(BOARD)/sources
 	$(CONNECTALDIR)/scripts/generate-constraints.py $(PIN_BINDINGS) -o $(BOARD)/sources/zynqpcie.xdc --boardfile $(CONNECTALDIR)/boardinfo/$(BOARD).json --pinoutfile zynqpcie.json
-
 
 include $(CONNECTALDIR)/Makefile.connectal

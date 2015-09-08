@@ -75,6 +75,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     pint->handler = handler;
     pint->cb = (PortalHandlerTemplate *)cb;
     pint->reqinfo = reqinfo;
+    //PORTAL_PRINTF("%s: **initialize portal_%d_%d handler %p cb %p\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number, handler, cb);
     if (!item) {
         // Use defaults for transport handling methods
 #ifdef BSIM

@@ -51,9 +51,10 @@ import PcieEndpointX7    :: *;
 `elsif ALTERA
 import PcieEndpointS5    :: *;
 `endif
-import PcieHost         :: *;
-import HostInterface    :: *;
+import PcieHost          :: *;
+import HostInterface     :: *;
 import `PinTypeInclude::*;
+import Platform          :: *;
 
 `ifndef DataBusWidth
 `define DataBusWidth 64
@@ -69,15 +70,16 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
    PcieHostTop host <- mkPcieHostTop(pcie_refclk_p, osc_50_b3b, pcie_perst_n);
 `endif
 
+   Vector#(NumberOfUserTiles,ConnectalTop) ts <- replicateM(mkConnectalTop(
 `ifdef IMPORT_HOSTIF // no synthesis boundary
-   ConnectalTop portalTop <- mkConnectalTop(host, clocked_by host.portalClock, reset_by host.portalReset);
-`else
-`ifdef IMPORT_HOST_CLOCKS // enables synthesis boundary
-   ConnectalTop portalTop <- mkConnectalTop(host.derivedClock, host.derivedReset, clocked_by host.portalClock, reset_by host.portalReset);
-`else  // enables synthesis boundary
-   ConnectalTop portalTop <- mkConnectalTop(clocked_by host.portalClock, reset_by host.portalReset);
+      host,
+`else                // enables synthesis boundary
+`ifdef IMPORT_HOST_CLOCKS
+       host.derivedClock, host.derivedReset,
 `endif
 `endif
+       clocked_by host.portalClock, reset_by host.portalReset));
+   Platform portalTop <- mkPlatform(ts, clocked_by host.portalClock, reset_by host.portalReset);
 
    if (mainClockPeriod == pcieClockPeriod) begin
        mkConnection(host.tpciehost.master, portalTop.slave, clocked_by host.portalClock, reset_by host.portalReset);

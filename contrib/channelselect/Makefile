@@ -1,9 +1,8 @@
-
 CONNECTALDIR?=../..
 INTERFACES = ChannelSelectTestRequest DDSTestRequest ChannelSelectTestIndication DDSTestIndication
+
 BSVFILES = ChannelSelectTestInterfaces.bsv  DDSTestInterfaces.bsv Top.bsv
 CPPFILES=testchannelselecttest.cpp
-NUMBER_OF_MASTERS =0
 
 gentarget:: sine.bin
 

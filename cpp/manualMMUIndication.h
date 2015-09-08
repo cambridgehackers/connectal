@@ -26,6 +26,10 @@
 static int return_code;
 static uint32_t return_id;
 enum {ManualMMU_None, ManualMMU_IdResponse, ManualMMU_ConfigResp, ManualMMU_Error};
+static int manualDisconnect(struct PortalInternal *p)
+{
+    return 0;
+}
 static int manualIdResponse(struct PortalInternal *p, const uint32_t sglId )
 {
     return_id = sglId;
@@ -43,7 +47,7 @@ static int manualError(struct PortalInternal *p, const uint32_t code, const uint
     return_code = ManualMMU_Error;
     return 0;
 }
-static MMUIndicationCb manualMMU_Cb = {manualIdResponse, manualConfigResp, manualError};
+static MMUIndicationCb manualMMU_Cb = {manualDisconnect, manualIdResponse, manualConfigResp, manualError};
 
 static int manualWaitForResp(PortalInternal *p, uint32_t *arg_id)
 {

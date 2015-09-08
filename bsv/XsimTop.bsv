@@ -27,8 +27,16 @@ import Top               :: *;
 import HostInterface     :: *;
 import Pipe::*;
 import CnocPortal::*;
-import MemTypes          :: *;
-import SimDma            ::*;
+import MemTypes:: *;
+import MMU:: *;
+import MemServer:: *;
+import MMURequest::*;
+import MMUIndication::*;
+import MemServerIndication::*;
+import MemServerRequest::*;
+import SimDma::*;
+import IfcNames::*;
+import BuildVector::*;
 
 module  mkXsimHost#(Clock derivedClock, Reset derivedReset)(XsimHost);
    interface derivedClock = derivedClock;
@@ -99,7 +107,23 @@ module mkXsimTop#(Clock derivedClock, Reset derivedReset)(Empty);
 `endif
 `endif
        );
-   mapM_(mkXsimSource, top.indications);
-   mapM_(mkXsimSink, top.requests);
-   mapM_(mkXsimMemoryConnection, top.masters);
+
+   MMUIndicationOutput lMMUIndicationOutput <- mkMMUIndicationOutput;
+   MMURequestInput lMMURequestInput <- mkMMURequestInput;
+   MMU#(PhysAddrWidth) lMMU <- mkMMU(0,True, lMMUIndicationOutput.ifc);
+   mkConnection(lMMURequestInput.pipes, lMMU.request);
+
+   MemServerIndicationOutput lMemServerIndicationOutput <- mkMemServerIndicationOutput;
+   MemServerRequestInput lMemServerRequestInput <- mkMemServerRequestInput;
+   MemServer#(PhysAddrWidth,DataBusWidth,NumberOfMasters) lMemServer <- mkMemServer(top.readers, top.writers, cons(lMMU,nil), lMemServerIndicationOutput.ifc);
+   mkConnection(lMemServerRequestInput.pipes, lMemServer.request);
+
+   let lMMUIndicationOutputNoc <- mkPortalMsgIndication(extend(pack(IfcNames_MMUIndicationH2S)), lMMUIndicationOutput.portalIfc.indications, lMMUIndicationOutput.portalIfc.messageSize);
+   let lMMURequestInputNoc <- mkPortalMsgRequest(extend(pack(IfcNames_MMURequestS2H)), lMMURequestInput.portalIfc.requests);
+   let lMemServerIndicationOutputNoc <- mkPortalMsgIndication(extend(pack(IfcNames_MemServerIndicationH2S)), lMemServerIndicationOutput.portalIfc.indications, lMemServerIndicationOutput.portalIfc.messageSize);
+   let lMemServerRequestInputNoc <- mkPortalMsgRequest(extend(pack(IfcNames_MemServerRequestS2H)), lMemServerRequestInput.portalIfc.requests);
+
+   mapM_(mkXsimSink, append(top.requests, append(vec(lMMURequestInputNoc), vec(lMemServerRequestInputNoc))));
+   mapM_(mkXsimSource, append(top.indications, append(vec(lMMUIndicationOutputNoc), vec(lMemServerIndicationOutputNoc))));
+   mapM_(mkXsimMemoryConnection, lMemServer.masters);
 endmodule

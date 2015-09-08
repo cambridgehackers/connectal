@@ -60,7 +60,7 @@ int main(int argc, const char **argv)
   int dstAlloc = portalAlloc(alloc_sz, 0);
   unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 
-  for (int i = 0; i < alloc_sz/sizeof(uint32_t); i++)
+  for (unsigned int i = 0; i < alloc_sz/sizeof(uint32_t); i++)
     dstBuffer[i] = 0xDEADBEEF;
 
   portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);

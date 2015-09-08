@@ -157,6 +157,9 @@ void PortalPoller::end(void)
 void* PortalPoller::pollFn(int timeout)
 {
     long rc = 0;
+    //printf("[%s:%d] before poll %d numFds %d\n", __FUNCTION__, __LINE__, timeout, numFds);
+    //for (int i = 0; i < numFds; i++)
+        //printf("%s: fd %d events %x\n", __FUNCTION__, portal_fds[i].fd, portal_fds[i].events);
     if (timeout != 0)
         rc = poll(portal_fds, numFds, timeout);
     if(rc < 0) {

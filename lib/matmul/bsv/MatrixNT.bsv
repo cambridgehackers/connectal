@@ -19,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFO::*;
 import FIFOF::*;
 import MIMO::*;
@@ -29,8 +28,8 @@ import Vector::*;
 import BRAM::*;
 import ConnectalMemory::*;
 import MemTypes::*;
-import MemreadEngine::*;
-import MemwriteEngine::*;
+import MemReadEngine::*;
+import MemWriteEngine::*;
 import MemUtils::*;
 import FloatingPoint::*;
 import Pipe::*;
@@ -513,18 +512,18 @@ interface DramMatrixMultiply#(numeric type n, numeric type dmasz, numeric type n
 endinterface
 
 module  mkDramMatrixMultiply#(HostInterface host)(DramMatrixMultiply#(N,TMul#(N,32),2));
-   MemwriteEngine#(TMul#(N,32),2, J)   writeEngine <- mkMemwriteEngine();
-   MemreadEngine#(TMul#(N,32), 2, J) rowReadEngine <- mkMemreadEngineBuff(512);
-   MemreadEngine#(TMul#(N,32), 2, K) colReadEngine <- mkMemreadEngineBuff(512);
+   MemWriteEngine#(TMul#(N,32),TMul#(N,32),2, J)   writeEngine <- mkMemWriteEngine();
+   MemReadEngine#(TMul#(N,32), TMul#(N,32), 2, J) rowReadEngine <- mkMemReadEngineBuff(512);
+   MemReadEngine#(TMul#(N,32), TMul#(N,32), 2, K) colReadEngine <- mkMemReadEngineBuff(512);
    
-   Vector#(J, MemreadServer#(TMul#(N,32))) rowReadServers = rowReadEngine.readServers;
-   Vector#(K, MemreadServer#(TMul#(N,32))) colReadServers = colReadEngine.readServers;
+   Vector#(J, MemReadServer#(TMul#(N,32))) rowReadServers = rowReadEngine.readServers;
+   Vector#(K, MemReadServer#(TMul#(N,32))) colReadServers = colReadEngine.readServers;
       
    MemWriter#(TMul#(32,N)) bogusWriter <- mkMemWriter;
    
-   Vector#(J, VectorSource#(DmaSz, Vector#(N,Float))) xvfsources <- mapM(mkMemreadVectorSource, rowReadServers);
-   Vector#(K, VectorSource#(DmaSz, Vector#(N,Float))) yvfsources <- mapM(mkMemreadVectorSource, colReadServers);
-   Vector#(J,   VectorSink#(DmaSz, Vector#(N,Float)))      sinks <- mapM(mkMemwriteVectorSink, writeEngine);
+   Vector#(J, VectorSource#(DmaSz, Vector#(N,Float))) xvfsources <- mapM(mkMemReadVectorSource, rowReadServers);
+   Vector#(K, VectorSource#(DmaSz, Vector#(N,Float))) yvfsources <- mapM(mkMemReadVectorSource, colReadServers);
+   Vector#(J,   VectorSink#(DmaSz, Vector#(N,Float)))      sinks <- mapM(mkMemWriteVectorSink, writeEngine);
    
    DmaMatrixMultiplyIfc#(MMSize,DmaSz) dmaMMF <- mkDmaMatrixMultiply(xvfsources, yvfsources, sinks, host);
    interface Vector readClients  = cons(rowReadEngine.dmaClient, cons(colReadEngine.dmaClient, nil));
@@ -615,4 +614,3 @@ module  mkMmNT#(MmIndication ind, TimerIndication timerInd, HostInterface host)(
    interface Vector writeClients =  dmaMMF.writeClients;
 
 endmodule
-

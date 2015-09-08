@@ -75,14 +75,8 @@ endinterface
 typedef MemPortal#(12,32) StdPortal;
 
 interface ConnectalTop;
-   interface PhysMemSlave#(32,32) slave;
-   interface Vector#(NumberOfMasters,PhysMemMaster#(PhysAddrWidth, DataBusWidth)) masters;
-   interface Vector#(MaxNumberOfPortals,ReadOnly#(Bool)) interrupt;
-   interface `PinType pins;
-endinterface
-interface Tile;
    interface PhysMemSlave#(18,32) slave;
-   interface ReadOnly#(Bool) interrupt;
+   interface Vector#(MaxNumberOfPortals,ReadOnly#(Bool)) interrupt;
    interface Vector#(NumReadClients,MemReadClient#(DataBusWidth)) readers;
    interface Vector#(NumWriteClients,MemWriteClient#(DataBusWidth)) writers;
    interface TileExtType pins;

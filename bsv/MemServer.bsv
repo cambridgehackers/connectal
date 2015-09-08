@@ -19,8 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
-// BSV Libraries
 import FIFO::*;
 import Vector::*;
 import List::*;
@@ -30,81 +28,33 @@ import Assert::*;
 import StmtFSM::*;
 import SpecialFIFOs::*;
 import Connectable::*;
-
-// CONNECTAL Libraries
 import HostInterface::*;
 import MemTypes::*;
 import ConnectalMemory::*;
 import MMU::*;
 import MemServerInternal::*;
 
-function Put#(t) null_put();
-   return (interface Put;
-              method Action put(t x) if (False);
-                 noAction;
-              endmethod
-           endinterface);
-endfunction
-
-function Get#(t) null_get();
-   return (interface Get;
-              method ActionValue#(t) get() if (False);
-                 return ?;
-              endmethod
-           endinterface);
-endfunction
-
-function  PhysMemWriteClient#(addrWidth, busWidth) null_phys_mem_write_client();
-   return (interface PhysMemWriteClient;
-              interface Get writeReq = null_get;
-              interface Get writeData = null_get;
-              interface Put writeDone = null_put;
-           endinterface);
-endfunction
-
-function  PhysMemReadClient#(addrWidth, busWidth) null_phys_mem_read_client();
-   return (interface PhysMemReadClient;
-              interface Get readReq = null_get;
-              interface Put readData = null_put;
-           endinterface);
-endfunction
-
-function  MemWriteClient#(busWidth) null_mem_write_client();
-   return (interface MemWriteClient;
-              interface Get writeReq = null_get;
-              interface Get writeData = null_get;
-              interface Put writeDone = null_put;
-           endinterface);
-endfunction
-
-function  MemReadClient#(busWidth) null_mem_read_client();
-   return (interface MemReadClient;
-              interface Get readReq = null_get;
-              interface Put readData = null_put;
-           endinterface);
-endfunction
-
-interface MemServer#(numeric type addrWidth, numeric type dataWidth, numeric type nMasters);
+interface MemServer#(numeric type addrWidth, numeric type busWidth, numeric type nMasters);
    interface MemServerRequest request;
-   interface Vector#(nMasters,PhysMemMaster#(addrWidth, dataWidth)) masters;
+   interface Vector#(nMasters,PhysMemMaster#(addrWidth, busWidth)) masters;
 endinterface		
 
-interface MemServerWithMMU#(numeric type addrWidth, numeric type dataWidth, numeric type nMasters);
+interface MemServerWithMMU#(numeric type addrWidth, numeric type busWidth, numeric type nMasters);
    interface MemServerRequest memServerRequest;
-   interface Vector#(nMasters,PhysMemMaster#(addrWidth, dataWidth)) masters;
+   interface Vector#(nMasters,PhysMemMaster#(addrWidth, busWidth)) masters;
    interface MMURequest mmuRequest;
 endinterface
 
-interface MemServerRead#(numeric type addrWidth, numeric type dataWidth, numeric type numClients, numeric type numServers);
+interface MemServerRead#(numeric type addrWidth, numeric type busWidth, numeric type numClients, numeric type numServers);
    interface MemServerRequest request;
-   interface Vector#(numClients, PhysMemReadClient#(addrWidth,dataWidth)) clients;
-   interface Vector#(numServers, MemReadServer#(dataWidth)) servers;
+   interface Vector#(numClients, PhysMemReadClient#(addrWidth,busWidth)) clients;
+   interface Vector#(numServers, MemReadServer#(busWidth)) servers;
 endinterface
 
-interface MemServerWrite#(numeric type addrWidth, numeric type dataWidth, numeric type numClients, numeric type numServers);
+interface MemServerWrite#(numeric type addrWidth, numeric type busWidth, numeric type numClients, numeric type numServers);
    interface MemServerRequest request;
-   interface Vector#(numClients, PhysMemWriteClient#(addrWidth,dataWidth)) clients;
-   interface Vector#(numServers, MemWriteServer#(dataWidth)) servers;
+   interface Vector#(numClients, PhysMemWriteClient#(addrWidth,busWidth)) clients;
+   interface Vector#(numServers, MemWriteServer#(busWidth)) servers;
 endinterface
    
 typedef struct {
@@ -112,30 +62,30 @@ typedef struct {
    Bit#(32) pref;
    } DmaError deriving (Bits);
 
-module mkMemServer#(Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
-		    Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients,
+module mkMemServer#(Vector#(numReadClients, MemReadClient#(busWidth)) readClients,
+		    Vector#(numWriteClients, MemWriteClient#(busWidth)) writeClients,
 		    Vector#(numMMUs,MMU#(addrWidth)) mmus,
 		    MemServerIndication indication)  
-   (MemServer#(addrWidth, dataWidth, nMasters))
+   (MemServer#(addrWidth, busWidth, nMasters))
    provisos(Mul#(TDiv#(numWriteClients, nMasters),nMasters,nws)
 	    ,Mul#(TDiv#(numReadClients, nMasters),nMasters,nrs)
-	    ,Add#(TLog#(TDiv#(dataWidth, 8)), d__, 8)
-	    ,Add#(TLog#(TDiv#(dataWidth, 8)), e__, BurstLenSize)
+	    ,Add#(TLog#(TDiv#(busWidth, 8)), d__, 8)
+	    ,Add#(TLog#(TDiv#(busWidth, 8)), e__, BurstLenSize)
 	    ,Add#(c__, addrWidth, 64)
 	    ,Add#(numWriteClients, a__, nws)
 	    ,Add#(numReadClients, b__, nrs)
 	    );
    
-   MemServerRead#(addrWidth,dataWidth,nMasters,nrs)  reader <- mkMemServerRead(indication, mmus);
-   MemServerWrite#(addrWidth,dataWidth,nMasters,nws) writer <- mkMemServerWrite(indication, mmus);
+   MemServerRead#(addrWidth,busWidth,nMasters,nrs)  reader <- mkMemServerRead(indication, mmus);
+   MemServerWrite#(addrWidth,busWidth,nMasters,nws) writer <- mkMemServerWrite(indication, mmus);
    
    zipWithM(mkConnection,readClients,take(reader.servers));
    zipWithM(mkConnection,writeClients,take(writer.servers));
    
-   function PhysMemMaster#(addrWidth,dataWidth) mkm(Integer i) = (interface PhysMemMaster#(addrWidth,dataWidth);
-								     interface PhysMemReadClient read_client = reader.clients[i];
-								     interface PhysMemWriteClient write_client = writer.clients[i];
-								  endinterface);
+   function PhysMemMaster#(addrWidth,busWidth) mkm(Integer i) = (interface PhysMemMaster#(addrWidth,busWidth);
+		     interface PhysMemReadClient read_client = reader.clients[i];
+		     interface PhysMemWriteClient write_client = writer.clients[i];
+		  endinterface);
 
    interface MemServerRequest request;
       method Action setTileState(TileControl tc);
@@ -163,11 +113,11 @@ endmodule
 
 module mkMemServerRead#(MemServerIndication indication,
 			Vector#(numMMUs,MMU#(addrWidth)) mmus)
-   (MemServerRead#(addrWidth, dataWidth, numClients, numServers))
+   (MemServerRead#(addrWidth, busWidth, numClients, numServers))
    provisos(Mul#(nrc, numClients, numServers)
 	    ,Add#(a__, addrWidth, 64)
-	    ,Add#(TLog#(TDiv#(dataWidth, 8)), b__, 8)
-	    ,Add#(TLog#(TDiv#(dataWidth, 8)), c__, BurstLenSize)
+	    ,Add#(TLog#(TDiv#(busWidth, 8)), b__, 8)
+	    ,Add#(TLog#(TDiv#(busWidth, 8)), c__, BurstLenSize)
 	    );
 
    FIFO#(Bit#(32))   addrReqFifo <- mkFIFO;
@@ -180,9 +130,9 @@ module mkMemServerRead#(MemServerIndication indication,
       return rv;
    endmodule
    Vector#(numMMUs,MMUAddrServer#(addrWidth,numClients)) mmu_servers <- mapM(foo,genVector);
-   Vector#(numClients,MemReadInternal#(addrWidth,dataWidth,MemServerTags,nrc)) readers;
-   Vector#(numClients, PhysMemReadClient#(addrWidth,dataWidth)) read_clients;
-   Vector#(numServers, MemReadServer#(dataWidth)) read_servers;
+   Vector#(numClients,MemReadInternal#(addrWidth,busWidth,MemServerTags,nrc)) readers;
+   Vector#(numClients, PhysMemReadClient#(addrWidth,busWidth)) read_clients;
+   Vector#(numServers, MemReadServer#(busWidth)) read_servers;
 
    for(Integer i = 0; i < valueOf(numClients); i = i+1) begin
       Vector#(numMMUs,Server#(ReqTup,Bit#(addrWidth))) ss;
@@ -246,11 +196,11 @@ endmodule
 	
 module mkMemServerWrite#(MemServerIndication indication,
 		     Vector#(numMMUs,MMU#(addrWidth)) mmus)
-   (MemServerWrite#(addrWidth, dataWidth, numClients, numServers))
+   (MemServerWrite#(addrWidth, busWidth, numClients, numServers))
    provisos(Mul#(nwc, numClients, numServers)
 	    ,Add#(a__, addrWidth, 64)
-	    ,Add#(TLog#(TDiv#(dataWidth, 8)), b__, 8)
-	    ,Add#(TLog#(TDiv#(dataWidth, 8)), c__, BurstLenSize)
+	    ,Add#(TLog#(TDiv#(busWidth, 8)), b__, 8)
+	    ,Add#(TLog#(TDiv#(busWidth, 8)), c__, BurstLenSize)
 	    );
    
    FIFO#(Bit#(32))   addrReqFifo <- mkFIFO;
@@ -263,9 +213,9 @@ module mkMemServerWrite#(MemServerIndication indication,
       return rv;
    endmodule
    Vector#(numMMUs,MMUAddrServer#(addrWidth,numClients)) mmu_servers <- mapM(foo,genVector);
-   Vector#(numClients,MemWriteInternal#(addrWidth,dataWidth,MemServerTags,nwc)) writers;
-   Vector#(numClients, PhysMemWriteClient#(addrWidth,dataWidth)) write_clients;
-   Vector#(numServers, MemWriteServer#(dataWidth)) write_servers;
+   Vector#(numClients,MemWriteInternal#(addrWidth,busWidth,MemServerTags,nwc)) writers;
+   Vector#(numClients, PhysMemWriteClient#(addrWidth,busWidth)) write_clients;
+   Vector#(numServers, MemWriteServer#(busWidth)) write_servers;
 
    for(Integer i = 0; i < valueOf(numClients); i = i+1) begin
       Vector#(numMMUs,Server#(ReqTup,Bit#(addrWidth))) ss;
@@ -327,13 +277,13 @@ module mkMemServerWrite#(MemServerIndication indication,
    endinterface
 endmodule
 
-module mkMemServerWithMMU#(Vector#(numReadClients, MemReadClient#(dataWidth)) readClients,
-			  Vector#(numWriteClients, MemWriteClient#(dataWidth)) writeClients,
+module mkMemServerWithMMU#(Vector#(numReadClients, MemReadClient#(busWidth)) readClients,
+			  Vector#(numWriteClients, MemWriteClient#(busWidth)) writeClients,
 			  MemServerIndication indication,
-			  MMUIndication mmuIndication)(MemServerWithMMU#(addrWidth, dataWidth,nMasters))
+			  MMUIndication mmuIndication)(MemServerWithMMU#(addrWidth, busWidth,nMasters))
 
-   provisos(Add#(TLog#(TDiv#(dataWidth, 8)), e__, 8)
-	    ,Add#(TLog#(TDiv#(dataWidth, 8)), f__, BurstLenSize)
+   provisos(Add#(TLog#(TDiv#(busWidth, 8)), e__, 8)
+	    ,Add#(TLog#(TDiv#(busWidth, 8)), f__, BurstLenSize)
 	    ,Add#(c__, addrWidth, 64)
 	    ,Add#(d__, addrWidth, 44)
 	    ,Add#(numWriteClients, a__, TMul#(TDiv#(numWriteClients, nMasters),nMasters))
@@ -342,12 +292,9 @@ module mkMemServerWithMMU#(Vector#(numReadClients, MemReadClient#(dataWidth)) re
 
    
    MMU#(addrWidth) hostMMU <- mkMMU(0, True, mmuIndication);
-   MemServer#(addrWidth,dataWidth,nMasters) dma <- mkMemServer(readClients, writeClients, cons(hostMMU,nil), indication);
+   MemServer#(addrWidth,busWidth,nMasters) dma <- mkMemServer(readClients, writeClients, cons(hostMMU,nil), indication);
 
    interface MemServerRequest memServerRequest = dma.request;
    interface MMURequest mmuRequest = hostMMU.request;
    interface Vector masters = dma.masters;
-
 endmodule
-
-

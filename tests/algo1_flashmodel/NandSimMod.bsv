@@ -19,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import BRAMFIFO::*;
 import FIFO::*;
 import FIFOF::*;
@@ -30,10 +29,9 @@ import GetPut::*;
 import Connectable::*;
 import Pipe::*;
 import MemTypes::*;
-import MemreadEngine::*;
-import MemwriteEngine::*;
+import MemReadEngine::*;
+import MemWriteEngine::*;
 import FlashCtrlModel::*;
-
 
 interface NandCfgRequest;
    method Action startRead(Bit#(32) drampointer, Bit#(32) dramOffset, Bit#(32) nandAddr, Bit#(32) numBytes, Bit#(32) burstLen);
@@ -58,8 +56,8 @@ endinterface
 
 
 module mkNandSimMod#(NandCfgIndication indication,
-		     MemreadServer#(64) nand_ctrl_host_rs,
-		     MemwriteServer#(64) nand_ctrl_host_ws) (NandSimMod#(numSlaves,memengineOuts))
+		     MemReadServer#(64) nand_ctrl_host_rs,
+		     MemWriteServer#(64) nand_ctrl_host_ws) (NandSimMod#(numSlaves,memengineOuts))
    provisos(
 
     Add#(a__, TLog#(TAdd#(numSlaves, 1)), 6)
@@ -99,13 +97,13 @@ module mkNandSimMod#(NandCfgIndication indication,
    
    let verbose = False;
    
-   MemreadEngine#(64, memengineOuts,  TAdd#(numSlaves,1))  re <- mkMemreadEngine();
-   MemwriteEngine#(64, memengineOuts, TAdd#(numSlaves,2))  we <- mkMemwriteEngine();
+   MemReadEngine#(64,64,memengineOuts,  TAdd#(numSlaves,1))  re <- mkMemReadEngine();
+   MemWriteEngine#(64,64,memengineOuts, TAdd#(numSlaves,2))  we <- mkMemWriteEngine();
    NandSimControl ns <- mkNandSimControl(nand_ctrl_host_rs, re.readServers[0],
 	 nand_ctrl_host_ws, we.writeServers[0], we.writeServers[1], indication);
    
-   Vector#(numSlaves,MemreadServer#(64)) slave_read_servers  = takeTail(re.readServers);
-   Vector#(numSlaves,MemwriteServer#(MemengineCmd,Bool)) slave_write_servers = takeTail(we.writeServers);
+   Vector#(numSlaves,MemReadServer#(64)) slave_read_servers  = takeTail(re.readServers);
+   Vector#(numSlaves,MemWriteServer#(MemengineCmd,Bool)) slave_write_servers = takeTail(we.writeServers);
    Vector#(numSlaves,FIFO#(Bit#(MemTagSize)))    slaveWriteTags <- replicateM(mkSizedBRAMFIFO(valueOf(memengineOuts)));
    Vector#(numSlaves,FIFO#(Bit#(MemTagSize)))    slaveReadTags <- replicateM(mkSizedBRAMFIFO(valueOf(memengineOuts)));
    Vector#(numSlaves,Reg#(Bit#(BurstLenSize)))   slaveReadCnts <- replicateM(mkReg(0));
@@ -164,9 +162,9 @@ module mkNandSimMod#(NandCfgIndication indication,
    interface request = ns.request;
 endmodule
 
-module mkNandSimControl#(MemreadServer#(64) dram_read_server, MemreadServer#(64) nand_read_server,
-    MemwriteServer#(64) dram_write_server, MemwriteServer#(64) nand_write_server,
-    MemwriteServer#(64) nand_erase_server, NandCfgIndication indication) (NandSimControl);
+module mkNandSimControl#(MemReadServer#(64) dram_read_server, MemReadServer#(64) nand_read_server,
+    MemWriteServer#(64) dram_write_server, MemWriteServer#(64) nand_write_server,
+    MemWriteServer#(64) nand_erase_server, NandCfgIndication indication) (NandSimControl);
    FIFOF#(Bit#(32))  readReqFifo <- mkFIFOF();
    FIFOF#(Bit#(32)) writeReqFifo <- mkFIFOF();
    Reg#(Bit#(32))   readCountReg <- mkReg(0);
@@ -247,8 +245,8 @@ module mkNandSimControl#(MemreadServer#(64) dram_read_server, MemreadServer#(64)
       method Action startRead(Bit#(32) pointer, Bit#(32) dramOffset, Bit#(32) nandAddr,Bit#(32) numBytes, Bit#(32) burstLen);
 	 $display("startRead numBytes=%d burstLen=%d", numBytes, burstLen);
 	 readReqFifo.enq(numBytes);
-	  nand_read_server.request.put(MemengineCmd {sglId: 0, base: extend(nandAddr), burstLen: truncate(burstLen), len: extend(numBytes)});
-	 dram_write_server.request.put(MemengineCmd {sglId: pointer, base: extend(dramOffset), burstLen: truncate(burstLen), len: extend(numBytes)});
+	  nand_read_server.request.put(MemengineCmd {sglId: 0, base: extend(nandAddr), burstLen: truncate(burstLen), len: extend(numBytes), tag:0});
+	 dram_write_server.request.put(MemengineCmd {sglId: pointer, base: extend(dramOffset), burstLen: truncate(burstLen), len: extend(numBytes), tag:0});
       endmethod
 
       /*!
@@ -257,13 +255,13 @@ module mkNandSimControl#(MemreadServer#(64) dram_read_server, MemreadServer#(64)
       method Action startWrite(Bit#(32) pointer, Bit#(32) dramOffset, Bit#(32) nandAddr,Bit#(32) numBytes, Bit#(32) burstLen);
 	 $display("startWrite numBytes=%d burstLen=%d", numBytes, burstLen);
 	 writeReqFifo.enq(numBytes);
-	  nand_write_server.request.put(MemengineCmd {sglId: 0, base: extend(nandAddr), burstLen: truncate(burstLen), len: extend(numBytes)});
-	  dram_read_server.request.put(MemengineCmd {sglId: pointer, base: extend(dramOffset), burstLen: truncate(burstLen), len: extend(numBytes)});
+	  nand_write_server.request.put(MemengineCmd {sglId: 0, base: extend(nandAddr), burstLen: truncate(burstLen), len: extend(numBytes), tag:0});
+	  dram_read_server.request.put(MemengineCmd {sglId: pointer, base: extend(dramOffset), burstLen: truncate(burstLen), len: extend(numBytes), tag:0});
       endmethod
 
       method Action startErase(Bit#(32) nandAddr, Bit#(32) numBytes);
 	 $display("startErase numBytes=%d burstLen=%d", numBytes, 16);
-	 nand_erase_server.request.put(MemengineCmd {sglId: 0, base: extend(nandAddr), burstLen: 16, len: extend(numBytes)});
+	 nand_erase_server.request.put(MemengineCmd {sglId: 0, base: extend(nandAddr), burstLen: 16, len: extend(numBytes), tag:0});
       endmethod
    endinterface
 endmodule

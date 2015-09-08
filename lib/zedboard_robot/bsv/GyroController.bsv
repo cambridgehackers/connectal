@@ -1,4 +1,3 @@
-
 // Copyright (c) 2014 Quanta Research Cambridge, Inc.
 
 // Permission is hereby granted, free of charge, to any person
@@ -20,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import GetPut::*;
 import Vector::*;
 import StmtFSM::*;
@@ -28,11 +26,10 @@ import FIFO::*;
 import SpecialFIFOs::*;
 import Gearbox::*;
 import ClientServer::*;
-
 import MemTypes::*;
 import Leds::*;
 import ConnectalSpi::*;
-import MemwriteEngine::*;
+import MemWriteEngine::*;
 import Pipe::*;
 
 interface GyroCtrlRequest;
@@ -76,7 +73,7 @@ module mkGyroController#(GyroCtrlIndication ind)(GyroController);
    let clk <- exposeCurrentClock;
    let rst <- exposeCurrentReset;
    Gearbox#(1,8,Bit#(8)) gb   <- mk1toNGearbox(clk,rst,clk,rst);
-   MemwriteEngine#(64, 1, 1) we <- mkMemwriteEngine;
+   MemWriteEngine#(64,64,1,1) we <- mkMemWriteEngine;
 
    
    Reg#(Bit#(32))  en_memwr   <- mkReg(maxBound);
@@ -204,5 +201,4 @@ module mkGyroController#(GyroCtrlIndication ind)(GyroController);
       endinterface
    endinterface
    interface dmaClient = we.dmaClient;
-      
 endmodule

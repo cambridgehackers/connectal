@@ -25,9 +25,8 @@ import Vector::*;
 import StmtFSM::*;
 import GetPut::*;
 import ClientServer::*;
-
 import MemTypes::*;
-import MemreadEngine::*;
+import MemReadEngine::*;
 import Pipe::*;
 
 interface MemreadRequest;
@@ -51,7 +50,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
    
    Reg#(Bit#(32))           srcGen <- mkReg(0);
    Reg#(Bit#(32))    mismatchCount <- mkReg(0);
-   MemreadEngine#(64,1,1)         re <- mkMemreadEngine;
+   MemReadEngine#(64,64,1,1)         re <- mkMemReadEngine;
 
    let debug = True;
    
@@ -81,7 +80,7 @@ module mkMemread#(MemreadIndication indication) (Memread);
 	 burstLen  <= bl;
 	 mismatchCount <= 0;
 	 srcGen <= 0;
-	 let cmd = MemengineCmd{sglId:rp, base:extend(off*4), len:nw*4, burstLen:truncate(bl*4)};
+	 let cmd = MemengineCmd{sglId:rp, base:extend(off*4), len:nw*4, burstLen:truncate(bl*4), tag:0};
 	 re.readServers[0].request.put(cmd);
       endmethod
    endinterface

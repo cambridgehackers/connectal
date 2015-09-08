@@ -73,15 +73,15 @@ typedef struct {SGLId sglId;
 		Bit#(MemTagSize) tag;
 		} MemengineCmd deriving (Eq,Bits);
 
-interface MemwriteServer#(numeric type dataWidth);
+interface MemWriteEngineServer#(numeric type userWidth);
    interface Put#(MemengineCmd)       request;
    interface Get#(Bool)               done;
-   interface PipeIn#(Bit#(dataWidth)) data;
+   interface PipeIn#(Bit#(userWidth)) data;
 endinterface
 
-interface MemwriteEngine#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers);
-   interface MemWriteClient#(dataWidth) dmaClient;
-   interface Vector#(numServers, MemwriteServer#(dataWidth)) writeServers;
+interface MemWriteEngine#(numeric type busWidth, numeric type userWidth, numeric type cmdQDepth, numeric type numServers);
+   interface MemWriteClient#(busWidth) dmaClient;
+   interface Vector#(numServers, MemWriteEngineServer#(userWidth)) writeServers;
 endinterface
 
 typedef struct {
@@ -91,14 +91,14 @@ typedef struct {
    Bool last;
    } MemDataF#(numeric type dsz) deriving (Bits);
 
-interface MemreadServer#(numeric type dataWidth);
+interface MemReadEngineServer#(numeric type userWidth);
    interface Put#(MemengineCmd)             request;
-   interface PipeOut#(MemDataF#(dataWidth)) data;
+   interface PipeOut#(MemDataF#(userWidth)) data;
 endinterface
 
-interface MemreadEngine#(numeric type dataWidth, numeric type cmdQDepth, numeric type numServers);
-   interface MemReadClient#(dataWidth) dmaClient;
-   interface Vector#(numServers, MemreadServer#(dataWidth)) readServers;
+interface MemReadEngine#(numeric type busWidth, numeric type userWidth, numeric type cmdQDepth, numeric type numServers);
+   interface MemReadClient#(busWidth) dmaClient;
+   interface Vector#(numServers, MemReadEngineServer#(userWidth)) readServers;
 endinterface
 
 //
@@ -231,4 +231,50 @@ endinstance
 
 function Bool isQuadWordAligned(Bit#(7) lower_addr);
    return (lower_addr[2:0]==3'b0);
+endfunction
+
+function Put#(t) null_put();
+   return (interface Put;
+              method Action put(t x) if (False);
+                 noAction;
+              endmethod
+           endinterface);
+endfunction
+
+function Get#(t) null_get();
+   return (interface Get;
+              method ActionValue#(t) get() if (False);
+                 return ?;
+              endmethod
+           endinterface);
+endfunction
+
+function  PhysMemWriteClient#(addrWidth, busWidth) null_phys_mem_write_client();
+   return (interface PhysMemWriteClient;
+              interface Get writeReq = null_get;
+              interface Get writeData = null_get;
+              interface Put writeDone = null_put;
+           endinterface);
+endfunction
+
+function  PhysMemReadClient#(addrWidth, busWidth) null_phys_mem_read_client();
+   return (interface PhysMemReadClient;
+              interface Get readReq = null_get;
+              interface Put readData = null_put;
+           endinterface);
+endfunction
+
+function  MemWriteClient#(busWidth) null_mem_write_client();
+   return (interface MemWriteClient;
+              interface Get writeReq = null_get;
+              interface Get writeData = null_get;
+              interface Put writeDone = null_put;
+           endinterface);
+endfunction
+
+function  MemReadClient#(busWidth) null_mem_read_client();
+   return (interface MemReadClient;
+              interface Get readReq = null_get;
+              interface Put readData = null_put;
+           endinterface);
 endfunction

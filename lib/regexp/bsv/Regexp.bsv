@@ -19,7 +19,6 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 import FIFO::*;
 import FIFOF::*;
 import SpecialFIFOs::*;
@@ -31,7 +30,7 @@ import ClientServer::*;
 import GetPut::*;
 import Connectable::*;
 import MemTypes::*;
-import MemreadEngine::*;
+import MemReadEngine::*;
 import Pipe::*;
 import Dma2BRAM::*;
 import RegexpEngine::*;
@@ -66,8 +65,8 @@ module mkRegexp#(RegexpIndication indication)(Regexp#(64))
 	    ,Log#(p,lp)
 	    );
 
-   MemreadEngine#(64, 1, p) config_re <- mkMemreadEngine;
-   MemreadEngine#(64, 2, p) haystack_re <- mkMemreadEngine;
+   MemReadEngine#(64,64,1,p) config_re <- mkMemReadEngine;
+   MemReadEngine#(64,64,2,p) haystack_re <- mkMemReadEngine;
    let read_servers = zip(config_re.readServers,haystack_re.readServers);
    Vector#(p, RegexpEngine#(lp)) rees <- mapM(uncurry(mkRegexpEngine), zip(read_servers,genVector));
    Reg#(RegexpState) state <- mkReg(Config_charMap);
@@ -137,4 +136,3 @@ module mkRegexp#(RegexpIndication indication)(Regexp#(64))
    endinterface
 
 endmodule
-

@@ -29,7 +29,7 @@ import ClientServer::*;
 import GetPut::*;
 import HostInterface::*;
 import MemTypes::*;
-import MemwriteEngine::*;
+import MemWriteEngine::*;
 import Pipe::*;
 import AddressGenerator::*;
 

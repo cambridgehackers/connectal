@@ -40,6 +40,7 @@
 #include <time.h> // ctime
 #endif
 #include "drivers/portalmem/portalmem.h" // PA_MALLOC
+#define PLATFORM_TILE 0
 
 static int init_shared(struct PortalInternal *pint, void *aparam)
 {
@@ -55,14 +56,14 @@ static int init_shared(struct PortalInternal *pint, void *aparam)
             pint->shared_dma = &param->dma.manager->priv;
         else if (param->dma.reqinfo) {
             PortalInternal *psgl = (PortalInternal *)malloc(sizeof(PortalInternal));
-            init_portal_internal(psgl, param->dma.reqport, pint->fpga_tile, NULL,
+            init_portal_internal(psgl, param->dma.reqport, PLATFORM_TILE, NULL,
                 NULL, NULL, NULL, param->dma.reqinfo);
             DmaManagerPrivate *p = (DmaManagerPrivate *)malloc(sizeof(DmaManagerPrivate));
             pint->shared_dma = p;
             DmaManager_init(p, psgl);
             p->poll = param->dma.poll;
             p->shared_mmu_indication = (PortalInternal *)malloc(sizeof(PortalInternal));
-            init_portal_internal(p->shared_mmu_indication, param->dma.indport, pint->fpga_tile, param->dma.handler,
+            init_portal_internal(p->shared_mmu_indication, param->dma.indport, PLATFORM_TILE, param->dma.handler,
                 param->dma.callbackFunctions, NULL, NULL, param->dma.indinfo);
         }
         DmaManagerPrivate *p = (DmaManagerPrivate *)pint->shared_dma;

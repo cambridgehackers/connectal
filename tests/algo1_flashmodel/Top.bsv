@@ -18,7 +18,6 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-// bsv libraries
 import SpecialFIFOs::*;
 import Vector::*;
 import BuildVector::*;
@@ -34,8 +33,8 @@ import MemTypes::*;
 import MemServer::*;
 import MemServerInternal::*;
 import MMU::*;
-import MemreadEngine::*;
-import MemwriteEngine::*;
+import MemReadEngine::*;
+import MemWriteEngine::*;
 import HostInterface::*;
 import MMURequest::*;
 import StrstrRequest::*;
@@ -125,5 +124,3 @@ module mkConnectalTop#(HostInterface host)(ConnectalTop);
       interface Aurora_Clock_Pins aurora_clk_fmc1 = flashtop.aurora_clk_fmc1;
    endinterface
 endmodule : mkConnectalTop
-
-

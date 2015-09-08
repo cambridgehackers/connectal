@@ -17,6 +17,7 @@ Contents
    design/design.rst
    devguide/devguide.rst
    make.rst
+   tools/tools.rst
    bsv/bsv.rst
    c/c.rst
    examples/index.rst

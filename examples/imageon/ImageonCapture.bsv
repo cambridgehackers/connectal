@@ -26,7 +26,7 @@ import BRAMFIFO::*;
 import MemTypes::*;
 import ClientServer::*;
 import Pipe::*;
-import MemwriteEngine::*;
+import MemWriteEngine::*;
 import IserdesDatadeser::*;
 import IserdesDatadeserIF::*;
 import Connectable :: *;
@@ -104,7 +104,7 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, HdmiGenerato
 			clocked_by imageon_clock, reset_by imageon_reset);
 
     // mem capture
-    MemwriteEngine#(64,1,1) we <- mkMemwriteEngine();
+    MemWriteEngine#(64,64,1,1) we <- mkMemWriteEngine();
     SyncFIFOIfc#(Bit#(64)) synchronizer <- mkSyncBRAMFIFO(10, imageon_clock, imageon_reset, defaultClock, defaultReset);
     rule sync_data if (dmaRun);
         synchronizer.enq(serdes.data.capture);
@@ -229,7 +229,7 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, HdmiGenerato
             serdes.data.start_capture();
         endmethod
         method Action startWrite(Bit#(32) pointer, Bit#(32) numBytes);
-            we.writeServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(numBytes), burstLen:8});
+            we.writeServers[0].request.put(MemengineCmd{sglId:pointer, base:0, len:truncate(numBytes), burstLen:8, tag:0});
             dmaRun <= True;
         endmethod
 	method Action set_host_oe(Bit#(1) v);

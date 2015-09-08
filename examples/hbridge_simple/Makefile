@@ -5,7 +5,6 @@ H2S_INTERFACES = HBridgeController:HBridgeCtrlIndication
 ZBLD = $(CONNECTALDIR)/lib/zedboard_robot/bsv
 BSVFILES = $(ZBLD)/HBridgeController.bsv
 CPPFILES= test_hbridge.cpp
-NUMBER_OF_MASTERS =0
 
 PIN_TYPE = HBridgeSimplePins
 PIN_TYPE_INCLUDE = HBridgeController
