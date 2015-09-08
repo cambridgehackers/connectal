@@ -1,3 +1,9 @@
+connectal (15.09.1-1precise1) precise; urgency=medium
+
+  * Released 15.09.1, includes tiled interface
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 08 Sep 2015 12:20:10 -0400
+
 connectal (15.08.5-1precise1) precise; urgency=medium
 
   * Releasing 15.08.5
