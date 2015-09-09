@@ -235,7 +235,7 @@ module  mkSharedInterleavedDotProdServerConfig#(UInt#(TLog#(TMul#(J,K))) label)(
       	 let col = tpl_2(tag_regs[row]);
 	 dotfifos[row].enq(MmToken{row:row, col:col, v:x});
 `else
-	 dotfifos[row].enq(MmToken{v:x});
+	 dotfifos[row].enq(MmToken{v:x, last:False, first:False});
 `endif      
 	 if (last_row) begin
 	    gatherCnt <= 0;
