@@ -39,7 +39,7 @@ endinterface
 import "BVI" GetInverter =
 module mkGetInverterBvi(GetInverter#(Bit#(asz)));
    let asz = valueOf(asz);
-   parameter DATA_SIZE = asz;
+   parameter DATA_WIDTH = asz;
    default_clock (CLK);
    default_reset (RST);
    interface Get mod;
@@ -68,7 +68,7 @@ endmodule
 import "BVI" PutInverter =
 module mkPutInverterBvi(PutInverter#(Bit#(asz)));
    let asz = valueOf(asz);
-   parameter DATA_SIZE = asz;
+   parameter DATA_WIDTH = asz;
    default_clock (CLK);
    default_reset (RST);
    interface Put mod;

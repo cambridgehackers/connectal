@@ -33,7 +33,7 @@
   `define BSV_RESET_EDGE negedge
 `endif
 
-module PutInverse(CLK,
+module PutInverter(CLK,
 		  RST,
 
 		  put,
@@ -58,5 +58,5 @@ module PutInverse(CLK,
    // will this work?
    assign get = put;
    assign RDY_get = EN_put;
-   assign RDY_put = EN_get;
-endmodule // PutInverse
+   assign RDY_put = 1; //not possible: EN_get;
+endmodule // PutInverter

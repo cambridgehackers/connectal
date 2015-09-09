@@ -141,7 +141,7 @@ module mk%(Ifc)sInverter(%(Ifc)sInverter);
 endmodule
 
 (* synthesize *)
-module mk%(Ifc)sWInverter(%(Ifc)sInverter);
+module mk%(Ifc)sInverterV(%(Ifc)sInverter);
 %(wInverseIndicationMethodRules)s
     interface %(Package)s%(Ifc)s ifc;
 %(wInverseIndicationMethods)s

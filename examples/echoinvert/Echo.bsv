@@ -36,10 +36,15 @@ typedef struct {
 } EchoPair deriving (Bits);
 
 module mkEcho(Echo);
+`ifdef BOARD_bluesim
     let inv <- mkEchoIndicationInverter;
+`else
+    let inv <- mkEchoIndicationInverterV;
+`endif
     EchoIndication indication = inv.ifc;
     FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
     FIFO#(EchoPair) delay2 <- mkSizedFIFO(8);
+    Reg#(Bool) dumpStart <- mkReg(False);
 
     rule heard;
         delay.deq;
@@ -53,6 +58,10 @@ module mkEcho(Echo);
    
    interface EchoRequest request;
       method Action say(Bit#(32) v);
+         if (!dumpStart) begin
+            $dumpon;
+            dumpStart <= True;
+         end
 	 delay.enq(v);
       endmethod
       
