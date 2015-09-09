@@ -94,20 +94,20 @@ typedef struct {
    Bool last;
    } MemData#(numeric type dsz) deriving (Bits);
 
-typeclass ReqByteEnables#(type t, numeric type besz);
-   function Bit#(besz) reqFirstByteEnable(t req);
-   function Bit#(besz) reqLastByteEnable(t req);
+typeclass ReqByteEnables#(type t);
+   function Bit#(ByteEnableSize) reqFirstByteEnable(t req);
+   function Bit#(ByteEnableSize) reqLastByteEnable(t req);
 endtypeclass
-instance ReqByteEnables#(PhysMemRequest#(addrWidth,dataBusWidth),besz) provisos (Div#(dataBusWidth,8,besz));
+instance ReqByteEnables#(PhysMemRequest#(addrWidth,dataBusWidth));
 `ifdef BYTE_ENABLES
-   function Bit#(besz) reqFirstByteEnable(PhysMemRequest#(addrWidth,dataBusWidth) req); return req.firstbe; endfunction
-   function Bit#(besz) reqLastByteEnable(PhysMemRequest#(addrWidth,dataBusWidth) req); return req.lastbe; endfunction
+   function Bit#(ByteEnableSize) reqFirstByteEnable(PhysMemRequest#(addrWidth,dataBusWidth) req); return req.firstbe; endfunction
+   function Bit#(ByteEnableSize) reqLastByteEnable(PhysMemRequest#(addrWidth,dataBusWidth) req); return req.lastbe; endfunction
 `else
-   function Bit#(besz) reqFirstByteEnable(PhysMemRequest#(addrWidth,dataBusWidth) req); return maxBound; endfunction
-   function Bit#(besz) reqLastByteEnable(PhysMemRequest#(addrWidth,dataBusWidth) req); return maxBound; endfunction
+   function Bit#(ByteEnableSize) reqFirstByteEnable(PhysMemRequest#(addrWidth,dataBusWidth) req); return maxBound; endfunction
+   function Bit#(ByteEnableSize) reqLastByteEnable(PhysMemRequest#(addrWidth,dataBusWidth) req); return maxBound; endfunction
 `endif
 endinstance
-instance ReqByteEnables#(MemRequest,ByteEnableSize);
+instance ReqByteEnables#(MemRequest);
 `ifdef BYTE_ENABLES
    function Bit#(ByteEnableSize) reqFirstByteEnable(MemRequest req); return req.firstbe; endfunction
    function Bit#(ByteEnableSize) reqLastByteEnable(MemRequest req); return req.lastbe; endfunction
