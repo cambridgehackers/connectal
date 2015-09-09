@@ -45,7 +45,6 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
 #include <pthread.h> // pthread_mutex_t
 #endif
 
-extern int debug_portal;
 #define PORTAL_PRINTF portal_printf
 #endif
 
