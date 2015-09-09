@@ -11,11 +11,12 @@ Constants
 .. bsv:typedef:: 6 MemTagSize
 .. bsv:typedef:: 8 BurstLenSize
 .. bsv:typedef:: 32 MemServerTags
+.. bsv:typedef:: TDiv#(DataBusSize,8) ByteEnableSize
 
 Data Types
 ----------
 
-.. bsv:struct:: PhysMemRequest#(numeric type addrWidth)
+.. bsv:struct:: PhysMemRequest#(numeric type addrWidth, dataWidth)
 
    A memory request containing a physical memory address
 
@@ -62,6 +63,23 @@ Data Types
       Length of read or write burst, in bytes. The number of beats of the request will be the burst length divided by the physical width of the memory interface.
 
    .. bsv:field:: Bit#(MemTagSize)  tag
+
+   .. bsv:field:: Bit#(ByteEnableSize) firstbe
+
+   .. bsv:field:: Bit#(ByteEnableSize) lastbe
+
+      If BYTE_ENABLESis defined as aBSV preprocessor macro,byte write
+      enables are added to PhysMemRequest, intwo fields: firstbe and
+      lastbe.The idea is to enable writing any number of contiguous
+      bytes even if it is less than the width of the shared memory
+      data bus.
+
+      These have roughly the same semantics as in PCIE. The write
+      enable in firstbe apply to the first beat of a burst request and
+      those inlastbe apply to the last beat of a multi-beat burst
+      request. Intervening beats of a burst request enable the write
+      of all beats of that burst.
+
 
 .. bsv:struct:: MemData#(numeric type dsz)
 
