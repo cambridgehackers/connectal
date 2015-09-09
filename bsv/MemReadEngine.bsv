@@ -149,15 +149,14 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
       if  (cond0) begin
 	 if (verbose) $display("mkMemReadEngineBuff::%d load_ctxt_c cmd.len %d idx %d cond0 %d last_burst %d", counter, cmd.len, loadIdx, cond0, last_burst);
 	 serverRequest.enq(tuple5(truncate(loadIdx),cmd,first_burst,last_burst,cmd_len));
+	 clientFirstBurst[loadIdx] <= False;
 	 if (last_burst) begin
 	    if (verbose) $display("mkMemReadEngineBuff::%d load_ctxt_b last_burst %d", counter, last_burst);
 	    clientInFlight[loadIdx] <= False;
 	 end
 	 else begin
-	    let new_cmd = MemengineCmd{sglId:cmd.sglId, base:cmd.base+extend(cmd.burstLen), 
-				       burstLen:cmd.burstLen, len:cmd.len-extend(cmd.burstLen), tag:cmd.tag};
-	    clientCommand[loadIdx] <= new_cmd;
-	    clientFirstBurst[loadIdx] <= False;
+	    clientCommand[loadIdx] <= MemengineCmd{sglId:cmd.sglId, base:cmd.base+extend(cmd.burstLen), 
+	       burstLen:cmd.burstLen, len:cmd.len-extend(cmd.burstLen), tag:cmd.tag};
 	 end
       end
    endrule
@@ -177,9 +176,9 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
       else begin
 	 respCnt <= new_respCnt;
       end
-      d.last = l;
-      let first = first_burst && (respCnt == 0);
-      clientDataFifo[idx].enq(MemDataF { data: d.data, tag: d.tag, first: first, last: d.last});
+      clientDataFifo[idx].enq(MemDataF { data: d.data, tag: d.tag,
+         first: //first_burst && 
+(respCnt == 0), last: l});
    endrule
 
    Vector#(numServers, MemReadEngineServer#(userWidth)) rs;
@@ -207,6 +206,7 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
 		  endinterface
                   interface data = memDataPipes[i];
                endinterface);
+   interface readServers = rs;
    interface MemReadClient dmaClient;
       interface Get readReq;
 	 method ActionValue#(MemRequest) get();
@@ -222,5 +222,4 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
       endinterface
       interface Put readData = toPut(serverDataFifo);
    endinterface 
-   interface readServers = rs;
 endmodule

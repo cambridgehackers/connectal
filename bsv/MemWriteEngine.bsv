@@ -98,34 +98,16 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
       match {.cmd,.cond0,.cond1} <- toGet(serverCond).get;
       if  (cond0) begin
 	 //$display("load_ctxt_b %h %d", cmd.base, idx);
-	 let x = cmd.burstLen;
-	 if (cmd.len < extend(cmd.burstLen))
-	    x = truncate(cmd.len);
 	 serverReq.enq(tuple2(truncate(loadIdx),cmd));
 	 if (cond1) begin
 	    clientInFlight[loadIdx] <= False;
 	 end
 	 else begin
-	    let new_cmd = MemengineCmd{sglId:cmd.sglId, base:cmd.base+extend(cmd.burstLen), burstLen:cmd.burstLen, len:cmd.len-extend(cmd.burstLen), tag:cmd.tag};
-	    clientStart[loadIdx] <= new_cmd;
+	    clientStart[loadIdx] <= MemengineCmd{sglId:cmd.sglId, base:cmd.base+extend(cmd.burstLen),
+               burstLen:cmd.burstLen, len:cmd.len-extend(cmd.burstLen), tag:cmd.tag};
 	 end
       end
    endrule
-
-   function PipeIn#(Bit#(w)) check_in(FIFOF#(Bit#(w)) f, Integer i) =
-      (interface PipeIn;
-   	  method Bool notFull = f.notFull;
-   	  method Action enq(Bit#(w) v);
-	     f.enq(v);
-	     clientAvail[i].increment(1);
-	     //$display("check_in %d", i);
-	     // if(i==2)
-	     // 	for(Integer j = 0; j < valueOf(w); j=j+32) begin
-	     // 	   Bit#(32) xx = v[j+31:j];
-	     // 	   $display("%h", xx);
-	     // 	end
-	  endmethod
-       endinterface);
 
    Vector#(numServers, MemWriteEngineServer#(userWidth)) rs;
    for(Integer i = 0; i < valueOf(numServers); i=i+1)
@@ -160,8 +142,15 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
                   interface Get done;
                      method ActionValue#(Bool) get = toGet(clientFinished[i]).get;
                   endinterface
-                  interface PipeIn data = check_in(dataBuffer[i], i);
+                  interface PipeIn data = interface PipeIn;
+   	                  method Bool notFull = dataBuffer[i].notFull;
+   	                  method Action enq(Bit#(userWidth) v);
+	                     dataBuffer[i].enq(v);
+	                     clientAvail[i].increment(1);
+	                  endmethod
+                       endinterface;
               endinterface);
+   interface writeServers = rs;
    interface MemWriteClient dmaClient;
       interface Get writeReq;
 	 method ActionValue#(MemRequest) get();
@@ -206,6 +195,5 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
 	 endmethod
       endinterface
    endinterface
-   interface writeServers = rs;
 endmodule
 
