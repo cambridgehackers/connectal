@@ -28,7 +28,7 @@
 #include <pthread.h>
 #include <fcntl.h>
 
-static int trace_poller=;//1;
+static int trace_poller;//=1;
 
 #ifndef NO_CPP_PORTAL_CODE
 PortalPoller *defaultPoller = new PortalPoller();
