@@ -115,7 +115,7 @@ module mkSharedMemoryFifoImpl(FIFO#(Bit#(32)));
    
    Bit#(32) limitPtr = 8*8;
 
-   SharedMemoryPipeOut#(64,1) dut <- mkSharedMemoryRequestPipeOut(readEngine.readServers, writeEngine.writeServers);
+   SharedMemoryPipeOut#(64,1) dut <- mkSharedMemoryPipeOut(readEngine.readServers, writeEngine.writeServers);
 
    Reg#(Bool) notFull <- mkReg(True);
    rule rdPtrRule if (!notFull);

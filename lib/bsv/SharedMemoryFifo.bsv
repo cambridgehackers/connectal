@@ -61,7 +61,7 @@ typedef enum {
    Stop
    } SharedMemoryPortalState deriving (Bits,Eq);
 
-module mkSharedMemoryRequestPipeOut#(Vector#(2, MemreadServer#(64)) readEngine, Vector#(2, MemwriteServer#(64)) writeEngine)(SharedMemoryPipeOut#(64,pipeCount));
+module mkSharedMemoryPipeOut#(Vector#(2, MemReadEngineServer#(64)) readEngine, Vector#(2, MemWriteEngineServer#(64)) writeEngine)(SharedMemoryPipeOut#(64,pipeCount));
    // read the wrPtr and rdPtr pointers, if they are different, then read a request
    Reg#(Bit#(32)) limitReg <- mkReg(0);
    Reg#(Bit#(32)) wrPtrReg <- mkReg(0);
@@ -210,8 +210,8 @@ module mkSharedMemoryRequestPipeOut#(Vector#(2, MemreadServer#(64)) readEngine, 
    interface data = map(toPipeOut, dataFifo);
 endmodule
 
-module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests, numIndications, 32) portal,
-    Vector#(2,MemReadServer#(64)) readEngine, Vector#(2, MemWriteServer#(64)) writeEngine)(SharedMemoryPortal#(64));
+module mkSharedMemoryPipeIn#(PipePortal#(numRequests, numIndications, 32) portal,
+    Vector#(2,MemReadEngineServer#(64)) readEngine, Vector#(2, MemWriteEngineServer#(64)) writeEngine)(SharedMemoryPortal#(64));
    let defaultClock <- exposeCurrentClock;
    let defaultReset <- exposeCurrentReset;
    // read the wrPtr and rdPtr pointers, if they are different, then read a request
