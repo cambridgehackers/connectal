@@ -29,6 +29,22 @@ Data Types
 
    .. bsv:field:: Bit#(MemTagSize) tag
 
+   .. bsv:field:: Bit#(TDiv#(dataWidth,8)) firstbe
+
+   .. bsv:field:: Bit#(TDiv#(dataWidth,8)) lastbe
+
+      If BYTE_ENABLESis defined as aBSV preprocessor macro,byte write
+      enables are added to PhysMemRequest, intwo fields: firstbe and
+      lastbe.The idea is to enable writing any number of contiguous
+      bytes even if it is less than the width of the shared memory
+      data bus.
+
+      These have roughly the same semantics as in PCIE. The write
+      enable in firstbe apply to the first beat of a burst request and
+      those inlastbe apply to the last beat of a multi-beat burst
+      request. Intervening beats of a burst request enable the write
+      of all beats of that burst.
+
 .. bsv:struct:: MemRequest
 
    A logical memory read or write request. The linear offset of the request will be translated by an MMU according to the specified scatter-gather list.

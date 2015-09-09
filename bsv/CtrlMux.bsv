@@ -162,10 +162,10 @@ module mkMemMethodMuxIn#(PortalCtrl#(aw,dataWidth) ctrl, Vector#(numRequests, Pi
    endfunction
 
    FIFO#(Bit#(MemTagSize)) doneFifo          <- mkFIFO1();
-   FIFO#(PhysMemRequest#(aw))   req_ars <- mkFIFO1();
+   FIFO#(PhysMemRequest#(aw,dataWidth)) req_ars <- mkFIFO1();
    FIFO#(Bit#(TLog#(numRequests))) rs <- mkFIFO1();
    FIFO#(Bool)                   rsCtrl <- mkFIFO1();
-   FIFO#(PhysMemRequest#(aw))   req_aws <- mkFIFO1();
+   FIFO#(PhysMemRequest#(aw,dataWidth)) req_aws <- mkFIFO1();
    FIFO#(Bit#(TLog#(numRequests))) ws <- mkFIFO1();
    FIFO#(Bool)                   wsCtrl <- mkFIFO1();
 
@@ -224,8 +224,12 @@ module mkMemMethodMuxIn#(PortalCtrl#(aw,dataWidth) ctrl, Vector#(numRequests, Pi
 
    interface PhysMemWriteServer write_server;
       interface Put writeReq;
-	 method Action put(PhysMemRequest#(addrWidth) req);
-	    req_aws.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
+	 method Action put(PhysMemRequest#(addrWidth,dataWidth) req);
+	    req_aws.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag
+`ifdef BYTE_ENABLES
+				       , firstbe: req.firstbe, lastbe: req.lastbe
+`endif
+				       });
 	    if (req.burstLen > 4) $display("**** \n\n mkMemMethodMux.writeReq len=%d \n\n ****", req.burstLen);
 	    //$display("mkMemMethodMux.writeReq addr=%h selWidth=%d aw=%d psel=%h pselCtrl=%x", req.addr, valueOf(selWidth), valueOf(aw), psel(req.addr), pselCtrl(req.addr));
 	    ws.enq(truncate(psel(req.addr)));
@@ -246,8 +250,12 @@ module mkMemMethodMuxIn#(PortalCtrl#(aw,dataWidth) ctrl, Vector#(numRequests, Pi
    endinterface
    interface PhysMemReadServer read_server;
       interface Put readReq;
-	 method Action put(PhysMemRequest#(addrWidth) req);
-	    req_ars.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
+	 method Action put(PhysMemRequest#(addrWidth,dataWidth) req);
+	    req_ars.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag
+`ifdef BYTE_ENABLES
+				       , firstbe: req.firstbe, lastbe: req.lastbe
+`endif
+	       });
 	    //$display("mkMemMethodMux.readReq addr=%h aw=%d psel=%h pselCtrl=%x", req.addr, valueOf(aw), psel(req.addr), pselCtrl(req.addr));
 	    if (req.burstLen > 4) $display("**** \n\n mkMemMethodMux.readReq len=%d \n\n ****", req.burstLen);
 	    rs.enq(truncate(psel(req.addr)));
@@ -286,10 +294,10 @@ module mkMemMethodMuxOut#(PortalCtrl#(aw,dataWidth) ctrl, Vector#(numIndications
    endfunction
 
    FIFO#(Bit#(MemTagSize)) doneFifo          <- mkFIFO1();
-   FIFO#(PhysMemRequest#(aw))   req_ars <- mkFIFO1();
+   FIFO#(PhysMemRequest#(aw,dataWidth)) req_ars <- mkFIFO1();
    FIFO#(Bit#(TLog#(numIndications))) rs <- mkFIFO1();
    FIFO#(Bool)                   rsCtrl <- mkFIFO1();
-   FIFO#(PhysMemRequest#(aw))   req_aws <- mkFIFO1();
+   FIFO#(PhysMemRequest#(aw,dataWidth)) req_aws <- mkFIFO1();
    FIFO#(Bit#(TLog#(numIndications))) ws <- mkFIFO1();
    FIFO#(Bool)                   wsCtrl <- mkFIFO1();
 
@@ -332,8 +340,12 @@ module mkMemMethodMuxOut#(PortalCtrl#(aw,dataWidth) ctrl, Vector#(numIndications
 
    interface PhysMemWriteServer write_server;
       interface Put writeReq;
-	 method Action put(PhysMemRequest#(addrWidth) req);
-	    req_aws.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
+	 method Action put(PhysMemRequest#(addrWidth,dataWidth) req);
+	    req_aws.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag
+`ifdef BYTE_ENABLES
+	       , firstbe: req.firstbe, lastbe: req.lastbe
+`endif
+	       });
 	    if (req.burstLen > 4) $display("**** \n\n mkMemMethodMux.writeReq len=%d \n\n ****", req.burstLen);
 	    //$display("mkMemMethodMux.writeReq addr=%h selWidth=%d aw=%d psel=%h pselCtrl=%x", req.addr, valueOf(selWidth), valueOf(aw), psel(req.addr), pselCtrl(req.addr));
 	    ws.enq(truncate(psel(req.addr)));
@@ -360,8 +372,12 @@ module mkMemMethodMuxOut#(PortalCtrl#(aw,dataWidth) ctrl, Vector#(numIndications
    endinterface
    interface PhysMemReadServer read_server;
       interface Put readReq;
-	 method Action put(PhysMemRequest#(addrWidth) req);
-	    req_ars.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
+	 method Action put(PhysMemRequest#(addrWidth,dataWidth) req);
+	    req_ars.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag
+`ifdef BYTE_ENABLES
+	       , firstbe: req.firstbe, lastbe: req.lastbe
+`endif
+	       });
 	    //$display("mkMemMethodMux.readReq addr=%h aw=%d psel=%h pselCtrl=%x", req.addr, valueOf(aw), psel(req.addr), pselCtrl(req.addr));
 	    if (req.burstLen > 4) $display("**** \n\n mkMemMethodMux.readReq len=%d \n\n ****", req.burstLen);
 	    rs.enq(truncate(psel(req.addr)));
@@ -395,12 +411,12 @@ module mkMemPortalMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (P
    function Put#(MemData#(dataWidth)) getMemPortalWriteData(PhysMemSlave#(aw,dataWidth) x) = x.write_server.writeData;
    
    FIFO#(Bit#(MemTagSize))        doneFifo <- mkFIFO1();
-   FIFO#(PhysMemRequest#(aw)) req_ars <- mkSizedFIFO(1);
+   FIFO#(PhysMemRequest#(aw,dataWidth)) req_ars <- mkSizedFIFO(1);
    FIFO#(Bit#(TLog#(numSlaves))) rs <- mkFIFO1();
    Vector#(numSlaves, PipeOut#(MemData#(dataWidth))) readDataPipes <- mapM(mkPipeOut, map(getMemPortalReadData,slaves));
    FunnelPipe#(1, numSlaves, MemData#(dataWidth), bpc) read_data_funnel <- mkFunnelPipesPipelined(readDataPipes);
       
-   FIFO#(PhysMemRequest#(aw)) req_aws <- mkFIFO1();
+   FIFO#(PhysMemRequest#(aw,dataWidth)) req_aws <- mkFIFO1();
    FIFO#(Bit#(TLog#(numSlaves))) ws <- mkFIFO1();
    FIFOF#(Tuple2#(Bit#(TLog#(numSlaves)), MemData#(dataWidth))) write_data <- mkFIFOF;
    UnFunnelPipe#(1, numSlaves, MemData#(dataWidth), bpc) write_data_unfunnel <- mkUnFunnelPipesPipelined(cons(toPipeOut(write_data),nil));
@@ -426,8 +442,12 @@ module mkMemPortalMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (P
 
    interface PhysMemWriteServer write_server;
       interface Put writeReq;
-	 method Action put(PhysMemRequest#(addrWidth) req);
-	    req_aws.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
+	 method Action put(PhysMemRequest#(addrWidth,dataWidth) req);
+	    req_aws.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag
+`ifdef BYTE_ENABLES
+	       , firstbe: req.firstbe, lastbe: req.lastbe
+`endif
+	       });
 	    if (req.burstLen > 4) $display("**** \n\n mkMemPortalMux.writeReq len=%d \n\n ****", req.burstLen);
 	    ws.enq(truncate(psel(req.addr)));
 	    if(verbose) $display("mkMemPortalMux.writeReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
@@ -448,8 +468,12 @@ module mkMemPortalMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (P
    endinterface
    interface PhysMemReadServer read_server;
       interface Put readReq;
-	 method Action put(PhysMemRequest#(addrWidth) req);
-	    req_ars.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag});
+	 method Action put(PhysMemRequest#(addrWidth,dataWidth) req);
+	    req_ars.enq(PhysMemRequest{addr:asel(req.addr), burstLen:req.burstLen, tag:req.tag
+`ifdef BYTE_ENABLES
+				       , firstbe: req.firstbe, lastbe: req.lastbe
+`endif
+	       });
 	    rs.enq(truncate(psel(req.addr)));
 	    if (req.burstLen > 4) $display("**** \n\n mkMemPortalMux.readReq len=%d \n\n ****", req.burstLen);
 	    if(verbose) $display("mkMemPortalMux.readReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));

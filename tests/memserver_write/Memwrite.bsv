@@ -36,7 +36,7 @@ import AddressGenerator::*;
 typedef TDiv#(DataBusWidth,32) WordsPerBeat;
 
 interface MemwriteRequest;
-   method Action startWrite(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) numReqs, Bit#(32) burstLen);
+   method Action startWrite(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) numReqs, Bit#(32) burstLen, Bit#(8) byteEnable);
 endinterface
 
 interface MemwriteIndication;
@@ -57,19 +57,31 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    Reg#(Bit#(3))                   tag <- mkReg(0);
    Reg#(Bit#(32))             numWords <- mkReg(0);
    Reg#(Bit#(BurstLenSize)) burstLenBytes <- mkReg(0);
-   Reg#(Bit#(32))              srcGens <- mkReg(0);
+   Reg#(Bit#(32))              srcGens <- mkReg(3);
+   Reg#(Bit#(8))            byteEnable <- mkReg('hff);
 
    AddressGenerator#(32, DataBusWidth) addrGenerator <- mkAddressGenerator();
    FIFO#(MemRequest) reqFifo <- mkSizedFIFO(4);
-   FIFO#(PhysMemRequest#(32)) preqFifo <- mkSizedFIFO(4);
+   FIFO#(PhysMemRequest#(32,DataBusWidth)) preqFifo <- mkSizedFIFO(4);
    FIFO#(MemData#(DataBusWidth))   dataFifo <- mkSizedBRAMFIFO(1024);
    FIFO#(Bit#(MemTagSize)) doneFifo <- mkSizedFIFO(4);
 
    let verboseProgress = False;
 
+   Bit#(TDiv#(DataBusWidth,8)) firstbe = { 4'hf, byteEnable[3:0] };
+   Bit#(TDiv#(DataBusWidth,8)) lastbe = { byteEnable[7:4], 4'hf };
+
    rule start if (numReqs != 0);
-      reqFifo.enq(MemRequest { sglId: pointer, offset: reqOffset, burstLen: burstLenBytes, tag: extend(tag) });
-      preqFifo.enq(PhysMemRequest { addr: 0, burstLen: burstLenBytes, tag: extend(tag) });
+      reqFifo.enq(MemRequest { sglId: pointer, offset: reqOffset, burstLen: burstLenBytes, tag: extend(tag)
+`ifdef BYTE_ENABLES
+			      , firstbe: firstbe, lastbe: lastbe
+`endif
+			      });
+      preqFifo.enq(PhysMemRequest { addr: 0, burstLen: burstLenBytes, tag: extend(tag)
+`ifdef BYTE_ENABLES
+				       , firstbe: firstbe, lastbe: lastbe
+`endif
+				   });
       numReqs <= numReqs - 1;
       reqOffset <= reqOffset + extend(burstLenBytes);
       tag <= tag + 1;
@@ -109,7 +121,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    endinterface );
 
    interface MemwriteRequest request;
-       method Action startWrite(Bit#(32) wp, Bit#(32) nw, Bit#(32) nreq, Bit#(32) bl);
+       method Action startWrite(Bit#(32) wp, Bit#(32) nw, Bit#(32) nreq, Bit#(32) bl, Bit#(8) be);
 	  $dumpvars();
           $display("startWrite pointer=%d numWords=%d (%d) numReqs=%d burstLen=%d", pointer, nw, nreq*bl, nreq, bl);
           pointer <= wp;
@@ -119,7 +131,8 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 	  numDone <= nreq;
 
 	  reqOffset <= 0;
-	  srcGens <= 0;
+	  srcGens <= 3;
+	  byteEnable <= be;
        endmethod
    endinterface
    interface dmaClients = vec(dmaClient);

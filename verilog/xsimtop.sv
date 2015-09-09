@@ -99,7 +99,7 @@ endmodule
 import "DPI-C" function void simDma_init(input int id, input int handle, input int size);
 import "DPI-C" function void simDma_initfd(input int id, input int fd);
 import "DPI-C" function void simDma_idreturn(input int aid);
-import "DPI-C" function void write_simDma32(input int handle, input int addr, input int data);
+import "DPI-C" function void write_simDma32(input int handle, input int addr, input int data, input int byteenable);
 import "DPI-C" function int read_simDma32(input int handle, input int addr);
 
 module XsimDmaReadWrite(input CLK,
@@ -130,7 +130,8 @@ module XsimDmaReadWrite(input CLK,
 			input 		  en_write32,
 			input [31:0] 	  write32_addr,
 			input [31:0] 	  write32_handle,
-			input [31:0] 	  write32_data
+			input [31:0] 	  write32_data,
+			input [3:0]       write32_byteenable
 			);
 
    reg 					  readresponse_valid_reg;
@@ -165,7 +166,7 @@ module XsimDmaReadWrite(input CLK,
 	    readresponse_data_reg <= 32'hbbbbbbbb;
 	 end
 	 if (en_write32 == 1)
-	   write_simDma32(write32_handle, write32_addr, write32_data);
+	   write_simDma32(write32_handle, write32_addr, write32_data, write32_byteenable);
       end // else: !if(RST == BSV_RESET_VALUE)
    end // always @ (posedge CLK)
 endmodule

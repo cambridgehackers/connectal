@@ -213,7 +213,11 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
 	    match {.idx, .cmd, .first_burst, .last_burst, .bl} <- toGet(serverRequest).get;
 	    serverProcessing.enq(tuple4(truncate(bl>>beat_shift), idx, first_burst, last_burst));
 	    if (verbose) $display("MemReadEngine::%d readReq idx %d offset %h burstLenBytes %h last_burst %d", counter, idx, cmd.base, bl, last_burst);
-	    return MemRequest { sglId: cmd.sglId, offset: cmd.base, burstLen:bl, tag: (cmd.tag << valueOf(serverIdxSz)) | extend(idx)};
+	    return MemRequest { sglId: cmd.sglId, offset: cmd.base, burstLen:bl, tag: (cmd.tag << valueOf(serverIdxSz)) | extend(idx)
+`ifdef BYTE_ENABLES
+			       , firstbe: maxBound, lastbe: maxBound
+`endif
+};
 	 endmethod
       endinterface
       interface Put readData = toPut(serverDataFifo);

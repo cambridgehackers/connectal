@@ -74,9 +74,9 @@ int main(int argc, const char **argv)
 
   sem_init(&done_sem, 1, 0);
 
-  int iters = 1;
+  int iters = 2;
 
-  int mismatchCount = 0;
+  uint32_t mismatchCount = 0;
 
   for (int iter = 0; iter < iters; iter++) {
       int dstAlloc = portalAlloc(alloc_sz, 1);
@@ -96,17 +96,21 @@ int main(int argc, const char **argv)
       fprintf(stderr, "dma->reference %d\n", ref_dstAlloc);
       int burstLenBytes = 32*sizeof(uint32_t);
 
+      int byteEnable = (iter == 0) ? 0xFF : 0x5a;
       portalTimerStart(0);
-      device->startWrite(ref_dstAlloc, alloc_sz, alloc_sz / burstLenBytes, burstLenBytes);
+      device->startWrite(ref_dstAlloc, alloc_sz, alloc_sz / burstLenBytes, burstLenBytes, byteEnable);
       sem_wait(&done_sem);
       platformStatistics();
 
       memdump((unsigned char *)dstBuffer, 32, "MEM");
       for (uint32_t i = 0; i < alloc_sz/sizeof(uint32_t); i++) {
-	  if (dstBuffer[i] != i)
+	  if (dstBuffer[i] != (i+3))
 	      mismatchCount++;
       }
-      fprintf(stderr, "%s: done mismatchCount=%d\n", __FUNCTION__, mismatchCount);
+      uint32_t expectedMismatchCount = (byteEnable == 0xff) ? 0 : 2*(alloc_sz / burstLenBytes);
+      fprintf(stderr, "%s: done mismatchCount=%d expected %d\n", __FUNCTION__, mismatchCount, expectedMismatchCount);
+      if (mismatchCount == expectedMismatchCount)
+	  mismatchCount=0;
 
       fprintf(stderr, "%s: calling munmap\n", __FUNCTION__);
       int unmapped = munmap(dstBuffer, alloc_sz);

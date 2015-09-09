@@ -252,8 +252,12 @@ module mkPcieControlAndStatusRegs(PcieControlAndStatusRegs);
    interface PhysMemSlave memSlave;
       interface PhysMemReadServer read_server;
 	 interface Put readReq;
-	    method Action put(PhysMemRequest#(32) req);
-	       csrRag.request.put(PhysMemRequest { addr: truncate(req.addr), burstLen: req.burstLen, tag: req.tag});
+	    method Action put(PhysMemRequest#(32,32) req);
+	       csrRag.request.put(PhysMemRequest { addr: truncate(req.addr), burstLen: req.burstLen, tag: req.tag
+`ifdef BYTE_ENABLES
+						  , firstbe: req.firstbe, lastbe: req.lastbe
+`endif
+						  });
 	    endmethod
 	 endinterface
 	 interface Get readData = toGet(readResponseFifo);
@@ -261,9 +265,13 @@ module mkPcieControlAndStatusRegs(PcieControlAndStatusRegs);
 
   interface PhysMemWriteServer write_server; 
 	 interface Put writeReq;
-	    method Action put(PhysMemRequest#(32) req);
+	    method Action put(PhysMemRequest#(32,32) req);
                $display("csrWag Request, addr=%h, burstLen=%h, tag=%h", req.addr, req.burstLen, req.tag);
-	       csrWag.request.put(PhysMemRequest { addr: truncate(req.addr), burstLen: req.burstLen, tag: req.tag});
+	       csrWag.request.put(PhysMemRequest { addr: truncate(req.addr), burstLen: req.burstLen, tag: req.tag
+`ifdef BYTE_ENABLES
+						  , firstbe: req.firstbe, lastbe: req.lastbe
+`endif
+						  });
 	    endmethod
 	 endinterface
      interface Put writeData = toPut(writeDataFifo);

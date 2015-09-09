@@ -5,6 +5,6 @@ MEM_WRITE_INTERFACES = lMemwrite.dmaClients
 
 BSVFILES = Memwrite.bsv
 CPPFILES = testmemwrite.cpp
-CONNECTALFLAGS += -D USE_ACP -P mkConnectalTop
+CONNECTALFLAGS += -D USE_ACP -P mkConnectalTop -D BYTE_ENABLES
 
 include $(CONNECTALDIR)/Makefile.connectal
