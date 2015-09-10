@@ -34,9 +34,9 @@ class %(className)sProxy : public Portal {
     %(classNameOrig)sCb *cb;
 public:
     %(className)sProxy(int id, int tile = DEFAULT_TILE, %(classNameOrig)sCb *cbarg = &%(className)sProxyReq, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
-        Portal(id, tile, bufsize, NULL, NULL, poller), cb(cbarg) {};
+        Portal(id, tile, bufsize, NULL, NULL, this, poller), cb(cbarg) {};
     %(className)sProxy(int id, PortalTransportFunctions *item, void *param, %(classNameOrig)sCb *cbarg = &%(className)sProxyReq, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
-        Portal(id, DEFAULT_TILE, bufsize, NULL, NULL, item, param, poller), cb(cbarg) {};
+        Portal(id, DEFAULT_TILE, bufsize, NULL, NULL, item, param, this, poller), cb(cbarg) {};
 '''
 
 wrapperClassPrefixTemplate='''
@@ -44,20 +44,16 @@ extern %(classNameOrig)sCb %(className)s_cbTable;
 class %(className)sWrapper : public Portal {
 public:
     %(className)sWrapper(int id, int tile = DEFAULT_TILE, PORTAL_INDFUNC cba = %(className)s_handleMessage, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
-           Portal(id, tile, bufsize, cba, (void *)&%(className)s_cbTable, poller) {
-        pint.parent = static_cast<void *>(this);
+           Portal(id, tile, bufsize, cba, (void *)&%(className)s_cbTable, this, poller) {
     };
     %(className)sWrapper(int id, PortalTransportFunctions *item, void *param, PORTAL_INDFUNC cba = %(className)s_handleMessage, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller=0):
-           Portal(id, DEFAULT_TILE, bufsize, cba, (void *)&%(className)s_cbTable, item, param, poller) {
-        pint.parent = static_cast<void *>(this);
+           Portal(id, DEFAULT_TILE, bufsize, cba, (void *)&%(className)s_cbTable, item, param, this, poller) {
     };
     %(className)sWrapper(int id, PortalPoller *poller) :
-           Portal(id, DEFAULT_TILE, %(classNameOrig)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, poller) {
-        pint.parent = static_cast<void *>(this);
+           Portal(id, DEFAULT_TILE, %(classNameOrig)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, this, poller) {
     };
     %(className)sWrapper(int id, PortalTransportFunctions *item, void *param, PortalPoller *poller):
-           Portal(id, DEFAULT_TILE, %(classNameOrig)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, item, param, poller) {
-        pint.parent = static_cast<void *>(this);
+           Portal(id, DEFAULT_TILE, %(classNameOrig)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, item, param, this, poller) {
     };
     virtual void disconnect(void) {
         printf("%(className)sWrapper.disconnect called %%d\\n", pint.client_fd_number);

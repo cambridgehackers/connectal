@@ -61,7 +61,7 @@ static tBoard* tboard;
  * Initialize control data structure for portal
  */
 void init_portal_internal(PortalInternal *pint, int id, int tile,
-    PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *item, void *param,
+    PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *item, void *param, void *parent,
     uint32_t reqinfo)
 {
     int rc;
@@ -74,9 +74,10 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     pint->muxid = -1;
     pint->handler = handler;
     pint->cb = (PortalHandlerTemplate *)cb;
+    pint->parent = parent;
     pint->reqinfo = reqinfo;
     if(trace_portal)
-        PORTAL_PRINTF("%s: **initialize portal_%d_%d handler %p cb %p\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number, handler, cb);
+        PORTAL_PRINTF("%s: **initialize portal_%d_%d handler %p cb %p parent %p\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number, handler, cb, parent);
     if (!item) {
         // Use defaults for transport handling methods
 #ifdef BSIM
