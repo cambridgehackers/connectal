@@ -195,6 +195,7 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
 	    Mul#(dataWidthBytes,8,serverBusWidth),
 	    Log#(dataWidthBytes,beatShift),
 	    Mul#(TDiv#(serverBusWidth, 32), 32, serverBusWidth),
+	    Mul#(TDiv#(serverBusWidth, 32), 4, TDiv#(serverBusWidth, 8)),
 	    Bits#(Tuple2#(Bit#(64), PhysMemRequest#(serverAddrWidth,serverBusWidth)), a__),
 	    Add#(b__, ByteEnableSize, TDiv#(serverBusWidth, 8))
 	    );
