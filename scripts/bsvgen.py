@@ -84,6 +84,11 @@ interface %(Ifc)sOutputPipes;
     interface PipePortal#(0, %(channelCount)s, SlaveDataBusWidth) portalIfc;
 endinterface
 
+function Bit#(16) get%(Ifc)sMessageSize(Bit#(16) methodNumber);
+    case (methodNumber)%(messageSizes)s
+    endcase
+endfunction
+
 (* synthesize *)
 module mk%(Ifc)sOutputPipes(%(Ifc)sOutputPipes);
     Vector#(%(channelCount)s, PipeOut#(Bit#(SlaveDataBusWidth))) indicationPipes;
@@ -94,10 +99,7 @@ module mk%(Ifc)sOutputPipes(%(Ifc)sOutputPipes);
     endinterface
     interface PipePortal portalIfc;
         interface PortalSize messageSize;
-        method Bit#(16) size(Bit#(16) methodNumber);
-            case (methodNumber)%(messageSizes)s
-            endcase
-        endmethod
+            method size = get%(Ifc)sMessageSize;
         endinterface
         interface Vector requests = nil;
         interface Vector indications = indicationPipes;
@@ -113,6 +115,12 @@ module mk%(Ifc)sOutput(%(Ifc)sOutput);
     endinterface
     interface PipePortal portalIfc = indicationPipes.portalIfc;
 endmodule
+instance PortalMessageSize#(%(Ifc)sOutput);
+   function Bit#(16) portalMessageSize(%(Ifc)sOutput p, Bit#(16) methodNumber);
+      return get%(Ifc)sMessageSize(methodNumber);
+   endfunction
+endinstance
+
 
 interface %(Ifc)sInverse;
 %(indicationInverseMethodDecls)s
