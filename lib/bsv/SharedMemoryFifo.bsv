@@ -39,7 +39,6 @@ interface SharedMemoryPipeOut#(numeric type dataBusWidth, numeric type pipeCount
 endinterface
 interface SharedMemoryPipeIn#(numeric type dataBusWidth);
    interface SharedMemoryPortalConfig cfg;
-   interface PipeIn#(Bit#(32)) data;
 endinterface
 
 
@@ -210,8 +209,8 @@ module mkSharedMemoryPipeOut#(Vector#(2, MemReadEngineServer#(64)) readEngine, V
    interface data = map(toPipeOut, dataFifo);
 endmodule
 
-module mkSharedMemoryPipeIn#(PipePortal#(numRequests, numIndications, 32) portal,
-    Vector#(2,MemReadEngineServer#(64)) readEngine, Vector#(2, MemWriteEngineServer#(64)) writeEngine)(SharedMemoryPortal#(64));
+module mkSharedMemoryPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes,
+    Vector#(2,MemReadEngineServer#(64)) readEngine, Vector#(2, MemWriteEngineServer#(64)) writeEngine)(SharedMemoryPipeIn#(64));
    let defaultClock <- exposeCurrentClock;
    let defaultReset <- exposeCurrentReset;
    // read the wrPtr and rdPtr pointers, if they are different, then read a request
@@ -224,7 +223,7 @@ module mkSharedMemoryPipeIn#(PipePortal#(numRequests, numIndications, 32) portal
    Reg#(SharedMemoryPortalState) state <- mkReg(Idle);
    Reg#(Bit#(32)) sglIdReg <- mkReg(0);
    Reg#(Bool)     readyReg   <- mkReg(False);
-   Vector#(numIndications, Bool) readyBits = map(pipeOutNotEmpty, portal.indications);
+   Vector#(numIndications, Bool) readyBits = map(pipeOutNotEmpty, pipes);
    Bool      interruptStatus = False;
    Bit#(16)  readyChannel = -1;
    function Bool pipeOutNotEmpty(PipeOut#(a) po); return po.notEmpty(); endfunction
@@ -279,15 +278,18 @@ module mkSharedMemoryPipeIn#(PipePortal#(numRequests, numIndications, 32) portal
    endrule
 
    rule sendHeader if (state == SendHeader && interruptStatus);
-      Bit#(16) messageBits = portal.messageSize.size(readyChannel);
-      Bit#(16) roundup = messageBits[4:0] == 0 ? 0 : 1;
-      Bit#(16) numWords = (messageBits >> 5) + roundup;
-      Bit#(16) totalWords = numWords + 1;
-      Bit#(32) hdr = extend(readyChannel) << 16 | extend(numWords + 1);
-      if (numWords[0] == 0)
-         totalWords = numWords + 2;
-      paddingReg <= numWords[0] == 0;
-      $display("sendHeader hdr=%h messageBits=%d numWords=%d totalWords=%d paddingReg=%d wrPtrReg=%h", hdr, messageBits, numWords, totalWords, paddingReg, wrPtrReg);
+      //Bit#(16) messageBits = portal.messageSize.size(readyChannel);
+      //Bit#(16) roundup = messageBits[4:0] == 0 ? 0 : 1;
+      //Bit#(16) numWords = (messageBits >> 5) + roundup;
+      //Bit#(16) totalWords = numWords + 1;
+      //Bit#(32) hdr = extend(readyChannel) << 16 | extend(numWords + 1);
+      Bit#(32) hdr <- toGet(pipes[readyChannel]).get();
+      Bit#(16) numWords = hdr[15:0];
+      let totalWords = numWords;
+      if (numWords[0] == 1)
+         totalWords = numWords + 1;
+      paddingReg <= numWords[0] == 1;
+      $display("sendHeader hdr=%h numWords=%d totalWords=%d paddingReg=%d wrPtrReg=%h", hdr, numWords, totalWords, paddingReg, wrPtrReg);
       wrPtrReg <= wrPtrReg + totalWords;
       messageWordsReg <= numWords;
       methodIdReg <= readyChannel;
@@ -299,8 +301,7 @@ module mkSharedMemoryPipeIn#(PipePortal#(numRequests, numIndications, 32) portal
 
    rule sendMessage if (state == SendMessage);
       messageWordsReg <= messageWordsReg - 1;
-      let v = portal.indications[methodIdReg].first;
-      portal.indications[methodIdReg].deq();
+      let v <- toGet(pipes[methodIdReg]).get();
       gb.enq(vec(v));
       $display("sendMessage v=%h messageWords=%d", v, messageWordsReg);
       if (messageWordsReg == 1) begin

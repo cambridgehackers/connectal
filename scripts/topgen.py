@@ -194,6 +194,7 @@ memEngineInst = '''   MemReadEngine#(64,64,2,%(clientCount)s) lSharereadEngine <
    MemWriteEngine#(64,64,2,%(clientCount)s) lSharewriteEngine <- mkMemWriteEngine();'''
 
 memModuleInstantiation = '''   SharedMemoryPortal#(64) l%(modname)sShare <- mkSharedMemory%(stype)sPortal(l%(modname)s.portalIfc,
+           get%(modnamebase)sMessageSize,
            takeAt(%(clientCount)s, lSharereadEngine.readServers), takeAt(%(clientCount)s, lSharewriteEngine.writeServers));'''
 
 memConnection = '''   mkConnection(l%(modname)sCW.pipes, l%(modname)sShare.cfg);'''
@@ -212,6 +213,7 @@ def instMod(args, modname, modext, constructor, tparam, memFlag, inverseFlag):
         return
     pmap['tparam'] = tparam
     pmap['modname'] = modname + modext
+    pmap['modnamebase'] = modname
     tstr = 'S2H'
     if modext == 'Output':
         tstr = 'H2S'
