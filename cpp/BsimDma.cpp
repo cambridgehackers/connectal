@@ -43,7 +43,7 @@ static int dma_trace ;//= 1;
 
 #define BUFFER_CHECK \
     if (!dma_info[id][pref].buffer || offset >= dma_info[id][pref].buffer_len) { \
-    fprintf(stderr, "BsimDma [%s:%d]: Error: buffer %p len %d; reference id %d pref %d offset %d\n", __FUNCTION__, __LINE__, dma_info[id][pref].buffer, dma_info[id][pref].buffer_len, id, pref, offset); \
+      fprintf(stderr, "BsimDma [%s:%d]: Error: offset %d too large for buffer %p len %d; reference id %d pref %d\n", __FUNCTION__, __LINE__, offset, dma_info[id][pref].buffer, dma_info[id][pref].buffer_len, id, pref); \
       exit(-1); \
     }
 
