@@ -126,7 +126,7 @@ endmodule
 
 module mkSimDma(SimDma#(dataWidth) ifc)
    provisos (Mul#(TDiv#(dataWidth, 32), 32, dataWidth),
-      Bits#(Vector#(TDiv#(dataWidth, 32), Bit#(4)), TDiv#(dataWidth, 8)));
+	     Bits#(Vector#(TDiv#(dataWidth, 32), Bit#(4)), TDiv#(dataWidth, 8)));
    Vector#(TDiv#(dataWidth,32),XsimDmaReadWrite) rws <- replicateM(mkXsimReadWrite());
    method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
       rws[0].init(id, handle, size);
@@ -196,7 +196,7 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
 	    Log#(dataWidthBytes,beatShift),
 	    Mul#(TDiv#(serverBusWidth, 32), 32, serverBusWidth),
 	    Bits#(Tuple2#(Bit#(64), PhysMemRequest#(serverAddrWidth,serverBusWidth)), a__),
-	    Add#(b__, 8, TDiv#(serverBusWidth, 8))
+	    Add#(b__, ByteEnableSize, TDiv#(serverBusWidth, 8))
 	    );
 
    let verbose = False;
@@ -290,7 +290,7 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
 	    Bit#(32) writeOffset = writeOffsetReg;
 	    Bit#(MemTagSize) tag = req.tag;
 	    Bit#(8) handle = req.addr[39:32];
-	    Bit#(BurstLenSize) byteEnable = maxBound;
+	    Bit#(ByteEnableSize) byteEnable = maxBound;
 `ifdef BYTE_ENABLES
 	    if (writeLen == 1) byteEnable = req.lastbe;
 `endif
