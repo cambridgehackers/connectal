@@ -119,6 +119,7 @@ module  mkBsimHost#(Clock derived_clock, Reset derived_reset)(BsimHost#(clientAd
    provisos (Add#(a__, 32, clientAddrWidth), Add#(b__, 32, clientBusWidth),
 	     Mul#(TDiv#(serverBusWidth, 32), 32, serverBusWidth),
              Mul#(TDiv#(serverBusWidth, 8), 8, serverBusWidth),
+	     Mul#(TDiv#(serverBusWidth, 32), 4, TDiv#(serverBusWidth, 8)),
 	     Add#(c__, ByteEnableSize,TDiv#(serverBusWidth, 8)));
 
    Vector#(nSlaves,PhysMemSlave#(serverAddrWidth,  serverBusWidth)) servers <- replicateM(mkSimDmaDmaMaster);
