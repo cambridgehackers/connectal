@@ -68,10 +68,18 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 
    let verboseProgress = False;
 
-   Bit#(TDiv#(DataBusWidth,8)) firstbe = { 4'hf, byteEnable[3:0] };
-   Bit#(TDiv#(DataBusWidth,8)) lastbe = { byteEnable[7:4], 4'hf };
+`ifdef BYTE_ENABLES
+   Bit#(TDiv#(DataBusWidth,8)) firstbe = maxBound;
+   Bit#(TDiv#(DataBusWidth,8)) lastbe = maxBound;
+   // just apply the byteEnable to the first and last 32-bit word of a burst
+   firstbe[3:0] = byteEnable[3:0];
+   lastbe[valueOf(ByteEnableSize)-1:valueOf(ByteEnableSize)-4] = byteEnable[7:4];
+`endif
 
    rule start if (numReqs != 0);
+`ifdef BYTE_ENABLES
+      $display("Memwrite.start firstbe=%h lastbe=%h", firstbe, lastbe);
+`endif
       reqFifo.enq(MemRequest { sglId: pointer, offset: reqOffset, burstLen: burstLenBytes, tag: extend(tag)
 `ifdef BYTE_ENABLES
 			      , firstbe: firstbe, lastbe: lastbe
