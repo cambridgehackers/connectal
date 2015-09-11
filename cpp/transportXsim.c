@@ -54,13 +54,13 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
 //sleep(10);
     if (!indPortal.mux_ports) {
         init_portal_internal(&mcommon, 0, 0, portal_mux_handler, NULL,
-            &transportSocketInit, NULL, sizeof(uint32_t)); 
+            &transportSocketInit, NULL, NULL, sizeof(uint32_t)); 
         PortalMuxParam param = {};
         param.pint = &mcommon;
         init_portal_internal(&indPortal, XsimIfcNames_XsimMsgIndication, 0,
-            XsimMsgIndication_handleMessage, &indHandlers, &transportMux, &param, XsimMsgIndication_reqinfo);
+            XsimMsgIndication_handleMessage, &indHandlers, &transportMux, &param, NULL, XsimMsgIndication_reqinfo);
         init_portal_internal(&reqPortal, XsimIfcNames_XsimMsgRequest, 0,
-            NULL, NULL, &transportMux, &param, XsimMsgRequest_reqinfo);
+            NULL, NULL, &transportMux, &param, NULL, XsimMsgRequest_reqinfo);
         indPortal.mux_ports_number = 16;
         indPortal.mux_ports = (PortalMuxHandler *)malloc(indPortal.mux_ports_number * sizeof(PortalMuxHandler));
     }

@@ -48,7 +48,7 @@
 #include "drivers/pcieportal/pcieportal.h" // BNOC_TRACE
 #endif
 
-int debug_portal = 0;
+static int trace_portal;//= 1;
 
 int global_pa_fd = -1;
 PortalInternal *utility_portal = 0x0;
@@ -61,7 +61,7 @@ static tBoard* tboard;
  * Initialize control data structure for portal
  */
 void init_portal_internal(PortalInternal *pint, int id, int tile,
-    PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *item, void *param,
+    PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *item, void *param, void *parent,
     uint32_t reqinfo)
 {
     int rc;
@@ -74,8 +74,10 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     pint->muxid = -1;
     pint->handler = handler;
     pint->cb = (PortalHandlerTemplate *)cb;
+    pint->parent = parent;
     pint->reqinfo = reqinfo;
-    //PORTAL_PRINTF("%s: **initialize portal_%d_%d handler %p cb %p\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number, handler, cb);
+    if(trace_portal)
+        PORTAL_PRINTF("%s: **initialize portal_%d_%d handler %p cb %p parent %p\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number, handler, cb, parent);
     if (!item) {
         // Use defaults for transport handling methods
 #ifdef BSIM
@@ -97,7 +99,8 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
 }
 int portal_disconnect(struct PortalInternal *pint)
 {
-    //PORTAL_PRINTF("[%s:%d] fpgafd %d num %d cli %d\n", __FUNCTION__, __LINE__, pint->fpga_fd, pint->client_fd_number, pint->client_fd[0], pint->client_fd[1]);
+    if(trace_portal)
+        PORTAL_PRINTF("[%s:%d] fpgafd %d num %d cli %d\n", __FUNCTION__, __LINE__, pint->fpga_fd, pint->client_fd_number, pint->client_fd[0], pint->client_fd[1]);
     close(pint->fpga_fd);
     if (pint->client_fd_number > 0)
         close(pint->client_fd[--pint->client_fd_number]);
@@ -309,7 +312,8 @@ int portalAlloc(size_t size, int cached)
 #else
     fd = ioctl(global_pa_fd, PA_MALLOC, &portalAlloc);
 #endif
-    //PORTAL_PRINTF("alloc size=%ld fd=%d\n", (unsigned long)size, fd);
+    if(trace_portal)
+        PORTAL_PRINTF("alloc size=%ld fd=%d\n", (unsigned long)size, fd);
     if (fd == -1) {
         PORTAL_PRINTF("portalAllocCached: alloc failed size=%ld errno=%d\n", (unsigned long)size, errno);
         exit(-1);
@@ -375,7 +379,8 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
 #else
 #error("dCAcheFlush not defined for unspecified architecture")
 #endif
-    //PORTAL_PRINTF("dcache flush\n");
+    if(trace_portal)
+        PORTAL_PRINTF("dcache flush\n");
     return 0;
 }
 

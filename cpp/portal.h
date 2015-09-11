@@ -45,7 +45,6 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
 #include <pthread.h> // pthread_mutex_t
 #endif
 
-extern int debug_portal;
 #define PORTAL_PRINTF portal_printf
 #endif
 
@@ -229,7 +228,7 @@ extern "C" {
 // Initialize portal control structure. (called by constructor when creating a portal at runtime)
 void init_portal_internal(PortalInternal *pint, int id, int tile,
     PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *item,
-    void *param, uint32_t reqinfo);
+    void *param, void *parent, uint32_t reqinfo);
 int portal_disconnect(struct PortalInternal *p);
 // Shared memory functions
 void initPortalMemory(void);
@@ -342,14 +341,14 @@ class Portal {
         }
     }
 public:
-    Portal(int id, int tile, uint32_t reqinfo, PORTAL_INDFUNC handler, void *cb, PortalPoller *poller = 0) {
-        init_portal_internal(&pint, id, tile, handler, cb, NULL, NULL, reqinfo); 
+    Portal(int id, int tile, uint32_t reqinfo, PORTAL_INDFUNC handler, void *cb, void *parent, PortalPoller *poller = 0) {
+        init_portal_internal(&pint, id, tile, handler, cb, NULL, NULL, parent, reqinfo); 
         pint.poller = poller;
         initPortal();
     };
     Portal(int id, int tile, uint32_t reqinfo, PORTAL_INDFUNC handler, void *cb,
-          PortalTransportFunctions *item, void *param, PortalPoller *poller = 0) {
-        init_portal_internal(&pint, id, tile, handler, cb, item, param, reqinfo); 
+          PortalTransportFunctions *item, void *param, void *parent, PortalPoller *poller = 0) {
+        init_portal_internal(&pint, id, tile, handler, cb, item, param, parent, reqinfo); 
         pint.poller = poller;
         initPortal();
     };
