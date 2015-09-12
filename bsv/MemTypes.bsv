@@ -121,7 +121,7 @@ endinstance
 //
 
 typedef struct {SGLId sglId;
-		Bit#(MemOffsetSize) base;
+		Bit#(32) base;
 		Bit#(BurstLenSize) burstLen;
 		Bit#(32) len;
 		Bit#(MemTagSize) tag;

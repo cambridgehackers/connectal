@@ -164,7 +164,7 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
 	    let new_tag = (cmd.tag << valueOf(serverIdxSz)) | extend(idx);
 	    inProgress.enq(tuple3(truncate(bl>>beat_shift), new_tag, last));
 	    //$display("writeReq %d, %h %h %h", idx, cmd.base, bl, last);
-	    return MemRequest { sglId: cmd.sglId, offset: cmd.base, burstLen:bl, tag: new_tag};
+	    return MemRequest { sglId: cmd.sglId, offset: extend(cmd.base), burstLen:bl, tag: new_tag};
 	 endmethod
       endinterface
       interface Get writeData;
