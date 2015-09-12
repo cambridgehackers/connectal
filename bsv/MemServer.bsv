@@ -285,7 +285,7 @@ module mkMemServerWithMMU#(Vector#(numReadClients, MemReadClient#(busWidth)) rea
    provisos(Add#(TLog#(TDiv#(busWidth, 8)), e__, 8)
 	    ,Add#(TLog#(TDiv#(busWidth, 8)), f__, BurstLenSize)
 	    ,Add#(c__, addrWidth, 64)
-	    ,Add#(d__, addrWidth, 44)
+	    ,Add#(d__, addrWidth, MemOffsetSize)
 	    ,Add#(numWriteClients, a__, TMul#(TDiv#(numWriteClients, nMasters),nMasters))
 	    ,Add#(numReadClients, b__, TMul#(TDiv#(numReadClients, nMasters),nMasters))
 	    );
