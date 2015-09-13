@@ -82,7 +82,8 @@ endmodule
 module mkXsimMemoryConnection#(PhysMemMaster#(addrWidth, dataWidth) master)(Empty)
    provisos (Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
 	     Mul#(TDiv#(dataWidth, 32), 32, dataWidth),
-	     Add#(a__, TDiv#(DataBusWidth,8), TDiv#(dataWidth, 8)));
+	     Add#(a__, TDiv#(DataBusWidth,8), TDiv#(dataWidth, 8)),
+	     Mul#(TDiv#(dataWidth, 32), 4, TDiv#(dataWidth, 8)));
    PhysMemSlave#(addrWidth,dataWidth) slave <- mkSimDmaDmaMaster();
    mkConnection(master, slave);
 endmodule
