@@ -29,7 +29,6 @@ import GetPut::*;
 import Connectable::*;
 import BRAMFIFO::*;
 import BRAM::*;
-import ConnectalBram::*;
 import MemTypes::*;
 import StmtFSM::*;
 import ClientServer::*;
@@ -126,7 +125,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
    // stage 1 (latency == 2)
    BRAM_Configure bramConfig = defaultValue;
    bramConfig.latency        = 2;
-   BRAM2Port#(RegionsIdx, Maybe#(Region)) regall <- ConnectalBram::mkBRAM2Server(bramConfig);
+   BRAM2Port#(RegionsIdx, Maybe#(Region)) regall <- mkBRAM2Server(bramConfig);
    Vector#(2,FIFOF#(ReqTup))          reqs0 <- replicateM(mkSizedFIFOF(3));
    
    // stage 2 (latency == 1)
@@ -136,7 +135,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
    Vector#(2, FIFOF#(Stage4Params)) stage4Params <- replicateM(mkFIFOF);
 
    // stage 4 (latency == 2)
-   BRAM2Port#(Bit#(entryIdxSize),Page0) pages <- ConnectalBram::mkBRAM2Server(bramConfig);
+   BRAM2Port#(Bit#(entryIdxSize),Page0) pages <- mkBRAM2Server(bramConfig);
    Vector#(2,FIFOF#(Offset))           offs1 <- replicateM(mkSizedFIFOF(3));
 
    // stage 4 (latnecy == 1)
