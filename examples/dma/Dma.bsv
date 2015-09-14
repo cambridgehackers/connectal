@@ -33,8 +33,9 @@ import MemWriteEngine::*;
 import HostInterface::*;
 
 interface DmaRequest;
-   method Action read(Bit#(32) sglId, Bit#(32) base, Bit#(8) burstLen, Bit#(32) bytes, Bit#(8) tag);
-   method Action write(Bit#(32) sglId, Bit#(32) base, Bit#(8) burstLen, Bit#(32) bytes, Bit#(8) tag);
+   method Action burstLen(Bit#(8) burstLenBytes);
+   method Action read(Bit#(32) sglId, Bit#(32) base, Bit#(32) bytes, Bit#(8) tag);
+   method Action write(Bit#(32) sglId, Bit#(32) base, Bit#(32) bytes, Bit#(8) tag);
 endinterface
 
 interface DmaIndication;
@@ -66,6 +67,7 @@ module mkDma#(DmaIndication indication)(Dma);
    FIFOF#(MemDataF#(DataBusWidth)) readFifo <- mkFIFOF();
    FIFO#(Bit#(8)) readTags <- mkSizedFIFO(valueOf(NumOutstandingRequests));
    FIFO#(Bit#(8)) writeTags <- mkSizedFIFO(valueOf(NumOutstandingRequests));
+   Reg#(Bit#(BurstLenSize)) burstLenReg <- mkReg(64);
 
    rule readDataRule;
       let mdf <- toGet(re.readServers[0].data).get();
@@ -84,18 +86,21 @@ module mkDma#(DmaIndication indication)(Dma);
    endrule
 
    interface DmaRequest request;
-      method Action read(Bit#(32) sglId, Bit#(32) base, Bit#(8) burstLen, Bit#(32) bytes, Bit#(8) tag);
+      method Action burstLen(Bit#(8) burstLenBytes);
+	 burstLenReg <= burstLenBytes;
+      endmethod
+      method Action read(Bit#(32) sglId, Bit#(32) base, Bit#(32) bytes, Bit#(8) tag);
          re.readServers[0].request.put(MemengineCmd {sglId: truncate(sglId),
 						     base: extend(base),
-						     burstLen: extend(burstLen),
+						     burstLen: extend(burstLenReg),
 						     len: bytes,
 						     tag: truncate(tag)
 						     });
       endmethod
-      method Action write(Bit#(32) sglId, Bit#(32) base, Bit#(8) burstLen, Bit#(32) bytes, Bit#(8) tag);
+      method Action write(Bit#(32) sglId, Bit#(32) base, Bit#(32) bytes, Bit#(8) tag);
          we.writeServers[0].request.put(MemengineCmd {sglId: truncate(sglId),
 						      base: extend(base),
-						      burstLen: extend(burstLen),
+						      burstLen: extend(burstLenReg),
 						      len: bytes,
 						      tag: truncate(tag)
 						      });

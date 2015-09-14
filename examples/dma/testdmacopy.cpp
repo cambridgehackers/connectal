@@ -65,15 +65,20 @@ int main(int argc, const char **argv)
     dmaIndication = new DmaIndication(IfcNames_DmaIndicationH2S);
 
     fprintf(stderr, "[%s:%d] allocating buffers\n", __FUNCTION__, __LINE__);
-    int srcAlloc = portalAlloc(4096, 0);
-    int dstAlloc = portalAlloc(4096, 0);
+    int srcAlloc = portalAlloc(8192, 0);
+    int dstAlloc = portalAlloc(8192, 0);
     int srcRef = dma->reference(srcAlloc);
     int dstRef = dma->reference(dstAlloc);
 
-    fprintf(stderr, "[%s:%d] starting dma\n", __FUNCTION__, __LINE__);
-    dmaRequest->read(srcRef, 0, 64, 4096, 0);
-    dmaRequest->write(dstRef, 0, 64, 4096, 0);
+    fprintf(stderr, "[%s:%d] requesting first dma\n", __FUNCTION__, __LINE__);
+    dmaRequest->read(srcRef, 0, 4096, 0);
+    dmaRequest->write(dstRef, 0, 4096, 1);
+    fprintf(stderr, "[%s:%d] requesting second dma\n", __FUNCTION__, __LINE__);
+    dmaRequest->read(srcRef, 4096, 4096, 2);
+    dmaRequest->write(dstRef, 4096, 4096, 3);
     fprintf(stderr, "[%s:%d] waiting for responses\n", __FUNCTION__, __LINE__);
+    dmaIndication->wait();
+    dmaIndication->wait();
     dmaIndication->wait();
     dmaIndication->wait();
     return 0;
