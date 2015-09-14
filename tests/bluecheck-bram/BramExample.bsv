@@ -45,6 +45,8 @@ import BRAM      :: *;
 import FIFO      :: *;
 import DefaultValue::*;
 
+import ConnectalBram::*;
+
 ///////////////
 // Interface //
 ///////////////
@@ -88,7 +90,7 @@ module mkBramImpl(BRAMServer#(addr,data))
    provisos(Bits#(addr, asz), Bits#(data, dsz));
    let cfg = defaultValue;
    cfg.latency = 2;
-   let bram <- mkBRAM1Server(cfg);
+   let bram <- ConnectalBram::mkBRAM2Server(cfg);
    interface request = bram.portA.request;
    interface response = bram.portA.response;
 endmodule

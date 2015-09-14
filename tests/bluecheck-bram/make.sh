@@ -38,7 +38,7 @@ BSC="bsc"
 BSCFLAGS="-keep-fires -cross-info -aggressive-conditions \
           -wait-for-license -suppress-warnings G0043 \
           -steps-warn-interval 300000 \
-          -p +:../../../bluecheck"
+          -p +:../../../bluecheck:../../bsv:../../lib/bsv"
 SUFFIXES=
 
 # UI
