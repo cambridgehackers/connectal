@@ -81,6 +81,7 @@ module mkDotProd(DotProd);
     FloatAlu adder <- mkFloatAdder(defaultValue);
     FloatAlu mul <- mkFloatMultiplier(defaultValue);
     Reg#(Float)    temp <- mkReg(0);
+    Reg#(Bool)     running <- mkReg(False);
 
     rule dotrule;
         let v <- toGet(dotFifo).get;
@@ -93,17 +94,20 @@ module mkDotProd(DotProd);
         adder.request.put(tuple2(resp,temp));
     endrule
 
-    rule storerule;
+    rule storerule; // if (running);
         let v <- toGet(lastFifo).get;
         match {.resp,.*} <- adder.response.get;
         temp <= resp;
-        if (v)
+        if (v) begin
             innerDone.enq(resp);
+            running <= False;
+        end
     endrule
     interface sendPair = toPipeIn(dotFifo);
     interface done = toPipeOut(innerDone);
-    method Action init(Float atemp);
+    method Action init(Float atemp) if (!running);
         temp <= atemp;
+        running <= True;
     endmethod
 endmodule
 

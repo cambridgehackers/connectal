@@ -123,35 +123,33 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
 	 if (verbose) $display("mkMemReadEngineBuff::%d rule_startNew %d %d", counter, idx, clientAvail[idx].read);
       endrule
 
-   rule rule_checkAvail;
-      if (clientInFlight[idx]) begin
+      rule rule_checkAvail if (clientInFlight[idx]);
          let cmd_len = clientNext[idx].len;
          let last_burst = clientNext[idx].last;
-	 let cond0 <- clientAvail[idx].maybeDecrement(unpack(extend(cmd_len>>beatShift)));
-	 serverCheckAvail[idx].enq(tuple3(cond0,last_burst,cmd_len));
-	 if (verbose) $display("mkMemReadEngineBuff::%d rule_checkAvail avail[%d] %d burstLen %d cond0 %d last_burst %d", counter, idx, clientAvail[idx].read(), cmd_len>>beatShift, cond0, last_burst);
-      end
-   endrule
+         let cond0 <- clientAvail[idx].maybeDecrement(unpack(extend(cmd_len>>beatShift)));
+         serverCheckAvail[idx].enq(tuple3(cond0,last_burst,cmd_len));
+         if (verbose) $display("mkMemReadEngineBuff::%d rule_checkAvail avail[%d] %d burstLen %d cond0 %d last_burst %d", counter, idx, clientAvail[idx].read(), cmd_len>>beatShift, cond0, last_burst);
+      endrule
 
-   // should use an EHR for clientInFlight to avoid the need for this pragma
-   (* descending_urgency = "rule_requestServer, rule_startNew" *)
-   rule rule_requestServer;
-      match {.cond0,.last_burst,.cmd_len} <- toGet(serverCheckAvail[idx]).get;
-      if  (cond0) begin
-	 if (verbose) $display("mkMemReadEngineBuff::%d rule_requestServer clientLen %d idx %d cond0 %d last_burst %d", counter, clientLen[idx], idx, cond0, last_burst);
-	 clientSReq[idx].enq(ServerRequest{
-              idx:fromInteger(idx),sglId:clientCommand[idx].sglId,base:clientBase[idx],
-              tag:clientCommand[idx].tag,last:last_burst,burstLen:cmd_len});
-         clientBase[idx] <= clientBase[idx] + extend(cmd_len);
-         clientLen[idx] <= clientLen[idx] - extend(cmd_len);
-         clientNext[idx] <= getNext(clientLen[idx], clientCommand[idx].burstLen);
-	 if (last_burst) begin
-	    if (verbose) $display("mkMemReadEngineBuff::%d rule_requestServer last_burst %d", counter, last_burst);
-	    clientInFlight[idx] <= False;
-	 end
-      end
-   endrule
-end
+      // should use an EHR for clientInFlight to avoid the need for this pragma
+      //(* descending_urgency = "rule_requestServer, rule_startNew" *)
+      rule rule_requestServer if (clientInFlight[idx]);
+         match {.cond0,.last_burst,.cmd_len} <- toGet(serverCheckAvail[idx]).get;
+         if  (cond0) begin
+	    if (verbose) $display("mkMemReadEngineBuff::%d rule_requestServer clientLen %d idx %d cond0 %d last_burst %d", counter, clientLen[idx], idx, cond0, last_burst);
+	    clientSReq[idx].enq(ServerRequest{
+                 idx:fromInteger(idx),sglId:clientCommand[idx].sglId,base:clientBase[idx],
+                 tag:clientCommand[idx].tag,last:last_burst,burstLen:cmd_len});
+            clientBase[idx] <= clientBase[idx] + extend(cmd_len);
+            clientLen[idx] <= clientLen[idx] - extend(cmd_len);
+            clientNext[idx] <= getNext(clientLen[idx], clientCommand[idx].burstLen);
+	    if (last_burst) begin
+	       if (verbose) $display("mkMemReadEngineBuff::%d rule_requestServer last_burst %d", counter, last_burst);
+	       clientInFlight[idx] <= False;
+	    end
+         end
+      endrule
+   end
    
    rule read_data_rule;
       let d <- toGet(serverDataFifo).get();
