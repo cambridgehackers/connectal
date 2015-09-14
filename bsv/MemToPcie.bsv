@@ -332,7 +332,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 	 hdr_4dw.addr = addr[40-1:2];
 	 hdr_4dw.length = tlplen;
 	 hdr_4dw.firstbe = reqFirstByteEnable(req)[3:0];
-	 hdr_4dw.lastbe = (tlplen > 1) ? reqLastByteEnable(req)[7:4] : 0;
+	 hdr_4dw.lastbe = (tlplen > 1) ? reqLastByteEnable(req)[valueOf(busWidthBytes)-1:valueOf(busWidthBytes)-4] : 0;
 	 tlp.data = pack(hdr_4dw);
 	 tlp.be = 16'hffff;
       end
@@ -345,7 +345,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 	 hdr_3dw.addr = addr[32-1:2];
 	 hdr_3dw.length = tlplen;
 	 hdr_3dw.firstbe = reqFirstByteEnable(req)[3:0];
-	 hdr_3dw.lastbe = (tlplen > 1) ? reqLastByteEnable(req)[7:4] : 0;
+	 hdr_3dw.lastbe = (tlplen > 1) ? reqLastByteEnable(req)[valueOf(busWidthBytes)-1:valueOf(busWidthBytes)-4] : 0;
 	 tlp.data = pack(hdr_3dw);
 	 tlp.be = 16'hfff0;
       end
@@ -382,7 +382,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 	       hdr_4dw.addr = addr[40-1:2];
 	       hdr_4dw.length = tlplen;
 	       hdr_4dw.firstbe = reqFirstByteEnable(req)[3:0];
-	       hdr_4dw.lastbe = (tlplen > 1) ? reqLastByteEnable(req)[7:4] : 0;
+	       hdr_4dw.lastbe = (tlplen > 1) ? reqLastByteEnable(req)[valueOf(busWidthBytes)-1:valueOf(busWidthBytes)-4] : 0;
 	       tlp.data = pack(hdr_4dw);
 	    end
 	    else begin
@@ -395,7 +395,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 	       hdr_3dw.addr = addr[32-1:2];
 	       hdr_3dw.length = tlplen;
 	       hdr_3dw.firstbe = reqFirstByteEnable(req)[3:0];
-	       hdr_3dw.lastbe = (tlplen > 1) ? reqLastByteEnable(req)[7:4] : 0;
+	       hdr_3dw.lastbe = (tlplen > 1) ? reqLastByteEnable(req)[valueOf(busWidthBytes)-1:valueOf(busWidthBytes)-4] : 0;
 	       tlp.be = 16'hfff0; // no data word in this TLP
 
 	       tlp.data = pack(hdr_3dw);
