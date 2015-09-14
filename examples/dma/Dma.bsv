@@ -60,7 +60,7 @@ typedef TMul#(NumOutstandingRequests,TMul#(32,4)) BufferSizeBytes;
 
 function Bit#(dsz) memdatafToData(MemDataF#(dsz) mdf); return mdf.data; endfunction
 
-module mkDma#(DmaIndication indication)(Dma#(numChannels))
+module mkDma#(Vector#(numChannels,DmaIndication) indication)(Dma#(numChannels))
    provisos (Add#(1, a__, numChannels),
 	     Add#(b__, TLog#(numChannels), TAdd#(1, TLog#(TMul#(NumOutstandingRequests, numChannels)))),
 	     Add#(c__, TLog#(numChannels), 6), // why is this?
@@ -87,13 +87,13 @@ module mkDma#(DmaIndication indication)(Dma#(numChannels))
        rule readDoneRule;
 	  match { .sglId, .base } <- toGet(readReqs[channel]).get();
 	  let tag <- toGet(readTags).get();
-	  indication.readDone(sglId, base, tag);
+	  indication[channel].readDone(sglId, base, tag);
        endrule
        rule writeDoneRule;
 	  match { .sglId, .base } <- toGet(writeReqs[channel]).get();
 	  let done <- we.writeServers[channel].done.get();
 	  let tag <- toGet(writeTags[channel]).get();
-	  indication.writeDone(sglId, base, tag);
+	  indication[channel].writeDone(sglId, base, tag);
        endrule
    end
 

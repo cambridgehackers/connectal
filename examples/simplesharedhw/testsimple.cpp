@@ -130,13 +130,14 @@ int main(int argc, const char **argv)
 {
     int verbose = 1;
     int numtimes = 10;
-    uint32_t alloc_sz = 4096;
+    uint32_t alloc_sz = 32768;
     dma = platformInit();
 
 //#define FF {dma}
 #define FF SHARED_DMA(IfcNames_MMURequestS2H, IfcNames_MMUIndicationH2S)
-    PortalSharedParam parami = {FF, alloc_sz, SHARED_HARDWARE(IfcNames_SimpleRequestPipesH2S)};
-    indication = new Simple(IfcNames_SimpleRequestH2S, numtimes, &transportShared, &parami);
+    //PortalSharedParam parami = {FF, alloc_sz, SHARED_HARDWARE(IfcNames_SimpleRequestPipesH2S)};
+    indication = new Simple(IfcNames_SimpleRequestH2S //, numtimes, &transportShared, &parami
+			    );
     PortalSharedParam paramr = {FF, alloc_sz, SHARED_HARDWARE(IfcNames_SimpleRequestPipesS2H)};
     SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequestS2H, &transportShared, &paramr);
 

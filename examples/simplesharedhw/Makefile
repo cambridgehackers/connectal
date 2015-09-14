@@ -1,7 +1,7 @@
 CONNECTALDIR?=../..
 INTERFACES = SharedMemoryPortalConfig
 S2H_INTERFACES = /SimpleRequest:Simple.request
-H2S_INTERFACES = /Simple:SimpleRequest
+H2S_INTERFACES = Simple:SimpleRequest
 MEM_READ_INTERFACES = "cons(lSharereadEngine.dmaClient,nil)"
 MEM_WRITE_INTERFACES = "cons(lSharewriteEngine.dmaClient,nil)"
 

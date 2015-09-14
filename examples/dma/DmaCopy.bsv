@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 import Vector::*;
+import BuildVector::*;
 import Connectable::*;
 import MemTypes::*;
 import HostInterface::*;
@@ -37,7 +38,7 @@ module mkApplication#(Dma#(numChannels) dma)(Empty);
 endmodule
 
 module mkDmaCopy#(DmaIndication indication)(DmaCopy);
-   Dma#(1) dma <- mkDma(indication);
+   Dma#(1) dma <- mkDma(vec(indication));
    let app <- mkApplication(dma);
    
    interface request     = dma.request[0];
