@@ -39,8 +39,8 @@ interface DmaRequest;
 endinterface
 
 interface DmaIndication;
-   method Action readDone(Bit#(8) tag);
-   method Action writeDone(Bit#(8) tag);
+   method Action readDone(Bit#(32) sglId, Bit#(32) base, Bit#(8) tag);
+   method Action writeDone(Bit#(32) sglId, Bit#(32) base, Bit#(8) tag);
 endinterface
 
 interface Dma#(numeric type numChannels);
@@ -69,6 +69,8 @@ module mkDma#(DmaIndication indication)(Dma#(numChannels))
    MemReadEngine#(DataBusWidth,DataBusWidth,NumOutstandingRequests,numChannels)  re <- mkMemReadEngineBuff(valueOf(BufferSizeBytes));
    MemWriteEngine#(DataBusWidth,DataBusWidth,NumOutstandingRequests,numChannels) we <- mkMemWriteEngineBuff(valueOf(BufferSizeBytes));
 
+   Vector#(numChannels, FIFO#(Tuple2#(Bit#(32),Bit#(32)))) readReqs <- replicateM(mkSizedFIFO(valueOf(NumOutstandingRequests)));
+   Vector#(numChannels, FIFO#(Tuple2#(Bit#(32),Bit#(32)))) writeReqs <- replicateM(mkSizedFIFO(valueOf(NumOutstandingRequests)));
    Vector#(numChannels, FIFOF#(MemDataF#(DataBusWidth))) readFifo <- replicateM(mkFIFOF());
    Vector#(numChannels, FIFO#(Bit#(8))) writeTags <- replicateM(mkSizedFIFO(valueOf(NumOutstandingRequests)));
    Reg#(Bit#(BurstLenSize)) burstLenReg <- mkReg(64);
@@ -83,13 +85,15 @@ module mkDma#(DmaIndication indication)(Dma#(numChannels))
 	  readFifo[channel].enq(mdf);
        endrule
        rule readDoneRule;
+	  match { .sglId, .base } <- toGet(readReqs[channel]).get();
 	  let tag <- toGet(readTags).get();
-	  indication.readDone(tag);
+	  indication.readDone(sglId, base, tag);
        endrule
        rule writeDoneRule;
+	  match { .sglId, .base } <- toGet(writeReqs[channel]).get();
 	  let done <- we.writeServers[channel].done.get();
 	  let tag <- toGet(writeTags[channel]).get();
-	  indication.writeDone(tag);
+	  indication.writeDone(sglId, base, tag);
        endrule
    end
 
@@ -99,6 +103,7 @@ module mkDma#(DmaIndication indication)(Dma#(numChannels))
 	      burstLenReg <= burstLenBytes;
 	 endmethod
 	 method Action read(Bit#(32) sglId, Bit#(32) base, Bit#(32) bytes, Bit#(8) tag);
+	      readReqs[channel].enq(tuple2(sglId, base));
 	      re.readServers[channel].request.put(MemengineCmd {sglId: truncate(sglId),
 								base: extend(base),
 								burstLen: extend(burstLenReg),
@@ -107,6 +112,7 @@ module mkDma#(DmaIndication indication)(Dma#(numChannels))
 								});
 	 endmethod
 	 method Action write(Bit#(32) sglId, Bit#(32) base, Bit#(32) bytes, Bit#(8) tag);
+	      writeReqs[channel].enq(tuple2(sglId, base));
 	      we.writeServers[channel].request.put(MemengineCmd {sglId: truncate(sglId),
 								 base: extend(base),
 								 burstLen: extend(burstLenReg),

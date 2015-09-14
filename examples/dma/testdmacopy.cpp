@@ -39,12 +39,12 @@ public:
 	sem_init(&sem, 0, 0);
     }
 
-    void readDone ( const uint8_t tag ) {
-	fprintf(stderr, "[%s:%d] tag=%d\n", __FUNCTION__, __LINE__, tag);
+    void readDone ( uint32_t sglId, uint32_t base, const uint8_t tag ) {
+    fprintf(stderr, "[%s:%d] sglId=%d base=%08x tag=%d\n", __FUNCTION__, __LINE__, sglId, base, tag);
 	sem_post(&sem);
     }
-    void writeDone ( const uint8_t tag ) {
-	fprintf(stderr, "[%s:%d] tag=%d\n", __FUNCTION__, __LINE__, tag);
+    void writeDone ( uint32_t sglId, uint32_t base, uint8_t tag ) {
+    fprintf(stderr, "[%s:%d] sglId=%d base=%08x tag=%d\n", __FUNCTION__, __LINE__, sglId, base, tag);
 	sem_post(&sem);
     }
     void wait() {
