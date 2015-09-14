@@ -58,6 +58,15 @@ function NextReq getNext(Bit#(32) len, Bit#(BurstLenSize) burst);
    return v;
 endfunction
 
+typedef struct {
+   Bit#(indexSize)    idx;
+   SGLId              sglId;
+   Bit#(32)           base;
+   Bit#(MemTagSize)   tag;
+   Bool               last;
+   Bit#(BurstLenSize) burstLen;
+} ServerRequest#(numeric type indexSize) deriving (Bits, Eq);
+
 module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, userWidth, cmdQDepth, numServers))
    provisos (Div#(busWidth,8,busWidthBytes),
 	     Mul#(busWidthBytes,8,busWidth),
@@ -87,20 +96,23 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
    Vector#(numServers, Reg#(Bit#(32)))      clientLen <- replicateM(mkReg(unpack(0)));
    Vector#(numServers, Reg#(Bit#(32)))      clientBase <- replicateM(mkReg(unpack(0)));
    Vector#(numServers, Reg#(NextReq))       clientNext <- replicateM(mkReg(unpack(0)));
+   Vector#(numServers, FIFOF#(ServerRequest#(serverIdxSz))) clientSReq <- replicateM(mkSizedFIFOF(1));
    
-   FIFO#(Tuple4#(Bit#(serverIdxSz),Bool,Bool,Bit#(BurstLenSize)))              serverCheckAvail <- mkSizedFIFO(1);
-   FIFO#(Tuple6#(Bit#(serverIdxSz),SGLId,Bit#(32),Bit#(MemTagSize),Bool,Bit#(BurstLenSize))) serverRequest <- mkSizedFIFO(valueOf(cmdQDepth));
+   Vector#(numServers, FIFO#(Tuple3#(Bool,Bool,Bit#(BurstLenSize)))) serverCheckAvail <- replicateM(mkSizedFIFO(1));
+   FIFO#(ServerRequest#(serverIdxSz))       serverRequest <- mkSizedFIFO(valueOf(cmdQDepth));
    FIFO#(Tuple3#(Bit#(8),Bit#(serverIdxSz),Bool)) serverProcessing <- mkSizedFIFO(valueOf(cmdQDepth));
    FIFOF#(MemData#(busWidth))                       serverDataFifo <- mkFIFOF;
 
    Reg#(Bit#(8))                    respCnt <- mkReg(0);
    Reg#(Bit#(32)) counter <- mkReg(0);
 
+   mkFunnelNodeRR(map(toPipeOut, clientSReq), valueOf(numServers), toPut(serverRequest));
+
    rule incCounter;
       counter <= counter + 1;
    endrule
          
-   for (Integer idx = 0; idx < valueOf(numServers); idx = idx + 1)
+   for (Integer idx = 0; idx < valueOf(numServers); idx = idx + 1) begin
       rule rule_startNew if (!clientInFlight[idx]);
 	 let cmd <- toGet(clientRequest[idx]).get();
 	 clientInFlight[idx] <= True;
@@ -111,28 +123,25 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
 	 if (verbose) $display("mkMemReadEngineBuff::%d rule_startNew %d %d", counter, idx, clientAvail[idx].read);
       endrule
 
-   Reg#(Bit#(TAdd#(1,serverIdxSz))) loadIdx <- mkReg(0);
    rule rule_checkAvail;
-      if (clientInFlight[loadIdx]) begin
-         let cmd_len = clientNext[loadIdx].len;
-         let last_burst = clientNext[loadIdx].last;
-	 let cond0 <- clientAvail[loadIdx].maybeDecrement(unpack(extend(cmd_len>>beatShift)));
-	 serverCheckAvail.enq(tuple4(truncate(loadIdx),cond0,last_burst,cmd_len));
-	 if (verbose) $display("mkMemReadEngineBuff::%d rule_checkAvail avail[%d] %d burstLen %d cond0 %d last_burst %d", counter, loadIdx, clientAvail[loadIdx].read(), cmd_len>>beatShift, cond0, last_burst);
+      if (clientInFlight[idx]) begin
+         let cmd_len = clientNext[idx].len;
+         let last_burst = clientNext[idx].last;
+	 let cond0 <- clientAvail[idx].maybeDecrement(unpack(extend(cmd_len>>beatShift)));
+	 serverCheckAvail[idx].enq(tuple3(cond0,last_burst,cmd_len));
+	 if (verbose) $display("mkMemReadEngineBuff::%d rule_checkAvail avail[%d] %d burstLen %d cond0 %d last_burst %d", counter, idx, clientAvail[idx].read(), cmd_len>>beatShift, cond0, last_burst);
       end
-      if(loadIdx+1 >= fromInteger(valueOf(numServers)))
-         loadIdx <= 0;
-      else
-         loadIdx <= loadIdx+1;
    endrule
 
    // should use an EHR for clientInFlight to avoid the need for this pragma
    (* descending_urgency = "rule_requestServer, rule_startNew" *)
    rule rule_requestServer;
-      match {.idx, .cond0,.last_burst,.cmd_len} <- toGet(serverCheckAvail).get;
+      match {.cond0,.last_burst,.cmd_len} <- toGet(serverCheckAvail[idx]).get;
       if  (cond0) begin
 	 if (verbose) $display("mkMemReadEngineBuff::%d rule_requestServer clientLen %d idx %d cond0 %d last_burst %d", counter, clientLen[idx], idx, cond0, last_burst);
-	 serverRequest.enq(tuple6(idx,clientCommand[idx].sglId,clientBase[idx],clientCommand[idx].tag,last_burst,cmd_len));
+	 clientSReq[idx].enq(ServerRequest{
+              idx:fromInteger(idx),sglId:clientCommand[idx].sglId,base:clientBase[idx],
+              tag:clientCommand[idx].tag,last:last_burst,burstLen:cmd_len});
          clientBase[idx] <= clientBase[idx] + extend(cmd_len);
          clientLen[idx] <= clientLen[idx] - extend(cmd_len);
          clientNext[idx] <= getNext(clientLen[idx], clientCommand[idx].burstLen);
@@ -142,6 +151,7 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
 	 end
       end
    endrule
+end
    
    rule read_data_rule;
       let d <- toGet(serverDataFifo).get();
@@ -200,14 +210,15 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
    interface MemReadClient dmaClient;
       interface Get readReq;
 	 method ActionValue#(MemRequest) get();
-	    match {.idx, .cmd_sglId, .cmd_base, .cmd_tag, .last_burst, .bl} <- toGet(serverRequest).get;
-	    serverProcessing.enq(tuple3(truncate(bl>>beatShift), idx, last_burst));
-	    if (verbose) $display("MemReadEngine::%d readReq idx %d offset %h burstLenBytes %h last_burst %d", counter, idx, cmd_base, bl, last_burst);
-	    return MemRequest { sglId: cmd_sglId, offset: extend(cmd_base), burstLen:bl, tag: (cmd_tag << valueOf(serverIdxSz)) | extend(idx)
+            let v <- toGet(serverRequest).get;
+	    serverProcessing.enq(tuple3(truncate(v.burstLen>>beatShift), v.idx, v.last));
+	    if (verbose) $display("MemReadEngine::%d readReq idx %d offset %h burstLenBytes %h last %d", counter, v.idx, v.base, v.burstLen, v.last);
+	    return MemRequest { sglId: v.sglId, offset: extend(v.base),
+               burstLen:v.burstLen, tag: (v.tag << valueOf(serverIdxSz)) | extend(v.idx)
 `ifdef BYTE_ENABLES
 			       , firstbe: maxBound, lastbe: maxBound
 `endif
-};
+               };
 	 endmethod
       endinterface
       interface Put readData = toPut(serverDataFifo);
