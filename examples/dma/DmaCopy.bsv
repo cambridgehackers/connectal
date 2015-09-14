@@ -32,15 +32,15 @@ interface DmaCopy;
    interface Vector#(1,MemWriteClient#(DataBusWidth))     writeClient;
 endinterface
 
-module mkApplication#(Dma dma)(Empty);
+module mkApplication#(Dma#(numChannels) dma)(Empty);
    mkConnection(dma.readData, dma.writeData);
 endmodule
 
 module mkDmaCopy#(DmaIndication indication)(DmaCopy);
-   let dma <- mkDma(indication);
+   Dma#(1) dma <- mkDma(indication);
    let app <- mkApplication(dma);
    
-   interface request     = dma.request;
+   interface request     = dma.request[0];
    interface readClient  = dma.readClient;
    interface writeClient = dma.writeClient;
 endmodule
