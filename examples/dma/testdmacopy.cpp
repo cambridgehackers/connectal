@@ -53,35 +53,67 @@ public:
 };
 
 DmaManager *dma;
-DmaIndication *dmaIndication0, *dmaIndication1;
-DmaRequestProxy *dmaRequest0, *dmaRequest1;
+  static int proxyNames[] = { IfcNames_DmaRequestS2H0, IfcNames_DmaRequestS2H1 };
+  static int wrapperNames[] = { IfcNames_DmaIndicationH2S0, IfcNames_DmaIndicationH2S1 };
+class Channel {
+  DmaIndication *dmaIndication;
+  DmaRequestProxy *dmaRequest;
+  int channel;
+  int srcAlloc;
+  int dstAlloc;
+  int srcRef;
+  int dstRef;
+  int size;
+public:
+  Channel(int channel) : channel(channel), size(1024*1024) {
+    dmaRequest    = new DmaRequestProxy(proxyNames[channel]);
+    dmaIndication = new DmaIndication(wrapperNames[channel]);
+    fprintf(stderr, "[%s:%d] channel %d allocating buffers\n", __FUNCTION__, __LINE__, channel);
+    srcAlloc = portalAlloc(size, 0);
+    dstAlloc = portalAlloc(size, 0);
+    srcRef = dma->reference(srcAlloc);
+    dstRef = dma->reference(dstAlloc);
+  }
+  void run() {
+    fprintf(stderr, "[%s:%d] channel %d requesting first dma\n", __FUNCTION__, __LINE__, channel);
+    dmaRequest->read(srcRef, 0, size/2, 0);
+    dmaRequest->write(dstRef, 0, size/2, 1);
+    fprintf(stderr, "[%s:%d] channel %d requesting second dma\n", __FUNCTION__, __LINE__, channel);
+    dmaRequest->read(srcRef, size/2, size/2, 2);
+    dmaRequest->write(dstRef, size/2, size/2, 3);
+    fprintf(stderr, "[%s:%d] channel %d waiting for responses\n", __FUNCTION__, __LINE__, channel);
+    dmaIndication->wait();
+    dmaIndication->wait();
+    dmaIndication->wait();
+    dmaIndication->wait();
+  }
+  static void *threadfn(void *c) {
+    Channel *channelp = (Channel *)c;
+    channelp->run();
+    return 0;
+  }
+};
+
+
+
+pthread_t threads[2];
 
 int main(int argc, const char **argv)
 {
     fprintf(stderr, "[%s:%d] calling platformInit\n", __FUNCTION__, __LINE__);
     dma = platformInit();
     fprintf(stderr, "[%s:%d] creating proxy and wrapper\n", __FUNCTION__, __LINE__);
-    dmaRequest0    = new DmaRequestProxy(IfcNames_DmaRequestS2H0);
-    dmaRequest1    = new DmaRequestProxy(IfcNames_DmaRequestS2H1);
-    dmaIndication0 = new DmaIndication(IfcNames_DmaIndicationH2S0);
-    dmaIndication1 = new DmaIndication(IfcNames_DmaIndicationH2S1);
 
-    fprintf(stderr, "[%s:%d] allocating buffers\n", __FUNCTION__, __LINE__);
-    int srcAlloc = portalAlloc(8192, 0);
-    int dstAlloc = portalAlloc(8192, 0);
-    int srcRef = dma->reference(srcAlloc);
-    int dstRef = dma->reference(dstAlloc);
+    for (int i = 0; i < 2; i++) {
+      Channel *channel = new Channel(i);
+      pthread_create(&threads[i], 0, channel->threadfn, channel);
+    }
 
-    fprintf(stderr, "[%s:%d] requesting first dma\n", __FUNCTION__, __LINE__);
-    dmaRequest0->read(srcRef, 0, 4096, 0);
-    dmaRequest0->write(dstRef, 0, 4096, 1);
-    fprintf(stderr, "[%s:%d] requesting second dma\n", __FUNCTION__, __LINE__);
-    dmaRequest0->read(srcRef, 4096, 4096, 2);
-    dmaRequest0->write(dstRef, 4096, 4096, 3);
-    fprintf(stderr, "[%s:%d] waiting for responses\n", __FUNCTION__, __LINE__);
-    dmaIndication0->wait();
-    dmaIndication0->wait();
-    dmaIndication0->wait();
-    dmaIndication0->wait();
+    // wait for threads to exit
+    for (int i = 0; i < 2; i++) {
+      void *ret;
+      pthread_join(threads[i], &ret);
+      fprintf(stderr, "thread exited ret=%p\n", ret);
+    }
     return 0;
 }
