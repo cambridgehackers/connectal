@@ -155,7 +155,7 @@ int main(int argc, const char **argv)
 
   fprintf(stderr, "Main::starting memcpy numWords:%d\n", numWords);
   int burstLen = 32;
-#ifndef BSIM
+#ifndef SIMULATION
   int iterCnt = 128;
 #else
   int iterCnt = 2;
