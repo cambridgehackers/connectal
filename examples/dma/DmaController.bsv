@@ -43,7 +43,7 @@ interface DmaIndication;
    method Action writeDone(Bit#(32) sglId, Bit#(32) base, Bit#(8) tag);
 endinterface
 
-interface Dma#(numeric type numChannels);
+interface DmaController#(numeric type numChannels);
    // request from software
    interface Vector#(numChannels,DmaRequest) request;
    // data out to application logic
@@ -60,7 +60,7 @@ typedef TMul#(NumOutstandingRequests,TMul#(32,4)) BufferSizeBytes;
 
 function Bit#(dsz) memdatafToData(MemDataF#(dsz) mdf); return mdf.data; endfunction
 
-module mkDma#(Vector#(numChannels,DmaIndication) indication)(Dma#(numChannels))
+module mkDmaController#(Vector#(numChannels,DmaIndication) indication)(DmaController#(numChannels))
    provisos (Add#(1, a__, numChannels),
 	     Add#(b__, TLog#(numChannels), TAdd#(1, TLog#(TMul#(NumOutstandingRequests, numChannels)))),
 	     Add#(c__, TLog#(numChannels), 6), // why is this?

@@ -25,22 +25,22 @@ import BuildVector::*;
 import Connectable::*;
 import MemTypes::*;
 import HostInterface::*;
-import Dma::*;
+import DmaController::*;
 
-interface DmaCopy;
+interface DmaLoopback;
    interface DmaRequest request0;
    interface DmaRequest request1;
    interface Vector#(1,MemReadClient#(DataBusWidth))      readClient;
    interface Vector#(1,MemWriteClient#(DataBusWidth))     writeClient;
 endinterface
 
-module mkApplication#(Dma#(numChannels) dma)(Empty);
+module mkLoopback#(DmaController#(numChannels) dma)(Empty);
    mkConnection(dma.readData, dma.writeData);
 endmodule
 
-module mkDmaCopy#(DmaIndication indication0, DmaIndication indication1)(DmaCopy);
-   Dma#(2) dma <- mkDma(vec(indication0,indication1));
-   let app <- mkApplication(dma);
+module mkDmaLoopback#(DmaIndication indication0, DmaIndication indication1)(DmaLoopback);
+   DmaController#(2) dma <- mkDmaController(vec(indication0,indication1));
+   let app <- mkLoopback(dma);
    
    interface request0    = dma.request[0];
    interface request1    = dma.request[1];
