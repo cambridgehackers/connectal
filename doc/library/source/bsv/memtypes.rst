@@ -97,16 +97,33 @@ Data Types
 
       Indicates that this is the last beat of a burst.
 
+
+.. bsv:struct:: MemDataF#(numeric type dsz)
+
+   One beat of the payload of a physical or logical memory read or write request. Used by MemReadEngine and MemWriteEngine.
+
+   .. bsv:field:: Bit#(dsz) data
+
+      One data beat worth of data.
+
+   .. bsv:field:: Bit#(MemTagSize) tag
+
+      Indicates to which request this beat belongs.
+
+   .. bsv:field:: Bool first
+
+      Indicates that this is the last beat of a request.
+
+   .. bsv:field:: Bool last
+
+      Indicates that this is the last beat of a request.
+
 Physical Memory Clients and Servers
 -----------------------------------
 
-.. bsv:interface:: PhysMemSlave#(numeric type addrWidth, numeric type dataWidth)
-
-   .. bsv:subinterface:: PhysMemReadServer#(addrWidth, dataWidth) read_server
-
-   .. bsv:subinterface:: PhysMemWriteServer#(addrWidth, dataWidth) write_server 
-
 .. bsv:interface:: PhysMemMaster#(numeric type addrWidth, numeric type dataWidth)
+
+   The physical memory interface exposed by MemMaster. For example, connects via AXI to Zynq or via PCIe to x86 memory.
 
    .. bsv:subinterface:: PhysMemReadClient#(addrWidth, dataWidth) read_client
 
@@ -125,6 +142,13 @@ Physical Memory Clients and Servers
    .. bsv:subinterface:: Get#(MemData#(dsz)) writeData
 
    .. bsv:subinterface:: Put#(Bit#(MemTagSize))       writeDone
+
+.. bsv:interface:: PhysMemSlave#(numeric type addrWidth, numeric type dataWidth)
+
+   .. bsv:subinterface:: PhysMemReadServer#(addrWidth, dataWidth) read_server
+
+   .. bsv:subinterface:: PhysMemWriteServer#(addrWidth, dataWidth) write_server 
+
 
 .. bsv:interface:: PhysMemReadServer#(numeric type asz, numeric type dsz)
 
@@ -145,7 +169,12 @@ Physical Memory Clients and Servers
 Memory Clients and Servers
 --------------------------
 
+These clients and servers operate on logical addresses. These are
+translated by an MMU before being issued to system memory.
+
 .. bsv:interface:: MemReadClient#(numeric type dsz)
+
+   The system memory read interface exported by a client of MemServer, such as MemReadEngine.
 
    .. bsv:subinterface:: Get#(MemRequest)    readReq
 
@@ -153,6 +182,8 @@ Memory Clients and Servers
 
 
 .. bsv:interface:: MemWriteClient#(numeric type dsz)
+
+   The system memory write interface exported by a client of MemServer, such as MemWriteEngine.
 
    .. bsv:subinterface:: Get#(MemRequest)    writeReq
 
@@ -162,12 +193,16 @@ Memory Clients and Servers
 
 .. bsv:interface:: MemReadServer#(numeric type dsz)
 
+   The system memory read interface exported by MemServer.
+
    .. bsv:subinterface:: Put#(MemRequest) readReq
 
    .. bsv:subinterface:: Get#(MemData#(dsz))     readData
 
 
 .. bsv:interface:: MemWriteServer#(numeric type dsz)
+
+   The system memory write interface exported by MemServer.
 
    .. bsv:subinterface:: Put#(MemRequest) writeReq
 
@@ -185,7 +220,7 @@ Memory Engine Types
 
    .. bsv:field:: SGLId sglId
 
-      Which scatter gather list the MMU should use to translate the addresses
+      Which memory object identifer (scatter gather list ID) the MMU should use to translate the addresses
 
    .. bsv:field:: Bit#(MemOffsetSize) base
 
@@ -208,6 +243,8 @@ Memory Engine Interfaces
 
 .. bsv:interface:: MemWriteEngineServer#(numeric type userWidth)
 
+   The interface used by one client of a MemWriteEngine.
+
    .. bsv:subinterface:: Put#(MemengineCmd)       request
 
    .. bsv:subinterface:: Get#(Bool)               done
@@ -216,17 +253,23 @@ Memory Engine Interfaces
 
 .. bsv:interface:: MemWriteEngine#(numeric type busWidth, numeric type userWidth, numeric type cmdQDepth, numeric type numServers)
 
+   A multi-client component that supports multi-burst writes to system memory.
+
    .. bsv:subinterface:: MemWriteClient#(busWidth) dmaClient
 
    .. bsv:subinterface:: Vector#(numServers, MemWriteEngineServer#(userWidth)) writeServers
 
 .. bsv:interface:: MemReadEngineServer#(numeric type userWidth)
 
+   The interface used by one client of a MemReadEngine.
+
    .. bsv:subinterface:: Put#(MemengineCmd)        request
 
-   .. bsv:subinterface:: PipeOut#(Bit#(userWidth)) data
+   .. bsv:subinterface:: PipeOut#(MemDataF#(userWidth)) data
       
 .. bsv:interface:: MemReadEngine#(numeric type busWidth, numeric type userWidth, numeric type cmdQDepth, numeric type numServers)
+
+   A multi-client component that supports multi-burst reads from system memory.
 
    .. bsv:subinterface:: MemReadClient#(busWidth) dmaClient
 
