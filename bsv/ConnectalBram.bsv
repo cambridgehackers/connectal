@@ -38,7 +38,7 @@ module mkBRAMServers#(BRAM_Configure bramConfig)(BRAMServers#(numServers, addr, 
    provisos (Bits#(addr,asz),
 	     Bits#(data,dsz));
    let memorySize = bramConfig.memorySize == 0 ? 2**valueOf(asz) : bramConfig.memorySize;
-   BRAM_DUAL_PORT#(addr,data) bram <- mkBRAMCore2(bramConfig.memorySize, True); // latency 2
+   BRAM_DUAL_PORT#(addr,data) bram <- mkBRAMCore2(memorySize, True); // latency 2
    Vector#(2, FIFOF#(data)) responseFifo <- replicateM(mkSizedFIFOF(2));
    // EHR did not work here, CReg doesn't seem to go into a vector, so using Wire. -Jamey
    Vector#(2, Wire#(Maybe#(Tuple2#(Bool,data)))) data0 <- replicateM(mkDWire(tagged Invalid));
