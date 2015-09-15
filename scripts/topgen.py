@@ -207,10 +207,11 @@ pipeInstantiation = '''   %(modname)s%(inverse)s%(tparam)s l%(modname)s <- mk%(m
 
 connectInstantiation = '''   mkConnection(l%(modname)s.pipes, l%(userIf)s);'''
 
-def instMod(args, modname, modext, constructor, tparam, memFlag, inverseFlag):
+def instMod(pmap, args, modname, modext, constructor, tparam, memFlag, inverseFlag):
     global clientCount
     if not modname:
         return
+    map = pmap.copy()
     pmap['tparam'] = tparam
     pmap['modname'] = modname + modext
     pmap['modnamebase'] = modname
@@ -337,11 +338,11 @@ if __name__=='__main__':
         pmap = parseParam(pitem, True)
         ptemp = pmap['name']
         for pmap['name'] in ptemp.split(','):
-            instMod('', pmap['name'], 'Output', '', '', pmap['memFlag'], pmap['inverse'])
+            instMod(pmap, '', pmap['name'], 'Output', '', '', pmap['memFlag'], pmap['inverse'])
             argstr = pmap['uparam'] + ('l%(name)sOutput.ifc' if not pmap['inverse'] else '')
             if pmap['uparam'] and pmap['uparam'][0] == '/':
                 argstr = 'l%(name)sOutput.ifc, ' + pmap['uparam'][1:-2]
-            instMod(argstr, pmap['usermod'], '', '', pmap['xparam'], False, pmap['inverse'])
+            instMod(pmap, argstr, pmap['usermod'], '', '', pmap['xparam'], False, pmap['inverse'])
             pmap['uparam'] = ''
     for pitem in options.wrapper:
         pmap = parseParam(pitem, False)
@@ -350,9 +351,9 @@ if __name__=='__main__':
         pr = pmap['userIf'].split('.')
         pmap['usermod'] = pr[0]
         if pmap['usermod'] not in instantiatedModules:
-            instMod(pmap['uparam'], pmap['usermod'], '', '', pmap['xparam'], False, False)
+            instMod(pmap, pmap['uparam'], pmap['usermod'], '', '', pmap['xparam'], False, False)
         flushModules(pmap['usermod'])
-        instMod('', pmap['name'], 'Input', '', '', pmap['memFlag'], pmap['inverse'])
+        instMod(pmap, '', pmap['name'], 'Input', '', '', pmap['memFlag'], pmap['inverse'])
         portalInstantiate.append('')
     for key in instantiatedModules:
         flushModules(key)
