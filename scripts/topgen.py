@@ -193,7 +193,7 @@ memShareInst = '''   SharedMemoryPortalConfigInput%(tparam)s l%(modname)sCW <- m
 memEngineInst = '''   MemReadEngine#(64,64,2,%(clientCount)s) lSharereadEngine <- mkMemReadEngine();
    MemWriteEngine#(64,64,2,%(clientCount)s) lSharewriteEngine <- mkMemWriteEngine();'''
 
-memModuleInstantiation = '''   SharedMemoryPortal#(64) l%(modname)sShare <- mkSharedMemory%(stype)sPortal(l%(modname)s.portalIfc,
+memModuleInstantiation = '''   SharedMemoryPortal#(64) l%(modname)sShare <- mkSharedMemory%(stype)sPortal(l%(modname)s%(number).portalIfc,
            get%(modnamebase)sMessageSize,
            takeAt(%(clientCount)s, lSharereadEngine.readServers), takeAt(%(clientCount)s, lSharewriteEngine.writeServers));'''
 
@@ -252,7 +252,7 @@ def instMod(pmap, args, modname, modext, constructor, tparam, memFlag, inverseFl
             options.portname.append('IfcNames_' + modname + memFlag + tstr + pmap['number'])
             addPortal('IfcNames_' + pmap['argsConfig'], '%(modname)sCW' % pmap, 'Request')
         else:
-            addPortal('IfcNames_' + pmap['args'] + pmap['number'], '%(modname)s' % pmap, pmap['stype'])
+            addPortal('IfcNames_' + pmap['args'] + pmap['number'], '%(modname)s%(number)s' % pmap, pmap['stype'])
     else:
         if not instantiateRequest.get(pmap['modname']):
             instantiateRequest[pmap['modname']] = iReq()
