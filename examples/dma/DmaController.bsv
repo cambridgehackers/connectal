@@ -33,16 +33,36 @@ import MemWriteEngine::*;
 import HostInterface::*;
 
 interface DmaRequest;
+   //
+   // Configures burstLen used by DMA transfers. Only needed for performance tuning if default value does not perform well.
+   //
    method Action burstLen(Bit#(8) burstLenBytes);
+   //
+   // Requests a read of system memory, streaming the data to the readData PipeOut
+   // @param objId the reference to the memory object allocated by portalAlloc
+   // @param base  offset, in bytes, from which to start reading
+   // @param bytes number of bytes to read, must be a multiple of the buswidth in bytes
+   // @param tag   identifier for the request
    method Action read(Bit#(32) objId, Bit#(32) base, Bit#(32) bytes, Bit#(8) tag);
+   //
+   // Requests a write of system memory, streaming the data from writeData PipeIn
+   // @param objId the reference to the memory object allocated by portalAlloc
+   // @param base  offset, in bytes, to which to start writing
+   // @param bytes number of bytes to write, must be a multiple of the buswidth in bytes
+   // @param tag   identifier for the request
    method Action write(Bit#(32) objId, Bit#(32) base, Bit#(32) bytes, Bit#(8) tag);
 endinterface
 
 interface DmaIndication;
+   // Indicates completion of read request, identified by tag, from offset base of objId
    method Action readDone(Bit#(32) objId, Bit#(32) base, Bit#(8) tag);
+   // Indicates completion of write request, identified by tag, to offset base of objId
    method Action writeDone(Bit#(32) objId, Bit#(32) base, Bit#(8) tag);
 endinterface
 
+//
+// DmaController controls multiple channels of DMA to/from system memory
+// @param numChannels: the maximum number of simultaneous read and write streams
 interface DmaController#(numeric type numChannels);
    // request from software
    interface Vector#(numChannels,DmaRequest) request;
@@ -50,7 +70,7 @@ interface DmaController#(numeric type numChannels);
    interface Vector#(numChannels,PipeOut#(MemDataF#(DataBusWidth))) readData;
    // data in from application logic
    interface Vector#(numChannels,PipeIn#(MemDataF#(DataBusWidth)))  writeData;
-   // DMA interfaces connected to MemServer
+   // memory interfaces connected to MemServer
    interface Vector#(1,MemReadClient#(DataBusWidth))      readClient;
    interface Vector#(1,MemWriteClient#(DataBusWidth))     writeClient;
 endinterface
