@@ -46,7 +46,7 @@ module mkBRAMServers#(BRAM_Configure bramConfig)(BRAMServers#(numServers, addr, 
    Vector#(2, Reg#(Maybe#(Tuple2#(Bool,data)))) data2 <- replicateM(mkReg(tagged Invalid));
    Vector#(2, ConfigCounter#(2)) counter <- replicateM(mkConfigCounter(2));
 
-   let verbose = True;
+   let verbose = False;
 
    function BRAM_PORT#(addr, data) portsel(Integer port);
       return (port == 0) ? bram.a : bram.b;
