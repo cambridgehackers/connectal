@@ -35,6 +35,10 @@ interface PortalSize;
    method Bit#(16) size(Bit#(16) methodNumber);
 endinterface
 
+typeclass PortalMessageSize#(type t);
+   function Bit#(16) portalMessageSize(t p, Bit#(16) methodNumber);
+endtypeclass
+
 // implementation of a Portal as a group of Pipes
 interface PipePortal#(numeric type numRequests, numeric type numIndications, numeric type slaveDataWidth);
    interface PortalSize messageSize;

@@ -248,6 +248,15 @@ instance Connectable#(PipeOut#(a),Put#(a));
    endmodule
 endinstance
 
+instance Connectable#(ActionValue#(a),PipeIn#(a));
+   module mkConnection#(ActionValue#(a) in, PipeIn#(a) out)(Empty);
+      rule connect;
+	 let v <- in;
+	 out.enq(v);
+      endrule
+   endmodule
+endinstance
+
 instance Connectable#(PipeOut#(a),PipeIn#(a));
    module mkConnection#(PipeOut#(a) in, PipeIn#(a) out)(Empty);
       rule connect;
@@ -412,6 +421,29 @@ module mkFunnelNode#(Vector#(n, PipeOut#(a)) inpipes, Integer numPipes, Put#(a) 
 	 end
       if (send)
 	 outpipe.put(v);
+   endrule
+endmodule
+   
+module mkFunnelNodeRR#(Vector#(n, PipeOut#(a)) inpipes, Integer numPipes, Put#(a) outpipe)(Empty)
+   provisos (Log#(n, pipeIdxSz));
+   Reg#(Bit#(TAdd#(pipeIdxSz, 1))) idx <- mkReg(0);
+
+   rule funnel;
+      a v = ?;
+      Bool send = False;
+      Bit#(TAdd#(pipeIdxSz, 1)) curIdx = idx;
+      for (Integer i = 0; i < valueOf(n) && i < numPipes; i = i+1)
+         if (fromInteger(i) != curIdx && !send && inpipes[i].notEmpty) begin
+            send = True;
+            idx <= fromInteger(i);
+            curIdx = fromInteger(i);
+         end
+      if (!send && inpipes[curIdx].notEmpty)
+         send = True;
+      if (send) begin
+         v <- toGet(inpipes[curIdx]).get();
+         outpipe.put(v);
+      end
    endrule
 endmodule
 

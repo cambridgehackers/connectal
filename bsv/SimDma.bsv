@@ -42,7 +42,7 @@ interface SimDma#(numeric type dataWidth);
    method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
    method Action initfd(Bit#(32) id, Bit#(32) fd);
    method Action idreturn(Bit#(32) id);
-   method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v);
+   method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v, Bit#(TDiv#(dataWidth,8)) byteEnable);
    method Action readrequest(Bit#(32) handle, Bit#(32) addr);
    method ActionValue#(Bit#(dataWidth)) readresponse();
 endinterface
@@ -53,13 +53,15 @@ import "BDPI" function ActionValue#(Bit#(32)) simDma_initfd(Bit#(32) id, Bit#(32
 import "BDPI" function ActionValue#(Bit#(32)) simDma_idreturn(Bit#(32) id);
 
 // implemented in BsimDma.cpp
-import "BDPI" function Action write_simDma32(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
-import "BDPI" function Action write_simDma64(Bit#(32) handle, Bit#(32) addr, Bit#(64) v);
+import "BDPI" function Action write_simDma32(Bit#(32) handle, Bit#(32) addr, Bit#(32) v, Bit#(4) byteEnable);
+import "BDPI" function Action write_simDma64(Bit#(32) handle, Bit#(32) addr, Bit#(64) v, Bit#(8) byteEnable);
 import "BDPI" function ActionValue#(Bit#(32)) read_simDma32(Bit#(32) handle, Bit#(32) addr);
 import "BDPI" function ActionValue#(Bit#(64)) read_simDma64(Bit#(32) handle, Bit#(32) addr);
 
 module mkSimDma(SimDma#(dataWidth) ifc)
-   provisos (Mul#(TDiv#(dataWidth, 32), 32, dataWidth));
+   provisos (Mul#(TDiv#(dataWidth, 32), 32, dataWidth),
+	     Bits#(Vector#(TDiv#(dataWidth, 32), Bit#(4)), TDiv#(dataWidth, 8))
+	     );
    FIFO#(Bit#(dataWidth)) dataFifo <- mkFIFO();
       method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
 	 let v <- simDma_init(id, handle, size);
@@ -73,14 +75,16 @@ module mkSimDma(SimDma#(dataWidth) ifc)
 	 let v <- simDma_idreturn(id);
 	 //return v;
       endmethod
-      method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v);
+      method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v, Bit#(TDiv#(dataWidth,8)) byteEnable);
 	  Vector#(TDiv#(dataWidth, 32), Bit#(32)) vs = unpack(v);
-	  function Action write32(Integer i, Bit#(32) vv);
+	  Vector#(TDiv#(dataWidth, 32), Bit#(4)) byteEnables = unpack(byteEnable);
+	  function Action write32(Tuple3#(Integer,Bit#(32),Bit#(4)) tpl);
 	     action
-		write_simDma32(handle, addr+4*fromInteger(i), vv);
+		match { .i, .vv, .byteEnable } = tpl;
+		write_simDma32(handle, addr+4*fromInteger(i), vv, byteEnable);
 	     endaction
 	  endfunction
-	  mapM_(uncurry(write32), zip(genVector(), vs));
+	  mapM_(write32, zip3(genVector(), vs, byteEnables));
       endmethod
       method Action  readrequest(Bit#(32) handle, Bit#(32) addr);
 	  function ActionValue#(Bit#(32)) read32(Integer i);
@@ -104,7 +108,7 @@ interface XsimDmaReadWrite;
    method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
    method Action initfd(Bit#(32) id, Bit#(32) fd);
    method Action idreturn(Bit#(32) id);
-   method Action write32(Bit#(32) handle, Bit#(32) addr, Bit#(32) v);
+   method Action write32(Bit#(32) handle, Bit#(32) addr, Bit#(32) v, Bit#(4) byteEnable);
    method Action readrequest(Bit#(32) handle, Bit#(32) addr);
    method ActionValue#(Bit#(32)) readresponse();
 endinterface
@@ -114,14 +118,15 @@ module mkXsimReadWrite(XsimDmaReadWrite);
    method init(init_id, init_handle, init_size) enable (en_init);
    method initfd(initfd_id, initfd_fd) enable (en_initfd);
    method idreturn(idreturn_id) enable (en_idreturn);
-   method write32(write32_handle, write32_addr, write32_data) enable (en_write32);
+   method write32(write32_handle, write32_addr, write32_data, write32_byteenable) enable (en_write32);
    method readrequest(readrequest_handle, readrequest_addr) enable (en_readrequest) ready (rdy_readrequest);
    method readresponse_data readresponse() enable (en_readresponse) ready (rdy_readresponse);
    schedule (init, initfd, write32, readrequest, readresponse, idreturn) CF (init, initfd, write32, readrequest, readresponse, idreturn);
 endmodule
 
 module mkSimDma(SimDma#(dataWidth) ifc)
-   provisos (Mul#(TDiv#(dataWidth, 32), 32, dataWidth));
+   provisos (Mul#(TDiv#(dataWidth, 32), 32, dataWidth),
+	     Bits#(Vector#(TDiv#(dataWidth, 32), Bit#(4)), TDiv#(dataWidth, 8)));
    Vector#(TDiv#(dataWidth,32),XsimDmaReadWrite) rws <- replicateM(mkXsimReadWrite());
    method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
       rws[0].init(id, handle, size);
@@ -132,14 +137,16 @@ module mkSimDma(SimDma#(dataWidth) ifc)
    method Action idreturn(Bit#(32) id);
       rws[0].idreturn(id);
    endmethod
-   method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v);
+   method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v, Bit#(TDiv#(dataWidth,8)) byteEnable);
       Vector#(TDiv#(dataWidth, 32), Bit#(32)) vs = unpack(v);
-      function Action write32(Integer i, Bit#(32) vv);
+      Vector#(TDiv#(dataWidth, 32), Bit#(4)) byteEnables = unpack(byteEnable);
+      function Action write32(Tuple3#(Integer,Bit#(32),Bit#(4)) tpl);
 	 action
-	    rws[i].write32(handle, addr+4*fromInteger(i), vv);
+	    match { .i, .vv, .byteEnable } = tpl;
+	    rws[i].write32(handle, addr+4*fromInteger(i), vv, byteEnable);
 	 endaction
       endfunction
-      mapM_(uncurry(write32), zip(genVector(), vs));
+      mapM_(write32, zip3(genVector(), vs, byteEnables));
    endmethod
    method Action readrequest(Bit#(32) handle, Bit#(32) addr);
       function Action doreadrequest(Integer i);
@@ -172,7 +179,7 @@ module mkSimDma(SimDma#(dataWidth) ifc);
    endmethod
    method Action idreturn(Bit#(32) id);
    endmethod
-   method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v);
+   method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v, Bit#(TDiv#(dataWidth,8)) byteEnable);
    endmethod
    method Action readrequest(Bit#(32) handle, Bit#(32) addr);
    endmethod
@@ -188,7 +195,9 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
 	    Mul#(dataWidthBytes,8,serverBusWidth),
 	    Log#(dataWidthBytes,beatShift),
 	    Mul#(TDiv#(serverBusWidth, 32), 32, serverBusWidth),
-	    Bits#(Tuple2#(Bit#(64), PhysMemRequest#(serverAddrWidth)), a__)
+	    Mul#(TDiv#(serverBusWidth, 32), 4, TDiv#(serverBusWidth, 8)),
+	    Bits#(Tuple2#(Bit#(64), PhysMemRequest#(serverAddrWidth,serverBusWidth)), a__),
+	    Add#(b__, ByteEnableSize, TDiv#(serverBusWidth, 8))
 	    );
 
    let verbose = False;
@@ -213,8 +222,8 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
    Reg#(Bit#(64)) last_read_eob <- mkReg(0);
    Reg#(Bit#(64)) last_write_eob <- mkReg(0);
 
-   FIFOF#(Tuple2#(Bit#(64), PhysMemRequest#(serverAddrWidth)))  readDelayFifo <- mkSizedFIFOF(readLatency_I);
-   FIFOF#(Tuple2#(Bit#(64),PhysMemRequest#(serverAddrWidth))) writeDelayFifo <- mkSizedFIFOF(writeLatency_I);
+   FIFOF#(Tuple2#(Bit#(64), PhysMemRequest#(serverAddrWidth,serverBusWidth)))  readDelayFifo <- mkSizedFIFOF(readLatency_I);
+   FIFOF#(Tuple2#(Bit#(64),PhysMemRequest#(serverAddrWidth,serverBusWidth))) writeDelayFifo <- mkSizedFIFOF(writeLatency_I);
 
    FIFOF#(Tuple2#(Bit#(64), Bit#(MemTagSize))) bFifo <- mkSizedFIFOF(writeLatency_I);
    FIFOF#(Tuple2#(Bit#(MemTagSize),Bool)) taglastfifo <- mkFIFOF();
@@ -253,7 +262,7 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
 
    interface PhysMemReadServer read_server;
       interface Put readReq;
-	 method Action put(PhysMemRequest#(serverAddrWidth) req);
+	 method Action put(PhysMemRequest#(serverAddrWidth,serverBusWidth) req);
             if (verbose) $display("mkSimDmaDmaMaster::%d axiSlave.read.readAddr %h bc %d", cycles, req.addr, req.burstLen);
 	    //readAddrGenerator.request.put(req);
 	    readDelayFifo.enq(tuple2(cycles,req));
@@ -270,7 +279,7 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
    endinterface
    interface PhysMemWriteServer write_server;
       interface Put writeReq;
-	 method Action put(PhysMemRequest#(serverAddrWidth) req);
+	 method Action put(PhysMemRequest#(serverAddrWidth,serverBusWidth) req);
 	 //$display("mkSimDmaDmaMaster::req_aw id=%d", req.tag);
 	 writeDelayFifo.enq(tuple2(cycles,req));
 	 endmethod
@@ -282,12 +291,19 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
 	    Bit#(32) writeOffset = writeOffsetReg;
 	    Bit#(MemTagSize) tag = req.tag;
 	    Bit#(8) handle = req.addr[39:32];
+	    Bit#(ByteEnableSize) byteEnable = maxBound;
+`ifdef BYTE_ENABLES
+	    if (writeLen == 1) byteEnable = req.lastbe;
+`endif
 	    if (writeLenReg == 0) begin
 	       req_aw_b_ts <= cycles;
 	       writeLen = req.burstLen>>beat_shift;
 	       writeOffset = 0;
+`ifdef BYTE_ENABLES
+	       byteEnable = req.firstbe;
+`endif
 	    end
-	    rw.write(extend(handle), req.addr[31:0] + writeOffset, resp.data);
+	    rw.write(extend(handle), req.addr[31:0] + writeOffset, resp.data, extend(byteEnable));
 	    writeLenReg <= writeLen - 1;
 	    writeOffsetReg <= writeOffset + fromInteger(valueOf(serverBusWidth)/8);
 	    if (writeLen == 1) begin

@@ -56,29 +56,36 @@ import ConnectalBram::*;
 //////////////////
 
 /* Make a stack with space for 2^n elements of type a */
-module mkBramSpec (BRAMServer#(addr, data))
+module mkBramSpec (BRAM2Port#(addr, data))
    provisos(Bits#(addr, asz), Bits#(data, dsz), Bounded#(addr));
 
    RegFile#(addr, data) regFile <- mkRegFileFull();
-   FIFO#(BRAMRequest#(addr,data)) reqFifo <- mkFIFO();
-   FIFO#(data)     responseFifo <- mkFIFO();
+   Vector#(2,FIFO#(BRAMRequest#(addr,data))) reqFifo <- replicateM(mkFIFO());
+   Vector#(2, FIFO#(data))              responseFifo <- replicateM(mkFIFO());
 
-   rule process;
-      let req <- toGet(reqFifo).get();
-      if (req.write) begin
-	 //$display("mkBramSpec: write address=%h data=%h", req.address, req.datain);
-	 regFile.upd(req.address, req.datain);
-	 if (req.responseOnWrite)
-	    responseFifo.enq(req.datain);
-      end
-      else begin
-	 let d = regFile.sub(req.address);
-	 //$display("mkBramSpec: read address=%h data=%h", req.address, d);
-	 responseFifo.enq(d);
-	 end
-   endrule
-   interface Put request = toPut(reqFifo);
-   interface Get response = toGet(responseFifo);
+   for (Integer i = 0; i < 2; i = i + 1)
+       rule process;
+	  let req <- toGet(reqFifo[i]).get();
+	  if (req.write) begin
+	     //$display("mkBramSpec: write address=%h data=%h", req.address, req.datain);
+	     regFile.upd(req.address, req.datain);
+	     if (req.responseOnWrite)
+		responseFifo[i].enq(req.datain);
+	  end
+	  else begin
+	     let d = regFile.sub(req.address);
+	     //$display("mkBramSpec: read address=%h data=%h", req.address, d);
+	     responseFifo[i].enq(d);
+	     end
+       endrule
+   interface Server portA;
+      interface Put request = toPut(reqFifo[0]);
+      interface Get response = toGet(responseFifo[0]);
+   endinterface
+   interface Server portB;
+      interface Put request = toPut(reqFifo[1]);
+      interface Get response = toGet(responseFifo[1]);
+   endinterface
 
 endmodule
 
@@ -86,13 +93,20 @@ endmodule
 // Implementation //
 ////////////////////
 
-module mkBramImpl(BRAMServer#(addr,data))
+module mkBramStd(BRAM2Port#(addr,data))
+   provisos(Bits#(addr, asz), Bits#(data, dsz));
+   let cfg = defaultValue;
+   cfg.latency = 2;
+   let bram <- mkBRAM2Server(cfg);
+   return bram;
+endmodule
+
+module mkBramImpl(BRAM2Port#(addr,data))
    provisos(Bits#(addr, asz), Bits#(data, dsz));
    let cfg = defaultValue;
    cfg.latency = 2;
    let bram <- ConnectalBram::mkBRAM2Server(cfg);
-   interface request = bram.portA.request;
-   interface response = bram.portA.response;
+   return bram;
 endmodule
 
 /////////////////////////
@@ -111,31 +125,19 @@ endinstance
 
 module [BlueCheck] checkBram ();
   /* Specification instance */
-  BRAMServer#(Bit#(2),Bit#(8)) spec <- mkBramSpec();
+  BRAM2Port#(Bit#(2),Bit#(8)) spec <- mkBramStd();
 
   /* Implmentation instance */
-  BRAMServer#(Bit#(2),Bit#(8)) imp <- mkBramImpl();
+  BRAM2Port#(Bit#(2),Bit#(8)) imp <- mkBramImpl();
 
    Ensure ensure <- getEnsure;
 
-   function Stmt prop1(BRAMRequest#(Bit#(2),Bit#(8)) req);
-      return
-      seq
-	 spec.request.put(req);
-	 imp.request.put(req);
-	 if (!req.write || req.responseOnWrite)
-	 action
-	    let vspec <- spec.response.get();
-	    let vimp  <- imp.response.get();
-	    ensure(vspec == vimp);
-	 endaction
-      endseq;
-   endfunction
-
-   equiv("req"    , spec.request.put    , imp.request.put);
-   equiv("resp"   , spec.response.get   , imp.response.get);
+   equivf(4, "reqA"    , spec.portA.request.put    , imp.portA.request.put);
+   equivf(2, "respA"   , spec.portA.response.get   , imp.portA.response.get);
+   equivf(4, "reqB"    , spec.portB.request.put    , imp.portB.request.put);
+   equivf(2, "respB"   , spec.portB.response.get   , imp.portB.response.get);
    // prop("prop1"  , prop1); // deadlocks
-   parallel(list("req", "resp"));
+   parallel(list("reqA", "reqB"));
 endmodule
 
 module [Module] testBram ();

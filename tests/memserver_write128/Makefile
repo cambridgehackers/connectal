@@ -6,6 +6,6 @@ MEM_WRITE_INTERFACES = lMemwrite.dmaClients
 
 BSVFILES = $(MSWDIR)/Memwrite.bsv
 CPPFILES = $(MSWDIR)/testmemwrite.cpp
-CONNECTALFLAGS += -D USE_ACP -P mkConnectalTop -D DataBusWidth=128
+CONNECTALFLAGS += -D USE_ACP -P mkConnectalTop -D DataBusWidth=128 -D BYTE_ENABLES
 
 include $(CONNECTALDIR)/Makefile.connectal

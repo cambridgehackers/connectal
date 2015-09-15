@@ -33,6 +33,7 @@
 #include <sys/mman.h>
 #endif
 
+static int trace_hardware;//=1;
 void send_portal_null(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd)
 {
 }
@@ -125,13 +126,19 @@ int event_hardware(struct PortalInternal *pint)
     volatile unsigned int *srcp = &map_base[PORTAL_CTRL_INTERRUPT_STATUS];
     volatile unsigned int *enp = &map_base[PORTAL_CTRL_INTERRUPT_ENABLE];
     while ((queue_status = pint->item->read(pint, &statp))) {
-        if(0) {
+        if(trace_hardware) {
             unsigned int int_src = pint->item->read(pint, &srcp);
             unsigned int int_en  = pint->item->read(pint, &enp);
-            PORTAL_PRINTF( "%s: (fpga%d) about to receive messages int=%08x en=%08x qs=%08x\n", __FUNCTION__, pint->fpga_number, int_src, int_en, queue_status);
+            PORTAL_PRINTF( "%s: (fpga%d) about to receive messages int=%08x en=%08x qs=%08x handler %p parent %p\n", __FUNCTION__, pint->fpga_number, int_src, int_en, queue_status, pint->handler, pint->parent);
         }
         if (pint->handler)
             pint->handler(pint, queue_status-1, 0);
+        else {
+            unsigned int int_src = pint->item->read(pint, &srcp);
+            unsigned int int_en  = pint->item->read(pint, &enp);
+            PORTAL_PRINTF( "%s: (fpga%d) no handler receive int=%08x en=%08x qs=%08x handler %p parent %p\n", __FUNCTION__, pint->fpga_number, int_src, int_en, queue_status, pint->handler, pint->parent);
+            exit(-1);
+        }
     }
     return -1;
 }

@@ -252,7 +252,7 @@ module mkMemReadInternal#(MemServerIndication ind,
    interface servers = sv;
    interface PhysMemReadClient client;
       interface Get readReq;
-	 method ActionValue#(PhysMemRequest#(addrWidth)) get();
+	 method ActionValue#(PhysMemRequest#(addrWidth,dataWidth)) get();
 	    let request <- toGet(serverRequest).get;
 	    let req = request.req;
 	    if (False && request.pa[31:24] != 0)
@@ -262,7 +262,11 @@ module mkMemReadInternal#(MemServerIndication ind,
 	    //$display("mkMemReadInternal::readReq: client=%d, rename_tag=%d, physAddr=%h req.burstLen=%d beat_shift=%d last=%d", request.client,request.rename_tag,request.pa, req.burstLen, beat_shift, req.burstLen == beat_shift);
 	    if (verbose) $display("mkMemReadInternal::read_client.readReq %d", cycle_cnt-last_readReq);
 	    last_readReq <= cycle_cnt;
-	    return PhysMemRequest{addr:request.pa, burstLen:req.burstLen, tag:request.rename_tag};
+	    return PhysMemRequest{addr:request.pa, burstLen:req.burstLen, tag:request.rename_tag
+`ifdef BYTE_ENABLES
+				  , firstbe: request.req.firstbe, lastbe: request.req.lastbe
+`endif
+	       };
 	 endmethod
       endinterface
       interface Put readData;
@@ -429,7 +433,7 @@ module mkMemWriteInternal#(MemServerIndication ind,
    interface servers = sv;
    interface PhysMemWriteClient client;
       interface Get writeReq;
-	 method ActionValue#(PhysMemRequest#(addrWidth)) get();
+	 method ActionValue#(PhysMemRequest#(addrWidth,dataWidth)) get();
 	    let request <- toGet(serverRequest).get();
 	    let req = request.req;
 	    let physAddr = request.pa;
@@ -437,7 +441,11 @@ module mkMemWriteInternal#(MemServerIndication ind,
 	    let rename_tag = request.rename_tag;
 	    serverProcessing.enq(DRec{req_tag:req.tag, req_burstLen: req.burstLen, client:client, rename_tag:rename_tag, last: (req.burstLen == fromInteger(valueOf(busWidthBytes))) });
 	    //$display("mkMemWriteInternal::writeReq: client=%d, rename_tag=%d", client,rename_tag);
-	    return PhysMemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)};
+	    return PhysMemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)
+`ifdef BYTE_ENABLES
+				  , firstbe: req.firstbe, lastbe: req.lastbe
+`endif
+};
 	 endmethod
       endinterface
       interface Get writeData = toGet(memDataFifo);

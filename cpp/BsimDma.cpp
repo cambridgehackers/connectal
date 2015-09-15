@@ -43,17 +43,30 @@ static int dma_trace ;//= 1;
 
 #define BUFFER_CHECK \
     if (!dma_info[id][pref].buffer || offset >= dma_info[id][pref].buffer_len) { \
-    fprintf(stderr, "BsimDma [%s:%d]: Error: buffer %p len %d; reference id %d pref %d offset %d\n", __FUNCTION__, __LINE__, dma_info[id][pref].buffer, dma_info[id][pref].buffer_len, id, pref, offset); \
+      fprintf(stderr, "BsimDma [%s:%d]: Error: offset %d too large for buffer %p len %d; reference id %d pref %d\n", __FUNCTION__, __LINE__, offset, dma_info[id][pref].buffer, dma_info[id][pref].buffer_len, id, pref); \
       exit(-1); \
     }
 
-extern "C" void write_simDma32(uint32_t pref, uint32_t offset, unsigned int data)
+extern "C" void write_simDma32(uint32_t pref, uint32_t offset, unsigned int data, uint8_t byteEnable)
 {
     uint32_t id = pref>>5;
     pref -= id<<5; 
     if (dma_trace)
       fprintf(stderr, "%s: %d [%d:%d] = %x\n", __FUNCTION__, id, pref, offset, data);
     BUFFER_CHECK
+    if (byteEnable != 0xF) {
+      uint32_t old_data = *(unsigned int *)&dma_info[id][pref].buffer[offset];
+      uint32_t mask = 0;
+      for (int i = 0; i < 4; i++) {
+	if (byteEnable & (1 << i))
+	  mask |= (0xFF << (i*8));
+      }
+      //fprintf(stderr, "write_simDma32 mask=%08x data=%08x old_data=%08x\n", mask, data, old_data);
+      data &= mask;
+      old_data &= ~mask;
+      //fprintf(stderr, "write_simDma32 mask=%08x data=%08x old_data=%08x\n", mask, data, old_data);
+      data = data | old_data;
+    }
     *(unsigned int *)&dma_info[id][pref].buffer[offset] = data;
 }
 
@@ -69,13 +82,24 @@ extern "C" unsigned int read_simDma32(uint32_t pref, uint32_t offset)
     return ret;
 }
 
-extern "C" void write_simDma64(uint32_t pref, uint32_t offset, uint64_t data)
+extern "C" void write_simDma64(uint32_t pref, uint32_t offset, uint64_t data, uint8_t byteEnable)
 {
     uint32_t id = pref>>5;
     pref -= id<<5; 
     if (dma_trace)
       fprintf(stderr, "%s: %d [%d:%d] = %llx\n", __FUNCTION__, id, pref, offset, (long long)data);
     BUFFER_CHECK
+    if (byteEnable != 0xFF) {
+      uint64_t old_data = *(uint64_t *)&dma_info[id][pref].buffer[offset];
+      uint64_t mask = 0;
+      for (int i = 0; i < 8; i++) {
+	if (byteEnable & (1 << i))
+	  mask |= (0xFF << (i*8));
+      }
+      data &= mask;
+      old_data &= ~mask;
+      data = data | old_data;
+    }
     *(uint64_t *)&dma_info[id][pref].buffer[offset] = data;
 }
 

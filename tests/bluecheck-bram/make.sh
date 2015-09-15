@@ -38,23 +38,24 @@ BSC="bsc"
 BSCFLAGS="-keep-fires -cross-info -aggressive-conditions \
           -wait-for-license -suppress-warnings G0043 \
           -steps-warn-interval 300000 \
-          -p +:../../../bluecheck"
+          -simdir bluesim -bdir bluesim -info-dir bluesim \
+          -p +:../../../bluecheck:../../bsv:../../lib/bsv"
 SUFFIXES=
 
 # UI
 # ==
 
 echo "(11) BRAM"
-echo "(12) BRAM Iterative Deepening"
+echo "(12) BRAM2Port"
 
 #read OPTION
-OPTION=11
+OPTION=12
 case "$OPTION" in
  11) TOPFILE=BramExample.bsv
      TOPMOD=testBram
      ;;
- 12) TOPFILE=BramExample.bsv
-     TOPMOD=testBramID
+ 12) TOPFILE=Bram2Example.bsv
+     TOPMOD=testBram
      ;;
   *) echo "Option not recognised"
      exit
@@ -64,6 +65,7 @@ esac
 # Build it
 # ========
 
+mkdir -p bluesim
 echo Compiling $TOPMOD in file $TOPFILE
 if [ "$SYNTH" = "1" ]
 then
@@ -71,7 +73,7 @@ then
 else
   if $BSC $BSCFLAGS -sim -g $TOPMOD -u $TOPFILE
   then
-    if $BSC $BSCFLAGS -sim -o $TOPMOD -e $TOPMOD  $TOPMOD.ba
+    if $BSC $BSCFLAGS -sim -o $TOPMOD -e $TOPMOD  bluesim/$TOPMOD.ba
     then
         ./$TOPMOD
     else

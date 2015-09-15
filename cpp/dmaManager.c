@@ -72,7 +72,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
     MMURequest_idRequest(priv->sglDevice, (SpecialTypeForSendingFd)fd);
     if (priv->poll) {
         int rc = priv->poll(priv->shared_mmu_indication, &priv->sglId);
-        printf("[%s:%d] return after idrequest %d %d\n", __FUNCTION__, __LINE__, rc, priv->sglId);
+        fprintf(stderr, "[%s:%d] return after idrequest %d %d\n", __FUNCTION__, __LINE__, rc, priv->sglId);
     }
     else
         sem_wait(&priv->sglIdSem);
@@ -93,7 +93,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
         if (priv->poll) {
             uint32_t ret;
             int rc = priv->poll(priv->shared_mmu_indication, &ret);
-            printf("[%s:%d] return after ioctl %d %d\n", __FUNCTION__, __LINE__, rc, ret);
+            fprintf(stderr, "[%s:%d] return after ioctl %d %d\n", __FUNCTION__, __LINE__, rc, ret);
         }
         else
             sem_wait(&priv->confSem);
@@ -106,7 +106,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
         if (priv->poll) {
             uint32_t ret;
             int rc = priv->poll(priv->shared_mmu_indication, &ret);
-            printf("[%s:%d] return after sendfd %d %d\n", __FUNCTION__, __LINE__, rc, ret);
+            fprintf(stderr, "[%s:%d] return after sendfd %d %d\n", __FUNCTION__, __LINE__, rc, ret);
         }
         else
             sem_wait(&priv->confSem);

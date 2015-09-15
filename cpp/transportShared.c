@@ -57,14 +57,14 @@ static int init_shared(struct PortalInternal *pint, void *aparam)
         else if (param->dma.reqinfo) {
             PortalInternal *psgl = (PortalInternal *)malloc(sizeof(PortalInternal));
             init_portal_internal(psgl, param->dma.reqport, PLATFORM_TILE, NULL,
-                NULL, NULL, NULL, param->dma.reqinfo);
+                NULL, NULL, NULL, NULL, param->dma.reqinfo);
             DmaManagerPrivate *p = (DmaManagerPrivate *)malloc(sizeof(DmaManagerPrivate));
             pint->shared_dma = p;
             DmaManager_init(p, psgl);
             p->poll = param->dma.poll;
             p->shared_mmu_indication = (PortalInternal *)malloc(sizeof(PortalInternal));
             init_portal_internal(p->shared_mmu_indication, param->dma.indport, PLATFORM_TILE, param->dma.handler,
-                param->dma.callbackFunctions, NULL, NULL, param->dma.indinfo);
+                param->dma.callbackFunctions, NULL, NULL, NULL, param->dma.indinfo);
         }
         DmaManagerPrivate *p = (DmaManagerPrivate *)pint->shared_dma;
         if (p) {
@@ -75,7 +75,7 @@ static int init_shared(struct PortalInternal *pint, void *aparam)
             PortalInternal *p = (PortalInternal *)malloc(sizeof(PortalInternal));
             pint->shared_cfg = p;
             init_portal_internal(p, param->hardware.port, pint->fpga_tile, NULL,
-                NULL, NULL, NULL, param->hardware.reqinfo);
+                NULL, NULL, NULL, NULL, param->hardware.reqinfo);
             param->hardware.setSglId(p, pint->sharedMem);
         }
     }

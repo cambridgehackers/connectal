@@ -31,7 +31,11 @@ module mkAxiDmaSlave#(PhysMemSlave#(addrWidth,dataWidth) slave) (Axi3Slave#(addr
    interface Put req_ar;
       method Action put((Axi3ReadRequest#(addrWidth, 12)) req);
 	 let burstLen = extend(req.len+1) << beatShift;
-	 slave.read_server.readReq.put(PhysMemRequest{addr:req.address, burstLen:burstLen,  tag:truncate(req.id)});
+	 slave.read_server.readReq.put(PhysMemRequest{addr:req.address, burstLen:burstLen,  tag:truncate(req.id)
+`ifdef BYTE_ENABLES
+						      , firstbe: maxBound, lastbe: maxBound
+`endif
+						      });
       endmethod
    endinterface
    interface Get resp_read;
@@ -43,7 +47,11 @@ module mkAxiDmaSlave#(PhysMemSlave#(addrWidth,dataWidth) slave) (Axi3Slave#(addr
    interface Put req_aw;
       method Action put(Axi3WriteRequest#(addrWidth, 12) req);
 	 let burstLen = extend(req.len+1) << beatShift;
-	 slave.write_server.writeReq.put(PhysMemRequest{addr:req.address, burstLen:burstLen, tag:truncate(req.id)});
+	 slave.write_server.writeReq.put(PhysMemRequest{addr:req.address, burstLen:burstLen, tag:truncate(req.id)
+`ifdef BYTE_ENABLES
+							, firstbe: maxBound, lastbe: maxBound
+`endif
+							});
       endmethod
    endinterface
    interface Put resp_write;
@@ -64,17 +72,19 @@ module mkAxiDmaMaster#(PhysMemMaster#(addrWidth,dataWidth) master) (Axi3Master#(
    provisos(Div#(dataWidth,8,dataWidthBytes),
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift),
-	    Add#(tagWidth,a__,MemTagSize));
+	    Add#(tagWidth,a__,MemTagSize),
+	    Add#(TDiv#(64,8),b__,dataWidthBytes));
 
    Reg#(Bit#(8))  burstReg <- mkReg(0);
-   FIFO#(Bit#(8)) reqs <- mkSizedFIFO(32);
+   FIFO#(Tuple3#(Bit#(8),Bit#(ByteEnableSize),Bit#(ByteEnableSize))) reqs <- mkSizedFIFO(32);
+   Reg#(Bit#(ByteEnableSize)) lastbeReg <- mkReg(maxBound);
    
    let beat_shift = fromInteger(valueOf(beatShift));
 
    interface Get req_aw;
       method ActionValue#(Axi3WriteRequest#(addrWidth,tagWidth)) get();
 	 let req <- master.write_client.writeReq.get;
-	 reqs.enq(truncate(req.burstLen));
+	 reqs.enq(tuple3(truncate(req.burstLen),reqFirstByteEnable(req),reqLastByteEnable(req)));
 	 return Axi3WriteRequest{address:req.addr, len:truncate((req.burstLen>>beat_shift)-1), id:truncate(req.tag), size: axiBusSize(valueOf(dataWidth)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
       endmethod
    endinterface
@@ -82,13 +92,20 @@ module mkAxiDmaMaster#(PhysMemMaster#(addrWidth,dataWidth) master) (Axi3Master#(
       method ActionValue#(Axi3WriteData#(dataWidth,tagWidth)) get();
 	 let tagdata <- master.write_client.writeData.get();
 	 let burstLen = burstReg;
+	 Bit#(dataWidthBytes) byteEnable = extend((burstLen == 1) ? lastbeReg : maxBound);
 	 if (burstLen == 0) begin
-	    burstLen = reqs.first >> beat_shift;
+	    match { .bl, .firstbe, .lastbe } = reqs.first;
+	    burstLen = bl >> beat_shift;
 	    reqs.deq;
+`ifdef BYTE_ENABLES
+	    byteEnable = extend(firstbe);
+	    lastbeReg <= lastbe;
+`endif
 	 end
 	 burstReg <= burstLen-1;
 	 Bit#(1) last = burstLen == 1 ? 1'b1 : 1'b0;
-	 return Axi3WriteData { data: tagdata.data, byteEnable: maxBound, last: last, id: truncate(tagdata.tag) };
+
+	 return Axi3WriteData { data: tagdata.data, byteEnable: byteEnable, last: last, id: truncate(tagdata.tag) };
       endmethod
    endinterface
    interface Put resp_b;

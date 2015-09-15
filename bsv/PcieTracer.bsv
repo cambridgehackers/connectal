@@ -29,6 +29,7 @@ import FIFOF        :: *;
 import PCIE               :: *;
 import BRAM         :: *;
 import BramMux        :: *;
+import ConnectalBram  ::*;
 
 typedef 11 TlpTraceAddrSize;
 typedef TAdd#(TlpTraceAddrSize,1) TlpTraceAddrSize1;
@@ -82,11 +83,11 @@ module mkPcieTracer(PcieTracer);
    bramCfg.memorySize = memorySize;
    bramCfg.latency = 1;
 `ifdef PCIE_BSCAN
-   BRAM2Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) fromPcieTraceBram <- mkBRAM2Server(bramCfg);
-   BRAM2Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) toPcieTraceBram <- mkBRAM2Server(bramCfg);
+   BRAM2Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) fromPcieTraceBram <- ConnectalBram::mkBRAM2Server(bramCfg);
+   BRAM2Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) toPcieTraceBram <- ConnectalBram::mkBRAM2Server(bramCfg);
 `else
-   BRAM1Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) fromPcieTraceBram <- mkBRAM1Server(bramCfg);
-   BRAM1Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) toPcieTraceBram <- mkBRAM1Server(bramCfg);
+   BRAM1Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) fromPcieTraceBram <- ConnectalBram::mkBRAM1Server(bramCfg);
+   BRAM1Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) toPcieTraceBram <- ConnectalBram::mkBRAM1Server(bramCfg);
 `endif
    Vector#(2, BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData)) bramServers;
    bramServers[0] = fromPcieTraceBram.portA;

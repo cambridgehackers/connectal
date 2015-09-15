@@ -217,13 +217,17 @@ module mkPcieToMem#(PciId my_id)(PcieToMem);
     interface PhysMemMaster master;
     interface PhysMemWriteClient write_client;
         interface Get    writeReq;
-	  method ActionValue#(PhysMemRequest#(32)) get();
+	  method ActionValue#(PhysMemRequest#(32,32)) get();
 	     let hdr = writeHeaderFifo.first;
 	     writeHeaderFifo.deq;
 	     writeDataFifo.enq(hdr);
 	     let burstLen = truncate(hdr.length << 2);
              $display("burstLen = %h", hdr.length << 2);
-	     return PhysMemRequest { addr: extend(writeHeaderFifo.first.addr) << 2, burstLen: burstLen, tag: truncate(writeHeaderFifo.first.tag)};
+	     return PhysMemRequest { addr: extend(writeHeaderFifo.first.addr) << 2, burstLen: burstLen, tag: truncate(writeHeaderFifo.first.tag)
+`ifdef BYTE_ENABLES
+				    , firstbe: maxBound, lastbe: maxBound
+`endif
+};
 	  endmethod
        endinterface
         interface Get writeData;
@@ -244,13 +248,17 @@ module mkPcieToMem#(PciId my_id)(PcieToMem);
      endinterface
     interface PhysMemReadClient read_client;
         interface Get    readReq;
-	  method ActionValue#(PhysMemRequest#(32)) get();
+	  method ActionValue#(PhysMemRequest#(32,32)) get();
 	     let hdr = readHeaderFifo.first;
 	     readHeaderFifo.deq;
 	     //$display("req_ar hdr.length=%d hdr.addr=%h", hdr.length, hdr.addr);
 	     readDataFifo.enq(hdr);
 	     let burstLen = truncate(hdr.length << 2);
-	     return PhysMemRequest { addr: extend(readHeaderFifo.first.addr) << 2, burstLen: burstLen, tag: truncate(readHeaderFifo.first.tag)};
+	     return PhysMemRequest { addr: extend(readHeaderFifo.first.addr) << 2, burstLen: burstLen, tag: truncate(readHeaderFifo.first.tag)
+`ifdef BYTE_ENABLES
+				    , firstbe: maxBound, lastbe: maxBound
+`endif
+};
 	    endmethod
        endinterface
         interface Put readData;

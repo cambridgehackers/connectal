@@ -28,6 +28,7 @@ import GetPut::*;
 import ClientServer::*;
 import Pipe::*;
 import ConnectalMemory::*;
+import DefaultValue::*;
 
 typedef Bit#(32) SGLId;
 typedef 44 MemOffsetSize;
@@ -38,6 +39,11 @@ typedef 32 MemServerTags;
 `else
 typedef 8 MemServerTags;
 `endif
+`ifdef DataBusWidth
+typedef TDiv#(`DataBusWidth,8) ByteEnableSize;
+`else
+typedef TDiv#(64,8) ByteEnableSize;
+`endif
 
 // memory request with physical addresses.
 // these can be transmitted directly to the bus master
@@ -45,7 +51,19 @@ typedef struct {
    Bit#(addrWidth) addr;
    Bit#(BurstLenSize) burstLen;
    Bit#(MemTagSize) tag;
-   } PhysMemRequest#(numeric type addrWidth) deriving (Bits);
+`ifdef BYTE_ENABLES
+   Bit#(ByteEnableSize) firstbe; // maybe we only need lastbe
+   Bit#(ByteEnableSize) lastbe;
+`endif
+   } PhysMemRequest#(numeric type addrWidth, numeric type dataBusWidth) deriving (Bits);
+
+instance DefaultValue#(PhysMemRequest#(addrWidth,dataBusWidth));
+   defaultValue = PhysMemRequest { addr: 0, burstLen: 0, tag: 0
+`ifdef BYTE_ENABLES
+				  , firstbe: maxBound, lastbe: maxBound
+`endif
+      };
+endinstance
 
 // memory request with "virtual" addresses.
 // these need to be translated before they can be send to the bus
@@ -54,7 +72,20 @@ typedef struct {
    Bit#(MemOffsetSize) offset;
    Bit#(BurstLenSize) burstLen;
    Bit#(MemTagSize)  tag;
+`ifdef BYTE_ENABLES
+   Bit#(ByteEnableSize) firstbe; // maybe we only need lastbe
+   Bit#(ByteEnableSize) lastbe;
+`endif
    } MemRequest deriving (Bits);
+
+instance DefaultValue#(MemRequest);
+   defaultValue = MemRequest {
+      sglId: 0, offset: 0, burstLen: 0, tag: 0
+`ifdef BYTE_ENABLES
+      , firstbe: maxBound, lastbe: maxBound
+`endif
+      };
+endinstance
 
 // memory payload
 typedef struct {
@@ -63,11 +94,34 @@ typedef struct {
    Bool last;
    } MemData#(numeric type dsz) deriving (Bits);
 
+typeclass ReqByteEnables#(type t);
+   function Bit#(ByteEnableSize) reqFirstByteEnable(t req);
+   function Bit#(ByteEnableSize) reqLastByteEnable(t req);
+endtypeclass
+instance ReqByteEnables#(PhysMemRequest#(addrWidth,dataBusWidth));
+`ifdef BYTE_ENABLES
+   function Bit#(ByteEnableSize) reqFirstByteEnable(PhysMemRequest#(addrWidth,dataBusWidth) req); return req.firstbe; endfunction
+   function Bit#(ByteEnableSize) reqLastByteEnable(PhysMemRequest#(addrWidth,dataBusWidth) req); return req.lastbe; endfunction
+`else
+   function Bit#(ByteEnableSize) reqFirstByteEnable(PhysMemRequest#(addrWidth,dataBusWidth) req); return maxBound; endfunction
+   function Bit#(ByteEnableSize) reqLastByteEnable(PhysMemRequest#(addrWidth,dataBusWidth) req); return maxBound; endfunction
+`endif
+endinstance
+instance ReqByteEnables#(MemRequest);
+`ifdef BYTE_ENABLES
+   function Bit#(ByteEnableSize) reqFirstByteEnable(MemRequest req); return req.firstbe; endfunction
+   function Bit#(ByteEnableSize) reqLastByteEnable(MemRequest req); return req.lastbe; endfunction
+`else
+   function Bit#(ByteEnableSize) reqFirstByteEnable(MemRequest req); return maxBound; endfunction
+   function Bit#(ByteEnableSize) reqLastByteEnable(MemRequest req); return maxBound; endfunction
+`endif
+endinstance
+
 ///////////////////////////////////////////////////////////////////////////////////
 //
 
 typedef struct {SGLId sglId;
-		Bit#(MemOffsetSize) base;
+		Bit#(32) base;
 		Bit#(BurstLenSize) burstLen;
 		Bit#(32) len;
 		Bit#(MemTagSize) tag;
@@ -145,23 +199,23 @@ interface PhysMemMaster#(numeric type addrWidth, numeric type dataWidth);
 endinterface
 
 interface PhysMemReadClient#(numeric type asz, numeric type dsz);
-   interface Get#(PhysMemRequest#(asz))    readReq;
+   interface Get#(PhysMemRequest#(asz,dsz))    readReq;
    interface Put#(MemData#(dsz)) readData;
 endinterface
 
 interface PhysMemWriteClient#(numeric type asz, numeric type dsz);
-   interface Get#(PhysMemRequest#(asz))    writeReq;
+   interface Get#(PhysMemRequest#(asz,dsz))    writeReq;
    interface Get#(MemData#(dsz)) writeData;
    interface Put#(Bit#(MemTagSize))       writeDone;
 endinterface
 
 interface PhysMemReadServer#(numeric type asz, numeric type dsz);
-   interface Put#(PhysMemRequest#(asz)) readReq;
+   interface Put#(PhysMemRequest#(asz,dsz)) readReq;
    interface Get#(MemData#(dsz))     readData;
 endinterface
 
 interface PhysMemWriteServer#(numeric type asz, numeric type dsz);
-   interface Put#(PhysMemRequest#(asz)) writeReq;
+   interface Put#(PhysMemRequest#(asz,dsz)) writeReq;
    interface Put#(MemData#(dsz))     writeData;
    interface Get#(Bit#(MemTagSize))           writeDone;
 endinterface
@@ -215,14 +269,22 @@ instance Connectable#(PhysMemMaster#(32, busWidth), PhysMemSlave#(40, busWidth))
       //mkConnection(m.read_client.readReq, s.read_server.readReq);
       rule readreq;
 	 let req <- m.read_client.readReq.get();
-	 s.read_server.readReq.put(PhysMemRequest { addr: extend(req.addr), burstLen: req.burstLen, tag: req.tag });
+	 s.read_server.readReq.put(PhysMemRequest { addr: extend(req.addr), burstLen: req.burstLen, tag: req.tag
+`ifdef BYTE_ENABLES
+						   , firstbe: req.firstbe, lastbe: req.lastbe
+`endif
+	    });
       endrule
 
       mkConnection(s.read_server.readData, m.read_client.readData);
       //mkConnection(m.write_client.writeReq, s.write_server.writeReq);
       rule writereq;
 	 let req <- m.write_client.writeReq.get();
-	 s.write_server.writeReq.put(PhysMemRequest { addr: extend(req.addr), burstLen: req.burstLen, tag: req.tag });
+	 s.write_server.writeReq.put(PhysMemRequest { addr: extend(req.addr), burstLen: req.burstLen, tag: req.tag
+`ifdef BYTE_ENABLES
+						     , firstbe: req.firstbe, lastbe: req.lastbe
+`endif
+ });
       endrule
       mkConnection(m.write_client.writeData, s.write_server.writeData);
       mkConnection(s.write_server.writeDone, m.write_client.writeDone);

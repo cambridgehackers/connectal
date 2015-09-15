@@ -110,29 +110,53 @@ module mkSharedMemoryFifoImpl(FIFO#(Bit#(32)));
    let mem <- mkMemory(readEngine.dmaClient, writeEngine.dmaClient);
 
    Reg#(Bit#(32)) dataReg <- mkReg(0);
-   Reg#(Bit#(32)) headPtr <- mkReg(16);
-   Reg#(Bit#(32)) tailPtr <- mkReg(16);
+   Reg#(Bit#(32)) wrPtrReg <- mkReg(16);
+   Reg#(Bit#(32)) rdPtrReg[2] <- mkCReg(2,16);
+   
+   Bit#(32) limitPtr = 8*8;
 
-   let dut <- mkSharedMemoryRequestPipeOut(readEngine.readServers, writeEngine.writeServers);
+   SharedMemoryPipeOut#(64,1) dut <- mkSharedMemoryPipeOut(readEngine.readServers, writeEngine.writeServers);
+
+   Reg#(Bool) notFull <- mkReg(True);
+   rule rdPtrRule if (!notFull);
+      let v = mem.read(8);
+      rdPtrReg[0] <= v[31:0] << 2;
+      //$display("updating rdPtr %d", rdPtrReg[0]);
+   endrule
+   rule notFullRule;
+      let nf = (wrPtrReg != (rdPtrReg[1]+8));
+      if (wrPtrReg == 16)
+	 nf = (rdPtrReg[1] != (limitPtr - 8));
+      $display("notFullRule nf=%d wrPtr %d rdPtr %d limitPtr %d", nf, wrPtrReg, rdPtrReg[1], limitPtr);
+      notFull <= nf;
+   endrule
 
    let fsm <- mkAutoFSM(seq
-			mem.write(0, { headPtr>>2, 32*8 });
-			mem.write(8, { 0, tailPtr>>2 });
+			mem.write(0, { wrPtrReg>>2, limitPtr });
+			mem.write(8, { 0, rdPtrReg[1]>>2 });
 			dut.cfg.setSglId(22);
-      $display("wrote fifo head/tail ptr");
+      $display("wrote fifo wrPtr/rdPtr ptr");
 			while (True) seq
+			   await(notFull);
 			   dataReg <= dataFifo.first();
 			   dataFifo.deq();
-			   mem.write(truncate(headPtr+0), {dataReg, 2});
-			   headPtr <= headPtr + 8;
-			   mem.write(0, { headPtr>>2, 32 });
+			   mem.write(truncate(wrPtrReg+0), {dataReg, 2});
+			   mem.write(0, { wrPtrReg>>2, 32 });
+			   action
+			       let wrPtr = wrPtrReg + 8;
+			       if (wrPtr >= limitPtr) begin
+				  wrPtr = 16;
+			       $display("wrapped around wrPtr=%d limitPtr=%d", wrPtr, limitPtr);
+			       end
+			       wrPtrReg <= wrPtr;
+			   endaction
 			   endseq
 			endseq
 			);
 
    method enq = dataFifo.enq;
-   method first = dut.data.first;
-   method deq   = dut.data.deq;
+   method first = dut.data[0].first;
+   method deq   = dut.data[0].deq;
 endmodule
 
 /////////////////////////
@@ -141,10 +165,10 @@ endmodule
 
 module [BlueCheck] checkSharedMemoryFifo ();
   /* Specification instance */
-   FIFO#(Bit#(32)) spec <- mkSharedMemoryFifoImpl();
+   FIFO#(Bit#(32)) spec <- mkSizedFIFO(32);
 
    /* Implmentation instance */
-   FIFO#(Bit#(32)) imp <- mkSizedFIFO(32);
+   FIFO#(Bit#(32)) imp <- mkSharedMemoryFifoImpl();
 
    Ensure ensure <- getEnsure;
 

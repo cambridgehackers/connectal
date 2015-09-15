@@ -166,7 +166,7 @@ module mkBRAMWriter#(Integer id,
       Bit#(TLog#(nd)) zeros = 0;
       Bit#(32) req_len_bytes = {zeros,req_len_ds[31:valueOf(TLog#(nd))]} * fromInteger(valueOf(bwbytes));
 
-      readServer.request.put(MemengineCmd{sglId:h, base:b, len:req_len_bytes, burstLen:burst_len_bytes, tag: 0});
+      readServer.request.put(MemengineCmd{sglId:h, base:truncate(b), len:req_len_bytes, burstLen:burst_len_bytes, tag: 0});
       if(verbose) $display("mkBRAMWriter::start (%d) %d, %d", id, req_len_bytes, burst_len_bytes);
       j <= extend(start_idx);
       n <= extend(finish_idx);
@@ -224,7 +224,7 @@ module mkBRAMWriteClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMWriteClient#
    endrule
    
    rule loadReq(i <= n);
-      we.writeServers[0].request.put(MemengineCmd{sglId:ptr, base:off, len:truncate(bus_width_in_bytes), burstLen:truncate(bus_width_in_bytes), tag: 0});
+      we.writeServers[0].request.put(MemengineCmd{sglId:ptr, base:truncate(off), len:truncate(bus_width_in_bytes), burstLen:truncate(bus_width_in_bytes), tag: 0});
       off <= off+bus_width_in_bytes;
       i <= i+fromInteger(valueOf(nd));
       //$display("mkBRAMWriteClient::loadReq %h", i);

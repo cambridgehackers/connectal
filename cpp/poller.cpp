@@ -28,6 +28,8 @@
 #include <pthread.h>
 #include <fcntl.h>
 
+static int trace_poller;//=1;
+
 #ifndef NO_CPP_PORTAL_CODE
 PortalPoller *defaultPoller = new PortalPoller();
 uint64_t poll_enter_time, poll_return_time; // for performance measurement
@@ -104,7 +106,8 @@ int PortalPoller::registerInstance(Portal *portal)
     if (rc < 0)
         fprintf(stderr, "[%s:%d] write error %d\n", __FUNCTION__, __LINE__, errno);
     numWrappers++;
-    //fprintf(stderr, "Portal::registerInstance fpga%d fd %d clients %d\n", portal->pint.fpga_number, portal->pint.fpga_fd, portal->pint.client_fd_number);
+    if (trace_poller)
+        fprintf(stderr, "Poller: registerInstance fpga%d fd %d clients %d\n", portal->pint.fpga_number, portal->pint.fpga_fd, portal->pint.client_fd_number);
     portal_wrappers = (Portal **)realloc(portal_wrappers, numWrappers*sizeof(Portal *));
     portal_wrappers[numWrappers-1] = portal;
 
@@ -127,7 +130,7 @@ void* PortalPoller::init(void)
         pthread_mutex_unlock(&mutex);
     }
 #endif
-    //fprintf(stderr, "portalExec::about to enter loop, numFds=%d\n", numFds);
+    //fprintf(stderr, "Poller: about to enter loop, numFds=%d\n", numFds);
     return NULL;
 }
 void PortalPoller::stop(void)
@@ -143,12 +146,12 @@ void PortalPoller::stop(void)
 void PortalPoller::end(void)
 {
     stopping = 1;
-    printf("%s: don't disable interrupts when stopping\n", __FUNCTION__);
+    fprintf(stderr, "%s: don't disable interrupts when stopping\n", __FUNCTION__);
     return;
     pthread_mutex_lock(&mutex);
     for (int i = 0; i < numWrappers; i++) {
         Portal *instance = portal_wrappers[i];
-        fprintf(stderr, "portalExec::disabling interrupts portal %d fpga%d\n", i, instance->pint.fpga_number);
+        fprintf(stderr, "Poller::disabling interrupts portal %d fpga%d\n", i, instance->pint.fpga_number);
         instance->pint.item->enableint(&instance->pint, 0);
     }
     pthread_mutex_unlock(&mutex);
@@ -164,7 +167,7 @@ void* PortalPoller::pollFn(int timeout)
         rc = poll(portal_fds, numFds, timeout);
     if(rc < 0) {
         // return only in error case
-        fprintf(stderr, "poll returned rc=%ld errno=%d:%s\n", rc, errno, strerror(errno));
+        fprintf(stderr, "Poller: poll returned rc=%ld errno=%d:%s\n", rc, errno, strerror(errno));
     }
     return (void*)rc;
 }
@@ -178,8 +181,11 @@ void* PortalPoller::event(void)
         fprintf(stderr, "[%s:%d] read error %d\n", __FUNCTION__, __LINE__, errno);
     for (int i = 0; i < numWrappers; i++) {
         if (!portal_wrappers)
-            fprintf(stderr, "No portal_instances revents=%d\n", portal_fds[i].revents);
+            fprintf(stderr, "Poller: No portal_instances revents=%d\n", portal_fds[i].revents);
         Portal *instance = portal_wrappers[i];
+        if (trace_poller)
+            fprintf(stderr, "Poller: event tile %d fpga%d fd %d handler %p parent %p\n",
+                instance->pint.fpga_tile, instance->pint.fpga_number, instance->pint.fpga_fd, instance->pint.handler, instance->pint.parent);
         instance->pint.item->event(&instance->pint);
         if (instance->pint.handler) {
             // re-enable interrupt which was disabled by portal_isr
@@ -204,7 +210,7 @@ void* PortalPoller::threadFn(void* __x)
             rc = event();
     }
     end();
-    printf("[%s] thread ending\n", __FUNCTION__);
+    fprintf(stderr, "[%s] thread ending\n", __FUNCTION__);
     return rc;
 }
 

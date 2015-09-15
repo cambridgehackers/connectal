@@ -48,7 +48,7 @@
 #include "drivers/pcieportal/pcieportal.h" // BNOC_TRACE
 #endif
 
-int debug_portal = 0;
+static int trace_portal;//= 1;
 
 int global_pa_fd = -1;
 PortalInternal *utility_portal = 0x0;
@@ -61,7 +61,7 @@ static tBoard* tboard;
  * Initialize control data structure for portal
  */
 void init_portal_internal(PortalInternal *pint, int id, int tile,
-    PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *item, void *param,
+    PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *item, void *param, void *parent,
     uint32_t reqinfo)
 {
     int rc;
@@ -74,8 +74,10 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     pint->muxid = -1;
     pint->handler = handler;
     pint->cb = (PortalHandlerTemplate *)cb;
+    pint->parent = parent;
     pint->reqinfo = reqinfo;
-    //PORTAL_PRINTF("%s: **initialize portal_%d_%d handler %p cb %p\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number, handler, cb);
+    if(trace_portal)
+        PORTAL_PRINTF("%s: **initialize portal_%d_%d handler %p cb %p parent %p\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number, handler, cb, parent);
     if (!item) {
         // Use defaults for transport handling methods
 #ifdef BSIM
@@ -97,7 +99,8 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
 }
 int portal_disconnect(struct PortalInternal *pint)
 {
-    //PORTAL_PRINTF("[%s:%d] fpgafd %d num %d cli %d\n", __FUNCTION__, __LINE__, pint->fpga_fd, pint->client_fd_number, pint->client_fd[0], pint->client_fd[1]);
+    if(trace_portal)
+        PORTAL_PRINTF("[%s:%d] fpgafd %d num %d cli %d\n", __FUNCTION__, __LINE__, pint->fpga_fd, pint->client_fd_number, pint->client_fd[0], pint->client_fd[1]);
     close(pint->fpga_fd);
     if (pint->client_fd_number > 0)
         close(pint->client_fd[--pint->client_fd_number]);
@@ -134,8 +137,8 @@ static void checkSignature(const char *filename, int ioctlnum)
         while(filesignature[i].md5) {
             if (!strcmp(filesignature[i].filename, signature.filename)) {
                 if (strcmp(filesignature[i].md5, signature.md5))
-                    printf("%s: driver '%s' signature mismatch %s %s\n", __FUNCTION__,
-                        signature.filename, signature.md5, filesignature[i].md5);
+		  fprintf(stderr, "%s: driver '%s' signature mismatch %s %s\n", __FUNCTION__,
+			  signature.filename, signature.md5, filesignature[i].md5);
                 break;
             }
             i++;
@@ -164,7 +167,7 @@ void initPortalHardware(void)
      */
     int pid = fork();
     if (pid == -1) {
-        printf("[%s:%d] fork error\n", __FUNCTION__, __LINE__);
+	fprintf(stderr, "[%s:%d] fork error\n", __FUNCTION__, __LINE__);
         exit(-1);
     }
     else if (pid) {
@@ -182,7 +185,7 @@ void initPortalHardware(void)
 	      exit(-1);
 	  fd = open("/dev/connectal", O_RDONLY); /* scan the fpga directory */
 	  len = read(fd, &status, sizeof(status));
-	  printf("[%s:%d] fd %d len %lu\n", __FUNCTION__, __LINE__, fd, len);
+	  fprintf(stderr, "[%s:%d] fd %d len %lu\n", __FUNCTION__, __LINE__, fd, len);
 	  close(fd);
 	}
 #else
@@ -191,7 +194,7 @@ void initPortalHardware(void)
             int rc = stat("/dev/connectal", &statbuf); /* wait for driver to load */
             if (rc != -1)
                 break;
-            printf("[%s:%d] waiting for '/dev/connectal'\n", __FUNCTION__, __LINE__);
+            fprintf(stderr, "[%s:%d] waiting for '/dev/connectal'\n", __FUNCTION__, __LINE__);
             sleep(1);
         }
 #endif
@@ -230,7 +233,7 @@ void initPortalHardware(void)
                         endptr2 = strstr(filename, "\n");
                         if (endptr2)
                             *endptr2 = 0;
-                        printf("buffer %s\n", filename);
+                        fprintf(stderr, "buffer %s\n", filename);
                         goto endloop;
                     }
                 }
@@ -251,15 +254,15 @@ endloop:
         char *p = dirname(filename);
         static char buf2[MAX_PATH];
         sprintf(buf2, "%s/bsim", p);
-printf("[%s:%d] BSIM %s *******\n", __FUNCTION__, __LINE__, buf2);
+fprintf(stderr, "[%s:%d] BSIM %s *******\n", __FUNCTION__, __LINE__, buf2);
         argv[ind++] = NULL;
         rc = execvp (buf2, argv);
 #elif defined(BOARD_xsim)
         argv[ind++] = (char *)"-R";
         argv[ind++] = (char *)"work.xsimtop";
-printf("[%s:%d] RUNNING XSIM\n", __FUNCTION__, __LINE__);
+fprintf(stderr, "[%s:%d] RUNNING XSIM\n", __FUNCTION__, __LINE__);
         rc = execvp ("xsim", argv);
-printf("[%s:%d] rc %d\n", __FUNCTION__, __LINE__, rc);
+fprintf(stderr, "[%s:%d] rc %d\n", __FUNCTION__, __LINE__, rc);
 #else
         char *serial = getenv("SERIALNO");
         if (serial) {
@@ -309,7 +312,8 @@ int portalAlloc(size_t size, int cached)
 #else
     fd = ioctl(global_pa_fd, PA_MALLOC, &portalAlloc);
 #endif
-    //PORTAL_PRINTF("alloc size=%ld fd=%d\n", (unsigned long)size, fd);
+    if(trace_portal)
+        PORTAL_PRINTF("alloc size=%ld fd=%d\n", (unsigned long)size, fd);
     if (fd == -1) {
         PORTAL_PRINTF("portalAllocCached: alloc failed size=%ld errno=%d\n", (unsigned long)size, errno);
         exit(-1);
@@ -375,7 +379,8 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
 #else
 #error("dCAcheFlush not defined for unspecified architecture")
 #endif
-    //PORTAL_PRINTF("dcache flush\n");
+    if(trace_portal)
+        PORTAL_PRINTF("dcache flush\n");
     return 0;
 }
 
