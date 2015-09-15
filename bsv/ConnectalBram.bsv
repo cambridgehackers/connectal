@@ -37,6 +37,7 @@ endinterface
 module mkBRAMServers#(BRAM_Configure bramConfig)(BRAMServers#(numServers, addr, data))
    provisos (Bits#(addr,asz),
 	     Bits#(data,dsz));
+   let memorySize = bramConfig.memorySize == 0 ? 2**valueOf(asz) : bramConfig.memorySize;
    BRAM_DUAL_PORT#(addr,data) bram <- mkBRAMCore2(bramConfig.memorySize, True); // latency 2
    Vector#(2, FIFOF#(data)) responseFifo <- replicateM(mkSizedFIFOF(2));
    // EHR did not work here, CReg doesn't seem to go into a vector, so using Wire. -Jamey
@@ -44,6 +45,8 @@ module mkBRAMServers#(BRAM_Configure bramConfig)(BRAMServers#(numServers, addr, 
    Vector#(2, Reg#(Maybe#(Tuple2#(Bool,data)))) data1 <- replicateM(mkReg(tagged Invalid));
    Vector#(2, Reg#(Maybe#(Tuple2#(Bool,data)))) data2 <- replicateM(mkReg(tagged Invalid));
    Vector#(2, ConfigCounter#(2)) counter <- replicateM(mkConfigCounter(2));
+
+   let verbose = True;
 
    function BRAM_PORT#(addr, data) portsel(Integer port);
       return (port == 0) ? bram.a : bram.b;
@@ -73,11 +76,17 @@ module mkBRAMServers#(BRAM_Configure bramConfig)(BRAMServers#(numServers, addr, 
       endrule
    end
 
+   Reg#(Bit#(32)) cycles <- mkReg(0);
+   rule cyclesRule if (verbose);
+      cycles <= cycles + 1;
+   endrule
+
    function BRAM1Port#(addr,data) server(Integer i);
       return (interface BRAM1Port#(addr,data);
 	 interface BRAMServer portA;
 	 interface Put request;
 	    method Action put(BRAMRequest#(addr,data) req) if (counter[i].positive());
+	      if (verbose) $display("%d %d addr %h data %h write %d counter %d", memorySize, cycles, req.address, req.datain, req.write, counter[i].read());
 	      portsel(i).put(req.write, req.address, req.datain);
 	      if (!req.write || req.responseOnWrite) begin
 		 counter[i].decrement(1);
@@ -88,6 +97,7 @@ module mkBRAMServers#(BRAM_Configure bramConfig)(BRAMServers#(numServers, addr, 
 	 interface Get response;
 	    method ActionValue#(data) get();
 	      let v <- toGet(responseFifo[i]).get();
+	      if (verbose) $display("%d %d data %h counter %d", memorySize, cycles, v, counter[i].read());
 	      counter[i].increment(1);
 	      return v;
 	    endmethod
@@ -105,21 +115,21 @@ endmodule
 module mkBRAM2Server#(BRAM_Configure bramConfig)(BRAM2Port#(addr, data))
    provisos (Bits#(addr, a__),
 	     Bits#(data, b__));
-   BRAMServers#(2,addr,data) bram <- mkBRAMServers(bramConfig);
+   BRAMServers#(2,addr,data) cbram <- mkBRAMServers(bramConfig);
    
-   interface portA = bram.ports[0].portA;
-   interface portB = bram.ports[1].portA;
-   method portAClear = bram.ports[0].portAClear;
-   method portBClear = bram.ports[1].portAClear;
+   interface portA = cbram.ports[0].portA;
+   interface portB = cbram.ports[1].portA;
+   method portAClear = cbram.ports[0].portAClear;
+   method portBClear = cbram.ports[1].portAClear;
 endmodule
 
 module mkBRAM1Server#(BRAM_Configure bramConfig)(BRAM1Port#(addr, data))
    provisos (Bits#(addr, a__),
 	     Bits#(data, b__));
-   BRAMServers#(1,addr,data) bram <- mkBRAMServers(bramConfig);
+   BRAMServers#(1,addr,data) cbram <- mkBRAMServers(bramConfig);
    
-   interface portA = bram.ports[0].portA;
-   method portAClear = bram.ports[0].portAClear;
+   interface portA = cbram.ports[0].portA;
+   method portAClear = cbram.ports[0].portAClear;
 endmodule
 
 export mkBRAM1Server;
