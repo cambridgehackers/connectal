@@ -205,7 +205,7 @@ connectIndication = '''   mkConnection(l%(usermod)s.inverseIfc, l%(modname)s.met
 
 pipeInstantiation = '''   %(modname)s%(inverse)s%(tparam)s l%(modname)s%(number)s <- mk%(modname)s%(inverse)s;'''
 
-connectInstantiation = '''   mkConnection(l%(modname)s.pipes, l%(userIf)s);'''
+connectInstantiation = '''   mkConnection(l%(modname)s%(number)s.pipes, l%(userIf)s);'''
 
 def instMod(pmap, args, modname, modext, constructor, tparam, memFlag, inverseFlag):
     global clientCount
@@ -334,11 +334,11 @@ if __name__=='__main__':
              exportedNames.append('export %s::*;' % item)
     interfaceList = []
 
+    modcount = {}
     for pitem in options.proxy:
         print 'options.proxy: %s' % options.proxy
         pmap = parseParam(pitem, True)
         ptemp = pmap['name'].split(',')
-        modcount = {}
         for pmap['name'] in ptemp:
             pmap['number'] = ''
             if (ptemp.count(pmap['name']) > 1):
@@ -354,19 +354,25 @@ if __name__=='__main__':
                 argstr = 'l%(name)sOutput%(number)s.ifc, ' + pmap['uparam'][1:-2]
             instMod(pmap, argstr, pmap['usermod'], '', '', pmap['xparam'], False, pmap['inverse'])
             pmap['uparam'] = ''
+    modcount = {}
     for pitem in options.wrapper:
-        print 'options.wrapper: %s' % options.wrapper
         pmap = parseParam(pitem, False)
+        print 'options.wrapper: %s %s' % (pitem, pmap)
         pmap['userIf'] = pmap['name']
         pmap['name'] = pmap['usermod']
         pmap['number'] = ''
         pr = pmap['userIf'].split('.')
         pmap['usermod'] = pr[0]
-        if pmap['usermod'] not in instantiatedModules:
-            instMod(pmap, pmap['uparam'], pmap['usermod'], '', '', pmap['xparam'], False, False)
-        flushModules(pmap['usermod'])
-        instMod(pmap, '', pmap['name'], 'Input', '', '', pmap['memFlag'], pmap['inverse'])
-        portalInstantiate.append('')
+        modintf_list = pr[1].split(',')
+        numbers = range(0,len(modintf_list)) if len(modintf_list) > 1 else ['']
+        for (modintf,number) in zip(modintf_list, numbers):
+            pmap['number'] = str(number)
+            pmap['userIf'] = '%s.%s' % (pmap['usermod'], modintf)
+            if pmap['usermod'] not in instantiatedModules:
+                instMod(pmap, pmap['uparam'], pmap['usermod'], '', '', pmap['xparam'], False, False)
+            flushModules(pmap['usermod'])
+            instMod(pmap, '', pmap['name'], 'Input', '', '', pmap['memFlag'], pmap['inverse'])
+            portalInstantiate.append('')
     for key in instantiatedModules:
         flushModules(key)
     for pitem in options.interface:
