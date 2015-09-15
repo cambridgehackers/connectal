@@ -71,6 +71,7 @@ interface DotProd;
     interface PipeIn#(DotType) sendPair;
     interface PipeOut#(Float)   done;
     method Action init(Float atemp);
+    method Action incrementWait();
 endinterface
 
 (* synthesize *)
@@ -82,6 +83,7 @@ module mkDotProd(DotProd);
     FloatAlu mul <- mkFloatMultiplier(defaultValue);
     Reg#(Float)    temp <- mkReg(0);
     Reg#(Bool)     running <- mkReg(False);
+    Reg#(Bit#(32))  waitCount <- mkReg(0);
 
     rule dotrule;
         let v <- toGet(dotFifo).get;
@@ -94,13 +96,16 @@ module mkDotProd(DotProd);
         adder.request.put(tuple2(resp,temp));
     endrule
 
-    rule storerule; // if (running);
+    rule storerule if (running);
         let v <- toGet(lastFifo).get;
         match {.resp,.*} <- adder.response.get;
         temp <= resp;
         if (v) begin
-            innerDone.enq(resp);
-            running <= False;
+            waitCount <= waitCount - 1;
+            if (waitCount == 1) begin
+                innerDone.enq(resp);
+                running <= False;
+            end
         end
     endrule
     interface sendPair = toPipeIn(dotFifo);
@@ -108,6 +113,10 @@ module mkDotProd(DotProd);
     method Action init(Float atemp) if (!running);
         temp <= atemp;
         running <= True;
+        waitCount <= 0;
+    endmethod
+    method Action incrementWait();
+        waitCount <= waitCount + 1;
     endmethod
 endmodule
 
@@ -132,7 +141,6 @@ module mkConv#(ConvIndication indication)(Conv);
     Reg#(Bit#(32)) wp <- mkReg(0);
     Reg#(Bool)     fsmRunning <- mkReg(False);
     Reg#(Bit#(BurstLenSize)) burstLenInBytes <- mkReg(8);
-    Reg#(Bit#(32)) waitFinish <- mkReg(0);
     Reg#(Bool) dtypeFloat <- mkReg(False);
     Reg#(Bool) dumpStart <- mkReg(False);
     FIFOF#(Bool) dLast <- mkFIFOF;
@@ -170,13 +178,10 @@ module mkConv#(ConvIndication indication)(Conv);
 
     rule finishProcessing;
         let v <- toGet(dotp.done).get;
-        waitFinish <= waitFinish - 1;
-        if (waitFinish == 1) begin
-            // Write convolution result into output (image, channel, y, x)
-            //  *CACCESS(outputp) = v;
-            indication.outputp(outputp, v);
-            fsmRunning <= False;
-        end
+        // Write convolution result into output (image, channel, y, x)
+        //  *CACCESS(outputp) = v;
+        indication.outputp(outputp, v);
+        fsmRunning <= False;
     endrule
 
     FSM fsm <- mkFSM(seq
@@ -186,11 +191,11 @@ module mkConv#(ConvIndication indication)(Conv);
             wp <= wpx;
             // Calculate single 2D filter convolution
             for ( p <= 0; p < p_limit; p <= p + 1) action
+                dotp.incrementWait;
                 rEngine.readServers[0].request.put(MemengineCmd{sglId:param.objectId,
                     base:extend(bp), len:q_limit, burstLen:burstLenInBytes, tag: 0});
                 rEngine.readServers[1].request.put(MemengineCmd{sglId:param.objectId,
                     base:extend(wp), len:q_limit, burstLen:burstLenInBytes, tag: 0});
-                waitFinish <= waitFinish + 1;
                 bp <= bp + param.conv_in_width;
                 wp <= wp + param.kernel_w;
             endaction
