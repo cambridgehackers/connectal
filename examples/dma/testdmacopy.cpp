@@ -53,16 +53,18 @@ public:
 };
 
 DmaManager *dma;
-DmaIndication *dmaIndication;
-DmaRequestProxy *dmaRequest;
+DmaIndication *dmaIndication0, *dmaIndication1;
+DmaRequestProxy *dmaRequest0, *dmaRequest1;
 
 int main(int argc, const char **argv)
 {
     fprintf(stderr, "[%s:%d] calling platformInit\n", __FUNCTION__, __LINE__);
     dma = platformInit();
     fprintf(stderr, "[%s:%d] creating proxy and wrapper\n", __FUNCTION__, __LINE__);
-    dmaRequest    = new DmaRequestProxy(IfcNames_DmaRequestS2H);
-    dmaIndication = new DmaIndication(IfcNames_DmaIndicationH2S);
+    dmaRequest0    = new DmaRequestProxy(IfcNames_DmaRequestS2H0);
+    dmaRequest1    = new DmaRequestProxy(IfcNames_DmaRequestS2H1);
+    dmaIndication0 = new DmaIndication(IfcNames_DmaIndicationH2S0);
+    dmaIndication1 = new DmaIndication(IfcNames_DmaIndicationH2S1);
 
     fprintf(stderr, "[%s:%d] allocating buffers\n", __FUNCTION__, __LINE__);
     int srcAlloc = portalAlloc(8192, 0);
@@ -71,15 +73,15 @@ int main(int argc, const char **argv)
     int dstRef = dma->reference(dstAlloc);
 
     fprintf(stderr, "[%s:%d] requesting first dma\n", __FUNCTION__, __LINE__);
-    dmaRequest->read(srcRef, 0, 4096, 0);
-    dmaRequest->write(dstRef, 0, 4096, 1);
+    dmaRequest0->read(srcRef, 0, 4096, 0);
+    dmaRequest0->write(dstRef, 0, 4096, 1);
     fprintf(stderr, "[%s:%d] requesting second dma\n", __FUNCTION__, __LINE__);
-    dmaRequest->read(srcRef, 4096, 4096, 2);
-    dmaRequest->write(dstRef, 4096, 4096, 3);
+    dmaRequest0->read(srcRef, 4096, 4096, 2);
+    dmaRequest0->write(dstRef, 4096, 4096, 3);
     fprintf(stderr, "[%s:%d] waiting for responses\n", __FUNCTION__, __LINE__);
-    dmaIndication->wait();
-    dmaIndication->wait();
-    dmaIndication->wait();
-    dmaIndication->wait();
+    dmaIndication0->wait();
+    dmaIndication0->wait();
+    dmaIndication0->wait();
+    dmaIndication0->wait();
     return 0;
 }

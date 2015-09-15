@@ -28,7 +28,8 @@ import HostInterface::*;
 import Dma::*;
 
 interface DmaCopy;
-   interface DmaRequest request;
+   interface DmaRequest request0;
+   interface DmaRequest request1;
    interface Vector#(1,MemReadClient#(DataBusWidth))      readClient;
    interface Vector#(1,MemWriteClient#(DataBusWidth))     writeClient;
 endinterface
@@ -37,11 +38,12 @@ module mkApplication#(Dma#(numChannels) dma)(Empty);
    mkConnection(dma.readData, dma.writeData);
 endmodule
 
-module mkDmaCopy#(DmaIndication indication)(DmaCopy);
-   Dma#(1) dma <- mkDma(vec(indication));
+module mkDmaCopy#(DmaIndication indication0, DmaIndication indication1)(DmaCopy);
+   Dma#(2) dma <- mkDma(vec(indication0,indication1));
    let app <- mkApplication(dma);
    
-   interface request     = dma.request[0];
+   interface request0    = dma.request[0];
+   interface request1    = dma.request[1];
    interface readClient  = dma.readClient;
    interface writeClient = dma.writeClient;
 endmodule
