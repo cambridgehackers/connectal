@@ -112,11 +112,11 @@ Data Types
 
    .. bsv:field:: Bool first
 
-      Indicates that this is the last beat of a request.
+      Indicates that this is the first data beat of a request.
 
    .. bsv:field:: Bool last
 
-      Indicates that this is the last beat of a request.
+      Indicates that this is the last data beat of a request.
 
 Physical Memory Clients and Servers
 -----------------------------------
