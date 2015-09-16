@@ -284,8 +284,14 @@ module mkSharedMemoryPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes,
       let messageWords = totalWords-1;
       let padding      = totalWords[0] == 1;
       let paddedWords = (padding) ? totalWords+1 : totalWords;
-      $display("sendHeader hdr=%h messageWords=%d totalWords=%d paddingReg=%d wrPtrReg=%h", hdr, messageWords, totalWords, paddingReg, wrPtrReg);
-      wrPtrReg <= wrPtrReg + paddedWords;
+      let wrPtr = wrPtrReg + paddedWords;
+      if (wrPtr > limitReg) begin
+	 $display("wrPtr wrapping");
+	 wrPtr = 4;
+      end
+
+      $display("sendHeader hdr=%h messageWords=%d totalWords=%d paddingReg=%d wrPtrReg=%d wrPtr=%d", hdr, messageWords, totalWords, paddingReg, wrPtrReg, wrPtr);
+      wrPtrReg <= wrPtr;
       messageWordsReg <= messageWords;
       paddingReg      <= padding;
       methodIdReg <= readyChannel;
