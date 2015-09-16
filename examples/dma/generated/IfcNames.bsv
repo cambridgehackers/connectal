@@ -1,0 +1,2 @@
+
+typedef enum {NoInterface, IfcNames_MemServerRequestS2H,IfcNames_MMURequestS2H,IfcNames_MemServerIndicationH2S,IfcNames_MMUIndicationH2S,IfcNames_DmaIndicationH2S0,IfcNames_DmaIndicationH2S1,IfcNames_DmaRequestS2H0,IfcNames_DmaRequestS2H1} IfcNames deriving (Eq,Bits);
