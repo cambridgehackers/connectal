@@ -5,7 +5,7 @@ MEM_READ_INTERFACES = lReadTest.dmaClients
 
 BSVFILES = ReadTest.bsv
 CPPFILES=../memread/testmemread.cpp
-NUMBER_OF_MASTERS =4
+PLATFORM_NUMBER_OF_MASTERS =4
 #CONNECTALFLAGS += -I$(CONNECTALDIR)/examples/memread
 
 include $(CONNECTALDIR)/Makefile.connectal
