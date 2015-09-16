@@ -30,6 +30,7 @@ import BRAMFIFO::*;
 import ConfigCounter::*;
 import Connectable::*;
 import ConnectalMemory::*;
+import ConnectalBramFifo::*;
 import MemTypes::*;
 import Pipe::*;
 import MemUtils::*;
@@ -87,11 +88,18 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
    let verbose = False;
    let beatShift = fromInteger(valueOf(beatShift));
 
+   let clock <- exposeCurrentClock();
+   let reset <- exposeCurrentReset();
+
    Integer bufferSizeBeats = bufferSizeBytes/valueOf(busWidthBytes);
    Vector#(numServers, Reg#(Bool))          clientInFlight <- replicateM(mkReg(False));
    Vector#(numServers, ConfigCounter#(16))  clientAvail <- replicateM(mkConfigCounter(fromInteger(bufferSizeBeats)));
    Vector#(numServers, Reg#(MemengineCmd))  clientCommand <- replicateM(mkReg(unpack(0)));
+`ifdef USE_DUAL_CLOCK_FIFOF
+   Vector#(numServers, FIFOF#(MemDataF#(userWidth))) clientDataFifo <- replicateM(mkDualClockBramFIFOF(clock, reset, clock, reset));
+`else
    Vector#(numServers, FIFOF#(MemDataF#(userWidth))) clientDataFifo <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
+`endif
    Vector#(numServers, FIFO#(MemengineCmd)) clientRequest <- replicateM(mkFIFO());
    Vector#(numServers, Reg#(Bit#(32)))      clientLen <- replicateM(mkReg(unpack(0)));
    Vector#(numServers, Reg#(Bit#(32)))      clientBase <- replicateM(mkReg(unpack(0)));
