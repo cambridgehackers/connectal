@@ -25,21 +25,35 @@ interface MemServer;
    method Action myMethod(Bool rc);
 endinterface		
 
-module mkInner(MemServer);
+// Warning: "GuardTest.bsv", line 34, column 9: (G0010)
+//   Rule "dbgrRule" was treated as more urgent than "toprule". Conflicts:
+//     "dbgrRule" cannot fire before "toprule":
+//       calls to myFlag.write vs. myFlag.read
+//     "toprule" cannot fire before "dbgrRule":
+//       calls to myFlag.write vs. myFlag.read
+module  mkGuardTestBench(Empty);
+   FIFOF#(Bool) fifo <- mkFIFOF1;
+
    Reg#(Bool) myFlag <- mkReg(False);
    rule dbgrRule if (myFlag);
        myFlag <= False;
    endrule
-   method Action myMethod(Bool rc) if (!myFlag);
-      myFlag <= True;
-   endmethod
+   rule toprule;
+      if (fifo.first && !myFlag)
+         myFlag <= fifo.first;
+   endrule
 endmodule
 
-module  mkGuardTestBench(Empty);
+// this version does not generate the extra warning
+module  mkGuardTestBenchNonAgressive(Empty);
    FIFOF#(Bool) fifo <- mkFIFOF1;
-   MemServer l <- mkInner();
-   rule toprule;
+
+   Reg#(Bool) myFlag <- mkReg(False);
+   rule dbgrRule if (myFlag);
+       myFlag <= False;
+   endrule
+   rule toprule if (!myFlag);
       if (fifo.first)
-          l.myMethod(fifo.first);
+         myFlag <= fifo.first;
    endrule
 endmodule
