@@ -22,30 +22,24 @@
 import FIFOF          ::*;
 
 interface MemServer;
-   method Action stateDbg(Bool rc);
+   method Action myMethod(Bool rc);
 endinterface		
 
 module mkInner(MemServer);
-   Reg#(Bool) dbgrStart <- mkReg(False);
-   rule dbgrRule if (dbgrStart);
-       dbgrStart <= False;
+   Reg#(Bool) myFlag <- mkReg(False);
+   rule dbgrRule if (myFlag);
+       myFlag <= False;
    endrule
-   method Action stateDbg(Bool rc) if (!dbgrStart);
-      dbgrStart <= True;
-   endmethod
-endmodule
-module mkOuter(MemServer);
-   MemServer  reader <- mkInner();
-   method Action stateDbg(Bool rc);
-      if (rc)
-         reader.stateDbg(rc);
+   method Action myMethod(Bool rc) if (!myFlag);
+      myFlag <= True;
    endmethod
 endmodule
 
 module  mkGuardTestBench(Empty);
    FIFOF#(Bool) fifo <- mkFIFOF1;
-   MemServer l <- mkOuter();
-   rule handle_stateDbg_request;
-      l.stateDbg(fifo.first);
+   MemServer l <- mkInner();
+   rule toprule;
+      if (fifo.first)
+          l.myMethod(fifo.first);
    endrule
 endmodule
