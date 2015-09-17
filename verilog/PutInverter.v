@@ -59,4 +59,14 @@ module PutInverter(CLK,
    assign get = put;
    assign RDY_get = EN_put;
    assign RDY_put = 1; //not possible: EN_get;
+// when building examples/echoinvert.xsim and looking at verilog/mkCnocTop.v,
+// The EN and RDY signals passed to the external module are not independant
+// (there is a combinational path from RDY -> EN
+// Aaarg...
+//module mkCnocTop(CLK,
+//  assign lEcho_inv_EN_ifc_heard = lEcho_inv_RDY_ifc_heard && lEcho_delay_EMPTY_N ;
+//  mkEchoIndicationInverterV lEcho_inv(...
+//                 .EN_ifc_heard(lEcho_inv_EN_ifc_heard),
+//                 .RDY_ifc_heard(lEcho_inv_RDY_ifc_heard),
+//                 ...)
 endmodule // PutInverter
