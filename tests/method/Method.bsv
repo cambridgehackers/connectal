@@ -19,33 +19,38 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-import FIFO          ::*;
+import LinkerLib::*;
+import GetPut::*;
+import FIFO::*;
 
-interface Exporter;
-   method ActionValue#(Bool) e;
+interface Inverter;
+    method Action m(Bool v);
+    method ActionValue#(Bool) mInv;
 endinterface		
 
 (* synthesize *)
-module  mkExporter(Exporter);
-   FIFO#(Bool) efifo <- mkFIFO;
+module  mkInverter(Inverter);
+    PutInverter#(Bool) inv <- mkPutInverter();
 
-   method ActionValue#(Bool) e;
-       efifo.deq;
-       return efifo.first;
-   endmethod
+    method Action m(Bool v);
+        inv.mod.put(v);
+    endmethod
+    method ActionValue#(Bool) mInv;
+        let v <- inv.inverse.get;
+        return v;
+    endmethod
 endmodule
 
-interface Importer;
-   method Action i(Bool v);
-endinterface		
+interface Invertm;
+    method Action actual(Bool v);
+endinterface
 
 (* synthesize *)
-module  mkImporter(Importer);
-   FIFO#(Bool) ififo <- mkFIFO;
-
-   method Action i(Bool v);
-      ififo.enq(v);
-   endmethod
+module mkInvertm(Invertm);
+    FIFO#(Bool) fifo <- mkFIFO;
+    method Action actual(Bool v);
+        fifo.enq(v);
+    endmethod
 endmodule
 
 interface MethodRequest;
@@ -55,13 +60,24 @@ interface Method;
    interface MethodRequest request;
 endinterface
 
+(* synthesize *)
 module mkMethod(Method);
-   Exporter einst <- mkExporter;
-   Importer iinst <- mkImporter;
+   Inverter einst <- mkInverter;
+   Invertm eact <- mkInvertm;
+   FIFO#(Bool) fifo <- mkFIFO;
 
-   rule toprule;
-      let v <- einst.e;
-      iinst.i(v);
+   rule invoke_rule;
+      einst.m(fifo.first);
+   endrule
+
+   PutInverter#(Bool) conn <- mkPutInverter();
+   rule connect_rule1;
+      let v <- einst.mInv;
+      conn.mod.put(v);
+   endrule
+   rule connect_rule2;
+      let v <- conn.inverse.get();
+      eact.actual(v);
    endrule
 
    interface MethodRequest request;
