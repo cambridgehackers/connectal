@@ -139,8 +139,6 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
          if (verbose) $display("mkMemReadEngineBuff::%d rule_checkAvail avail[%d] %d burstLen %d cond0 %d last_burst %d", counter, idx, clientAvail[idx].read(), cmd_len>>beatShift, cond0, last_burst);
       endrule
 
-      // should use an EHR for clientInFlight to avoid the need for this pragma
-      //(* descending_urgency = "rule_requestServer, rule_startNew" *)
       rule rule_requestServer if (clientInFlight[idx]);
          match {.cond0,.last_burst,.cmd_len} <- toGet(serverCheckAvail[idx]).get;
          if  (cond0) begin
@@ -182,8 +180,8 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
       rs[i] = (interface MemReadEngineServer#(userWidth);
 		  interface Put request;
 		     method Action put(MemengineCmd cmd);
-			Bit#(32) bsb = fromInteger(bufferSizeBytes);
 `ifdef SIMULATION
+			Bit#(32) bsb = fromInteger(bufferSizeBytes);
 			Bit#(32) dw = fromInteger(valueOf(busWidthBytes));
 			let mdw = ((cmd.len)/dw)*dw != cmd.len;
 			let bbl = extend(cmd.burstLen) > bsb;
