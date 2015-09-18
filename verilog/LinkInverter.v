@@ -33,7 +33,7 @@
   `define BSV_RESET_EDGE negedge
 `endif
 
-module PutInverter(CLK,
+module LinkInverter(CLK,
 		  RST,
 
 		  put,
@@ -42,7 +42,9 @@ module PutInverter(CLK,
 
 		  get,
 		  EN_get,
-		  RDY_get
+		  RDY_get,
+                  modReady,
+                  inverseReady
 		  );
    parameter DATA_WIDTH = 1;
 
@@ -54,9 +56,13 @@ module PutInverter(CLK,
    input 		   EN_put;
    output 		   RDY_get;
    output 		   RDY_put;
+   output 		   modReady;
+   output 		   inverseReady;
 
    // will this work?
    assign get = put;
-   assign RDY_get = EN_put;
-   assign RDY_put = EN_get;
-endmodule // PutInverter
+   assign RDY_get = 1;
+   assign RDY_put = 1;
+   assign modReady = EN_get;
+   assign inverseReady = EN_put;
+endmodule // LinkInverter

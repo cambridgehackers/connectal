@@ -35,6 +35,12 @@ interface PutInverter#(type a);
    interface Put#(a) mod;
    interface Get#(a) inverse;
 endinterface
+interface LinkInverter#(type a);
+   interface Put#(a) mod;
+   interface Get#(a) inverse;
+   method Bool modReady();
+   method Bool inverseReady();
+endinterface
 
 import "BVI" GetInverter =
 module mkGetInverterBvi(GetInverter#(Bit#(asz)));
@@ -92,4 +98,41 @@ module mkPutInverter(PutInverter#(a)) provisos (Bits#(a, asz));
 	 return unpack(v);
       endmethod
    endinterface
+endmodule
+
+import "BVI" LinkInverter =
+module mkLinkInverterBvi(LinkInverter#(Bit#(asz)));
+   let asz = valueOf(asz);
+   parameter DATA_WIDTH = asz;
+   default_clock (CLK);
+   default_reset (RST);
+   interface Put mod;
+      method put(put) enable(EN_put) ready (RDY_put);
+   endinterface
+   interface Get inverse;
+      method get get() enable (EN_get) ready (RDY_get);
+   endinterface
+   method modReady modReady();
+   method inverseReady inverseReady();
+   schedule (mod.put, inverse.get, modReady, inverseReady) CF (mod.put, inverse.get, modReady, inverseReady);
+endmodule
+module mkLinkInverter(LinkInverter#(a)) provisos (Bits#(a, asz));
+   let inverter <- mkLinkInverterBvi();
+   interface Put mod;
+      method Action put(a v);
+	 inverter.mod.put(pack(v));
+      endmethod
+   endinterface
+   interface Get inverse;
+      method ActionValue#(a) get();
+	 let v <- inverter.inverse.get();
+	 return unpack(v);
+      endmethod
+   endinterface
+   method Bool modReady();
+      return inverter.modReady();
+   endmethod
+   method Bool inverseReady();
+      return inverter.inverseReady();
+   endmethod
 endmodule
