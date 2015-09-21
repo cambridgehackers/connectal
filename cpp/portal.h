@@ -234,6 +234,7 @@ int portal_disconnect(struct PortalInternal *p);
 void initPortalMemory(void);
 int portalAlloc(size_t size, int cached);
 void *portalMmap(int fd, size_t size);
+int portalMunmap(void *addr, size_t size);
 int portalCacheFlush(int fd, void *__p, long size, int flush);
 
 // Timer functions

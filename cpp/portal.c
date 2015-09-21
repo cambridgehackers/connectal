@@ -341,6 +341,14 @@ void *portalMmap(int fd, size_t size)
     return mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
 #endif
 }
+void *portalMunmap(void *addr, size_t size)
+{
+#ifdef __KERNEL__
+    fprintf(stderr, "UNIMPLEMENTED: portalMunmap addr=%p size=%d\n", addr, size);
+#else      ///////////////////////// userspace version
+    return munmap(addr, size);
+#endif
+}
 
 int portalCacheFlush(int fd, void *__p, long size, int flush)
 {
