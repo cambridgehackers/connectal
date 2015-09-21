@@ -34,8 +34,8 @@ static int trace_poller;//=1;
 PortalPoller *defaultPoller = new PortalPoller();
 uint64_t poll_enter_time, poll_return_time; // for performance measurement
 
-PortalPoller::PortalPoller()
-  : portal_wrappers(0), portal_fds(0), startThread(1), numWrappers(0), numFds(0), stopping(0)
+PortalPoller::PortalPoller(int autostart)
+  : portal_wrappers(0), portal_fds(0), startThread(autostart), numWrappers(0), numFds(0), stopping(0)
 {
     int rc = pipe(pipefd);
     if (rc != 0)

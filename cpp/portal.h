@@ -315,7 +315,7 @@ private:
     int numWrappers;
     int numFds;
 public:
-    PortalPoller();
+    PortalPoller(int autostart=1);
     int registerInstance(Portal *portal);
     int unregisterInstance(Portal *portal);
     void *init(void);
