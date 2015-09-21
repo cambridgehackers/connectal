@@ -25,3 +25,5 @@ BSVFILES = DmaController.bsv
 CPPFILES=testdmacopy.cpp
 
 include $(CONNECTALDIR)/Makefile.connectal
+
+CONNECTALFLAGS += -D USE_DUAL_CLOCK_FIFOF
