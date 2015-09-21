@@ -38,21 +38,50 @@ static int wrapperNames[] = { IfcNames_DmaIndicationH2S0, IfcNames_DmaIndication
 
 pthread_t threads[2];
 
-class Channel {
+class DmaBuffer {
+    DmaManager *mgr;
+    const int size;
+    int fd;
+    char *buf;
+    int ref;
+public:
+    DmaBuffer(DmaManager *mgr, int size) : mgr(mgr), size(size), ref(-1) {
+	fd = portalAlloc(size, 1);
+	buf = (char *)portalMmap(fd, size);
+    }
+    ~DmaBuffer() {
+	// if destructor is not called, the object is automatically
+	// unreferenced and freed when the process exits
+	mgr->dereference(fd);
+	portalMunmap(buf, size);
+	close(fd);
+    }
+    char *buffer() {
+	return buf;
+    }
+    int reference() {
+	if (ref == -1)
+	    ref = mgr->reference(fd);
+	return ref;
+    }
+    void dereference() {
+	if (ref != -1)
+	    mgr->dereference(ref);
+	ref = -1;
+    }
+};
+
+// ChannelWorker processes one channel
+class ChannelWorker {
   PortalPoller *poller;
   DmaIndication *dmaIndication;
   DmaRequestProxy *dmaRequest;
   int channel;
-  int srcfd;
-  int dstfd;
-  char *srcbuffer;
-  char *dstbuffer;
-  int srcRef;
-  int dstRef;
+  DmaBuffer *buffers[4];
   int size;
   volatile int waitCount;
 public:
-    Channel(int channel);
+    ChannelWorker(int channel);
     void run();
     void post() { waitCount--; }
     static void *threadfn(void *c);
@@ -60,10 +89,10 @@ public:
 
 class DmaIndication : public DmaIndicationWrapper
 {
-    Channel *channel;
+    ChannelWorker *channel;
     sem_t sem;
 public:
-    DmaIndication(unsigned int id, PortalPoller *poller = 0, Channel *channel = 0)
+    DmaIndication(unsigned int id, PortalPoller *poller = 0, ChannelWorker *channel = 0)
 	: DmaIndicationWrapper(id, poller), channel(channel) {
 	sem_init(&sem, 0, 0);
     }
@@ -85,34 +114,31 @@ public:
     }
 };
 
-Channel::Channel(int channel)
+ChannelWorker::ChannelWorker(int channel)
   : poller(new PortalPoller(0)), channel(channel), size(1024*1024), waitCount(0)
 {
     dmaRequest    = new DmaRequestProxy(proxyNames[channel], poller);
     dmaIndication = new DmaIndication(wrapperNames[channel], poller, this);
-    fprintf(stderr, "[%s:%d] channel %d allocating buffers\n", __FUNCTION__, __LINE__, channel);
-    srcfd = portalAlloc(size, 0);
-    dstfd = portalAlloc(size, 0);
-    srcbuffer = (char *)portalMmap(srcfd, size);
-    dstbuffer = (char *)portalMmap(dstfd, size);
-    srcRef = dma->reference(srcfd);
-    dstRef = dma->reference(dstfd);
+    fprintf(stderr, "[%s:%d] channel %d dma mgr %p allocating buffers\n", __FUNCTION__, __LINE__, channel, dma);
+    for (int i = 0; i < 4; i++) {
+	buffers[i] = new DmaBuffer(dma, size);
+    }
   }
 
-void Channel::run()
+void ChannelWorker::run()
 {
     fprintf(stderr, "[%s:%d] channel %d requesting first dma\n", __FUNCTION__, __LINE__, channel);
-    dmaRequest->read(srcRef, 0, size/2, 0);
+    dmaRequest->read(buffers[0]->reference(), 0, size/2, 0);
     waitCount++;
 
-    dmaRequest->write(dstRef, 0, size/2, 1);
+    dmaRequest->write(buffers[1]->reference(), 0, size/2, 1);
     waitCount++;
 
     fprintf(stderr, "[%s:%d] channel %d requesting second dma\n", __FUNCTION__, __LINE__, channel);
-    dmaRequest->read(srcRef, size/2, size/2, 2);
+    dmaRequest->read(buffers[2]->reference(), size/2, size/2, 2);
     waitCount++;
 
-    dmaRequest->write(dstRef, size/2, size/2, 3);
+    dmaRequest->write(buffers[3]->reference(), size/2, size/2, 3);
     waitCount++;
 
     fprintf(stderr, "[%s:%d] channel %d waiting for responses\n", __FUNCTION__, __LINE__, channel);
@@ -122,9 +148,9 @@ void Channel::run()
     }
 }
 
-void *Channel::threadfn(void *c)
+void *ChannelWorker::threadfn(void *c)
 {
-    Channel *channelp = (Channel *)c;
+    ChannelWorker *channelp = (ChannelWorker *)c;
     channelp->run();
     return 0;
 }
@@ -136,7 +162,7 @@ int main(int argc, const char **argv)
     fprintf(stderr, "[%s:%d] creating proxy and wrapper\n", __FUNCTION__, __LINE__);
 
     for (int i = 0; i < 2; i++) {
-      Channel *channel = new Channel(i);
+      ChannelWorker *channel = new ChannelWorker(i);
       pthread_create(&threads[i], 0, channel->threadfn, channel);
     }
 
