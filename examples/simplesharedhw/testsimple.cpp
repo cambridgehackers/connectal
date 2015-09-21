@@ -49,9 +49,14 @@ class Simple : public SimpleRequestWrapper
 public:
   uint32_t cnt;
   uint32_t times;
+  sem_t sem;
+  void wait() {
+    sem_wait(&sem);
+    cnt = 0;
+  }
   void incr_cnt(){
     if (++cnt == 7*times)
-      exit(0);
+      sem_post(&sem);
   }
   void say1(uint32_t a) {
     fprintf(stderr, "say1(%d)\n", a);
@@ -121,7 +126,9 @@ public:
         fprintf(stderr, "    [%d] = 0x%x\n", i, v[i] & 0xffff);
     incr_cnt();
   }
-  Simple(unsigned int id, unsigned int numtimes=1, PortalTransportFunctions *item=0, void *param = 0) : SimpleRequestWrapper(id, item, param), cnt(0), times(numtimes){}
+  Simple(unsigned int id, unsigned int numtimes=1, PortalTransportFunctions *item=0, void *param = 0) : SimpleRequestWrapper(id, item, param), cnt(0), times(numtimes) {
+    sem_init(&sem, 0, 0);
+  }
 };
 
 DmaManager *dma;
@@ -130,13 +137,16 @@ int main(int argc, const char **argv)
 {
     int verbose = 1;
     int numtimes = 10;
+    int wait_per_iter = 1;
     uint32_t alloc_sz = 32768;
     dma = platformInit();
 
 //#define FF {dma}
 #define FF SHARED_DMA(IfcNames_MMURequestS2H, IfcNames_MMUIndicationH2S)
-    //PortalSharedParam parami = {FF, alloc_sz, SHARED_HARDWARE(IfcNames_SimpleRequestPipesH2S)};
-    indication = new Simple(IfcNames_SimpleRequestH2S //, numtimes, &transportShared, &parami
+    PortalSharedParam parami = {FF, alloc_sz, SHARED_HARDWARE(IfcNames_SimpleRequestPipesH2S)};
+    indication = new Simple(IfcNames_SimpleRequestH2S,
+			    (wait_per_iter) ? 1 : numtimes
+			    , &transportShared, &parami
 			    );
     PortalSharedParam paramr = {FF, alloc_sz, SHARED_HARDWARE(IfcNames_SimpleRequestPipesS2H)};
     SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequestS2H, &transportShared, &paramr);
@@ -159,7 +169,12 @@ int main(int argc, const char **argv)
       device->say6(v6a, v6b, v6c);  
       if (verbose) fprintf(stderr, "Main::calling say7(%08x, %08x)\n", s3.a, s3.e1);
       device->say7(s3);  
+      if (wait_per_iter)
+	fprintf(stderr, "Waiting for iter %d responses\n", i);
+	indication->wait();
+	fprintf(stderr, "Received iter %d responses\n", i);
     }
-  while(1)
-    sleep(10);
+    if (!wait_per_iter)
+      indication->wait();
+    return 0;
 }

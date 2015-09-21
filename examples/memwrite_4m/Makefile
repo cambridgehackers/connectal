@@ -5,6 +5,6 @@ MEM_WRITE_INTERFACES = lMemwrite.dmaClients
 
 BSVFILES = Memwrite.bsv
 CPPFILES = ../memwrite/testmemwrite.cpp
-NUMBER_OF_MASTERS =4
+PLATFORM_NUMBER_OF_MASTERS =4
 
 include $(CONNECTALDIR)/Makefile.connectal

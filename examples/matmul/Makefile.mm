@@ -46,10 +46,10 @@ NDK_DIR=$(shell ndk-which gcc | sed 's:toolchains.*::')
 OPENCVDIR=$(CONNECTALDIR)/../opencv-android-sdk/sdk/native/
 CONNECTALFLAGS += -I$(CONNECTALDIR)/lib/matmul/cpp -I$(OPENCVDIR)/jni/include -L$(OPENCVDIR)/libs/armeabi-v7a -lz
 CONNECTALFLAGS += -S$(NDK_DIR)/sources/cxx-stl/stlport/libs/armeabi-v7a/libstlport_static.a
-NUMBER_OF_MASTERS=2
+PLATFORM_NUMBER_OF_MASTERS=2
 endif
 ifeq (bluesim,$(FAMILY))
-NUMBER_OF_MASTERS=2
+PLATFORM_NUMBER_OF_MASTERS=2
 endif
 
 synth-ip.tcl:

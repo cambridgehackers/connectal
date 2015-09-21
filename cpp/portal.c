@@ -180,13 +180,22 @@ void initPortalHardware(void)
 	{
 	  int fd;
 	  ssize_t len;
+	  int try;
 	  fprintf(stderr, "subprocess pid %d completed status=%x %d\n", pid, status, WEXITSTATUS(status));
 	  if (WEXITSTATUS(status) != 0)
 	      exit(-1);
-	  fd = open("/dev/connectal", O_RDONLY); /* scan the fpga directory */
-	  len = read(fd, &status, sizeof(status));
-	  fprintf(stderr, "[%s:%d] fd %d len %lu\n", __FUNCTION__, __LINE__, fd, len);
-	  close(fd);
+	  for (try = 0; try < 4; try++) {
+	    fd = open("/dev/connectal", O_RDONLY); /* scan the fpga directory */
+	    if (fd < 0) {
+	      fprintf(stderr, "[%s:%d] error opening /dev/connectal %s\n", __FUNCTION__, __LINE__, strerror(errno));
+	      continue;
+	    }
+	    len = read(fd, &status, sizeof(status));
+	    if (len < sizeof(status))
+	      fprintf(stderr, "[%s:%d] fd %d len %lu\n", __FUNCTION__, __LINE__, fd, len);
+	    close(fd);
+	    break;
+	  }
 	}
 #else
         while (1) {
@@ -330,6 +339,14 @@ void *portalMmap(int fd, size_t size)
     return retptr;
 #else      ///////////////////////// userspace version
     return mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
+#endif
+}
+void *portalMunmap(void *addr, size_t size)
+{
+#ifdef __KERNEL__
+    fprintf(stderr, "UNIMPLEMENTED: portalMunmap addr=%p size=%d\n", addr, size);
+#else      ///////////////////////// userspace version
+    return munmap(addr, size);
 #endif
 }
 

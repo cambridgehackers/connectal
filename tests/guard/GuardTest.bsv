@@ -19,44 +19,41 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+import FIFOF          ::*;
 
-`ifdef BSV_ASSIGNMENT_DELAY
-`else
-  `define BSV_ASSIGNMENT_DELAY
-`endif
+interface MemServer;
+   method Action myMethod(Bool rc);
+endinterface		
 
-`ifdef BSV_POSITIVE_RESET
-  `define BSV_RESET_VALUE 1'b1
-  `define BSV_RESET_EDGE posedge
-`else
-  `define BSV_RESET_VALUE 1'b0
-  `define BSV_RESET_EDGE negedge
-`endif
+// Warning: "GuardTest.bsv", line 34, column 9: (G0010)
+//   Rule "dbgrRule" was treated as more urgent than "toprule". Conflicts:
+//     "dbgrRule" cannot fire before "toprule":
+//       calls to myFlag.write vs. myFlag.read
+//     "toprule" cannot fire before "dbgrRule":
+//       calls to myFlag.write vs. myFlag.read
+module  mkGuardTestBench(Empty);
+   FIFOF#(Bool) fifo <- mkFIFOF1;
 
-module PutInverter(CLK,
-		  RST,
+   Reg#(Bool) myFlag <- mkReg(False);
+   rule dbgrRule if (myFlag);
+       myFlag <= False;
+   endrule
+   rule toprule;
+      if (fifo.first && !myFlag)
+         myFlag <= fifo.first;
+   endrule
+endmodule
 
-		  put,
-		  EN_put,
-		  RDY_put,
+// this version does not generate the extra warning
+module  mkGuardTestBenchNonAgressive(Empty);
+   FIFOF#(Bool) fifo <- mkFIFOF1;
 
-		  get,
-		  EN_get,
-		  RDY_get
-		  );
-   parameter DATA_WIDTH = 1;
-
-   input CLK;
-   input RST;
-   output [DATA_WIDTH-1 : 0] get;
-   input  [DATA_WIDTH-1 : 0] put;
-   input 		   EN_get;
-   input 		   EN_put;
-   output 		   RDY_get;
-   output 		   RDY_put;
-
-   // will this work?
-   assign get = put;
-   assign RDY_get = EN_put;
-   assign RDY_put = EN_get;
-endmodule // PutInverter
+   Reg#(Bool) myFlag <- mkReg(False);
+   rule dbgrRule if (myFlag);
+       myFlag <= False;
+   endrule
+   rule toprule if (!myFlag);
+      if (fifo.first)
+         myFlag <= fifo.first;
+   endrule
+endmodule

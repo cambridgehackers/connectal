@@ -32,6 +32,31 @@ Portal Memory
 .. c:function:: portalCacheFlush(int fd, void *__p, long size, int flush)
 
 
+PortalPoller
+============
+
+.. cpp:class:: PortalPoller
+
+   Polls portals
+
+   .. cpp:member:: PortalPoller::PortalPoller(int autostart = 1)
+
+      If autostart is 1, then invoke :cpp:member:`start()` from :cpp:member:`registerInstance()`
+
+   .. cpp:member:: void PortalPoller::start();
+
+      Starts the poller. Called automatically from :cpp:member:`registerInstance()` if :cpp:member:`autostart` is 1.
+
+   .. cpp:member:: void PortalPoller::stop();
+
+      Stops the poller.
+
+   .. cpp:member:: int PortalPoller::timeout
+
+      The timeout value, in milliseconds, passed to :c:function:`poll()`
+
+
+
 Deprecated Functions
 --------------------
 

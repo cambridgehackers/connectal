@@ -33,16 +33,36 @@ import MemWriteEngine::*;
 import HostInterface::*;
 
 interface DmaRequest;
+   //
+   // Configures burstLen used by DMA transfers. Only needed for performance tuning if default value does not perform well.
+   //
    method Action burstLen(Bit#(8) burstLenBytes);
-   method Action read(Bit#(32) sglId, Bit#(32) base, Bit#(32) bytes, Bit#(8) tag);
-   method Action write(Bit#(32) sglId, Bit#(32) base, Bit#(32) bytes, Bit#(8) tag);
+   //
+   // Requests a read of system memory, streaming the data to the readData PipeOut
+   // @param objId the reference to the memory object allocated by portalAlloc
+   // @param base  offset, in bytes, from which to start reading
+   // @param bytes number of bytes to read, must be a multiple of the buswidth in bytes
+   // @param tag   identifier for the request
+   method Action read(Bit#(32) objId, Bit#(32) base, Bit#(32) bytes, Bit#(8) tag);
+   //
+   // Requests a write of system memory, streaming the data from writeData PipeIn
+   // @param objId the reference to the memory object allocated by portalAlloc
+   // @param base  offset, in bytes, to which to start writing
+   // @param bytes number of bytes to write, must be a multiple of the buswidth in bytes
+   // @param tag   identifier for the request
+   method Action write(Bit#(32) objId, Bit#(32) base, Bit#(32) bytes, Bit#(8) tag);
 endinterface
 
 interface DmaIndication;
-   method Action readDone(Bit#(32) sglId, Bit#(32) base, Bit#(8) tag);
-   method Action writeDone(Bit#(32) sglId, Bit#(32) base, Bit#(8) tag);
+   // Indicates completion of read request, identified by tag, from offset base of objId
+   method Action readDone(Bit#(32) objId, Bit#(32) base, Bit#(8) tag);
+   // Indicates completion of write request, identified by tag, to offset base of objId
+   method Action writeDone(Bit#(32) objId, Bit#(32) base, Bit#(8) tag);
 endinterface
 
+//
+// DmaController controls multiple channels of DMA to/from system memory
+// @param numChannels: the maximum number of simultaneous read and write streams
 interface DmaController#(numeric type numChannels);
    // request from software
    interface Vector#(numChannels,DmaRequest) request;
@@ -50,7 +70,7 @@ interface DmaController#(numeric type numChannels);
    interface Vector#(numChannels,PipeOut#(MemDataF#(DataBusWidth))) readData;
    // data in from application logic
    interface Vector#(numChannels,PipeIn#(MemDataF#(DataBusWidth)))  writeData;
-   // DMA interfaces connected to MemServer
+   // memory interfaces connected to MemServer
    interface Vector#(1,MemReadClient#(DataBusWidth))      readClient;
    interface Vector#(1,MemWriteClient#(DataBusWidth))     writeClient;
 endinterface
@@ -85,15 +105,15 @@ module mkDmaController#(Vector#(numChannels,DmaIndication) indication)(DmaContro
 	  readFifo[channel].enq(mdf);
        endrule
        rule readDoneRule;
-	  match { .sglId, .base } <- toGet(readReqs[channel]).get();
+	  match { .objId, .base } <- toGet(readReqs[channel]).get();
 	  let tag <- toGet(readTags).get();
-	  indication[channel].readDone(sglId, base, tag);
+	  indication[channel].readDone(objId, base, tag);
        endrule
        rule writeDoneRule;
-	  match { .sglId, .base } <- toGet(writeReqs[channel]).get();
+	  match { .objId, .base } <- toGet(writeReqs[channel]).get();
 	  let done <- we.writeServers[channel].done.get();
 	  let tag <- toGet(writeTags[channel]).get();
-	  indication[channel].writeDone(sglId, base, tag);
+	  indication[channel].writeDone(objId, base, tag);
        endrule
    end
 
@@ -102,18 +122,18 @@ module mkDmaController#(Vector#(numChannels,DmaIndication) indication)(DmaContro
 	 method Action burstLen(Bit#(8) burstLenBytes);
 	      burstLenReg <= burstLenBytes;
 	 endmethod
-	 method Action read(Bit#(32) sglId, Bit#(32) base, Bit#(32) bytes, Bit#(8) tag);
-	      readReqs[channel].enq(tuple2(sglId, base));
-	      re.readServers[channel].request.put(MemengineCmd {sglId: truncate(sglId),
+	 method Action read(Bit#(32) objId, Bit#(32) base, Bit#(32) bytes, Bit#(8) tag);
+	      readReqs[channel].enq(tuple2(objId, base));
+	      re.readServers[channel].request.put(MemengineCmd {sglId: truncate(objId),
 								base: extend(base),
 								burstLen: extend(burstLenReg),
 								len: bytes,
 								tag: truncate(tag)
 								});
 	 endmethod
-	 method Action write(Bit#(32) sglId, Bit#(32) base, Bit#(32) bytes, Bit#(8) tag);
-	      writeReqs[channel].enq(tuple2(sglId, base));
-	      we.writeServers[channel].request.put(MemengineCmd {sglId: truncate(sglId),
+	 method Action write(Bit#(32) objId, Bit#(32) base, Bit#(32) bytes, Bit#(8) tag);
+	      writeReqs[channel].enq(tuple2(objId, base));
+	      we.writeServers[channel].request.put(MemengineCmd {sglId: truncate(objId),
 								 base: extend(base),
 								 burstLen: extend(burstLenReg),
 								 len: bytes,

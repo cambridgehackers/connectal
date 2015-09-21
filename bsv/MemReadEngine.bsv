@@ -30,6 +30,7 @@ import BRAMFIFO::*;
 import ConfigCounter::*;
 import Connectable::*;
 import ConnectalMemory::*;
+import ConnectalBramFifo::*;
 import MemTypes::*;
 import Pipe::*;
 import MemUtils::*;
@@ -87,11 +88,18 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
    let verbose = False;
    let beatShift = fromInteger(valueOf(beatShift));
 
+   let clock <- exposeCurrentClock();
+   let reset <- exposeCurrentReset();
+
    Integer bufferSizeBeats = bufferSizeBytes/valueOf(busWidthBytes);
    Vector#(numServers, Reg#(Bool))          clientInFlight <- replicateM(mkReg(False));
    Vector#(numServers, ConfigCounter#(16))  clientAvail <- replicateM(mkConfigCounter(fromInteger(bufferSizeBeats)));
    Vector#(numServers, Reg#(MemengineCmd))  clientCommand <- replicateM(mkReg(unpack(0)));
+`ifdef USE_DUAL_CLOCK_FIFOF
+   Vector#(numServers, FIFOF#(MemDataF#(userWidth))) clientDataFifo <- replicateM(mkDualClockBramFIFOF(clock, reset, clock, reset));
+`else
    Vector#(numServers, FIFOF#(MemDataF#(userWidth))) clientDataFifo <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
+`endif
    Vector#(numServers, FIFO#(MemengineCmd)) clientRequest <- replicateM(mkFIFO());
    Vector#(numServers, Reg#(Bit#(32)))      clientLen <- replicateM(mkReg(unpack(0)));
    Vector#(numServers, Reg#(Bit#(32)))      clientBase <- replicateM(mkReg(unpack(0)));
@@ -123,35 +131,31 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
 	 if (verbose) $display("mkMemReadEngineBuff::%d rule_startNew %d %d", counter, idx, clientAvail[idx].read);
       endrule
 
-   rule rule_checkAvail;
-      if (clientInFlight[idx]) begin
+      rule rule_checkAvail if (clientInFlight[idx]);
          let cmd_len = clientNext[idx].len;
          let last_burst = clientNext[idx].last;
-	 let cond0 <- clientAvail[idx].maybeDecrement(unpack(extend(cmd_len>>beatShift)));
-	 serverCheckAvail[idx].enq(tuple3(cond0,last_burst,cmd_len));
-	 if (verbose) $display("mkMemReadEngineBuff::%d rule_checkAvail avail[%d] %d burstLen %d cond0 %d last_burst %d", counter, idx, clientAvail[idx].read(), cmd_len>>beatShift, cond0, last_burst);
-      end
-   endrule
+         let cond0 <- clientAvail[idx].maybeDecrement(unpack(extend(cmd_len>>beatShift)));
+         serverCheckAvail[idx].enq(tuple3(cond0,last_burst,cmd_len));
+         if (verbose) $display("mkMemReadEngineBuff::%d rule_checkAvail avail[%d] %d burstLen %d cond0 %d last_burst %d", counter, idx, clientAvail[idx].read(), cmd_len>>beatShift, cond0, last_burst);
+      endrule
 
-   // should use an EHR for clientInFlight to avoid the need for this pragma
-   (* descending_urgency = "rule_requestServer, rule_startNew" *)
-   rule rule_requestServer;
-      match {.cond0,.last_burst,.cmd_len} <- toGet(serverCheckAvail[idx]).get;
-      if  (cond0) begin
-	 if (verbose) $display("mkMemReadEngineBuff::%d rule_requestServer clientLen %d idx %d cond0 %d last_burst %d", counter, clientLen[idx], idx, cond0, last_burst);
-	 clientSReq[idx].enq(ServerRequest{
-              idx:fromInteger(idx),sglId:clientCommand[idx].sglId,base:clientBase[idx],
-              tag:clientCommand[idx].tag,last:last_burst,burstLen:cmd_len});
-         clientBase[idx] <= clientBase[idx] + extend(cmd_len);
-         clientLen[idx] <= clientLen[idx] - extend(cmd_len);
-         clientNext[idx] <= getNext(clientLen[idx], clientCommand[idx].burstLen);
-	 if (last_burst) begin
-	    if (verbose) $display("mkMemReadEngineBuff::%d rule_requestServer last_burst %d", counter, last_burst);
-	    clientInFlight[idx] <= False;
-	 end
-      end
-   endrule
-end
+      rule rule_requestServer if (clientInFlight[idx]);
+         match {.cond0,.last_burst,.cmd_len} <- toGet(serverCheckAvail[idx]).get;
+         if  (cond0) begin
+	    if (verbose) $display("mkMemReadEngineBuff::%d rule_requestServer clientLen %d idx %d cond0 %d last_burst %d", counter, clientLen[idx], idx, cond0, last_burst);
+	    clientSReq[idx].enq(ServerRequest{
+                 idx:fromInteger(idx),sglId:clientCommand[idx].sglId,base:clientBase[idx],
+                 tag:clientCommand[idx].tag,last:last_burst,burstLen:cmd_len});
+            clientBase[idx] <= clientBase[idx] + extend(cmd_len);
+            clientLen[idx] <= clientLen[idx] - extend(cmd_len);
+            clientNext[idx] <= getNext(clientLen[idx], clientCommand[idx].burstLen);
+	    if (last_burst) begin
+	       if (verbose) $display("mkMemReadEngineBuff::%d rule_requestServer last_burst %d", counter, last_burst);
+	       clientInFlight[idx] <= False;
+	    end
+         end
+      endrule
+   end
    
    rule read_data_rule;
       let d <- toGet(serverDataFifo).get();
@@ -176,8 +180,8 @@ end
       rs[i] = (interface MemReadEngineServer#(userWidth);
 		  interface Put request;
 		     method Action put(MemengineCmd cmd);
-			Bit#(32) bsb = fromInteger(bufferSizeBytes);
 `ifdef SIMULATION
+			Bit#(32) bsb = fromInteger(bufferSizeBytes);
 			Bit#(32) dw = fromInteger(valueOf(busWidthBytes));
 			let mdw = ((cmd.len)/dw)*dw != cmd.len;
 			let bbl = extend(cmd.burstLen) > bsb;

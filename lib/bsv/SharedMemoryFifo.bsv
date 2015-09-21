@@ -75,16 +75,16 @@ module mkSharedMemoryPipeOut#(Vector#(2, MemReadEngineServer#(64)) readEngine, V
    MIMO#(2,1,2,Bit#(32)) readMimo <- mkMIMO(mimoConfig);
    Vector#(pipeCount, FIFOF#(Bit#(32))) dataFifo <- replicateM(mkFIFOF);
 
-   let verbose = True;
+   let verbose = False;
 
-   rule updateReqWrPtrRdPtr if (state == Idle && readyReg);
-      if (verbose) $display("updateReqWrPtrRdPtr");
+   rule updateReqRdWrPtr if (state == Idle && readyReg);
+      if (verbose) $display("updateReqRdWrPtr");
       readEngine[0].request.put(
           MemengineCmd {sglId: sglIdReg, base: 0, burstLen: 16, len: 16, tag: 0});
       state <= WrPtrRequested;
    endrule
 
-   rule receiveReqWrPtrRdPtr if (state == WrPtrRequested || state == RdPtrRequested);
+   rule receiveReqRdWrPtr if (state == WrPtrRequested || state == RdPtrRequested);
       let v <- toGet(readEngine[0].data).get();
       let w0 = v.data[31:0];
       let w1 = v.data[63:32];
@@ -109,7 +109,7 @@ module mkSharedMemoryPipeOut#(Vector#(2, MemReadEngineServer#(64)) readEngine, V
             state <= Idle;
       end
       if (verbose)
-         $display("receiveReqWrPtrRdPtr state=%d w0=%x w1=%x wrPtr=%d rdPtr=%d limit=%d", state, w0, w1, wrPtr, rdPtr, limit);
+         $display("receiveReqRdWrPtr state=%d w0=%x w1=%x wrPtr=%d rdPtr=%d limit=%d", state, w0, w1, wrPtr, rdPtr, limit);
    endrule
 
    rule requestMessage if (state == RequestMessage);
@@ -238,13 +238,13 @@ module mkSharedMemoryPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes,
       end
    end
 
-   rule updateIndWrPtrRdPtr if (state == Idle && readyReg);
+   rule updateIndRdWrPtr if (state == Idle && readyReg);
       readEngine[0].request.put(
           MemengineCmd {sglId: sglIdReg, base: 0, burstLen: 16, len: 16, tag: 0});
       state <= WrPtrRequested;
    endrule
 
-   rule receiveIndWrPtrRdPtr if (state == WrPtrRequested || state == RdPtrRequested);
+   rule receiveIndRdWrPtr if (state == WrPtrRequested || state == RdPtrRequested);
       let md <- toGet(readEngine[0].data).get();
       let data = md.data;
       let w0 = data[31:0];
@@ -268,34 +268,36 @@ module mkSharedMemoryPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes,
             //state <= Idle;
       end
       if (verbose)
-         $display("receiveIndWrPtrRdPtr state=%d w0=%x w1=%x wrPtr=%d rdPtr=%d limit=%d", state, w0, w1, wrPtr, rdPtr, limitReg);
+         $display("receiveIndRdWrPtr state=%d w0=%x w1=%x wrPtr=%d rdPtr=%d limit=%d", state, w0, w1, wrPtr, rdPtr, limitReg);
    endrule
 
    rule send64bits;
       let v = gb.first;
       gb.deq();
+      if (verbose) $display("send64bits v=%h", v);
       writeEngine[0].data.enq(pack(v));
    endrule
 
    rule sendHeader if (state == SendHeader && interruptStatus);
-      //Bit#(16) messageBits = portal.messageSize.size(readyChannel);
-      //Bit#(16) roundup = messageBits[4:0] == 0 ? 0 : 1;
-      //Bit#(16) numWords = (messageBits >> 5) + roundup;
-      //Bit#(16) totalWords = numWords + 1;
-      //Bit#(32) hdr = extend(readyChannel) << 16 | extend(numWords + 1);
       Bit#(32) hdr <- toGet(pipes[readyChannel]).get();
-      Bit#(16) numWords = hdr[15:0];
-      let totalWords = numWords;
-      if (numWords[0] == 1)
-         totalWords = numWords + 1;
-      paddingReg <= numWords[0] == 1;
-      $display("sendHeader hdr=%h numWords=%d totalWords=%d paddingReg=%d wrPtrReg=%h", hdr, numWords, totalWords, paddingReg, wrPtrReg);
-      wrPtrReg <= wrPtrReg + totalWords;
-      messageWordsReg <= numWords;
+      Bit#(16) totalWords = hdr[15:0];
+      let messageWords = totalWords-1;
+      let padding      = totalWords[0] == 1;
+      let paddedWords = (padding) ? totalWords+1 : totalWords;
+      let wrPtr = wrPtrReg + paddedWords;
+      if (wrPtr > limitReg) begin
+	 $display("wrPtr wrapping");
+	 wrPtr = 4;
+      end
+
+      $display("sendHeader hdr=%h messageWords=%d totalWords=%d paddingReg=%d wrPtrReg=%d wrPtr=%d", hdr, messageWords, totalWords, paddingReg, wrPtrReg, wrPtr);
+      wrPtrReg <= wrPtr;
+      messageWordsReg <= messageWords;
+      paddingReg      <= padding;
       methodIdReg <= readyChannel;
       gb.enq(vec(hdr));
       writeEngine[0].request.put( MemengineCmd
-          {sglId: sglIdReg, base: extend(wrPtrReg) << 2, burstLen: 8, len: extend(totalWords) << 2, tag: 0});
+          {sglId: sglIdReg, base: extend(wrPtrReg) << 2, burstLen: 8, len: extend(paddedWords) << 2, tag: 0});
       state <= SendMessage;
    endrule
 
@@ -303,7 +305,7 @@ module mkSharedMemoryPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes,
       messageWordsReg <= messageWordsReg - 1;
       let v <- toGet(pipes[methodIdReg]).get();
       gb.enq(vec(v));
-      $display("sendMessage v=%h messageWords=%d", v, messageWordsReg);
+      $display("sendMessage v=%h messageWords=%d paddingReg=%d", v, messageWordsReg, paddingReg);
       if (messageWordsReg == 1) begin
          if (paddingReg)
             state <= SendPadding;
@@ -319,7 +321,8 @@ module mkSharedMemoryPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes,
    endrule
 
    rule updateWrPtr if (state == UpdateWrPtr);
-      $display("updateIndWrPtr limit=%d wrPtr=%d", limitReg, wrPtrReg);
+      $display("updateWrPtr limit=%d wrPtr=%d", limitReg, wrPtrReg);
+      Bit#(64) metadata = extend(limitReg);
       gb.enq(vec(extend(limitReg)));
       writeEngine[0].request.put(
              MemengineCmd {sglId: sglIdReg, base: 0 << 2, burstLen: 8, len: 2 << 2, tag: 0});
@@ -327,7 +330,7 @@ module mkSharedMemoryPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes,
    endrule
 
    rule updateWrPtr2 if (state == UpdateWrPtr2);
-      $display("updateIndWrPtr2");
+      $display("updateWrPtr2");
       gb.enq(vec(extend(wrPtrReg)));
       state <= SendHeader;
    endrule
