@@ -45,25 +45,32 @@ class DmaBuffer {
     char *buf;
     int ref;
 public:
+    // Allocates a portal memory object of specified size and maps it into user process
     DmaBuffer(DmaManager *mgr, int size) : mgr(mgr), size(size), ref(-1) {
 	fd = portalAlloc(size, 1);
 	buf = (char *)portalMmap(fd, size);
     }
+    // Dereferences and deallocates the portal memory object
+    // if destructor is not called, the object is automatically
+    // unreferenced and freed when the process exits
     ~DmaBuffer() {
-	// if destructor is not called, the object is automatically
-	// unreferenced and freed when the process exits
 	mgr->dereference(fd);
 	portalMunmap(buf, size);
 	close(fd);
     }
+    // returns the address of the mapped buffer
     char *buffer() {
 	return buf;
     }
+    // returns the reference to the object
+    //
+    // Sends the address translation table to hardware MMU if necessary.
     int reference() {
 	if (ref == -1)
 	    ref = mgr->reference(fd);
 	return ref;
     }
+    // Removes the address translation table from the hardware MMU
     void dereference() {
 	if (ref != -1)
 	    mgr->dereference(ref);
