@@ -125,7 +125,17 @@ static void checkSignature(const char *filename, int ioctlnum)
     PortalSignaturePcie signature;
 #endif
 
-    int fd = open(filename, O_RDONLY);
+    int fd;
+    int tries;
+    for (tries = 0; tries < 10; tries++) {
+      fd = open(filename, O_RDONLY);
+      if (fd >= 0)
+	  break;
+    }
+    if (fd < 0) {
+	fprintf(stderr, "[%s:%d] failed to open %s %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
+	return;
+    }
     if (strcmp(filename, "/dev/portalmem")) {
         ssize_t len = read(fd, &status, sizeof(status));
         if (len != sizeof(status))
@@ -184,7 +194,7 @@ void initPortalHardware(void)
 	  fprintf(stderr, "subprocess pid %d completed status=%x %d\n", pid, status, WEXITSTATUS(status));
 	  if (WEXITSTATUS(status) != 0)
 	      exit(-1);
-	  for (try = 0; try < 4; try++) {
+	  for (try = 0; try < 10; try++) {
 	    fd = open("/dev/connectal", O_RDONLY); /* scan the fpga directory */
 	    if (fd < 0) {
 	      fprintf(stderr, "[%s:%d] error opening /dev/connectal %s\n", __FUNCTION__, __LINE__, strerror(errno));

@@ -312,7 +312,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
    endrule
 
    FIFO#(PhysMemRequest#(40,buswidth)) readReqFifo <- mkFIFO();
-   rule readReqRule if (!writeInProgress && !writeDataMimo.deqReady());
+   rule readReqRule if (!writeInProgress); // && !writeDataMimo.deqReady());
       let req <- toGet(readReqFifo).get();
       let burstLen = req.burstLen >> beat_shift;
       let addr = req.addr;
