@@ -10,7 +10,7 @@ Homepage: https://github.com/cambridgehackers/connectal
 
 Package: connectal
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, python (>= 2.7), python-ply, python-gmpy, python-netifaces, python-gflags, python-support (>= 0.90), dkms, vim, fpgamake, buildcache, fpgajtag, pciescan, gcc, g++, libfontconfig1, libxft2
+Depends: ${shlibs:Depends}, ${misc:Depends}, python (>= 2.7), python-ply, python-gmpy, python-netifaces, python-gflags, python-support (>= 0.90), dkms, fpgamake, buildcache, fpgajtag, pciescan, gcc, g++, libfontconfig1, libxft2
 Description: Software-driven hardware development framework
  Connectal provides a hardware-software interface for applications
  split between user mode code and custom hardware in an FPGA. Portal
