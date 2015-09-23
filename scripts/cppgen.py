@@ -37,6 +37,8 @@ public:
         Portal(id, tile, bufsize, NULL, NULL, this, poller), cb(cbarg) {};
     %(className)sProxy(int id, PortalTransportFunctions *item, void *param, %(classNameOrig)sCb *cbarg = &%(className)sProxyReq, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
         Portal(id, DEFAULT_TILE, bufsize, NULL, NULL, item, param, this, poller), cb(cbarg) {};
+    %(className)sProxy(int id, PortalPoller *poller) :
+        Portal(id, DEFAULT_TILE, %(classNameOrig)s_reqinfo, NULL, NULL, NULL, NULL, this, poller), cb(&%(className)sProxyReq) {};
 '''
 
 wrapperClassPrefixTemplate='''
