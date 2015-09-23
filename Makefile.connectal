@@ -59,7 +59,7 @@ verilog.%: gen.%
 run.%:
 	$(MAKE) -C $* --no-print-directory run
 
-IPDIR?=$(CONNECTALDIR)/out
+IPDIR?=$(PROJECTDIR)/ip
 NUMBER_OF_USER_TILES?=1
 SLAVE_DATA_BUS_WIDTH?=32
 SLAVE_CONTROL_ADDR_WIDTH?=5
