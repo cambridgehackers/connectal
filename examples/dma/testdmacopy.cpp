@@ -122,7 +122,7 @@ public:
 };
 
 ChannelWorker::ChannelWorker(int channel)
-  : poller(new PortalPoller(0)), channel(channel), size(1024*1024), waitCount(0)
+  : poller(new PortalPoller(0)), channel(channel), size(8*1024*1024), waitCount(0)
 {
     dmaRequest    = new DmaRequestProxy(proxyNames[channel], poller);
     dmaIndication = new DmaIndication(wrapperNames[channel], poller, this);
@@ -132,8 +132,13 @@ ChannelWorker::ChannelWorker(int channel)
     }
   }
 
+volatile int started;
 void ChannelWorker::run()
 {
+    while (!started) {
+	// wait for other threads to be ready
+    }
+
     fprintf(stderr, "[%s:%d] channel %d requesting first dma\n", __FUNCTION__, __LINE__, channel);
     dmaRequest->read(buffers[0]->reference(), 0, size/2, 0);
     waitCount++;
@@ -172,12 +177,14 @@ int main(int argc, const char **argv)
       ChannelWorker *channel = new ChannelWorker(i);
       pthread_create(&threads[i], 0, channel->threadfn, channel);
     }
-
+    portalTimerStart(0);
+    started = 1;
     // wait for threads to exit
     for (int i = 0; i < 2; i++) {
       void *ret;
       pthread_join(threads[i], &ret);
       fprintf(stderr, "thread exited ret=%p\n", ret);
     }
+    platformStatistics();
     return 0;
 }
