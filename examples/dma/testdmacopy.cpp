@@ -30,11 +30,17 @@
 #include "dmaManager.h"
 #include "DmaIndication.h"
 #include "DmaRequest.h"
+#include "LoopbackControl.h"
 
 class DmaIndication;
 DmaManager *dma;
-static int proxyNames[] = { IfcNames_DmaRequestS2H0, IfcNames_DmaRequestS2H1 };
-static int wrapperNames[] = { IfcNames_DmaIndicationH2S0, IfcNames_DmaIndicationH2S1 };
+LoopbackControlProxy *loopbackControl;
+static int proxyNames[] = { IfcNames_DmaRequestS2H0 
+			    , IfcNames_DmaRequestS2H1 
+};
+static int wrapperNames[] = { IfcNames_DmaIndicationH2S0
+			      , IfcNames_DmaIndicationH2S1 
+};
 
 pthread_t threads[2];
 
@@ -90,7 +96,11 @@ class ChannelWorker {
 public:
     ChannelWorker(int channel);
     void run();
-    void post() { waitCount--; }
+    void post() {
+      fprintf(stderr, "post channel=%d\n", channel);
+      waitCount--;
+      loopbackControl->marker(0xf00f);
+    }
     static void *threadfn(void *c);
 };
 
@@ -98,33 +108,52 @@ class DmaIndication : public DmaIndicationWrapper
 {
     ChannelWorker *channel;
     sem_t sem;
+  int count;
+  void incr_count() {
+    count--;
+    fprintf(stderr, "DmaIndication::incr_count() channel=%p\n", channel);
+    if (channel)
+      channel->post();
+    if (count <= 0) {
+      //sem_post(&sem);
+    }
+  }
 public:
     DmaIndication(unsigned int id, PortalPoller *poller = 0, ChannelWorker *channel = 0)
-	: DmaIndicationWrapper(id, poller), channel(channel) {
-	sem_init(&sem, 0, 0);
+      : DmaIndicationWrapper(id, poller), channel(channel), count(4) {
+      //sem_init(&sem, 0, 0);
     }
 
     void readDone ( uint32_t sglId, uint32_t base, const uint8_t tag ) {
-    fprintf(stderr, "[%s:%d] sglId=%d base=%08x tag=%d\n", __FUNCTION__, __LINE__, sglId, base, tag);
-	sem_post(&sem);
-	if (channel)
-	    channel->post();
+      fprintf(stderr, "[%s:%d] sglId=%d base=%08x tag=%d\n", __FUNCTION__, __LINE__, sglId, base, tag);
+      //sem_post(&sem);
+      incr_count();
     }
     void writeDone ( uint32_t sglId, uint32_t base, uint8_t tag ) {
-    fprintf(stderr, "[%s:%d] sglId=%d base=%08x tag=%d\n", __FUNCTION__, __LINE__, sglId, base, tag);
-	sem_post(&sem);
-	if (channel)
-	    channel->post();
+      fprintf(stderr, "[%s:%d] sglId=%d base=%08x tag=%d\n", __FUNCTION__, __LINE__, sglId, base, tag);
+      //sem_post(&sem);
+      incr_count();
     }
     void wait() {
 	sem_wait(&sem);
     }
 };
 
+#ifdef SIMULATION
+int arraySize = 4*1024;
+#else
+int arraySize = 16*1024*1024;
+#endif
+int doWrite = 1;
+int doRead = 1;
+int numchannels = 1;
+int numiters = 1;
+
 ChannelWorker::ChannelWorker(int channel)
-  : poller(new PortalPoller(0)), channel(channel), size(8*1024*1024), waitCount(0)
+    : poller(new PortalPoller(0)), channel(channel), size(arraySize), waitCount(0)
 {
     dmaRequest    = new DmaRequestProxy(proxyNames[channel], poller);
+    dmaRequest->pint.busyType = BUSY_SPIN;
     dmaIndication = new DmaIndication(wrapperNames[channel], poller, this);
     fprintf(stderr, "[%s:%d] channel %d dma mgr %p allocating buffers\n", __FUNCTION__, __LINE__, channel, dma);
     for (int i = 0; i < 4; i++) {
@@ -133,31 +162,33 @@ ChannelWorker::ChannelWorker(int channel)
   }
 
 volatile int started;
+sem_t workersem;
 void ChannelWorker::run()
 {
     while (!started) {
 	// wait for other threads to be ready
     }
 
-    fprintf(stderr, "[%s:%d] channel %d requesting first dma\n", __FUNCTION__, __LINE__, channel);
-    dmaRequest->read(buffers[0]->reference(), 0, size/2, 0);
-    waitCount++;
+    portalTimerStart(0);
+    for (int i = 0; i < numiters; i++) {
+	if (doRead) {
+	    fprintf(stderr, "[%s:%d] channel %d requesting first dma\n", __FUNCTION__, __LINE__, channel);
+	    dmaRequest->read(buffers[0]->reference(), 0, size/2, 0);
+	    waitCount++;
+	}
 
-    dmaRequest->write(buffers[1]->reference(), 0, size/2, 1);
-    waitCount++;
-
-    fprintf(stderr, "[%s:%d] channel %d requesting second dma\n", __FUNCTION__, __LINE__, channel);
-    dmaRequest->read(buffers[2]->reference(), size/2, size/2, 2);
-    waitCount++;
-
-    dmaRequest->write(buffers[3]->reference(), size/2, size/2, 3);
-    waitCount++;
-
+	if (doWrite) {
+	    dmaRequest->write(buffers[1]->reference(), 0, size/2, 1);
+	    waitCount++;
+	}
+    }
     fprintf(stderr, "[%s:%d] channel %d waiting for responses\n", __FUNCTION__, __LINE__, channel);
     // poll
     while (waitCount > 0) {
 	poller->event();
     }
+    platformStatistics();
+    sem_post(&workersem);
 }
 
 void *ChannelWorker::threadfn(void *c)
@@ -167,24 +198,69 @@ void *ChannelWorker::threadfn(void *c)
     return 0;
 }
 
-int main(int argc, const char **argv)
+int main(int argc, char * const*argv)
 {
+    int opt;
+    while ((opt = getopt(argc, argv, "i:rws:")) != -1) {
+	switch (opt) {
+	case 'r':
+	    doWrite = 0;
+	    break;
+	case 'w':
+	    doRead = 0;
+	    break;
+	case 'i':
+	    numiters = strtoul(optarg, 0, 0);
+	    break;
+	case 's': {
+	    char *endptr = 0;
+	    arraySize = strtoul(optarg, &endptr, 0);
+	    if (endptr) {
+		switch (*endptr) {
+		case 'K':
+		    arraySize *= 1024;
+		    break;
+		case 'M':
+		    arraySize *= 1024*1024;
+		    break;
+		default:
+		    break;
+		}
+	    }
+	} break;
+	default:
+	    fprintf(stderr,
+		    "Usage: %s [-r] [-w] [-s transferSize]\n"
+		    "       -r read only\n"
+		    "       -r write only\n",
+		    argv[0]);
+	    exit(EXIT_FAILURE);
+	}
+    }
+    loopbackControl = new LoopbackControlProxy(IfcNames_LoopbackControlS2H);
+    loopbackControl->loopback(0);
     fprintf(stderr, "[%s:%d] calling platformInit\n", __FUNCTION__, __LINE__);
     dma = platformInit();
     fprintf(stderr, "[%s:%d] creating proxy and wrapper\n", __FUNCTION__, __LINE__);
 
-    for (int i = 0; i < 2; i++) {
+    sem_init(&workersem, 0, 0);
+    for (int i = 0; i < numchannels; i++) {
       ChannelWorker *channel = new ChannelWorker(i);
       pthread_create(&threads[i], 0, channel->threadfn, channel);
     }
-    portalTimerStart(0);
+    //portalTimerStart(0);
     started = 1;
     // wait for threads to exit
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < numchannels; i++) {
+      sem_wait(&workersem);
+    }
+    //platformStatistics();
+
+    // wait for threads to exit
+    for (int i = 0; i < numchannels; i++) {
       void *ret;
       pthread_join(threads[i], &ret);
       fprintf(stderr, "thread exited ret=%p\n", ret);
     }
-    platformStatistics();
     return 0;
 }

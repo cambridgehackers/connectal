@@ -22,26 +22,53 @@
 
 import Vector::*;
 import BuildVector::*;
+import FIFOF::*;
+import BRAMFIFO::*;
+import GetPut::*;
 import Connectable::*;
 import MemTypes::*;
 import HostInterface::*;
 import DmaController::*;
+import Pipe::*;
+
+import Interfaces::*;
 
 interface DmaLoopback;
+   interface LoopbackControl control;
    interface DmaRequest request0;
    interface DmaRequest request1;
    interface Vector#(1,MemReadClient#(DataBusWidth))      readClient;
    interface Vector#(1,MemWriteClient#(DataBusWidth))     writeClient;
 endinterface
 
-module mkLoopback#(DmaController#(numChannels) dma)(Empty);
-   mkConnection(dma.readData, dma.writeData);
-endmodule
+typedef 2 NumChannels;
 
 module mkDmaLoopback#(DmaIndication indication0, DmaIndication indication1)(DmaLoopback);
-   DmaController#(2) dma <- mkDmaController(vec(indication0,indication1));
-   let app <- mkLoopback(dma);
+   DmaController#(NumChannels) dma <- mkDmaController(vec(indication0,indication1));
+   Reg#(Bool) loopbackReg <- mkReg(False);
    
+   for (Integer channel = 0; channel < valueOf(NumChannels); channel = channel + 1) begin
+      FIFOF#(MemDataF#(DataBusWidth)) buffer <- mkSizedBRAMFIFOF(1024);
+      rule readDataRule;
+	 let md <- toGet(dma.readData[channel]).get();
+	 if (loopbackReg)
+	    buffer.enq(md);
+      endrule
+      rule writeDataRule;
+	 let md = unpack(0);
+         if (loopbackReg)
+	    let md <- toGet(buffer).get();
+	 dma.writeData[channel].enq(md);
+      endrule
+   end
+
+   interface LoopbackControl control;
+      method Action loopback(Bool lb);
+	 loopbackReg <= lb;
+      endmethod
+      method Action marker(Bit#(32) fb);
+      endmethod
+   endinterface
    interface request0    = dma.request[0];
    interface request1    = dma.request[1];
    interface readClient  = dma.readClient;
