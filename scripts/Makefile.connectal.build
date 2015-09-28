@@ -89,7 +89,7 @@ endif
 ifeq ($(USE_BUILDCACHE),1)
 BUILDCACHE=$(shell cd $(CONNECTALDIR)/..; /bin/pwd)/buildcache/buildcache
 ifeq ("$(BUILDCACHE_CACHEDIR)", "")
-BUILDCACHE_CACHEDIR=$(shell cd $(CONNECTALDIR)/..; /bin/pwd)/fpgamake-cache
+BUILDCACHE_CACHEDIR=buildcache-cache
 endif
 endif
 
