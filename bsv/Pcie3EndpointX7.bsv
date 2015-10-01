@@ -132,11 +132,11 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    Reset derivedReset <- mkAsyncReset(4, pcieReset250, derivedClock);
    Reset user_reset <- mkAsyncReset(2, pcie_ep.user_reset, pcie_ep.user_clk);
 
-   FIFOF#(AxiStCq) fAxiCq <- mkBypassFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   FIFOF#(AxiStRc) fAxiRc <- mkBypassFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   FIFOF#(AxiStCq) fAxiCq <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   FIFOF#(AxiStRc) fAxiRc <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
 
-   FIFOF#(AxiStRq) fAxiRq <- mkBypassFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   FIFOF#(AxiStCc) fAxiCc <- mkBypassFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   FIFOF#(AxiStRq) fAxiRq <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   FIFOF#(AxiStCc) fAxiCc <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
 
    FIFOF#(TLPData#(16)) fcq <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    FIFOF#(TLPData#(16)) frc <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
@@ -254,7 +254,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
 
    rule rl_rc_header (fAxiRc.first.sop);
       RCDescriptor rc_desc = unpack(fAxiRc.first.data [95:0]);
-      Bit#(32) data = fAxiRc.first.data[31:0];
+      Bit#(32) data = fAxiRc.first.data[128+32-1:128];
       TLPData#(16) tlp16 = convertRCDescriptorToTLP16(rc_desc, data);
       rg_dwcount <= (rc_desc.dwcount == 0) ? 0 : rc_desc.dwcount - 1;
       frc.enq(tlp16);
@@ -356,6 +356,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       interface request = toPut(frq);
       interface response = toGet(frc);
    endinterface
+   // Requests from other PCIe devices
    interface Server tlpc;
       interface request = toPut(fcc);
       interface response = toGet(fcq);
