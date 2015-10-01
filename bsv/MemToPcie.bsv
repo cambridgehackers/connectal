@@ -26,12 +26,14 @@ import GetPut       :: *;
 import Connectable  :: *;
 import PCIE         :: *;
 import DefaultValue :: *;
-import MIMO         :: *;
-import MIFO         :: *;
 import Vector       :: *;
 import ClientServer :: *;
-import MemTypes     :: *;
+import MIMO         :: *;
 import Probe        :: *;
+
+import ConnectalMimo :: *;
+import MIFO         :: *;
+import MemTypes     :: *;
 import ConfigCounter ::*;
 
 typedef struct {
@@ -90,7 +92,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 
    mimoCfg.bram_based = True;
    mimoCfg.unguarded = True;
-    MIMO#(busWidthWords,4,WriteDataMimoSize,Bit#(32)) writeDataMimo <- mkMIMO(mimoCfg);
+    MIMO#(busWidthWords,4,WriteDataMimoSize,Bit#(32)) writeDataMimo <- ConnectalMimo::mkMIMOBram(mimoCfg);
     ConfigCounter#(8) writeDataCnt <- mkConfigCounter(0);
     Reg#(Bit#(WriteDataBurstLenSize)) writeBurstCount <- mkReg(0);
     FIFO#(Bit#(WriteDataBurstLenSize)) writeBurstCountFifo <- mkFIFO();
