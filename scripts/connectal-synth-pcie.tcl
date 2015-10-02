@@ -40,7 +40,11 @@ if {$need_pcie == "x7_gen2x8"} {
 }
 
 if {$need_pcie == "x7_gen3x8"} {
-    set pcieversion {3.0}
+    if {[version -short] >= "2015.2"} {
+	set pcieversion {4.0}
+    } else {
+	set pcieversion {3.0}
+    }
     set maxlinkwidth {X8}
     connectal_synth_ip pcie3_7x $pcieversion pcie3_7x_0 [list CONFIG.PL_LINK_CAP_MAX_LINK_WIDTH {X8} CONFIG.PL_LINK_CAP_MAX_LINK_SPEED {8.0_GT/s} CONFIG.TL_PF_ENABLE_REG {false} CONFIG.vendor_id {1be7} CONFIG.PF0_DEVICE_ID {c100} CONFIG.PF0_SUBSYSTEM_VENDOR_ID {1be7} CONFIG.PF0_SUBSYSTEM_ID {a705} CONFIG.PF0_Use_Class_Code_Lookup_Assistant {false} CONFIG.pf0_base_class_menu {Memory_controller} CONFIG.pf0_bar0_64bit {true} CONFIG.pf0_bar0_size {16} CONFIG.pf0_bar2_enabled {true} CONFIG.pf0_bar2_64bit {true} CONFIG.pf0_bar2_scale {Megabytes} CONFIG.pf0_bar2_size {1} CONFIG.PF0_INTERRUPT_PIN {NONE} CONFIG.pf0_msi_enabled {false} CONFIG.pf0_msix_enabled {true} CONFIG.PF0_MSIX_CAP_TABLE_SIZE {010} CONFIG.PF0_MSIX_CAP_TABLE_OFFSET {00000200} CONFIG.PF0_MSIX_CAP_PBA_OFFSET {000001f0} CONFIG.axisten_if_width {256_bit} CONFIG.AXISTEN_IF_RC_STRADDLE {true} CONFIG.axisten_if_enable_client_tag {true} CONFIG.cfg_ctl_if {false} CONFIG.cfg_ext_if {false} CONFIG.cfg_fc_if {false} CONFIG.cfg_mgmt_if {false} CONFIG.cfg_status_if {false} CONFIG.cfg_tx_msg_if {false} CONFIG.en_ext_clk {false} CONFIG.axisten_freq {250} CONFIG.PF0_PM_CAP_SUPP_D1_STATE {false} CONFIG.pf0_dsn_enabled {true} CONFIG.mode_selection {Advanced} CONFIG.pcie_blk_locn {X0Y1} CONFIG.per_func_status_if {false} CONFIG.en_ext_clk {false} CONFIG.rcv_msg_if {false} CONFIG.tx_fc_if {false} CONFIG.shared_logic_in_core {true} CONFIG.en_msi_per_vec_masking {false} CONFIG.pipe_mode_sim {Enable_External_PIPE_Interface} CONFIG.pipe_sim {false} CONFIG.en_ext_pipe_interface {true}]
 }
