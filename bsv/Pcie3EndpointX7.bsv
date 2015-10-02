@@ -54,10 +54,6 @@ interface PcieEndpointX7#(numeric type lanes);
    interface PciewrapCommon#(lanes)            common;
    interface Server#(TLPData#(16), TLPData#(16)) tlpr;
    interface Server#(TLPData#(16), TLPData#(16)) tlpc;
-   interface Clock epClock125;
-   interface Reset epReset125;
-   interface Clock epClock250;
-   interface Reset epReset250;
    interface Clock epPcieClock;
    interface Reset epPcieReset;
    interface Clock epPortalClock;
@@ -116,9 +112,9 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    PcieWrap#(PcieLanes) pcie_ep <- mkPcieWrap(defaultClock, defaultResetInverted);
 
    // The PCIe endpoint exports full (250MHz) and half-speed (125MHz) clocks
-   Clock clock250 = pcie_ep.user_clk;
+   Clock pcieClock250 = pcie_ep.user_clk;
    Reset user_reset_n <- mkResetInverter(pcie_ep.user_reset, clocked_by pcie_ep.user_clk);
-   Reset reset250 <- mkAsyncReset(4, user_reset_n, clock250);
+   Reset pcieReset250 <- mkAsyncReset(4, user_reset_n, pcieClock250);
 
    ClockGenerator7Params     clkgenParams = defaultValue;
    clkgenParams.clkin1_period    = 4.000; //  250MHz
@@ -129,11 +125,11 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    clkgenParams.clkout1_divide     = round(mainClockPeriod);
    clkgenParams.clkout1_duty_cycle = 0.5;
    clkgenParams.clkout1_phase      = 0.0000;
-   ClockGenerator7           clkgen <- mkClockGenerator7(clkgenParams, clocked_by clock250, reset_by reset250);
-   Clock clock125 = clkgen.clkout1;
-   Reset reset125 <- mkAsyncReset(4, reset250, clock125);
+   ClockGenerator7           clkgen <- mkClockGenerator7(clkgenParams, clocked_by pcieClock250, reset_by pcieReset250);
+   Clock mainClock = clkgen.clkout1;
+   Reset mainReset <- mkAsyncReset(4, pcieReset250, mainClock);
    Clock derivedClock = clkgen.clkout0;
-   Reset derivedReset <- mkAsyncReset(4, reset250, derivedClock);
+   Reset derivedReset <- mkAsyncReset(4, pcieReset250, derivedClock);
    Reset user_reset <- mkAsyncReset(2, pcie_ep.user_reset, pcie_ep.user_clk);
 
    FIFOF#(AxiStCq) fAxiCq <- mkBypassFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
@@ -348,17 +344,13 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
 
    endrule
 
-`ifdef PCIE_250MHZ
-   Clock portalClock = clock250;
-   Reset portalReset = reset250;
-`else
-   Clock portalClock = clock125;
-   Reset portalReset = reset125;
-`endif
    // The PCIE endpoint is processing Gen3 descriptors at 250MHz. The
    // AXI bridge is accepting TLPData#(16)s at 250 MHz. The
    // conversion uses half of Gen3 descriptor.
    //mkConnection(tlp8, gb.tlp, clocked_by portalClock, reset_by portalReset);
+
+   let portalClock = (mainClockPeriod == pcieClockPeriod) ? pcieClock250 : mainClock;
+   let portalReset = (mainClockPeriod == pcieClockPeriod) ? pcieReset250 : mainReset;
 
    interface Server tlpr;
       interface request = toPut(frq);
@@ -372,14 +364,10 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    interface Pcie3wrapUser user = pcie_ep.user;
    interface PciewrapPipe pipe = pcie_ep.pipe;
    interface PciewrapCommon common= pcie_ep.common;
-   interface Clock epClock125 = clock125;
-   interface Reset epReset125 = reset125;
-   interface Clock epClock250 = clock250;
-   interface Reset epReset250 = reset250;
-   interface Clock epPcieClock = clock250;
-   interface Reset epPcieReset = reset250;
-   interface Clock epPortalClock = clock250;
-   interface Reset epPortalReset = reset250;
+   interface Clock epPcieClock = pcieClock250;
+   interface Reset epPcieReset = pcieReset250;
+   interface Clock epPortalClock = portalClock;
+   interface Reset epPortalReset = portalReset;
    interface Clock epDerivedClock = derivedClock;
    interface Reset epDerivedReset = derivedReset;
 endmodule: mkPcieEndpointX7
