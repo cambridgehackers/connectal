@@ -8,7 +8,7 @@
         "constraints": [],
         "implconstraints": ["constraints/xilinx/vc709.xdc"],
         "runscript" : "run.pcietest",
-        "CONNECTALFLAGS" : ["--mainclockperiod=8", "--derivedclockperiod=4", "--pcieclockperiod=8"],
+        "CONNECTALFLAGS" : ["--mainclockperiod=4", "--derivedclockperiod=4", "--pcieclockperiod=4"],
         "rewireclockstring" : ""
     },
     "leds" : {
