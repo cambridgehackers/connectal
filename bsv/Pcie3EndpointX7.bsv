@@ -279,7 +279,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    endrule
 
    Reg#(DWCount) cc_dwcount <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   FIFOF#(TLPData#(16)) fcc_tlps <- mkPipelineFIFOF (clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   FIFOF#(TLPData#(16)) fcc_tlps <- mkFIFOF (clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    // CC.
    rule get_cc_tlps;
       let tlp <- toGet(fcc).get;
@@ -304,7 +304,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    endrule
 
    // RQ.
-   FIFOF#(TLPData#(16)) frq_tlps <- mkPipelineFIFOF (clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   FIFOF#(TLPData#(16)) frq_tlps <- mkFIFOF (clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    Reg#(DWCount) rq_dwcount <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    Reg#(Maybe#(Bit#(32))) rq_mdw <- mkRegU(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    Reg#(Bit#(4)) rq_first_be <- mkRegU(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
