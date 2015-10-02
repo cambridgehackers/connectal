@@ -125,14 +125,14 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    clkgenParams.clkin1_period    = 4.000;
    clkgenParams.clkin_buffer     = False;
    clkgenParams.clkfbout_mult_f  = 4.000; // 1000MHz
-   clkgenParams.clkout0_divide_f = 8.000; //  125MHz
-   clkgenParams.clkout1_divide     = round(derivedClockPeriod);
+   clkgenParams.clkout0_divide_f = derivedClockPeriod;
+   clkgenParams.clkout1_divide     = round(mainClockPeriod);
    clkgenParams.clkout1_duty_cycle = 0.5;
    clkgenParams.clkout1_phase      = 0.0000;
    ClockGenerator7           clkgen <- mkClockGenerator7(clkgenParams, clocked_by clock250, reset_by reset250);
-   Clock clock125 = clkgen.clkout0; /* half speed user_clk */
+   Clock clock125 = clkgen.clkout1;
    Reset reset125 <- mkAsyncReset(4, reset250, clock125);
-   Clock derivedClock = clkgen.clkout1;
+   Clock derivedClock = clkgen.clkout0;
    Reset derivedReset <- mkAsyncReset(4, reset250, derivedClock);
    Reset user_reset <- mkAsyncReset(2, pcie_ep.user_reset, pcie_ep.user_clk);
 
