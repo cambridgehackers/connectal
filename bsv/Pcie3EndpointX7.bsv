@@ -361,8 +361,8 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    //mkConnection(tlp8, gb.tlp, clocked_by portalClock, reset_by portalReset);
 
    interface Server tlpr;
-      interface request = toPut(frc);
-      interface response = toGet(frq);
+      interface request = toPut(frq);
+      interface response = toGet(frc);
    endinterface
    interface Server tlpc;
       interface request = toPut(fcc);
