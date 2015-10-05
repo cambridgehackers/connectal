@@ -305,47 +305,47 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    endrule
 
    // RC.
-   Reg#(DWCount) rg_dwcount <- mkRegU(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   Reg#(Bool) rg_even <- mkReg(True, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   Reg#(DWCount) rc_dwcount <- mkRegU(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   Reg#(Bool) rc_even <- mkReg(True, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
 
-   rule rl_rc_header (fAxiRc.first.sop && rg_even);
+   rule rl_rc_header (fAxiRc.first.sop && rc_even);
       RCDescriptor rc_desc = unpack(fAxiRc.first.data [95:0]);
       // RC descriptor always 96 bytes with first data word in bits 127:96                                                                                            
       Bit#(32) data = fAxiRc.first.data[127:96];
       TLPData#(16) tlp16 = convertRCDescriptorToTLP16(rc_desc, data);
-      rg_dwcount <= (rc_desc.dwcount == 0) ? 0 : rc_desc.dwcount - 1;
+      rc_dwcount <= (rc_desc.dwcount == 0) ? 0 : rc_desc.dwcount - 1;
       frc.enq(tlp16);
       let even = False;
       if (rc_desc.dwcount == 0 || rc_desc.dwcount == 1) begin
         fAxiRc.deq;
         even = True;
       end
-      rg_even <= even;
+      rc_even <= even;
    endrule
 
-   rule rl_rc_data ((!rg_even || !(fAxiRc.first.sop)) && (rg_dwcount != 0));
+   rule rl_rc_data ((!rc_even || !(fAxiRc.first.sop)) && (rc_dwcount != 0));
       Bit#(16) be16;
-      case (rg_dwcount)
+      case (rc_dwcount)
          1: be16 = 16'hF000;
          2: be16 = 16'hFF00;
          3: be16 = 16'hFFF0;
          default: be16 = 16'hFFFF;
       endcase
-      let last = (rg_dwcount <= 4);
-      let dwcount = rg_dwcount - 4;
+      let last = (rc_dwcount <= 4);
+      let dwcount = rc_dwcount - 4;
       if (last) dwcount = 0;
-      let data = (rg_even) ? fAxiRc.first.data[127:0]: fAxiRc.first.data[255:128];
+      let data = (rc_even) ? fAxiRc.first.data[127:0]: fAxiRc.first.data[255:128];
       TLPData#(16) tlp16 = TLPData{sof: False,
                                    eof: last,
                                    hit: 0,
                                    be: be16,
                                    data: pack(data)};
       frc.enq(tlp16);
-      if (last || !rg_even) begin
+      if (last || !rc_even) begin
          fAxiRc.deq;
       end
-      rg_dwcount <= dwcount;
-      rg_even <= (last) ? True : !rg_even;
+      rc_dwcount <= dwcount;
+      rc_even <= (last) ? True : !rc_even;
    endrule
 
    Reg#(DWCount) cc_dwcount <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
@@ -375,43 +375,73 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
 
    // RQ.
    FIFOF#(TLPData#(16)) frq_tlps <- mkFIFOF (clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   Reg#(Bit#(4)) rq_first_be <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   Reg#(Bit#(4)) rq_last_be <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   Reg#(Bool)    rq_even    <- mkRegU(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    Reg#(DWCount) rq_dwcount <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   Reg#(Maybe#(Bit#(32))) rq_mdw <- mkRegU(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   Reg#(Bit#(4)) rq_first_be <- mkRegU(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   Reg#(Bit#(4)) rq_last_be <- mkRegU(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   Reg#(AxiStRq) rq_rq <- mkRegU(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    rule get_rq_tlps;
       let tlp <- toGet(frq).get;
       frq_tlps.enq(tlp);
    endrule
 
-   rule rl_rq_header(frq_tlps.first.sof);
-      match { .rq_desc, .first_be, .last_be, .mdata} = convertTLP16ToRQDescriptor(frq_tlps.first);
-      rq_dwcount <= ((rq_desc.reqtype == MEMORY_WRITE) ? rq_desc.dwcount : 0);
-      rq_mdw <= mdata;
+   rule rl_rq_header if (frq_tlps.first.sof);
+      TLPData#(16) tlp <- toGet(frq_tlps).get();
+      match { .rq_desc, .first_be, .last_be, .mdata} = convertTLP16ToRQDescriptor(tlp);
+      let dwcount = ((rq_desc.reqtype == MEMORY_WRITE) ? rq_desc.dwcount : 0);
+      rq_dwcount <= dwcount;
+      rq_even <= False;
       rq_first_be <= first_be;
       rq_last_be <= last_be;
-      fAxiRq.enq(AxiStRq {data: zeroExtend(pack(rq_desc)), //FIXME:
-                       last: frq_tlps.first.eof,
-                       keep: 8'h0F,
-                       first_be: first_be,
-                       last_be: last_be});
-      frq_tlps.deq;
+      let last = (rq_desc.reqtype == MEMORY_WRITE) ? (dwcount <= 4) : True;
+      let rq = AxiStRq {data: zeroExtend(pack(rq_desc)), //FIXME:
+			last: last,
+			keep: 8'h0F,
+			first_be: first_be,
+			last_be: last_be};
+      if (rq_desc.reqtype == MEMORY_WRITE)
+	 rq_rq <= rq;
+      else
+	 fAxiRq.enq(rq);
    endrule
 
-   // rq_mdw contains last DW
-   rule rl_rq_data_a (rq_mdw matches tagged Valid .dw &&& (rq_dwcount == 1));
-      rq_dwcount <= 0;
-      rq_mdw <= tagged Invalid;
-   endrule
-
-   // rq_mdw Valid, and there are more DWs.
-   rule rl_rq_data_b(rq_mdw matches tagged Valid .dw &&& (rq_dwcount != 1));
-
-   endrule
-
-   // rq_mdw Invalid, and there are more DWs.
-   rule rl_rq_data_c(rq_mdw matches tagged Invalid &&& (rq_dwcount != 1));
-
+   // more data
+   rule rl_rq_data if (rq_dwcount != 0);
+      TLPData#(16) tlp <- toGet(frq_tlps).get();
+      let rq = rq_rq;
+      let last = (rq_dwcount <= 4);
+      let dwcount = rq_dwcount - 4;
+      Bit#(8) keep;
+      if (last)
+	dwcount = 0;
+      if (rq_even) begin
+	 rq.data[127:0] = tlp.data;
+	case (rq_dwcount)
+	   1: keep = 8'h01;
+	   2: keep = 8'h03;
+	   3: keep = 8'h07;
+	   default: keep = 8'h0f;
+	endcase
+      end
+      else begin
+	rq.data[255:128] = tlp.data;
+	case (rq_dwcount)
+	   1: keep = 8'h1f;
+	   2: keep = 8'h3f;
+	   3: keep = 8'h7f;
+	   default: keep = 8'hff;
+	endcase
+      end
+      rq.last = last;
+      rq.first_be = rq_first_be;
+      rq.last_be = rq_last_be;
+      rq.keep = keep;
+      if (!rq_even || last)
+	 fAxiRq.enq(rq);
+      if (rq_even)
+	rq_rq <= rq;
+      rq_dwcount <= dwcount;
+      rq_even <= (last) ? False : !rq_even;
    endrule
 
    // The PCIE endpoint is processing Gen3 descriptors at 250MHz. The
