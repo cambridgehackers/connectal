@@ -84,7 +84,9 @@ module mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    TLPDispatcher dispatcher <- mkTLPDispatcher;
    TLPArbiter arbiter <- mkTLPArbiter;
    MemToPcie#(DataBusWidth) sEngine <- mkMemToPcieSynth(my_pciId);
+`ifdef PCIE3
    MemInterrupt intr <- mkMemInterrupt(my_pciId);
+`endif
    Vector#(PortMax, PcieToMem) mvec;
    for (Integer i=0; i < valueOf(PortMax) - 1; i=i+1) begin
       let tlp;
@@ -260,8 +262,18 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys
 `ifdef PCIE3
    mkConnection(ep7.tlpr, pciehost.pcir, clocked_by pcieClock_, reset_by pcieReset_);
    mkConnection(ep7.tlpc, pciehost.pcic, clocked_by pcieClock_, reset_by pcieReset_);
+   let ipciehost = (interface PcieHost;
+		    interface msixEntry = pciehost.msixEntry;
+		    interface master = pciehost.master;
+		    interface slave = pciehost.slave;
+		    interface pcir = pciehost.pcir;
+		    interface pcic = pciehost.pcic;
+		    interface trace = pciehost.trace;
+		    interface interruptRequest = ep7.interruptRequest;
+		    endinterface);
 `else
    mkConnection(ep7.tlp, pciehost.pci, clocked_by pcieClock_, reset_by pcieReset_);
+   let ipciehost = pciehost;
 `endif
 
    interface Clock tsys_clk_200mhz = sys_clk_200mhz;
@@ -269,7 +281,7 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys
    interface Clock tpci_clk_100mhz_buf = pci_clk_100mhz_buf;
 
    interface PcieEndpointX7 tep7 = ep7;
-   interface PcieHost tpciehost = pciehost;
+   interface PcieHost tpciehost = ipciehost;
 
    interface pcieClock = ep7.epPcieClock;
    interface pcieReset = ep7.epPcieReset;
