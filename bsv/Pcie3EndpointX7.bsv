@@ -306,24 +306,24 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
 
    // RC.
    Reg#(DWCount) rg_dwcount <- mkRegU(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   Reg#(Bool) even <- mkReg(True, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   Reg#(Bool) rg_even <- mkReg(True, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
 
-   rule rl_rc_header (fAxiRc.first.sop && even);
+   rule rl_rc_header (fAxiRc.first.sop && rg_even);
       RCDescriptor rc_desc = unpack(fAxiRc.first.data [95:0]);
       // RC descriptor always 96 bytes with first data word in bits 127:96                                                                                            
       Bit#(32) data = fAxiRc.first.data[127:96] | 32'hbeef0000;
       TLPData#(16) tlp16 = convertRCDescriptorToTLP16(rc_desc, data);
       rg_dwcount <= (rc_desc.dwcount == 0) ? 0 : rc_desc.dwcount - 1;
       frc.enq(tlp16);
-      let e = False;
+      let even = False;
       if (rc_desc.dwcount == 0 || rc_desc.dwcount == 1) begin
         fAxiRc.deq;
-        e = True;
+        even = True;
       end
-      even <= e;
+      rg_even <= even;
    endrule
 
-   rule rl_rc_data ((!even || !(fAxiRc.first.sop)) && (rg_dwcount != 0));
+   rule rl_rc_data ((!rg_even || !(fAxiRc.first.sop)) && (rg_dwcount != 0));
       Bit#(16) be16;
       case (rg_dwcount)
          1: be16 = 16'hF000;
@@ -332,16 +332,17 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
          default: be16 = 16'hFFFF;
       endcase
       let last = (rg_dwcount <= 4);
-      let data = (even) ? fAxiRc.first.data[127:0]: fAxiRc.first.data[255:128];
+      let data = (rg_even) ? fAxiRc.first.data[127:0]: fAxiRc.first.data[255:128];
       TLPData#(16) tlp16 = TLPData{sof: False,
                                    eof: last,
                                    hit: 0,
                                    be: be16,
                                    data: pack(data)};
       frc.enq(tlp16);
-      if (last || !even)
+      if (last || !rg_even) begin
          fAxiRc.deq;
-      even <= (last) ? True : !even;
+      end
+      rg_even <= (last) ? True : !rg_even;
    endrule
 
    Reg#(DWCount) cc_dwcount <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
