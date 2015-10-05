@@ -332,6 +332,8 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
          default: be16 = 16'hFFFF;
       endcase
       let last = (rg_dwcount <= 4);
+      let dwcount = rg_dwcount - 4;
+      if (last) dwcount = 0;
       let data = (rg_even) ? fAxiRc.first.data[127:0]: fAxiRc.first.data[255:128];
       TLPData#(16) tlp16 = TLPData{sof: False,
                                    eof: last,
@@ -342,6 +344,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       if (last || !rg_even) begin
          fAxiRc.deq;
       end
+      rg_dwcount <= dwcount;
       rg_even <= (last) ? True : !rg_even;
    endrule
 
