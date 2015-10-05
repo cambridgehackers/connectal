@@ -54,6 +54,7 @@ interface PcieEndpointX7#(numeric type lanes);
    interface PciewrapCommon#(lanes)            common;
    interface Server#(TLPData#(16), TLPData#(16)) tlpr;
    interface Server#(TLPData#(16), TLPData#(16)) tlpc;
+   interface Put#(Tuple2#(Bit#(64),Bit#(32)))  interruptRequest;
    interface Clock epPcieClock;
    interface Reset epPcieReset;
    interface Clock epPortalClock;
@@ -197,6 +198,8 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    FIFOF#(TLPData#(16)) frc <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    FIFOF#(TLPData#(16)) fcc <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    FIFOF#(TLPData#(16)) frq <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+
+   FIFOF#(Tuple2#(Bit#(64),Bit#(32))) intrFifo <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
 
    // Drive s_axis_rq
    let rq_txready = (pcie_ep.s_axis_rq.tready != 0 && fAxiRq.notEmpty);
@@ -444,6 +447,24 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       rq_even <= (last) ? False : !rq_even;
    endrule
 
+   FIFO#(Bool) intrMutex <- mkFIFO1(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   rule rl_intr if (pcie_ep.cfg.interrupt_msix_enable[0] == 1);
+      match { .addr, .data } <- toGet(intrFifo).get();
+      pcie_ep.cfg.interrupt_msix_address(addr);
+      pcie_ep.cfg.interrupt_msix_data(data);
+      pcie_ep.cfg.interrupt_msix_int(1);
+      intrMutex.enq(True);
+   endrule: rl_intr
+   (* descending_urgency = "rl_intr, rl_intr_idle" *)
+   rule rl_intr_idle;
+      pcie_ep.cfg.interrupt_msix_address(0);
+      pcie_ep.cfg.interrupt_msix_data(0);
+      pcie_ep.cfg.interrupt_msix_int(0);
+   endrule
+   rule rl_intr_sent if (pcie_ep.cfg.interrupt_msix_sent() == 1|| pcie_ep.cfg.interrupt_msix_fail() == 1);
+      intrMutex.deq();
+   endrule
+
    // The PCIE endpoint is processing Gen3 descriptors at 250MHz. The
    // AXI bridge is accepting TLPData#(16)s at 250 MHz. The
    // conversion uses half of Gen3 descriptor.
@@ -461,6 +482,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       interface request = toPut(fcc);
       interface response = toGet(fcq);
    endinterface
+   interface interruptRequest = toPut(intrFifo);
    interface pcie    = pcie_ep.pci_exp;
    interface Pcie3wrapUser user = pcie_ep.user;
    interface PciewrapPipe pipe = pcie_ep.pipe;
