@@ -240,14 +240,18 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 
       for (Integer i = 0; i < currDwCount; i = i + 1) begin
 `ifdef AXI
+`ifdef PCIE3
+	 tlp.data[(i+1)*32-1:i*32] = v[i];
+`else
 	 tlp.data[(i+1)*32-1:i*32] = byteSwap(v[(currDwCount-1)-i]);
+`endif
 `elsif AVALON
 	 tlp.data[(i+1)*32-1:i*32] = v[(currDwCount-1)-i];
 `endif
       end
 
       tlpOutFifo.enq(tlp);
-   endrule
+   endrule: writeTlps
 
    Reg#(TLPTag) lastTag <- mkReg(0);
    FIFOF#(TLPData#(16)) tlpDecodeFifo <- mkFIFOF();
@@ -274,7 +278,11 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
       let dataInSecondTlp = quadWordAligned;
 `endif
       if (!tlp.sof) begin
+`ifdef PCIE3
+	 vec = tlpvec;
+`else
 	 vec = reverse(tlpvec);
+`endif
 	 // The MIMO implicit guard only checks for space to enqueue 1 element
 	 // so we explicitly check for the number of elements required
 	 // otherwise elements in the queue will be overwritten.
@@ -366,7 +374,10 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 	    let addr = req.addr;
 	    let awid = req.tag;
 	    let writeIs3dw = False;
-
+	    let use3dw = True;
+`ifdef PCIE3
+	    use3dw = False;
+`endif
 	    TLPLength tlplen = fromInteger(valueOf(busWidthWords))*extend(burstLen);
 	    TLPData#(16) tlp = defaultValue;
 	    tlp.sof = True;
@@ -375,7 +386,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 	    tlp.be = 16'hffff;
 
 	    $display("slave.writeAddr tlplen=%d burstLen=%d", tlplen, burstLen);
-	    if ((addr >> 32) != 0) begin
+	    if ((addr >> 32) != 0 || !use3dw) begin
 	       TLPMemory4DWHeader hdr_4dw = defaultValue;
 	       hdr_4dw.format = MEM_WRITE_4DW_DATA;
 	       hdr_4dw.tag = extend(awid);
@@ -448,7 +459,11 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
               Bit#(buswidth) v = 0;
               for (Integer i = 0; i < valueOf(busWidthWords); i = i+1) begin
 `ifdef AXI
+`ifdef PCIE3
+		 v[(i+1)*32-1:i*32] = data_v[i];
+`else
 		 v[(i+1)*32-1:i*32] = byteSwap(data_v[i]);
+`endif
 `elsif AVALON
 		 v[(i+1)*32-1:i*32] = data_v[i];
 `endif
