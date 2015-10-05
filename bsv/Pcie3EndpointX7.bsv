@@ -314,7 +314,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    rule rl_rc_header (fAxiRc.first.sop && rc_even);
       RCDescriptor rc_desc = unpack(fAxiRc.first.data [95:0]);
       // RC descriptor always 96 bytes with first data word in bits 127:96                                                                                            
-      Bit#(32) data = fAxiRc.first.data[127:96];
+      Bit#(32) data = byteSwap(fAxiRc.first.data[127:96]);
       TLPData#(16) tlp16 = convertRCDescriptorToTLP16(rc_desc, data);
       rc_dwcount <= (rc_desc.dwcount == 0) ? 0 : rc_desc.dwcount - 1;
       frc.enq(tlp16);
