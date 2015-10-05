@@ -448,19 +448,21 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    endrule
 
    FIFO#(Bool) intrMutex <- mkFIFO1(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   rule rl_intr if (pcie_ep.cfg.interrupt_msix_enable[0] == 1);
-      match { .addr, .data } <- toGet(intrFifo).get();
+   rule rl_intr;
+      let addr = 0;
+      let data = 0;
+      let enable = 0;
+      if (intrFifo.notEmpty() && pcie_ep.cfg.interrupt_msix_enable[0] == 1) begin
+	 match { .a, .d } <- toGet(intrFifo).get();
+	 addr = a;
+	 data = d;
+	 enable = 1;
+	 intrMutex.enq(True);
+      end
       pcie_ep.cfg.interrupt_msix_address(addr);
       pcie_ep.cfg.interrupt_msix_data(data);
-      pcie_ep.cfg.interrupt_msix_int(1);
-      intrMutex.enq(True);
+      pcie_ep.cfg.interrupt_msix_int(enable);
    endrule: rl_intr
-   (* descending_urgency = "rl_intr, rl_intr_idle" *)
-   rule rl_intr_idle;
-      pcie_ep.cfg.interrupt_msix_address(0);
-      pcie_ep.cfg.interrupt_msix_data(0);
-      pcie_ep.cfg.interrupt_msix_int(0);
-   endrule
    rule rl_intr_sent if (pcie_ep.cfg.interrupt_msix_sent() == 1|| pcie_ep.cfg.interrupt_msix_fail() == 1);
       intrMutex.deq();
    endrule
