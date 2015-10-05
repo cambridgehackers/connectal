@@ -93,6 +93,61 @@ typedef struct {
    Bit #(8)      be;
 } AxiStRc deriving (Bits, Eq);
 
+function TLPData#(16) convertCQDescriptorToTLP16(CQDescriptor desc, Bit#(32) data, TLPFirstDWBE first, TLPLastDWBE last);
+   TLPMemoryIO3DWHeader header = defaultValue;
+   header.format     = tpl_1(convertCQReqTypeToTLPFmtType(desc.reqtype));
+   header.pkttype    = tpl_2(convertCQReqTypeToTLPFmtType(desc.reqtype));
+   header.tclass     = desc.tclass;
+   header.relaxed    = desc.relaxed;
+   header.nosnoop    = desc.nosnoop;
+   header.length     = (desc.dwcount == 1024) ? 0 : truncate(desc.dwcount);
+   header.reqid      = desc.reqid;
+   header.tag        = desc.tag;
+   header.lastbe     = last;
+   header.firstbe    = first;
+   header.addr       = truncate(desc.address);
+   header.data       = convertDW(data);
+   
+   Bool is3DW = isReadReqType(desc.reqtype);
+   Bool is3Or4DW = isReadReqType(desc.reqtype) || (desc.dwcount == 1);
+
+   TLPData#(16) retval = defaultValue;
+   retval.sof   = True;
+   retval.eof   = is3Or4DW;
+   retval.hit   = (1 << pack(desc.barid));
+   retval.data  = pack(header);
+   retval.be    = (is3DW ? 16'hFFF0 : 16'hFFFF);
+   
+   return retval;
+endfunction
+
+function TLPData#(16) convertRCDescriptorToTLP16(RCDescriptor desc, Bit#(32) data);
+   TLPCompletionHeader header = defaultValue;
+   header.tclass    = desc.tclass;
+   header.relaxed   = desc.relaxed;
+   header.nosnoop   = desc.nosnoop;
+   header.cmplid    = desc.complid;
+   header.tag       = desc.tag;
+   header.reqid     = desc.reqid;
+   header.poison    = desc.poisoned;
+   header.cstatus   = desc.status;
+   header.length    = (desc.dwcount == 1024) ? 0 : truncate(desc.dwcount);
+   header.bytecount = (desc.bytecount == 4096) ? 0 : truncate(desc.bytecount);
+   header.loweraddr = truncate(desc.loweraddr);
+   header.data      = convertDW(data);
+
+   Bool is3DW = (desc.dwcount == 0);
+   Bool is3Or4DW = (desc.dwcount == 0) || (desc.dwcount == 1);
+   TLPData#(16) retval = defaultValue;
+   retval.sof   = True;
+   retval.eof   = is3Or4DW;
+   retval.hit   = 1; // XXX
+   retval.data  = pack(header);
+   retval.be    = (is3DW ? 16'hFFF0 : 16'hFFFF);
+   
+   return retval;
+endfunction
+
 `ifdef BOARD_vc709
 typedef 8 PcieLanes;
 typedef 8 NumLeds;
@@ -251,17 +306,24 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
 
    // RC.
    Reg#(DWCount) rg_dwcount <- mkRegU(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   Reg#(Bool) even <- mkReg(True, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
 
-   rule rl_rc_header (fAxiRc.first.sop);
+   rule rl_rc_header (fAxiRc.first.sop && even);
       RCDescriptor rc_desc = unpack(fAxiRc.first.data [95:0]);
-      Bit#(32) data = fAxiRc.first.data[128+32-1:128];
+      // RC descriptor always 96 bytes with first data word in bits 127:96                                                                                            
+      Bit#(32) data = fAxiRc.first.data[127:96] | 32'hbeef0000;
       TLPData#(16) tlp16 = convertRCDescriptorToTLP16(rc_desc, data);
       rg_dwcount <= (rc_desc.dwcount == 0) ? 0 : rc_desc.dwcount - 1;
       frc.enq(tlp16);
-      fAxiRc.deq;
+      let e = False;
+      if (rc_desc.dwcount == 0 || rc_desc.dwcount == 1) begin
+        fAxiRc.deq;
+        e = True;
+      end
+      even <= e;
    endrule
 
-   rule rl_rc_data ((!(fAxiRc.first.sop)) && (rg_dwcount != 0));
+   rule rl_rc_data ((!even || !(fAxiRc.first.sop)) && (rg_dwcount != 0));
       Bit#(16) be16;
       case (rg_dwcount)
          1: be16 = 16'hF000;
@@ -269,13 +331,17 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
          3: be16 = 16'hFFF0;
          default: be16 = 16'hFFFF;
       endcase
+      let last = (rg_dwcount <= 4);
+      let data = (even) ? fAxiRc.first.data[127:0]: fAxiRc.first.data[255:128];
       TLPData#(16) tlp16 = TLPData{sof: False,
-                                   eof: (rg_dwcount <= 4),
+                                   eof: last,
                                    hit: 0,
                                    be: be16,
-                                   data: pack(fAxiRc.first.data[127:0])};
+                                   data: pack(data)};
       frc.enq(tlp16);
-      fAxiRc.deq;
+      if (last || !even)
+         fAxiRc.deq;
+      even <= (last) ? True : !even;
    endrule
 
    Reg#(DWCount) cc_dwcount <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
@@ -322,7 +388,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       rq_last_be <= last_be;
       fAxiRq.enq(AxiStRq {data: zeroExtend(pack(rq_desc)), //FIXME:
                        last: frq_tlps.first.eof,
-                       keep: 8'hFF,
+                       keep: 8'h0F,
                        first_be: first_be,
                        last_be: last_be});
       frq_tlps.deq;
