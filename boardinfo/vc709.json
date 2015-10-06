@@ -2,7 +2,7 @@
     "options": {
         "bsvdefines" : ["XILINX=1", "Virtex7", "PCIE", "PCIE3", "PcieHostInterface", "PhysAddrWidth=40", "NUMBER_OF_LEDS=8"],
         "os" : "ubuntu",
-        "partname" : "xc7vx690tffg1761-3",
+        "partname" : "xc7vx690tffg1761-2",
         "need_pcie" : "x7_gen3x8",
         "TOP" : "PcieTop",
         "constraints": [],
@@ -51,7 +51,7 @@
 		 "LOC" : "AU39",
 		 "IOSTANDARD" : "LVCMOS15",
 		 "PIO_DIRECTION" : "OUTPUT"
-		 },
+		 }
 	},
     "pins": {
 		"userClk_p": {
