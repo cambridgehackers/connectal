@@ -76,9 +76,6 @@ endmodule
 // PCIE Gen3  PcieHost
 //
 `ifdef PCIE3
-Integer tlpCompleterRequest = 0;
-Integer tlpRequesterRequest = 1;
-
 (* synthesize *)
 module mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    TLPDispatcher dispatcher <- mkTLPDispatcher;
@@ -108,7 +105,7 @@ module mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
                       interface response = dispatcher.inFromBus;
                   endinterface);
 `ifdef TRACE_PORTAL
-   mkConnection(traceif[tlpCompleterRequest].bus, splitter);
+   mkConnection(traceif.bus, splitter);
 `else
    mkConnection(traceif.bus, sEngine.tlp);
 `endif
