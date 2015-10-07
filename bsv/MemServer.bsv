@@ -128,7 +128,7 @@ module mkMemServerRead#(MemServerIndication indication,
    function Server#(AddrTransRequest,Bit#(addrWidth)) selectMMUPort(Integer i);
       return mmus[i].addr[0];
    endfunction
-   Vector#(numMMUs,ArbitratedMMU#(addrWidth,numClients)) mmu_servers <- mapM(mkArbitratedMMU,map(genVector));
+   Vector#(numMMUs,ArbitratedMMU#(addrWidth,numClients)) mmu_servers <- mapM(mkArbitratedMMU,map(selectMMUPort,genVector));
    Vector#(numClients,MemReadInternal#(addrWidth,busWidth,MemServerTags,nrc)) readers;
    Vector#(numClients, PhysMemReadClient#(addrWidth,busWidth)) read_clients;
    Vector#(numServers, MemReadServer#(busWidth)) read_servers;
@@ -210,7 +210,7 @@ module mkMemServerWrite#(MemServerIndication indication,
    function Server#(AddrTransRequest,Bit#(addrWidth)) selectMMUPort(Integer i);
       return mmus[i].addr[1];
    endfunction
-   Vector#(numMMUs,ArbitratedMMU#(addrWidth,numClients)) mmu_servers <- mapM(mkArbitratedMMU,map(genVector));
+   Vector#(numMMUs,ArbitratedMMU#(addrWidth,numClients)) mmu_servers <- mapM(mkArbitratedMMU,map(selectMMUPort,genVector));
    Vector#(numClients,MemWriteInternal#(addrWidth,busWidth,MemServerTags,nwc)) writers;
    Vector#(numClients, PhysMemWriteClient#(addrWidth,busWidth)) write_clients;
    Vector#(numServers, MemWriteServer#(busWidth)) write_servers;
