@@ -125,17 +125,16 @@ module mkMemServerRead#(MemServerIndication indication,
    Reg#(Bit#(8)) trafficPtr <- mkReg(0);
    Reg#(Bit#(64)) trafficAccum <- mkReg(0);
    
-   module foo#(Integer i) (MMUAddrServer#(addrWidth,numClients));
-      let rv <- mkMMUAddrServer(mmus[i].addr[0]);
-      return rv;
-   endmodule
-   Vector#(numMMUs,MMUAddrServer#(addrWidth,numClients)) mmu_servers <- mapM(foo,genVector);
+   function Server#(AddrTransRequest,Bit#(addrWidth)) selectMMUPort(Integer i);
+      return mmus[i].addr[0];
+   endfunction
+   Vector#(numMMUs,ArbitratedMMU#(addrWidth,numClients)) mmu_servers <- mapM(mkArbitratedMMU,map(selectMMUPort,genVector));
    Vector#(numClients,MemReadInternal#(addrWidth,busWidth,MemServerTags,nrc)) readers;
    Vector#(numClients, PhysMemReadClient#(addrWidth,busWidth)) read_clients;
    Vector#(numServers, MemReadServer#(busWidth)) read_servers;
 
    for(Integer i = 0; i < valueOf(numClients); i = i+1) begin
-      Vector#(numMMUs,Server#(ReqTup,Bit#(addrWidth))) ss;
+      Vector#(numMMUs,Server#(AddrTransRequest,Bit#(addrWidth))) ss;
       for(Integer j = 0; j < valueOf(numMMUs); j=j+1)
 	 ss[j] = mmu_servers[j].servers[i];
       readers[i] <- mkMemReadInternal(indication,ss);
@@ -189,7 +188,7 @@ module mkMemServerRead#(MemServerIndication indication,
       endmethod
       method Action addrTrans(Bit#(32) pointer, Bit#(32) offset);
 	 addrReqFifo.enq(pointer);
-	 mmus[pointer[31:16]].addr[0].request.put(ReqTup{id:truncate(pointer), off:extend(offset)});
+	 mmus[pointer[31:16]].addr[0].request.put(AddrTransRequest{id:truncate(pointer), off:extend(offset)});
       endmethod
    endinterface
 endmodule
@@ -208,17 +207,16 @@ module mkMemServerWrite#(MemServerIndication indication,
    Reg#(Bit#(8)) trafficPtr <- mkReg(0);
    Reg#(Bit#(64)) trafficAccum <- mkReg(0);
    
-   module foo#(Integer i) (MMUAddrServer#(addrWidth,numClients));
-      let rv <- mkMMUAddrServer(mmus[i].addr[1]);
-      return rv;
-   endmodule
-   Vector#(numMMUs,MMUAddrServer#(addrWidth,numClients)) mmu_servers <- mapM(foo,genVector);
+   function Server#(AddrTransRequest,Bit#(addrWidth)) selectMMUPort(Integer i);
+      return mmus[i].addr[1];
+   endfunction
+   Vector#(numMMUs,ArbitratedMMU#(addrWidth,numClients)) mmu_servers <- mapM(mkArbitratedMMU,map(selectMMUPort,genVector));
    Vector#(numClients,MemWriteInternal#(addrWidth,busWidth,MemServerTags,nwc)) writers;
    Vector#(numClients, PhysMemWriteClient#(addrWidth,busWidth)) write_clients;
    Vector#(numServers, MemWriteServer#(busWidth)) write_servers;
 
    for(Integer i = 0; i < valueOf(numClients); i = i+1) begin
-      Vector#(numMMUs,Server#(ReqTup,Bit#(addrWidth))) ss;
+      Vector#(numMMUs,Server#(AddrTransRequest,Bit#(addrWidth))) ss;
       for(Integer j = 0; j < valueOf(numMMUs); j=j+1)
 	 ss[j] = mmu_servers[j].servers[i];
       writers[i] <- mkMemWriteInternal(indication, ss);
@@ -272,7 +270,7 @@ module mkMemServerWrite#(MemServerIndication indication,
       endmethod
       method Action addrTrans(Bit#(32) pointer, Bit#(32) offset);
 	 addrReqFifo.enq(pointer);
-	 mmus[pointer[31:16]].addr[1].request.put(ReqTup{id:truncate(pointer), off:extend(offset)});
+	 mmus[pointer[31:16]].addr[1].request.put(AddrTransRequest{id:truncate(pointer), off:extend(offset)});
       endmethod
    endinterface
 endmodule
