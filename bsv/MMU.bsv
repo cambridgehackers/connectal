@@ -351,11 +351,11 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 
 endmodule
 
-interface MMUAddrServer#(numeric type addrWidth, numeric type numServers);
+interface ArbitratedMMU#(numeric type addrWidth, numeric type numServers);
    interface Vector#(numServers,Server#(MMURequest,Bit#(addrWidth))) servers;
 endinterface
 
-module mkMMUAddrServer#(Server#(MMURequest,Bit#(addrWidth)) server) (MMUAddrServer#(addrWidth,numServers));
+module mkArbitratedMMU#(Server#(MMURequest,Bit#(addrWidth)) server) (ArbitratedMMU#(addrWidth,numServers));
    
    FIFOF#(Bit#(TAdd#(1,TLog#(numServers)))) tokFifo <- mkSizedFIFOF(9);
    Vector#(numServers, Server#(MMURequest,Bit#(addrWidth))) addrServers;

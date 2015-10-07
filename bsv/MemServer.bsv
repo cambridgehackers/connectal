@@ -125,11 +125,11 @@ module mkMemServerRead#(MemServerIndication indication,
    Reg#(Bit#(8)) trafficPtr <- mkReg(0);
    Reg#(Bit#(64)) trafficAccum <- mkReg(0);
    
-   module foo#(Integer i) (MMUAddrServer#(addrWidth,numClients));
-      let rv <- mkMMUAddrServer(mmus[i].addr[0]);
+   module foo#(Integer i) (ArbitratedMMU#(addrWidth,numClients));
+      let rv <- mkArbitratedMMU(mmus[i].addr[0]);
       return rv;
    endmodule
-   Vector#(numMMUs,MMUAddrServer#(addrWidth,numClients)) mmu_servers <- mapM(foo,genVector);
+   Vector#(numMMUs,ArbitratedMMU#(addrWidth,numClients)) mmu_servers <- mapM(foo,genVector);
    Vector#(numClients,MemReadInternal#(addrWidth,busWidth,MemServerTags,nrc)) readers;
    Vector#(numClients, PhysMemReadClient#(addrWidth,busWidth)) read_clients;
    Vector#(numServers, MemReadServer#(busWidth)) read_servers;
@@ -208,11 +208,11 @@ module mkMemServerWrite#(MemServerIndication indication,
    Reg#(Bit#(8)) trafficPtr <- mkReg(0);
    Reg#(Bit#(64)) trafficAccum <- mkReg(0);
    
-   module foo#(Integer i) (MMUAddrServer#(addrWidth,numClients));
-      let rv <- mkMMUAddrServer(mmus[i].addr[1]);
+   module foo#(Integer i) (ArbitratedMMU#(addrWidth,numClients));
+      let rv <- mkArbitratedMMU(mmus[i].addr[1]);
       return rv;
    endmodule
-   Vector#(numMMUs,MMUAddrServer#(addrWidth,numClients)) mmu_servers <- mapM(foo,genVector);
+   Vector#(numMMUs,ArbitratedMMU#(addrWidth,numClients)) mmu_servers <- mapM(foo,genVector);
    Vector#(numClients,MemWriteInternal#(addrWidth,busWidth,MemServerTags,nwc)) writers;
    Vector#(numClients, PhysMemWriteClient#(addrWidth,busWidth)) write_clients;
    Vector#(numServers, MemWriteServer#(busWidth)) write_servers;
