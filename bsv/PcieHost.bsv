@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 import Vector            :: *;
+import BuildVector       :: *;
 import Clocks            :: *;
 import GetPut            :: *;
 import FIFO              :: *;
@@ -75,27 +76,15 @@ endmodule
 // PCIE Gen3  PcieHost
 //
 `ifdef PCIE3
-Integer tlpCompleterRequest = 0;
-Integer tlpRequesterRequest = 1;
-typedef 2   NumberOfTlpIntfs;
-
 (* synthesize *)
 module mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
-   Vector#(NumberOfTlpIntfs, TLPDispatcher) dispatcher <- replicateM(mkTLPDispatcher);
-   Vector#(NumberOfTlpIntfs, TLPArbiter) arbiter <- replicateM(mkTLPArbiter);
-   Vector#(NumberOfMasters, MemToPcie#(DataBusWidth)) sEngine <- replicateM(mkMemToPcieSynth(my_pciId));
-   Vector#(NumberOfMasters,PhysMemSlave#(PciePhysAddrWidth,DataBusWidth)) slavearr;
+   TLPDispatcher dispatcher <- mkTLPDispatcher;
+   TLPArbiter arbiter <- mkTLPArbiter;
+   MemToPcie#(DataBusWidth) sEngine <- mkMemToPcieSynth(my_pciId);
+`ifdef PCIE3
    MemInterrupt intr <- mkMemInterrupt(my_pciId);
+`endif
    Vector#(PortMax, PcieToMem) mvec;
-   for (Integer i=0; i < valueOf(NumberOfMasters); i=i+1) begin
-      let tlp;
-      tlp = sEngine[i].tlp;
-      slavearr[i]  = sEngine[i].slave;
-      mkConnection((interface Server;
-                       interface response = dispatcher[tlpRequesterRequest].out[i];
-                       interface request = arbiter[tlpRequesterRequest].in[i];
-                    endinterface), tlp);
-   end
    for (Integer i=0; i < valueOf(PortMax) - 1; i=i+1) begin
       let tlp;
       if (i == portInterrupt)
@@ -105,30 +94,37 @@ module mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
          tlp = mvec[i].tlp;
       end
       mkConnection((interface Server;
-                       interface response = dispatcher[tlpCompleterRequest].out[i];
-                       interface request = arbiter[tlpCompleterRequest].in[i];
+                       interface response = dispatcher.out[i];
+                       interface request = arbiter.in[i];
                     endinterface), tlp);
    end
 
-   Vector#(NumberOfTlpIntfs, PcieTracer) traceif <- replicateM(mkPcieTracer());
-   mkConnection(traceif[tlpCompleterRequest].bus, (interface Client;
-                                    interface request = arbiter[tlpCompleterRequest].outToBus;
-                                    interface response = dispatcher[tlpCompleterRequest].inFromBus;
-                                 endinterface));
-   mkConnection(traceif[tlpRequesterRequest].bus, (interface Client;
-                                    interface request = arbiter[tlpRequesterRequest].outToBus;
-                                    interface response = dispatcher[tlpRequesterRequest].inFromBus;
-                                 endinterface));
+   PcieTracer traceif <- mkPcieTracer();
+   let splitter = (interface Client;
+                      interface request = arbiter.outToBus;
+                      interface response = dispatcher.inFromBus;
+                  endinterface);
+`ifdef TRACE_PORTAL
+   mkConnection(traceif.bus, splitter);
+`else
+   mkConnection(traceif.bus, sEngine.tlp);
+`endif
 
    PcieControlAndStatusRegs csr <- mkPcieControlAndStatusRegs();
    mkConnection(mvec[portConfig].master, csr.memSlave);
 
+   mkConnection(csr.traceClient, traceif.traceServer);
    interface msixEntry = csr.msixEntry;
    interface master = mvec[portPortal].master;
-   interface slave = slavearr;
+   interface slave = vec(sEngine.slave);
    interface interruptRequest = intr.interruptRequest;
-   interface pcic = traceif[tlpCompleterRequest].pci;
-   interface pcir = traceif[tlpRequesterRequest].pci;
+`ifdef TRACE_PORTAL
+   interface pcic = traceif.pci;
+   interface pcir = sEngine.tlp;
+`else
+   interface pcic = splitter;
+   interface pcir = traceif.pci;
+`endif
 endmodule: mkPcieHost
 `else //NOT PCIE3
 // ======================================================
@@ -263,8 +259,18 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys
 `ifdef PCIE3
    mkConnection(ep7.tlpr, pciehost.pcir, clocked_by pcieClock_, reset_by pcieReset_);
    mkConnection(ep7.tlpc, pciehost.pcic, clocked_by pcieClock_, reset_by pcieReset_);
+   let ipciehost = (interface PcieHost;
+		    interface msixEntry = pciehost.msixEntry;
+		    interface master = pciehost.master;
+		    interface slave = pciehost.slave;
+		    interface pcir = pciehost.pcir;
+		    interface pcic = pciehost.pcic;
+		    interface trace = pciehost.trace;
+		    interface interruptRequest = ep7.interruptRequest;
+		    endinterface);
 `else
    mkConnection(ep7.tlp, pciehost.pci, clocked_by pcieClock_, reset_by pcieReset_);
+   let ipciehost = pciehost;
 `endif
 
    interface Clock tsys_clk_200mhz = sys_clk_200mhz;
@@ -272,7 +278,7 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys
    interface Clock tpci_clk_100mhz_buf = pci_clk_100mhz_buf;
 
    interface PcieEndpointX7 tep7 = ep7;
-   interface PcieHost tpciehost = pciehost;
+   interface PcieHost tpciehost = ipciehost;
 
    interface pcieClock = ep7.epPcieClock;
    interface pcieReset = ep7.epPcieReset;

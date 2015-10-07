@@ -1,0 +1,16 @@
+
+cmake
+libboost-all-dev
+libgoogle-glog-dev
+libprotobuf-dev protobuf-compiler
+libhdf5-dev
+liblmdb-dev
+libleveldb-dev
+libsnappy-dev
+libopencv-dev
+libatlas-dev
+libatlas-blas-dev
+libblas-dev
+libopenblas-dev
+libatlas-base-dev
+libpapi-dev

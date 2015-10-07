@@ -81,7 +81,7 @@
    ../xilinx/PCIEWRAPPER3.bsv
    -p
    lanes
-   ../../out/nfsume/pcie3_7x_0/pcie3_7x_0_stub.v
+   ../../out/vc709/pcie3_7x_0/pcie3_7x_0_stub.v
 */
 
 import Clocks::*;
@@ -123,7 +123,7 @@ interface PciewrapM_axis_cq#(numeric type lanes);
     method Bit#(256)     tdata();
     method Bit#(8)     tkeep();
     method Bit#(1)     tlast();
-    method Action      tready(Bit#(22) v);
+    method Action      tready(Bit#(1) v);
     method Bit#(85)     tuser();
     method Bit#(1)     tvalid();
 endinterface
@@ -132,7 +132,7 @@ interface PciewrapM_axis_rc#(numeric type lanes);
     method Bit#(256)     tdata();
     method Bit#(8)     tkeep();
     method Bit#(1)     tlast();
-    method Action      tready(Bit#(22) v);
+    method Action      tready(Bit#(1) v);
     method Bit#(75)     tuser();
     method Bit#(1)     tvalid();
 endinterface
@@ -219,28 +219,28 @@ module mkPcieWrap#(Clock sys_clk, Reset sys_reset)(PcieWrap#(lanes));
      /* from clock*/
     default_reset sys_reset(sys_reset) = sys_reset;
     interface PciewrapCfg     cfg;
-        method interrupt_int(cfg_interrupt_int) enable((*inhigh*) EN_cfg_interrupt_int) clocked_by (user_clk) reset_by (no_reset);
-        method interrupt_msix_address(cfg_interrupt_msix_address) enable((*inhigh*) EN_cfg_interrupt_msix_address) clocked_by (user_clk) reset_by (no_reset);
-        method interrupt_msix_data(cfg_interrupt_msix_data) enable((*inhigh*) EN_cfg_interrupt_msix_data) clocked_by (user_clk) reset_by (no_reset);
-        method cfg_interrupt_msix_enable interrupt_msix_enable() clocked_by (user_clk) reset_by (no_reset);
-        method cfg_interrupt_msix_fail interrupt_msix_fail() clocked_by (user_clk) reset_by (no_reset);
-        method interrupt_msix_int(cfg_interrupt_msix_int) enable((*inhigh*) EN_cfg_interrupt_msix_int) clocked_by (user_clk) reset_by (no_reset);
-        method cfg_interrupt_msix_mask interrupt_msix_mask() clocked_by (user_clk) reset_by (no_reset);
-        method cfg_interrupt_msix_sent interrupt_msix_sent() clocked_by (user_clk) reset_by (no_reset);
-        method cfg_interrupt_msix_vf_enable interrupt_msix_vf_enable() clocked_by (user_clk) reset_by (no_reset);
-        method cfg_interrupt_msix_vf_mask interrupt_msix_vf_mask() clocked_by (user_clk) reset_by (no_reset);
-        method interrupt_pending(cfg_interrupt_pending) enable((*inhigh*) EN_cfg_interrupt_pending) clocked_by (user_clk) reset_by (no_reset);
-        method cfg_interrupt_sent interrupt_sent() clocked_by (user_clk) reset_by (no_reset);
+        method interrupt_int(cfg_interrupt_int) enable((*inhigh*) EN_cfg_interrupt_int) clocked_by (user_clk) reset_by (user_reset);
+        method interrupt_msix_address(cfg_interrupt_msix_address) enable((*inhigh*) EN_cfg_interrupt_msix_address) clocked_by (user_clk) reset_by (user_reset);
+        method interrupt_msix_data(cfg_interrupt_msix_data) enable((*inhigh*) EN_cfg_interrupt_msix_data) clocked_by (user_clk) reset_by (user_reset);
+        method cfg_interrupt_msix_enable interrupt_msix_enable() clocked_by (user_clk) reset_by (user_reset);
+        method cfg_interrupt_msix_fail interrupt_msix_fail() clocked_by (user_clk) reset_by (user_reset);
+        method interrupt_msix_int(cfg_interrupt_msix_int) enable((*inhigh*) EN_cfg_interrupt_msix_int) clocked_by (user_clk) reset_by (user_reset);
+        method cfg_interrupt_msix_mask interrupt_msix_mask() clocked_by (user_clk) reset_by (user_reset);
+        method cfg_interrupt_msix_sent interrupt_msix_sent() clocked_by (user_clk) reset_by (user_reset);
+        method cfg_interrupt_msix_vf_enable interrupt_msix_vf_enable() clocked_by (user_clk) reset_by (user_reset);
+        method cfg_interrupt_msix_vf_mask interrupt_msix_vf_mask() clocked_by (user_clk) reset_by (user_reset);
+        method interrupt_pending(cfg_interrupt_pending) enable((*inhigh*) EN_cfg_interrupt_pending) clocked_by (user_clk) reset_by (user_reset);
+        method cfg_interrupt_sent interrupt_sent() clocked_by (user_clk) reset_by (user_reset);
     endinterface
     interface PciewrapCommon     common;
-        method commands_in(common_commands_in) enable((*inhigh*) EN_common_commands_in) clocked_by (user_clk) reset_by (no_reset);
+        method commands_in(common_commands_in) enable((*inhigh*) EN_common_commands_in) clocked_by (user_clk) reset_by (user_reset);
         method common_commands_out commands_out();
     endinterface
     output_clock int_dclk_out(int_dclk_out);
     output_clock int_oobclk_out(int_oobclk_out);
     output_clock int_pclk_out_slave(int_pclk_out_slave);
     interface PciewrapInt_pclk_sel     int_pclk_sel;
-        method slave(int_pclk_sel_slave) enable((*inhigh*) EN_int_pclk_sel_slave) clocked_by (user_clk) reset_by (no_reset);
+        method slave(int_pclk_sel_slave) enable((*inhigh*) EN_int_pclk_sel_slave) clocked_by (user_clk) reset_by (user_reset);
     endinterface
     output_clock int_pipe_rxusrclk_out(int_pipe_rxusrclk_out);
     interface PciewrapInt_qplllock     int_qplllock;
@@ -252,20 +252,20 @@ module mkPcieWrap#(Clock sys_clk, Reset sys_reset)(PcieWrap#(lanes));
     output_clock int_userclk1_out(int_userclk1_out);
     output_clock int_userclk2_out(int_userclk2_out);
     interface PciewrapM_axis_cq     m_axis_cq;
-        method m_axis_cq_tdata tdata() clocked_by (user_clk) reset_by (no_reset);
-        method m_axis_cq_tkeep tkeep() clocked_by (user_clk) reset_by (no_reset);
-        method m_axis_cq_tlast tlast() clocked_by (user_clk) reset_by (no_reset);
-        method tready(m_axis_cq_tready) enable((*inhigh*) EN_m_axis_cq_tready) clocked_by (user_clk) reset_by (no_reset);
-        method m_axis_cq_tuser tuser() clocked_by (user_clk) reset_by (no_reset);
-        method m_axis_cq_tvalid tvalid() clocked_by (user_clk) reset_by (no_reset);
+        method m_axis_cq_tdata tdata() clocked_by (user_clk) reset_by (user_reset);
+        method m_axis_cq_tkeep tkeep() clocked_by (user_clk) reset_by (user_reset);
+        method m_axis_cq_tlast tlast() clocked_by (user_clk) reset_by (user_reset);
+        method tready(m_axis_cq_tready) enable((*inhigh*) EN_m_axis_cq_tready) clocked_by (user_clk) reset_by (user_reset);
+        method m_axis_cq_tuser tuser() clocked_by (user_clk) reset_by (user_reset);
+        method m_axis_cq_tvalid tvalid() clocked_by (user_clk) reset_by (user_reset);
     endinterface
     interface PciewrapM_axis_rc     m_axis_rc;
-        method m_axis_rc_tdata tdata() clocked_by (user_clk) reset_by (no_reset);
-        method m_axis_rc_tkeep tkeep() clocked_by (user_clk) reset_by (no_reset);
-        method m_axis_rc_tlast tlast() clocked_by (user_clk) reset_by (no_reset);
-        method tready(m_axis_rc_tready) enable((*inhigh*) EN_m_axis_rc_tready) clocked_by (user_clk) reset_by (no_reset);
-        method m_axis_rc_tuser tuser() clocked_by (user_clk) reset_by (no_reset);
-        method m_axis_rc_tvalid tvalid() clocked_by (user_clk) reset_by (no_reset);
+        method m_axis_rc_tdata tdata() clocked_by (user_clk) reset_by (user_reset);
+        method m_axis_rc_tkeep tkeep() clocked_by (user_clk) reset_by (user_reset);
+        method m_axis_rc_tlast tlast() clocked_by (user_clk) reset_by (user_reset);
+        method tready(m_axis_rc_tready) enable((*inhigh*) EN_m_axis_rc_tready) clocked_by (user_clk) reset_by (user_reset);
+        method m_axis_rc_tuser tuser() clocked_by (user_clk) reset_by (user_reset);
+        method m_axis_rc_tvalid tvalid() clocked_by (user_clk) reset_by (user_reset);
     endinterface
     interface PciewrapPci_exp     pci_exp;
         method rxn(pci_exp_rxn) enable((*inhigh*) EN_pci_exp_rxn)  clocked_by (sys_clk) reset_by (sys_reset);
@@ -292,24 +292,24 @@ module mkPcieWrap#(Clock sys_clk, Reset sys_reset)(PcieWrap#(lanes));
         method pipe_tx_7_sigs tx_7_sigs();
     endinterface
     interface PciewrapS_axis_cc     s_axis_cc;
-        method tdata(s_axis_cc_tdata) enable((*inhigh*) EN_s_axis_cc_tdata) clocked_by (user_clk) reset_by (no_reset);
-        method tkeep(s_axis_cc_tkeep) enable((*inhigh*) EN_s_axis_cc_tkeep) clocked_by (user_clk) reset_by (no_reset);
-        method tlast(s_axis_cc_tlast) enable((*inhigh*) EN_s_axis_cc_tlast) clocked_by (user_clk) reset_by (no_reset);
-        method s_axis_cc_tready tready() clocked_by (user_clk) reset_by (no_reset);
-        method tuser(s_axis_cc_tuser) enable((*inhigh*) EN_s_axis_cc_tuser) clocked_by (user_clk) reset_by (no_reset);
-        method tvalid(s_axis_cc_tvalid) enable((*inhigh*) EN_s_axis_cc_tvalid) clocked_by (user_clk) reset_by (no_reset);
+        method tdata(s_axis_cc_tdata) enable((*inhigh*) EN_s_axis_cc_tdata) clocked_by (user_clk) reset_by (user_reset);
+        method tkeep(s_axis_cc_tkeep) enable((*inhigh*) EN_s_axis_cc_tkeep) clocked_by (user_clk) reset_by (user_reset);
+        method tlast(s_axis_cc_tlast) enable((*inhigh*) EN_s_axis_cc_tlast) clocked_by (user_clk) reset_by (user_reset);
+        method s_axis_cc_tready tready() clocked_by (user_clk) reset_by (user_reset);
+        method tuser(s_axis_cc_tuser) enable((*inhigh*) EN_s_axis_cc_tuser) clocked_by (user_clk) reset_by (user_reset);
+        method tvalid(s_axis_cc_tvalid) enable((*inhigh*) EN_s_axis_cc_tvalid) clocked_by (user_clk) reset_by (user_reset);
     endinterface
     interface PciewrapS_axis_rq     s_axis_rq;
-        method tdata(s_axis_rq_tdata) enable((*inhigh*) EN_s_axis_rq_tdata) clocked_by (user_clk) reset_by (no_reset);
-        method tkeep(s_axis_rq_tkeep) enable((*inhigh*) EN_s_axis_rq_tkeep) clocked_by (user_clk) reset_by (no_reset);
-        method tlast(s_axis_rq_tlast) enable((*inhigh*) EN_s_axis_rq_tlast) clocked_by (user_clk) reset_by (no_reset);
-        method s_axis_rq_tready tready() clocked_by (user_clk) reset_by (no_reset);
-        method tuser(s_axis_rq_tuser) enable((*inhigh*) EN_s_axis_rq_tuser) clocked_by (user_clk) reset_by (no_reset);
-        method tvalid(s_axis_rq_tvalid) enable((*inhigh*) EN_s_axis_rq_tvalid) clocked_by (user_clk) reset_by (no_reset);
+        method tdata(s_axis_rq_tdata) enable((*inhigh*) EN_s_axis_rq_tdata) clocked_by (user_clk) reset_by (user_reset);
+        method tkeep(s_axis_rq_tkeep) enable((*inhigh*) EN_s_axis_rq_tkeep) clocked_by (user_clk) reset_by (user_reset);
+        method tlast(s_axis_rq_tlast) enable((*inhigh*) EN_s_axis_rq_tlast) clocked_by (user_clk) reset_by (user_reset);
+        method s_axis_rq_tready tready() clocked_by (user_clk) reset_by (user_reset);
+        method tuser(s_axis_rq_tuser) enable((*inhigh*) EN_s_axis_rq_tuser) clocked_by (user_clk) reset_by (user_reset);
+        method tvalid(s_axis_rq_tvalid) enable((*inhigh*) EN_s_axis_rq_tvalid) clocked_by (user_clk) reset_by (user_reset);
     endinterface
     interface PciewrapUser     user;
-        method user_app_rdy app_rdy() clocked_by (user_clk) reset_by (no_reset);
-        method user_lnk_up lnk_up() clocked_by (user_clk) reset_by (no_reset);
+        method user_app_rdy app_rdy() clocked_by (user_clk) reset_by (user_reset);
+        method user_lnk_up lnk_up() clocked_by (user_clk) reset_by (user_reset);
     endinterface
     
     
