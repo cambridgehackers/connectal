@@ -29,6 +29,7 @@ import GetPut::*;
 import Connectable::*;
 import BRAMFIFO::*;
 import BRAM::*;
+
 import ConnectalBram::*;
 import MemTypes::*;
 import StmtFSM::*;
@@ -282,11 +283,9 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
       portsel(regall, 1).request.put(BRAMRequest{write:True, responseOnWrite:False, address: truncate(sglId), datain: tagged Invalid });
       $display("idReturn %d", sglId);
    endrule
-      
    
-   Vector#(2,Server#(AddrTransRequest,Bit#(addrWidth))) addrServers;
-   for(Integer i = 0; i < 2; i=i+1)
-      addrServers[i] =
+   function Server#(AddrTransRequest,Bit#(addrWidth)) addrServer(Integer i);
+   return
       (interface Server#(AddrTransRequest,Bit#(addrWidth));
 	  interface Put request;
 	     method Action put(AddrTransRequest req);
@@ -306,6 +305,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 	     endmethod
 	  endinterface
        endinterface);
+   endfunction
       
    interface MMURequest request;
    method Action idRequest(SpecialTypeForSendingFd fd);
@@ -347,7 +347,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
        /* this method is only implemented in s/w responders */
    endmethod
    endinterface
-   interface addr = addrServers;
+   interface addr = genWith(addrServer);
 
 endmodule
 
@@ -358,7 +358,6 @@ endinterface
 module mkArbitratedMMU#(Server#(AddrTransRequest,Bit#(addrWidth)) server) (ArbitratedMMU#(addrWidth,numServers));
    
    FIFOF#(Bit#(TAdd#(1,TLog#(numServers)))) tokFifo <- mkSizedFIFOF(9);
-   Vector#(numServers, Server#(AddrTransRequest,Bit#(addrWidth))) addrServers;
    Reg#(Bit#(TLog#(numServers))) arb <- mkReg(0);
 
    // this is a very crude arbiter.  something more sophisticated may be required (mdk)
@@ -366,8 +365,8 @@ module mkArbitratedMMU#(Server#(AddrTransRequest,Bit#(addrWidth)) server) (Arbit
       arb <= arb+1;
    endrule
    
-   for(Integer i = 0; i < valueOf(numServers); i=i+1)
-      addrServers[i] = 
+   function Server#(AddrTransRequest,Bit#(addrWidth)) arbitratedServer(Integer i);
+   return
       (interface Server#(AddrTransRequest,Bit#(addrWidth));
 	  interface Put request;
 	     method Action put(AddrTransRequest req) if (arb == fromInteger(i));
@@ -383,7 +382,8 @@ module mkArbitratedMMU#(Server#(AddrTransRequest,Bit#(addrWidth)) server) (Arbit
 	     endmethod
 	  endinterface
        endinterface);
+   endfunction
 
-   interface servers = addrServers;
+   interface servers = genWith(arbitratedServer);
 
 endmodule
