@@ -88,7 +88,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
     // However, the implicit guard only checks for space for 1 element for enq(), and availability of 1 element for deq().
     MIMOConfiguration mimoCfg = defaultValue;
    MIFO#(4,busWidthWords,16,Bit#(32)) completionMimo <- mkMIFO();
-   MIFO#(4,busWidthWords,16,TLPTag) completionTagMimo <- mkMIFO();
+   MIFO#(4,busWidthWords,16,Tuple2#(TLPTag,Bool)) completionTagMimo <- mkMIFO(); // tag, last beat of burst
 
    mimoCfg.bram_based = True;
    mimoCfg.unguarded = True;
@@ -279,7 +279,8 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 	       end
 	       wordCount = wordCountReg - extend(pack(count));
 	       completionMimo.enq(count, vec);
-	       Vector#(4, TLPTag) tagvec = replicate(lastTag);
+	       function Tuple2#(TLPTag,Bool) taglast(Integer i); return tuple2(lastTag, (fromInteger(i) == (count-1)) ? tlp.eof : False); endfunction
+	       Vector#(4, Tuple2#(TLPTag,Bool)) tagvec = genWith(taglast);
 	       completionTagMimo.enq(count, tagvec);
 	       handled = True;
 	    end
@@ -294,7 +295,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
                vec[0] = hdr_3dw.data;
                wordCount = hdr_3dw.length - 1;
                completionMimo.enq(1, vec);
-               completionTagMimo.enq(1, replicate(tag));
+               completionTagMimo.enq(1, replicate(tuple2(tag,tlp.eof)));
             end
 	    handled = True;
       end
@@ -437,7 +438,8 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
          method ActionValue#(MemData#(buswidth)) get() if (completionMimo.deqReady()
 							   && completionTagMimo.deqReady());
 	      let data_v = completionMimo.first;
-	      let tag_v = completionTagMimo.first;
+	      let tag_last_v = completionTagMimo.first;
+	      match { .tag, .last } = tag_last_v[fromInteger(valueOf(busWidthWords))-1];
 	      completionMimo.deq();
 	      completionTagMimo.deq();
               Bit#(buswidth) v = 0;
@@ -452,7 +454,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 		 v[(i+1)*32-1:i*32] = data_v[i];
 `endif
               end
-	      return MemData { data: v, tag: truncate(tag_v[0]), last: True};
+	      return MemData { data: v, tag: truncate(tag), last: last}; // last beat of this response burst
            endmethod
 	endinterface
    endinterface
