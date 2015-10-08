@@ -1,5 +1,11 @@
 connectal (15.10.1-1precise1) precise; urgency=medium
 
+  * Released 15.10.2: basic DMA working on vc709 / 690T
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 08 Oct 2015 13:16:25 -0400
+
+connectal (15.10.1-1precise1) precise; urgency=medium
+
   * Released 15.10.1: working on 690T pcie support.
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 07 Oct 2015 17:19:20 -0400
