@@ -106,21 +106,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
     Reg#(Bool) quadAlignedTlpHandled <- mkReg(True);
 
    Wire#(Bool) writeHeaderTlpWire <- mkDWire(False);
-   Probe#(Bool) writeHeaderAvailableProbe <- mkProbe;
    Wire#(Bool) writeDataMimoEnqWire <- mkDWire(False);
-   Probe#(Bool) writeDataMimoEnqProbe <- mkProbe;
-   let    writeDataMimoCountProbe <- mkProbe;
-   let writeDataMimoEnqReadyProbe <- mkProbe;
-   Probe#(Bool) writeInProgressProbe <- mkProbe;
-   Probe#(Bit#(10)) writeBurstCountProbe <- mkProbe;
-   rule updateProbe0;
-      writeDataMimoCountProbe    <= writeDataMimo.count();
-      writeDataMimoEnqReadyProbe <= writeDataMimo.enqReadyN(fromInteger(valueOf(busWidthWords)));
-   endrule
-   rule updateProbe2;
-      writeHeaderAvailableProbe <= writeHeaderTlpWire;
-      writeDataMimoEnqProbe <= writeDataMimoEnqWire;
-   endrule
 
    Reg#(Bool) writeDataCntAboveThreshold <- mkReg(False);
    Reg#(Bool) writeDataMimoHasRoom <- mkReg(False);
@@ -191,7 +177,6 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
       tlpDwCount <= truncate(min(4,unpack(dwCount)));
       lastTlp <= (dwCount <= 4);
       writeInProgress <= (dwCount != 0);
-      writeInProgressProbe <= (dwCount != 0);
       if (isHeaderOnly) begin
 	 doneTag.enq(writeTag.first());
 	 writeTag.deq();
@@ -232,7 +217,6 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
       tlp.eof = lastTlp;
       if (lastTlp) begin
 	 writeInProgress <= False;
-	 writeInProgressProbe <= False;
 	 doneTag.enq(writeTag.first());
 	 writeTag.deq();
 	 $display("writeDwCount=%d will be zero", writeDwCount);
@@ -428,7 +412,6 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 	       burstLen <- toGet(writeBurstCountFifo).get();
 	    end
 	    writeBurstCount <= extend(burstLen-1);
-	    writeBurstCountProbe <= extend(burstLen-1);
 
 	    Vector#(busWidthWords, Bit#(32)) v = unpack(wdata.data);
 	    writeDataMimo.enq(fromInteger(valueOf(busWidthWords)), v);
