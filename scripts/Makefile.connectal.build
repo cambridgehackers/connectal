@@ -285,7 +285,7 @@ vsim: verilog bin/vsim
 	$(MAKE) -C vsim simulate
 
 $(VFILE): $(TOPBSVFILE) $(BSVFILES)
-	$(Q)mkdir -p verilog/portal $(DTOP)/obj
+	$(Q)mkdir -p verilog $(DTOP)/obj
 	@echo BSCVERILOG [$(DTOP)]
 	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -remove-dollar -verilog -u -g $(MKTOP) $(TOPBSVFILE)
 	$(Q)sed -i 's|// On .*|// timestamp removed|' verilog/*.v
