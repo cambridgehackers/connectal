@@ -1,4 +1,4 @@
-connectal (15.10.1-1precise1) precise; urgency=medium
+connectal (15.10.2-1precise1) precise; urgency=medium
 
   * Released 15.10.2: basic DMA working on vc709 / 690T
 
