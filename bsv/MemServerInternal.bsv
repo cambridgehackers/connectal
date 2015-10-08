@@ -65,6 +65,8 @@ function Bool sglid_outofrange(SGLId p);
    return ((p[15:0]) >= fromInteger(valueOf(MaxNumSGLists)));
 endfunction
 
+import RegFile::*;
+
 typedef struct {MemRequest req;
 		Bit#(TLog#(TMax#(1,numClients))) client; } LRec#(numeric type numClients, numeric type addrWidth) deriving(Bits);
 
@@ -96,7 +98,6 @@ module mkMemReadInternal#(MemServerIndication ind,
 	    ,Add#(beatShift, c__, BurstLenSize)
 	    );
    
-   
    // stopping/killing infra
    Vector#(4,Reg#(Bool)) killv <- replicateM(mkReg(False));
    Vector#(4,Reg#(Bool)) stopv <- replicateM(mkReg(False));
@@ -116,6 +117,7 @@ module mkMemReadInternal#(MemServerIndication ind,
    
    let verbose = False;
    
+   RegFile#(Bit#(5),Bit#(BurstLenSize)) clientBurstLen <- mkRegFileFull();
    Reg#(Bit#(BurstLenSize)) burstReg <- mkReg(0);
    Reg#(Bool)               firstReg <- mkReg(True);
    Reg#(Bool)                lastReg <- mkReg(False);
@@ -153,6 +155,7 @@ module mkMemReadInternal#(MemServerIndication ind,
       let request <- toGet(clientRequest).get();
       let physAddr <- mmus[request.req.sglId[31:16]].response.get;
       let rename_tag <- tag_gen.getTag;
+      
       serverRequest.enq(RRec{req:request.req, pa:physAddr, client:request.client, rename_tag:extend(rename_tag)});
       if (verbose) $display("mkMemReadInternal::checkMmuResp: client=%d, rename_tag=%d", request.client,rename_tag);
       if (verbose) $display("mkMemReadInternal::mmuResp %d %d", request.client, cycle_cnt-last_mmuResp);
@@ -164,23 +167,23 @@ module mkMemReadInternal#(MemServerIndication ind,
       Bit#(MemTagSize) response_tag = response.tag;
       let drq <- serverProcessing.portA.response.get;
       let otag = drq.req_tag;
-      let burstLen = burstReg;
-      let first =    firstReg;
-      let last  =    lastReg;
+      let burstLen = clientBurstLen.sub(truncate(response.tag));
+      let first   = firstReg;
+      let last    = response.last;
       if (first) begin
-	 burstLen = drq.req_burstLen >> beat_shift;
 	 last = drq.last;
 	 dynamicAssert(last == (burstLen==1), "Last incorrect");
       end
       Bit#(TLog#(numTags)) tt = truncate(response_tag);
-      clientData.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, datain:MemData{data: response.data, tag: otag, last: last}, address:{tt,truncate(burstLen)}});
+      clientData.portA.request.put(BRAMRequest{write:True, responseOnWrite:False, datain:MemData{data: response.data, tag: otag, last: last},
+					       address:{tt,truncate(burstLen)}});
       if (last) begin
 	 tag_gen.returnTag(truncate(response_tag));
       end
       last_readData <= cycle_cnt;
       if (verbose) $display("mkMemReadInternal::read_data cyclediff %d", cycle_cnt-last_readData);
-      burstReg <= burstLen-1;
-      firstReg <= burstLen-1 == 0;
+      clientBurstLen.upd(truncate(response.tag), burstLen-1);
+      firstReg <= last;
       lastReg  <= burstLen-1 == 1;
    endrule
 
@@ -233,6 +236,7 @@ module mkMemReadInternal#(MemServerIndication ind,
    			else if (sglid_outofrange(req.sglId))
 			   dmaErrorFifo.enq(DmaError { errorType: DmaErrorSGLIdOutOfRange_r, pref: req.sglId });
    			else if (stopv[req.tag[5:4]] == False) begin
+			   clientBurstLen.upd(truncate(req.tag), req.burstLen >> beat_shift);
    			   clientRequest.enq(LRec{req:req, client:fromInteger(i)});
    			   mmus[mmusel].request.put(AddrTransRequest{id:truncate(req.sglId),off:req.offset});
    			end
