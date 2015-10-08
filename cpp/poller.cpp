@@ -46,7 +46,7 @@ PortalPoller::PortalPoller(int autostart)
     addFd(pipefd[0]);
 
     timeout = -1;
-#if defined(BSIM) || defined(BOARD_xsim)
+#if defined(BSIM) || defined(BOARD_xsim) || defined(PCIE3) // interrupts not yet working on Xilinx gen3 core
     timeout = 100;
 #endif
 }

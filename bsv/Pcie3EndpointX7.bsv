@@ -38,6 +38,7 @@ import ClientServer      ::*;
 import Real              ::*;
 import XilinxVirtex7PCIE ::*;
 import BUtils            ::*;
+import Probe             ::*;
 
 import ConnectalClocks   ::*;
 import ConnectalXilinxCells   ::*;
@@ -188,6 +189,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    Reset derivedReset <- mkAsyncReset(4, pcieReset250, derivedClock);
    Reset user_reset <- mkAsyncReset(2, pcie_ep.user_reset, pcie_ep.user_clk);
 
+   // FIFOS
    FIFOF#(AxiStCq) fAxiCq <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    FIFOF#(AxiStRc) fAxiRc <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
 
@@ -383,7 +385,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    Reg#(Bool)    rq_even    <- mkRegU(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    Reg#(DWCount) rq_dwcount <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    Reg#(AxiStRq) rq_rq <- mkRegU(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   rule get_rq_tlps;
+   rule rl_rq_tlps;
       let tlp <- toGet(frq).get;
       frq_tlps.enq(tlp);
    endrule
@@ -391,6 +393,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    rule rl_rq_header if (frq_tlps.first.sof);
       TLPData#(16) tlp <- toGet(frq_tlps).get();
       match { .rq_desc, .first_be, .last_be, .mdata} = convertTLP16ToRQDescriptor(tlp);
+
       let dwcount = ((rq_desc.reqtype == MEMORY_WRITE) ? rq_desc.dwcount : 0);
       rq_dwcount <= dwcount;
       rq_even <= False;

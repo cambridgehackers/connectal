@@ -70,7 +70,7 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
    PcieHostTop host <- mkPcieHostTop(pcie_refclk_p, osc_50_b3b, pcie_perst_n);
 `endif
 
-   Vector#(NumberOfUserTiles,ConnectalTop) ts <- replicateM(mkConnectalTop(
+   Vector#(NumberOfUserTiles,ConnectalTop) tile <- replicateM(mkConnectalTop(
 `ifdef IMPORT_HOSTIF // no synthesis boundary
       host,
 `else                // enables synthesis boundary
@@ -79,7 +79,7 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
 `endif
 `endif
        clocked_by host.portalClock, reset_by host.portalReset));
-   Platform portalTop <- mkPlatform(ts, clocked_by host.portalClock, reset_by host.portalReset);
+   Platform portalTop <- mkPlatform(tile, clocked_by host.portalClock, reset_by host.portalReset);
 
    if (mainClockPeriod == pcieClockPeriod) begin
        mkConnection(host.tpciehost.master, portalTop.slave, clocked_by host.portalClock, reset_by host.portalReset);

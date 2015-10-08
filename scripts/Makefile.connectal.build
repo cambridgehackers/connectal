@@ -285,10 +285,12 @@ vsim: verilog bin/vsim
 	$(MAKE) -C vsim simulate
 
 $(VFILE): $(TOPBSVFILE) $(BSVFILES)
-	$(Q)mkdir -p verilog/portal $(DTOP)/obj
+	$(Q)mkdir -p verilog $(DTOP)/obj
 	@echo BSCVERILOG [$(DTOP)]
 	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -remove-dollar -verilog -u -g $(MKTOP) $(TOPBSVFILE)
 	$(Q)sed -i 's|// On .*|// timestamp removed|' verilog/*.v
+	$(Q)sed -i 's|  wire.*PROBE[,;]|(* mark_debug="true" *)&|' verilog/*.v 
+	$(Q)sed -i 's|  wire.*PROBE_VALID[,;]|(* mark_debug="true" *)&|' verilog/*.v 
 	$(Q)for v in verilog/*.v; do $(CONNECTALDIR)/scripts/copy_verilog.py $$v $(VERILOG_PATH); done
 
 $(DTOP)/jni/%.cpp: $(CONNECTALDIR)/cpp/%.cpp
