@@ -451,21 +451,33 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    endrule
 
    FIFO#(Bool) intrMutex <- mkFIFO1(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   Wire#(Bool) msix_int_enable <- mkDWire(False, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   let probe_msix_enable <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   let probe_msix_sent <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   let probe_msix_fail <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   let probe_msix_addr <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   let probe_msix_data <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+
    rule rl_intr;
-      let addr = 0;
-      let data = 0;
-      let enable = 0;
-      if (intrFifo.notEmpty() && pcie_ep.cfg.interrupt_msix_enable[0] == 1) begin
-	 match { .a, .d } <- toGet(intrFifo).get();
-	 addr = a;
-	 data = d;
-	 enable = 1;
+      if (pcie_ep.cfg.interrupt_msix_enable[0] == 1) begin
+	 match { .addr, .data } <- toGet(intrFifo).get();
+	 pcie_ep.cfg.interrupt_msix_address(addr);
+	 pcie_ep.cfg.interrupt_msix_data(data);
+	 msix_int_enable <= True;
 	 intrMutex.enq(True);
+
+	 probe_msix_addr <= addr;
+	 probe_msix_data <= data;
       end
-      pcie_ep.cfg.interrupt_msix_address(addr);
-      pcie_ep.cfg.interrupt_msix_data(data);
-      pcie_ep.cfg.interrupt_msix_int(enable);
    endrule: rl_intr
+   rule rl_intr_enable;
+      probe_msix_enable <= msix_int_enable;
+      probe_msix_sent <= pcie_ep.cfg.interrupt_msix_sent;
+      probe_msix_fail <= pcie_ep.cfg.interrupt_msix_fail;
+
+      pcie_ep.cfg.interrupt_msix_int(pack(msix_int_enable));
+   endrule
+
    rule rl_intr_sent if (pcie_ep.cfg.interrupt_msix_sent() == 1|| pcie_ep.cfg.interrupt_msix_fail() == 1);
       intrMutex.deq();
    endrule
