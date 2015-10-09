@@ -1,3 +1,9 @@
+connectal (15.10.3-1precise1) precise; urgency=medium
+
+  * Released 15.10.3: fixed reorder buffer if memory responses are split and reordered 
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 09 Oct 2015 09:43:57 -0400
+
 connectal (15.10.2-1precise1) precise; urgency=medium
 
   * Released 15.10.2: basic DMA working on vc709 / 690T
