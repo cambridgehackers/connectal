@@ -117,10 +117,9 @@ module mkMemReadInternal#(MemServerIndication ind,
    
    let verbose = False;
    
-   RegFile#(Bit#(TLog#(numTags)),Bit#(BurstLenSize)) clientBurstLen <- mkRegFileFull();
+   RegFile#(Bit#(TLog#(numTags)),Tuple2#(Bool,Bit#(BurstLenSize))) clientBurstLen <- mkRegFileFull();
    Reg#(Bit#(BurstLenSize)) burstReg <- mkReg(0);
    Reg#(Bool)               firstReg <- mkReg(True);
-   Reg#(Bool)                lastReg <- mkReg(False);
          
    Reg#(Bit#(32))  beatCount <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
@@ -156,7 +155,7 @@ module mkMemReadInternal#(MemServerIndication ind,
       let physAddr <- mmus[request.req.sglId[31:16]].response.get;
       let rename_tag <- tag_gen.getTag;
       let burstLenBeats = request.req.burstLen >> beat_shift;
-      clientBurstLen.upd(truncate(rename_tag), burstLenBeats);
+      clientBurstLen.upd(truncate(rename_tag), tuple2(burstLenBeats == 1, burstLenBeats));
       
       serverRequest.enq(RRec{req:request.req, pa:physAddr, client:request.client, rename_tag:extend(rename_tag)});
       if (verbose) $display("mkMemReadInternal::checkMmuResp: client=%d, tag=%d rename_tag=%d burstLen=%d", request.client, request.req.tag, rename_tag, burstLenBeats);
@@ -168,11 +167,9 @@ module mkMemReadInternal#(MemServerIndication ind,
       let response <- toGet(serverData).get();
       let drq <- serverProcessing.portA.response.get;
       let tag = drq.req_tag;
-      let burstLen = clientBurstLen.sub(truncate(response.tag));
+      match { .last, .burstLen } = clientBurstLen.sub(truncate(response.tag));
       let first   = firstReg;
-      let last    = response.last;
       if (first) begin
-	 last = drq.last;
 	 dynamicAssert(last == (burstLen==1), "Last incorrect");
       end
       if (last && burstLen != 1)
@@ -185,9 +182,8 @@ module mkMemReadInternal#(MemServerIndication ind,
       end
       last_readData <= cycle_cnt;
       if (verbose) $display("mkMemReadInternal::read_data cyclediff %d", cycle_cnt-last_readData);
-      clientBurstLen.upd(truncate(response.tag), burstLen-1);
-      firstReg <= last;
-      lastReg  <= burstLen-1 == 1;
+      clientBurstLen.upd(truncate(response.tag), tuple2((burstLen-1 == 1),burstLen-1));
+      firstReg <= response.last;
    endrule
 
    rule tag_completed;
