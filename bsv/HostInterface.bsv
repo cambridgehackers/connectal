@@ -138,8 +138,10 @@ endinterface
 interface PcieHostTop;
    interface PcieHost#(DataBusWidth, NumberOfMasters) tpciehost;
 `ifdef XILINX
+`ifdef XILINX_SYS_CLK
    interface Clock tsys_clk_200mhz;
    interface Clock tsys_clk_200mhz_buf;
+`endif
    interface Clock tpci_clk_100mhz_buf;
    interface PcieEndpointX7#(PcieLanes) tep7;
 `elsif ALTERA
