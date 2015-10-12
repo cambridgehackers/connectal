@@ -36,3 +36,11 @@ Host-Specific Interfaces
    Host interface for Zynq FPGAs such as zedboard, zc702, zc706, and zybo.
 
    The Zc706 is a ZynqHost even when it is plugged into a PCIe slot.
+
+Application-Specific Types
+--------------------------
+
+.. bsv:typedef:: PinType
+
+   Specifies the type of the application pins interface. Defined from PIN_TYPE.
+

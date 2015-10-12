@@ -29,7 +29,11 @@ Make Variables Defining the Application
 
 .. make:var:: PIN_TYPE
 
-   BSV interface of exported pins. Defaults to Empty.
+   BSV interface of exported pins. Defaults to Empty. BSV type bsv:typedef::PinType is defined from PIN_TYPE.
+
+.. make:var:: PIN_TYPE_INCLUDE
+
+   Which BSV package to import to get the declaration of PIN_TYPE.
 
 .. make:var:: BSVFILES
 
