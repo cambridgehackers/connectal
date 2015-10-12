@@ -143,4 +143,5 @@ module mkPlatform#(Vector#(NumberOfUserTiles, ConnectalTop) tiles)(Platform);
    interface interrupt = interrupts;
    interface slave = ctrl_mux;
    interface masters = lMemServer.masters;
+   interface pins = tiles[0].pins;
 endmodule
