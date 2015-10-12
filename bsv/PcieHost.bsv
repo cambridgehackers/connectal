@@ -202,7 +202,9 @@ interface PcieTop#(type ipins);
 `ifndef BSIM
    (* prefix="PCIE" *)
    interface PciewrapPci_exp#(PcieLanes) pcie;
+`ifdef PINS_ALWAYS_READY
    (* always_ready *)
+`endif
    (* prefix="" *)
    interface ipins       pins;
 `endif
