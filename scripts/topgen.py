@@ -41,6 +41,7 @@ def newArgparser():
 argparser = newArgparser()
 
 topTemplate='''
+import ConnectalConfig::*;
 import Vector::*;
 import Portal::*;
 import CtrlMux::*;
