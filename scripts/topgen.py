@@ -101,6 +101,7 @@ typedef enum {NoInterface, %(enumList)s} IfcNames deriving (Eq,Bits);
 '''
 
 topNocTemplate='''
+import ConnectalConfig::*;
 import Vector::*;
 import Portal::*;
 import CnocPortal::*;
