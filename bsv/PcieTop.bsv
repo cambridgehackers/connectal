@@ -26,6 +26,8 @@ import FIFO              :: *;
 import Connectable       :: *;
 import ClientServer      :: *;
 import DefaultValue      :: *;
+
+import ConnectalConfig::*;
 import PcieSplitter      :: *;
 import Xilinx            :: *;
 import Portal            :: *;

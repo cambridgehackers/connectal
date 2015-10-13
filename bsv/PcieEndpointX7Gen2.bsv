@@ -6,6 +6,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 package PcieEndpointX7Gen2;
 
+import ConnectalConfig   ::*;
 import Clocks            ::*;
 import Vector            ::*;
 import Connectable       ::*;
@@ -58,31 +59,6 @@ typedef struct {
    Bit#(16)      keep;
    Bit#(128)     data;
 } AxiTx deriving (Bits, Eq);
-
-`ifdef Artix7
-typedef 4 PcieLanes;
-`endif
-`ifdef BOARD_zc706
-typedef 4 PcieLanes;
-`endif
-`ifdef BOARD_vc707
-typedef 8 PcieLanes;
-`endif
-`ifdef BOARD_kc705
-typedef 8 PcieLanes;
-`endif
-`ifdef BOARD_vc707g2
-typedef 8 PcieLanes;
-`endif
-`ifdef BOARD_kc705g2
-typedef 8 PcieLanes;
-`endif
-`ifdef BOARD_kc160g2
-typedef 8 PcieLanes;
-`endif
-`ifdef BOARD_nfsume
-typedef 8 PcieLanes;
-`endif
 
 (* synthesize *)
 module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));

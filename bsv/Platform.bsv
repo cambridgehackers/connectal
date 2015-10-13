@@ -19,6 +19,7 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+import ConnectalConfig::*;
 import Vector::*;
 import Portal::*;
 import HostInterface::*;
@@ -42,7 +43,7 @@ interface Platform;
    interface PhysMemSlave#(32,32) slave;
    interface Vector#(NumberOfMasters,PhysMemMaster#(PhysAddrWidth, DataBusWidth)) masters;
    interface Vector#(MaxNumberOfPortals,ReadOnly#(Bool)) interrupt;
-   interface `PinType pins;
+   interface PinType pins;
 endinterface
 
 module renameReads#(Integer tile, MemReadClient#(DataBusWidth) reader, MemServerIndication err)(MemReadClient#(DataBusWidth));

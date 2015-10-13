@@ -23,21 +23,7 @@ import `PinTypeInclude::*;
 
 ////////////////////////////// common /////////////////////////////////
 
-`ifndef DataBusWidth
-`define DataBusWidth 64
-`endif
-
-typedef `PhysAddrWidth PhysAddrWidth;
-typedef `SlaveDataBusWidth SlaveDataBusWidth;
-typedef `DataBusWidth DataBusWidth;
-typedef `NumberOfMasters NumberOfMasters;
-typedef `SlaveControlAddrWidth SlaveControlAddrWidth;
-typedef `NumberOfUserTiles NumberOfUserTiles;
-typedef TAdd#(`NumberOfUserTiles,1) NumberOfTiles;
-typedef 2 NumReadClients;
-typedef 2 NumWriteClients;
-typedef `PinType TileExtType;
-typedef 16 MaxNumberOfPortals;
+import ConnectalConfig::*;
 
 ////////////////////////////// Bsim /////////////////////////////////
 `ifdef BsimHostInterface

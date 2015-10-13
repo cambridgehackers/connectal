@@ -29,6 +29,7 @@ import Connectable       :: *;
 import ClientServer      :: *;
 import BRAM              :: *;
 import DefaultValue      :: *;
+import ConnectalConfig   :: *;
 import PcieSplitter      :: *;
 import PcieTracer        :: *;
 import Xilinx            :: *;

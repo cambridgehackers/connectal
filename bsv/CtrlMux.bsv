@@ -22,7 +22,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-
+import ConnectalConfig::*;
 import Vector::*;
 import GetPut::*;
 import FIFOF::*;
