@@ -20,7 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import ConnectalProjectConfig::*;
+`include "ConnectalProjectConfig.bsv"
 
 `ifndef DataBusWidth
 `define DataBusWidth 64
@@ -35,8 +35,8 @@ typedef `NumberOfUserTiles NumberOfUserTiles;
 typedef TAdd#(`NumberOfUserTiles,1) NumberOfTiles;
 typedef 2 NumReadClients;
 typedef 2 NumWriteClients;
-typedef `PinType TileExtType;
-typedef `PinType PinType;
+//typedef `PinType TileExtType;
+//typedef `PinType PinType;
 typedef 16 MaxNumberOfPortals;
 `ifdef PcieLanes
 typedef `PcieLanes PcieLanes;

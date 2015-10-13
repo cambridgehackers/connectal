@@ -39,6 +39,8 @@ import SimDma::*;
 import IfcNames::*;
 import BuildVector::*;
 
+`include "ConnectalProjectConfig.bsv"
+
 module  mkXsimHost#(Clock derivedClock, Reset derivedReset)(XsimHost);
    interface derivedClock = derivedClock;
    interface derivedReset = derivedReset;

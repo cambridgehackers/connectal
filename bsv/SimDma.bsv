@@ -26,6 +26,9 @@ import FIFOF::*;
 import GetPut::*;
 
 import MemTypes::*;
+import ConnectalConfig::*;
+
+`include "ConnectalProjectConfig.bsv"
 
 `ifdef SIM_DMA_READ_LATENCY
 typedef `SIM_DMA_READ_LATENCY SimDmaReadLatency;

@@ -37,13 +37,14 @@ import MMUIndication::*;
 import MemServerIndication::*;
 import MemServerRequest::*;
 import IfcNames::*;
+`include "ConnectalProjectConfig.bsv"
 import `PinTypeInclude::*;
 
 interface Platform;
    interface PhysMemSlave#(32,32) slave;
    interface Vector#(NumberOfMasters,PhysMemMaster#(PhysAddrWidth, DataBusWidth)) masters;
    interface Vector#(MaxNumberOfPortals,ReadOnly#(Bool)) interrupt;
-   interface PinType pins;
+   interface `PinType pins;
 endinterface
 
 module renameReads#(Integer tile, MemReadClient#(DataBusWidth) reader, MemServerIndication err)(MemReadClient#(DataBusWidth));

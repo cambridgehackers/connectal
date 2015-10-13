@@ -31,6 +31,8 @@ import BRAM         :: *;
 import BramMux        :: *;
 import ConnectalBram  ::*;
 
+`include "ConnectalProjectConfig.bsv"
+
 typedef 11 TlpTraceAddrSize;
 typedef TAdd#(TlpTraceAddrSize,1) TlpTraceAddrSize1;
 

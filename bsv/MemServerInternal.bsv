@@ -37,6 +37,8 @@ import ConnectalMemory::*;
 import ConnectalClocks::*;
 import MMU::*;
 import ConnectalCompletionBuffer::*;
+import ConnectalConfig::*;
+`include "ConnectalProjectConfig.bsv"
 
 typedef 32 BeatCountSize;
 

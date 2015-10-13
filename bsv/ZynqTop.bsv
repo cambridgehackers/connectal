@@ -37,8 +37,9 @@ import AxiDma            :: *;
 import Top               :: *;
 import Bscan             :: *;
 import HostInterface     :: *;
-import `PinTypeInclude::*;
 import Platform          :: *;
+`include "ConnectalProjectConfig.bsv"
+import `PinTypeInclude::*;
 
 interface I2C_Pins;
    interface Inout#(Bit#(1)) scl;

@@ -25,6 +25,7 @@ import MemTypes::*;
 import Pipe::*;
 import ConnectalMemory::*;
 import HostInterface::*;
+`include "ConnectalProjectConfig.bsv"
 import `PinTypeInclude::*;
 
 interface PortalInterrupt#(numeric type dataWidth);
@@ -84,5 +85,5 @@ interface ConnectalTop;
    interface Vector#(MaxNumberOfPortals,ReadOnly#(Bool)) interrupt;
    interface Vector#(NumReadClients,MemReadClient#(DataBusWidth)) readers;
    interface Vector#(NumWriteClients,MemWriteClient#(DataBusWidth)) writers;
-   interface TileExtType pins;
+   interface `PinType pins;
 endinterface

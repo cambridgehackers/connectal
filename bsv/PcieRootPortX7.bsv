@@ -73,25 +73,6 @@ typedef struct {
    Bit#(128)     data;
 } AxiTx deriving (Bits, Eq);
 
-`ifdef Artix7
-typedef 4 PcieLanes;
-`endif
-`ifdef BOARD_zc706
-typedef 4 PcieLanes;
-`endif
-`ifdef BOARD_vc707
-typedef 8 PcieLanes;
-`endif
-`ifdef BOARD_kc705
-typedef 8 PcieLanes;
-`endif
-`ifdef BOARD_nfsume
-typedef 8 PcieLanes;
-`endif
-`ifdef BOARD_xsim
-typedef 8 PcieLanes;
-`endif
-
 (* synthesize *)
 module mkPcieRootPortX7(PcieRootPortX7#(PcieLanes));
 

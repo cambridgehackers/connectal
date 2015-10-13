@@ -3,6 +3,7 @@ import FIFO::*;
 import FIFOF::*;
 import Clocks::*;
 import ConnectalClocks::*;
+`include "ConnectalProjectConfig.bsv"
 
 interface Dsp48E1;
    method Bool     notEmpty();

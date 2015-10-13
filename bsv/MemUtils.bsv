@@ -30,6 +30,7 @@ import FIFOF::*;
 import SpecialFIFOs::*;
 import GetPut::*;
 
+import ConnectalConfig::*;
 import MemTypes::*;
 import ConfigCounter::*;
 import BRAMFIFOFLevel::*;

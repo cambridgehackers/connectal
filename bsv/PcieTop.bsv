@@ -28,6 +28,7 @@ import ClientServer      :: *;
 import DefaultValue      :: *;
 
 import ConnectalConfig::*;
+`include "ConnectalProjectConfig.bsv"
 import PcieSplitter      :: *;
 import Xilinx            :: *;
 import Portal            :: *;

@@ -40,6 +40,7 @@ import XilinxVirtex7PCIE ::*;
 import BUtils            ::*;
 import Probe             ::*;
 
+import ConnectalConfig::*;
 import ConnectalClocks   ::*;
 import ConnectalXilinxCells   ::*;
 import XilinxCells       ::*;
@@ -149,15 +150,6 @@ function TLPData#(16) convertRCDescriptorToTLP16(RCDescriptor desc, Bit#(32) dat
    
    return retval;
 endfunction
-
-`ifdef BOARD_vc709
-typedef 8 PcieLanes;
-typedef 8 NumLeds;
-`endif
-`ifdef BOARD_nfsume
-typedef 8 PcieLanes;
-typedef 2 NumLeds;
-`endif
 
 (* synthesize *)
 module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));

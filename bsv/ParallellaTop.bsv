@@ -54,6 +54,7 @@ import AxiDma            :: *;
 import Top               :: *;
 import Bscan             :: *;
 import HostInterface::*;
+`include "ConnectalProjectConfig.bsv"
 import `PinTypeInclude::*;
 
 interface I2C_Pins;

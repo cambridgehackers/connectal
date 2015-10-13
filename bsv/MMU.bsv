@@ -38,6 +38,7 @@ import ConnectalMemory::*;
 import ConnectalCompletionBuffer::*;
 import SimDma::*;
 
+`include "ConnectalProjectConfig.bsv"
 
 typedef 32 MaxNumSGLists;
 typedef Bit#(TLog#(MaxNumSGLists)) SGListId;

@@ -32,6 +32,8 @@ import AxiBits::*;
 import AxiGather::*;
 import Platform::*;
 
+`include "ConnectalProjectConfig.bsv"
+
 `ifdef USE_ACP
 typedef 1 NumAcp;
 `else

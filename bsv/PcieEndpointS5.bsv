@@ -40,6 +40,8 @@ import Real              ::*;
 
 import PCIE              ::*;
 
+`include "ConnectalProjectConfig.bsv"
+
 `ifdef BOARD_de5
 import PS5LIB            ::*;
 `elsif BOARD_vsim

@@ -39,6 +39,7 @@ import MemToPcie    :: *;
 import PcieToMem   :: *;
 import PcieCsr           :: *;
 import MemTypes          :: *;
+`include "ConnectalProjectConfig.bsv"
 `ifndef BSIM
 `ifdef XILINX
 `ifdef PCIE1

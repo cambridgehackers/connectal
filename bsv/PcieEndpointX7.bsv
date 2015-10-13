@@ -30,6 +30,8 @@ import PCIEWRAPPER       ::*;
 import Bufgctrl           ::*;
 import PcieGearbox       :: *;
 
+`include "ConnectalProjectConfig.bsv"
+
 (* always_ready, always_enabled *)
 interface PCIE_X7#(numeric type lanes);
    interface PciewrapPci_exp#(lanes)   pcie;
