@@ -18,11 +18,12 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+import ConnectalConfig::*;
+import HostInterface::*;
 import Vector::*;
 import FIFO::*;
 import Connectable::*;
 import Portal::*;
-import HostInterface::*;
 import CtrlMux::*;
 import Bscan::*;
 import BscanIndication::*;

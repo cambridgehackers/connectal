@@ -18,6 +18,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+import ConnectalConfig::*;
 import SpecialFIFOs::*;
 import Vector::*;
 import BuildVector::*;
@@ -28,6 +29,7 @@ import DefaultValue::*;
 import Connectable::*;
 import CtrlMux::*;
 import Portal::*;
+import HostInterface::*;
 import ConnectalMemory::*;
 import MemTypes::*;
 import MemServer::*;
@@ -35,7 +37,6 @@ import MemServerInternal::*;
 import MMU::*;
 import MemReadEngine::*;
 import MemWriteEngine::*;
-import HostInterface::*;
 import MMURequest::*;
 import StrstrRequest::*;
 import MemServerIndication::*;

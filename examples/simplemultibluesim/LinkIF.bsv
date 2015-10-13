@@ -19,7 +19,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-import HostInterface::*;
+import ConnectalConfig::*;
 import Simple::*;
 
 interface LinkRequest;

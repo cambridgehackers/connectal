@@ -21,11 +21,12 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import ConnectalConfig::*;
+import HostInterface::*;
 import Vector::*;
 import CtrlMux::*;
 import Portal::*;
 import MemTypes::*;
-import HostInterface::*;
 import Leds::*;
 import PS7LIB::*;
 import SPI::*;

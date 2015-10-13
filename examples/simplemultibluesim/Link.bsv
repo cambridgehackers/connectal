@@ -25,7 +25,7 @@ import Pipe::*;
 import Connectable::*;
 import CtrlMux::*;
 import Portal::*;
-import HostInterface::*;
+import ConnectalConfig::*;
 import CnocPortal::*;
 import SimLink::*;
 import LinkIF::*;

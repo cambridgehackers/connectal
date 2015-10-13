@@ -30,7 +30,7 @@ import ConnectalMemory::*;
 import MemTypes::*;
 import MemServer::*;
 import MMU::*;
-import HostInterface::*;
+import ConnectalConfig::*;
 import MemcpyRequest::*;
 import MemServerRequest::*;
 import MMURequest::*;

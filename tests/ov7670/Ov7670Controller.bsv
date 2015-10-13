@@ -30,7 +30,7 @@ import FIFOF::*;
 import BRAMFIFO::*;
 import Gearbox::*;
 import MemTypes::*;
-import HostInterface::*;
+import ConnectalConfig::*;
 import MemWriteEngine::*;
 import Pipe::*;
 import ConnectalClocks::*;

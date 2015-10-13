@@ -21,7 +21,7 @@
 import Vector::*;
 import Portal::*;
 import CtrlMux::*;
-import HostInterface::*;
+import ConnectalConfig::*;
 import EchoIndication::*;
 import EchoRequest::*;
 import Echo::*;

@@ -28,7 +28,7 @@ import StmtFSM::*;
 import MemTypes::*;
 import MemReadEngine::*;
 import MemWriteEngine::*;
-import HostInterface::*;
+import ConnectalConfig::*;
 import FloatOps::*;
 import Gearbox::*;
 import GearboxGetPut::*;

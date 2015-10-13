@@ -31,7 +31,7 @@ import ConnectalMemory::*;
 import MemServer::*;
 import MemServerInternal::*;
 import MMU::*;
-import HostInterface::*;
+import ConnectalConfig::*;
 import NandCfgRequest::*;
 import MMURequest::*;
 import RegexpRequest::*;

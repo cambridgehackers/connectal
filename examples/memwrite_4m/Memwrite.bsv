@@ -29,7 +29,7 @@ import MemWriteEngine::*;
 import Pipe::*;
 import Arith::*;
 import MemUtils::*;
-import HostInterface::*;
+import ConnectalConfig::*;
 import StmtFSM ::*;
 
 interface MemwriteRequest;

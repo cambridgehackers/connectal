@@ -24,7 +24,7 @@ import Vector::*;
 import CtrlMux::*;
 import Portal::*;
 import MemTypes::*;
-import HostInterface::*;
+import ConnectalConfig::*;
 import PmodControllerRequest::*;
 import PmodControllerIndication::*;
 import Controller::*;

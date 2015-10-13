@@ -28,7 +28,7 @@ import Pipe::*;
 import MemTypes::*;
 import MemReadEngine::*;
 import Pipe::*;
-import HostInterface::*; // for DataBusWidth
+import ConnectalConfig::*; // for DataBusWidth
 
 interface ReadTestRequest;
    method Action startRead(Bit#(32) pointer, Bit#(32) numBytes, Bit#(32) burstLenInBytes, Bit#(32) iterCnt);
