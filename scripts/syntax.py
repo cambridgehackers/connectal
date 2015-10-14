@@ -1004,6 +1004,11 @@ def p_package(p):
 
 def preprocess(source, defs):
     stack = [(True,True)]
+    def nexttok(s):
+        k = re.search('\s', s)
+        sym = s[:k.start()]
+        s = s[k.end():]
+        return (k, s)
     def pp(s):
         cond  = stack[-1][0]
         valid = stack[-1][1]
@@ -1016,16 +1021,12 @@ def preprocess(source, defs):
         tok = s[:j.start()]
         s = s[j.end():]
         if tok == 'ifdef':
-            k = re.search('\s', s)
-            sym = s[:k.start()]
-            s = s[k.end():]
+            (k, s) = nexttok(s)
             new_cond = sym in defs
             new_valid = new_cond and valid
             stack.append((new_cond,new_valid))
         elif tok == 'ifndef':
-            k = re.search('\s', s)
-            sym = s[:k.start()]
-            s = s[k.end():]
+            (k, s) = nexttok(s)
             new_cond = not sym in defs
             new_valid = valid and new_cond
             stack.append((new_cond,new_valid))
@@ -1035,9 +1036,7 @@ def preprocess(source, defs):
             stack.append((new_cond,valid))
         elif tok == 'elsif':
             stack.pop()
-            k = re.search('\s', s)
-            sym = s[:k.start()]
-            s = s[k.end():]
+            (k, s) = nexttok(s)
             new_cond = sym in defs
             new_valid = new_cond and valid
             stack.append((new_cond,new_valid))
