@@ -29,6 +29,7 @@ import Connectable       :: *;
 import ClientServer      :: *;
 import BRAM              :: *;
 import DefaultValue      :: *;
+import ConnectalConfig   :: *;
 import PcieSplitter      :: *;
 import PcieTracer        :: *;
 import Xilinx            :: *;
@@ -38,6 +39,7 @@ import MemToPcie    :: *;
 import PcieToMem   :: *;
 import PcieCsr           :: *;
 import MemTypes          :: *;
+`include "ConnectalProjectConfig.bsv"
 `ifndef BSIM
 `ifdef XILINX
 `ifdef PCIE1
@@ -60,11 +62,13 @@ import PcieEndpointS5    :: *;
 `endif
 import HostInterface     :: *;
 
-// implemented in TlpReplay.cpp
-import "BDPI" function Action put_tlp(TLPData#(16) d);
-import "BDPI" function ActionValue#(TLPData#(16)) get_tlp();
-import "BDPI" function Bool can_put_tlp();
-import "BDPI" function Bool can_get_tlp();
+`ifdef XILINX_SYS_CLK
+`define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n,
+`define SYS_CLK_ARG sys_clk_p, sys_clk_n,
+`else
+`define SYS_CLK_PARAM
+`define SYS_CLK_ARG
+`endif
 
 (* synthesize *)
 module mkMemToPcieSynth#(PciId my_id)(MemToPcie#(DataBusWidth));
@@ -200,14 +204,16 @@ interface PcieTop#(type ipins);
 `ifndef BSIM
    (* prefix="PCIE" *)
    interface PciewrapPci_exp#(PcieLanes) pcie;
+`ifdef PINS_ALWAYS_READY
    (* always_ready *)
+`endif
    (* prefix="" *)
    interface ipins       pins;
 `endif
 endinterface
 
 `ifdef BSIM
-module mkBsimPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)(PcieHostTop);
+module mkBsimPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_PARAM Reset pci_sys_reset_n)(PcieHostTop);
    let dc <- exposeCurrentClock;
    let dr <- exposeCurrentReset;
    PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(PciId{ bus:0, dev:0, func:0});
@@ -230,15 +236,17 @@ endmodule
 
 `ifdef XILINX
 (* no_default_clock, no_default_reset *)
-module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)(PcieHostTop);
+module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_PARAM Reset pci_sys_reset_n)(PcieHostTop);
 
 // Clock and PcieEndpoint for Xilinx
+`ifdef XILINX_SYS_CLK
    Clock sys_clk_200mhz <- mkClockIBUFDS(
 `ifdef ClockDefaultParam
        defaultValue,
 `endif
        sys_clk_p, sys_clk_n);
    Clock sys_clk_200mhz_buf <- mkClockBUFG(clocked_by sys_clk_200mhz);
+`endif // XILINX_SYS_CLK
    Clock pci_clk_100mhz_buf <- mkClockIBUFDS_GTE2(
 `ifdef ClockDefaultParam
        defaultValue,
@@ -273,8 +281,10 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys
    let ipciehost = pciehost;
 `endif
 
+`ifdef XILINX_SYS_CLK
    interface Clock tsys_clk_200mhz = sys_clk_200mhz;
    interface Clock tsys_clk_200mhz_buf = sys_clk_200mhz_buf;
+`endif
    interface Clock tpci_clk_100mhz_buf = pci_clk_100mhz_buf;
 
    interface PcieEndpointX7 tep7 = ep7;
@@ -324,14 +334,14 @@ endmodule
 `endif
 
 `ifdef BSIM
-   module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)(PcieHostTop);
-   PcieHostTop _a <- mkBsimPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n); return _a;
+   module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_PARAM Reset pci_sys_reset_n)(PcieHostTop);
+   PcieHostTop _a <- mkBsimPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, `SYS_CLK_ARG pci_sys_reset_n); return _a;
    endmodule
 `elsif XILINX // XILINX
    //(* synthesize, no_default_clock, no_default_reset *)
    (* no_default_clock, no_default_reset *)
-   module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n)(PcieHostTop);
-      PcieHostTop _a <- mkXilinxPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n); return _a;
+   module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_PARAM Reset pci_sys_reset_n)(PcieHostTop);
+      PcieHostTop _a <- mkXilinxPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, `SYS_CLK_ARG pci_sys_reset_n); return _a;
    endmodule
 `elsif ALTERA_TOP
    //(* synthesize, no_default_clock, no_default_reset *)

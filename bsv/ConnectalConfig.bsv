@@ -1,5 +1,4 @@
-
-// Copyright (c) 2015 Quanta Research Cambridge, Inc.
+// Copyright (c) 2015 Connectal Project
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -21,33 +20,24 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import ConnectalConfig::*;
-import HostInterface::*;
-import Vector::*;
-import CtrlMux::*;
-import Portal::*;
-import MemTypes::*;
-import Leds::*;
-import PS7LIB::*;
-import SPI::*;
-import SPIRequest::*;
-import SPIResponse::*;
+`include "ConnectalProjectConfig.bsv"
 
-typedef enum {IfcNames_ControllerRequest, IfcNames_ControllerResponse} IfcNames deriving (Eq,Bits);
+`ifndef DataBusWidth
+`define DataBusWidth 64
+`endif
 
-module mkConnectalTop#(HostInterface host)(ConnectalTop);
-
-   SPIResponseProxy cp <- mkSPIResponseProxy(IfcNames_ControllerResponse);
-   Controller controller <- mkController(cp.ifc, host.ps7.emiospi0);
-   SPIRequestWrapper cw <- mkSPIRequestWrapper(IfcNames_ControllerRequest, controller.req);
-   
-   Vector#(2,StdPortal) portals;
-   portals[0] = cp.portalIfc;
-   portals[1] = cw.portalIfc;
-   let ctrl_mux <- mkSlaveMux(portals);
-   
-   interface interrupt = getInterruptVector(portals);
-   interface slave = ctrl_mux;
-   interface masters = nil;
-endmodule : mkConnectalTop
-export mkConnectalTop;
+typedef `PhysAddrWidth PhysAddrWidth;
+typedef `SlaveDataBusWidth SlaveDataBusWidth;
+typedef `DataBusWidth DataBusWidth;
+typedef `NumberOfMasters NumberOfMasters;
+typedef `SlaveControlAddrWidth SlaveControlAddrWidth;
+typedef `NumberOfUserTiles NumberOfUserTiles;
+typedef TAdd#(`NumberOfUserTiles,1) NumberOfTiles;
+typedef 2 NumReadClients;
+typedef 2 NumWriteClients;
+//typedef `PinType TileExtType;
+//typedef `PinType PinType;
+typedef 16 MaxNumberOfPortals;
+`ifdef PcieLanes
+typedef `PcieLanes PcieLanes;
+`endif

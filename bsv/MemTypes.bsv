@@ -26,14 +26,19 @@ import Connectable::*;
 import BRAMFIFO::*;
 import GetPut::*;
 import ClientServer::*;
+
+import ConnectalConfig::*;
 import Pipe::*;
 import ConnectalMemory::*;
 import DefaultValue::*;
+
+`include "ConnectalProjectConfig.bsv"
 
 typedef Bit#(32) SGLId;
 typedef 44 MemOffsetSize;
 typedef 6 MemTagSize;
 typedef `BurstLenSize BurstLenSize;
+
 `ifndef USE_ACP
 `ifdef PCIE3
 // as configured, the Xilinx gen3 PCIe core supports 5 bit tags, and

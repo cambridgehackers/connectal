@@ -19,6 +19,7 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+import ConnectalConfig::*;
 import Vector            :: *;
 import GetPut::*;
 import Connectable::*;
@@ -37,6 +38,8 @@ import MemServerRequest::*;
 import SimDma::*;
 import IfcNames::*;
 import BuildVector::*;
+
+`include "ConnectalProjectConfig.bsv"
 
 module  mkXsimHost#(Clock derivedClock, Reset derivedReset)(XsimHost);
    interface derivedClock = derivedClock;

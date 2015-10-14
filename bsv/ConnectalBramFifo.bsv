@@ -27,6 +27,7 @@ import FIFOF::*;
 import BRAMFIFO::*;
 import CBus::*; // extendNP and truncateNP
 
+`include "ConnectalProjectConfig.bsv"
 import Arith::*;
 import ConnectalClocks::*;
 

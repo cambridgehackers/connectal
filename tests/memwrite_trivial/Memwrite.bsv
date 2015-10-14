@@ -26,7 +26,7 @@ import GetPut::*;
 import MemTypes::*;
 import MemWriteEngine::*;
 import Pipe::*;
-import HostInterface::*;
+import ConnectalConfig::*;
 
 interface MemwriteRequest;
    method Action startWrite(Bit#(32) pointer, Bit#(32) numWords, Bit#(32) burstLen);

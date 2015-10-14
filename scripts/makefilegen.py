@@ -510,6 +510,10 @@ if __name__=='__main__':
         for name in options.prvariant:
             make.write(variantTemplate % {'varname': name})
     make.close()
+    configbsv = util.createDirAndOpen(os.path.join(project_dir, 'generatedbsv', 'ConnectalProjectConfig.bsv'), 'w')
+    for (var, val) in map(util.splitBinding, bsvdefines):
+        configbsv.write('`define %(var)s %(val)s\n' % { 'var': var, 'val': val })
+    configbsv.close()
 
     if options.make:
         os.chdir(project_dir)

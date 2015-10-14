@@ -202,7 +202,7 @@ void initPortalHardware(void)
 	    }
 	    len = read(fd, &status, sizeof(status));
 	    if (len < sizeof(status))
-	      fprintf(stderr, "[%s:%d] fd %d len %lu\n", __FUNCTION__, __LINE__, fd, len);
+	      fprintf(stderr, "[%s:%d] fd %d len %lu\n", __FUNCTION__, __LINE__, fd, (unsigned long)len);
 	    close(fd);
 	    break;
 	  }

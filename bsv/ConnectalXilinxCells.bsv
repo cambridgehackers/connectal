@@ -26,6 +26,8 @@ import DefaultValue :: *;
 import XilinxCells  :: *;
 import Vector       :: *;
 
+`include "ConnectalProjectConfig.bsv"
+
 import "BVI" IBUFDS =
 module mkIBUFDS#(Wire#(one_bit) i, Wire#(one_bit) ib)(ReadOnly#(one_bit)) provisos(Bits#(one_bit,1));
    default_clock clk();

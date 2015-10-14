@@ -31,6 +31,8 @@ import PcieTracer     :: *;
 import MemTypes       :: *;
 import AddressGenerator::*;
 
+`include "ConnectalProjectConfig.bsv"
+
 `define msix_base 1024
 
 // An MSIX table entry, as defined in the PCIe spec

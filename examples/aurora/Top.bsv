@@ -25,7 +25,7 @@ import FIFO::*;
 import Connectable::*;
 import CtrlMux::*;
 import Portal::*;
-import HostInterface::*;
+import ConnectalConfig::*;
 import AuroraIndication::*;
 import AuroraRequest::*;
 import Aurora::*;

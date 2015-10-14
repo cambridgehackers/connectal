@@ -22,6 +22,7 @@
 
 package PcieEndpointS5;
 
+import ConnectalConfig   ::*;
 import Clocks            ::*;
 import Vector            ::*;
 import Connectable       ::*;
@@ -38,6 +39,8 @@ import ClientServer      ::*;
 import Real              ::*;
 
 import PCIE              ::*;
+
+`include "ConnectalProjectConfig.bsv"
 
 `ifdef BOARD_de5
 import PS5LIB            ::*;
@@ -100,8 +103,6 @@ typedef struct {
    Bit#(bytes)           be;
    Bit#(TMul#(bytes, 8)) data;
 } AvalonStTx#(type bytes) deriving (Bits, Eq);
-
-typedef 8 PcieLanes;
 
 (* synthesize *)
 module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieEndpointS5#(PcieLanes));

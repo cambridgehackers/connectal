@@ -30,7 +30,7 @@ import Pipe::*;
 import MemTypes::*;
 import MemReadEngine::*;
 import MemWriteEngine::*;
-import HostInterface::*;
+import ConnectalConfig::*;
 
 interface DmaRequest;
    //

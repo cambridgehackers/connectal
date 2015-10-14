@@ -29,6 +29,8 @@ import ConnectalAlteraCells   ::*;
 import ALTERA_PCIE_ED_WRAPPER ::*;
 import PS5LIB ::*;
 
+`include "ConnectalProjectConfig.bsv"
+
 // Default Pcie Application
 
 (* always_ready, always_enabled *)

@@ -29,6 +29,9 @@ import PCIE         :: *;
 import DefaultValue :: *;
 import ClientServer :: *;
 import MemTypes     :: *;
+import ConnectalConfig::*;
+
+`include "ConnectalProjectConfig.bsv"
 
 //
 // Top interface: PCIe transaction level packets (TLPs)

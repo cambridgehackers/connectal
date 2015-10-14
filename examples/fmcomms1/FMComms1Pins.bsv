@@ -25,7 +25,7 @@
 //import Clocks :: *;
 //import FIFO::*;
 //import Portal::*;
-//import HostInterface::*;
+//import ConnectalConfig::*;
 //import CtrlMux::*;
 //import MemTypes::*;
 //import MemServer::*;

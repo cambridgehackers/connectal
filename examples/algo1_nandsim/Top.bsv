@@ -27,7 +27,7 @@ import DefaultValue::*;
 import Connectable::*;
 import CtrlMux::*;
 import Portal::*;
-import HostInterface::*;
+import ConnectalConfig::*;
 import ConnectalMemory::*;
 import MemServer::*;
 import MemServerInternal::*;

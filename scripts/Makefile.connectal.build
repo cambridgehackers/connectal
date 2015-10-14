@@ -156,6 +156,13 @@ ubuntu.exe2: prepare_bin_target
 connectal.so: prepare_bin_target
 	$(Q)cd jni; $(MAKE) --no-print-directory -f Ubuntu.mk connectal.so
 	@cp -v jni/connectal.so bin
+ifneq ($(OS),android)
+	$(Q)[ ! -f bin/mkTop.bin.gz ] || objcopy --remove-section fpgadata bin/connectal.so
+	$(Q)[ ! -f bin/mkTop.bin.gz ] || objcopy --add-section fpgadata=bin/mkTop.bin.gz bin/connectal.so
+else
+	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || $(NDK_OBJCOPY) --remove-section fpgadata bin/connectal.so
+	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/connectal.so
+endif
 
 ifneq ($(BOARD),bluesim)
 ifneq ($(OS),android)
@@ -184,11 +191,15 @@ ifeq ($(OS),android)
 	gzip -f bin/mkTop.xdevcfg.bin
 	$(Q)[ ! -f bin/android.exe ] || $(NDK_OBJCOPY) --remove-section fpgadata bin/android.exe
 	$(Q)[ ! -f bin/android.exe ] || $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
+	$(Q)[ ! -f bin/connectal.so ] || $(NDK_OBJCOPY) --remove-section fpgadata bin/connectal.so
+	$(Q)[ ! -f bin/connectal.so ] || $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/connectal.so
 else ifneq ($(XILINX),)
 	@echo "zipping xilinx"
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
 	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --remove-section fpgadata bin/ubuntu.exe
 	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --add-section fpgadata=bin/mkTop.bin.gz bin/ubuntu.exe
+	$(Q)[ ! -f bin/connectal.so ] || objcopy --remove-section fpgadata bin/connectal.so
+	$(Q)[ ! -f bin/connectal.so ] || objcopy --add-section fpgadata=bin/mkTop.bin.gz bin/connectal.so
 	if [ -f Impl/TopDown/top-post-route.dcp ]; then cp -f Impl/TopDown/top-post-route.dcp bin; fi
 	$(CONNECTALDIR)/scripts/check-timing.py bin/*/top-post-route-timing-summary.rpt
 else
@@ -307,7 +318,7 @@ bsim: prepare_bin_target $(DTOP)/jni/TlpReplay.cpp $(BSIM_CXX_LOCAL)
 
 syntax.timestamp: $(BSVFILES)
 	@#$syntax.py uses environment variables: V INTERFACES BSVDEFINES_LIST DTOP DUT_NAME
-	$(Q)$(CONNECTALDIR)/scripts/syntax.py $(BSVFILES)
+	$(Q)BSVPATH=$(BSVPATH) $(CONNECTALDIR)/scripts/syntax.py $(BSVFILES)
 	$(Q)touch syntax.timestamp
 
 verilog: $(VFILE)

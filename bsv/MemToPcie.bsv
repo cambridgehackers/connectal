@@ -35,6 +35,9 @@ import ConnectalMimo :: *;
 import MIFO         :: *;
 import MemTypes     :: *;
 import ConfigCounter ::*;
+import ConnectalConfig::*;
+
+`include "ConnectalProjectConfig.bsv"
 
 typedef struct {
    TLPData#(16) tlp;

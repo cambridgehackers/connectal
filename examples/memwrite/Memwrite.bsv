@@ -28,7 +28,7 @@ import MemTypes::*;
 import MemWriteEngine::*;
 import Pipe::*;
 import Arith::*;
-import HostInterface::*;
+import ConnectalConfig::*;
 
 `ifdef NumEngineServers
 typedef `NumEngineServers NumEngineServers;

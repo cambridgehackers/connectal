@@ -26,7 +26,7 @@ import FIFO::*;
 import BRAMFIFO::*;
 import GetPut::*;
 import ClientServer::*;
-import HostInterface::*;
+import ConnectalConfig::*;
 import ConnectalMemory::*;
 import MemTypes::*;
 import MemReadEngine::*;

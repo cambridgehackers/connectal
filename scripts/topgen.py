@@ -41,6 +41,7 @@ def newArgparser():
 argparser = newArgparser()
 
 topTemplate='''
+import ConnectalConfig::*;
 import Vector::*;
 import Portal::*;
 import CtrlMux::*;
@@ -89,6 +90,7 @@ module mkConnectalTop
    interface slave = ctrl_mux;
    interface readers = take(%(portalReaders)s);
    interface writers = take(%(portalWriters)s);
+%(pinsInterface)s
 %(exportedInterfaces)s
 endmodule : mkConnectalTop
 %(exportedNames)s
@@ -99,6 +101,7 @@ typedef enum {NoInterface, %(enumList)s} IfcNames deriving (Eq,Bits);
 '''
 
 topNocTemplate='''
+import ConnectalConfig::*;
 import Vector::*;
 import Portal::*;
 import CnocPortal::*;
@@ -398,6 +401,8 @@ if __name__=='__main__':
                  'portalReaders' : ('append(' if len(options.memread) > 0 else '(') + ', '.join(options.memread + ['nullReaders']) + ')',
                  'portalWriters' : ('append(' if len(options.memwrite) > 0 else '(') + ', '.join(options.memwrite + ['nullWriters']) + ')',
                  'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
+#TODO: add a flag to enable pins interface                 
+                 'pinsInterface' : '    interface pins = l%(usermod)s.pins;\n' % pmap if False else '',
                  'moduleParam' : 'ConnectalTop' if not options.cnoc \
                      else 'CnocTop#(NumberOfRequests,NumberOfIndications,PhysAddrWidth,DataBusWidth,`PinType,NumberOfMasters)'
                  }

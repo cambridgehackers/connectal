@@ -28,7 +28,7 @@ import ClientServer::*;
 import Pipe::*;
 import MemTypes::*;
 import MemReadEngine::*;
-import HostInterface::*;
+import ConnectalConfig::*;
 
 interface ReadTestRequest;
    method Action startRead(Bit#(32) pointer, Bit#(32) numBytes, Bit#(32) burstLen, Bit#(32) iterCnt);

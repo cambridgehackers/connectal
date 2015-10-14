@@ -20,11 +20,12 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+import ConnectalConfig::*;
+import HostInterface::*;
 import Vector::*;
 import CtrlMux::*;
 import Portal::*;
 import MemTypes::*;
-import HostInterface::*;
 import SDIORequest::*;
 import SDIOResponse::*;
 import SDIO::*;

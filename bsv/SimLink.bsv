@@ -24,6 +24,8 @@ import Connectable       :: *;
 import FIFOF             :: *;
 import Pipe              :: *;
 
+`include "ConnectalProjectConfig.bsv"
+
 interface SimLink#(numeric type dataWidth);
    method Action start(Bit#(32) linknumber, Bool listening);
    method Bool   linkUp();
