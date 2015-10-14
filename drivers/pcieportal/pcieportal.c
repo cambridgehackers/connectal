@@ -153,7 +153,7 @@ static int pcieportal_release(struct inode *inode, struct file *filp)
         /* decrement the open file count */
         init_waitqueue_head(&(this_portal->extra->wait_queue));
         this_portal->board->open_count -= 1;
-	printk("%s_%d_%d: Closed device file\n", DEV_NAME, this_portal->device_tile, this_portal->device_name);
+	printk("%s%d_%d_%d: Closed device file\n", DEV_NAME, this_portal->board->info.board_number, this_portal->device_tile, this_portal->device_name);
 	list_for_each(pmlist, &this_portal->pmlist) {
 		struct pmentry *pmentry = list_entry(pmlist, struct pmentry, pmlist);
 		printk("    returning id=%d fmem=%p\n", pmentry->id, pmentry->fmem);
@@ -172,7 +172,7 @@ static unsigned int pcieportal_poll(struct file *filp, poll_table *poll_table)
         unsigned int mask = 0;
         uint32_t status = 0;
 
-        printk(KERN_INFO "%s_%d_%d: poll function called\n", DEV_NAME, this_portal->device_tile, this_portal->device_name);
+        printk(KERN_INFO "%s%d_%d_%d: poll function called\n", DEV_NAME, this_portal->board->info.board_number, this_portal->device_tile, this_portal->device_name);
         poll_wait(filp, &this_portal->extra->wait_queue, poll_table);
 	if (this_portal->regs) {
             status = *this_portal->regs;
@@ -180,7 +180,7 @@ static unsigned int pcieportal_poll(struct file *filp, poll_table *poll_table)
         if (status)
             mask |= POLLIN  | POLLRDNORM; /* readable */
         //mask |= POLLOUT | POLLWRNORM; /* writable */
-        printk(KERN_INFO "%s_%d_%d: poll return status is %x\n", DEV_NAME, this_portal->device_tile, this_portal->device_name, mask);
+        printk(KERN_INFO "%s%d_%d_%d: poll return status is %x\n", DEV_NAME, this_portal->board->info.board_number, this_portal->device_tile, this_portal->device_name, mask);
         return mask;
 }
 
@@ -515,7 +515,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		    this_portal->offset = offs;
 		    /* add the device operations */
 		    cdev_init(&this_portal->extra->cdev, &pcieportal_fops);
-		    this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + fpn);
+		    this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + freep);
 		    if (cdev_add(&this_portal->extra->cdev, this_device_number, 1)) {
 		      printk(KERN_ERR "%s: cdev_add %x failed\n",
 			     DEV_NAME, this_device_number);
@@ -523,9 +523,9 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		    } else {
 		      /* create a device node via udev */
 		      device_create(pcieportal_class, &dev->dev, this_device_number,
-			    this_portal, "%s_%d_%d", DEV_NAME, this_portal->device_tile, this_portal->device_name);
-		      printk(KERN_INFO "%s: /dev/%s_%d_%d = %x created\n",
-			     DEV_NAME, DEV_NAME, this_portal->device_tile, this_portal->device_name, this_device_number);
+				    this_portal, "%s%d_%d_%d", DEV_NAME, this_portal->board->info.board_number, this_portal->device_tile, this_portal->device_name);
+		      printk(KERN_INFO "%s: /dev/%s%d_%d_%d = %x created\n",
+			     DEV_NAME, DEV_NAME, this_portal->board->info.board_number, this_portal->device_tile, this_portal->device_name, this_device_number);
 		    }
 		    if (++fpn >= MAX_NUM_PORTALS){
 		      printk(KERN_INFO "%s: MAX_NUM_PORTALS exceeded", __func__);
@@ -538,19 +538,25 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		} while (++tile_index < num_tiles);
 		this_board->info.num_portals = fpn;
                 pci_set_drvdata(dev, this_board);
-		this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + MAX_MINOR_COUNT);
-		cdev_init(&this_board->extra->cdev, &pcieportal_fops);
-		if (cdev_add(&this_board->extra->cdev, this_device_number, 1)) {
-		    printk(KERN_ERR "%s: cdev_add board failed\n", DEV_NAME);
-                }
-		device_create(pcieportal_class, &dev->dev, this_device_number, NULL, "connectal");
+		if (this_board->info.board_number == 0) {
+			// /dev/connectal
+			this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + MAX_MINOR_COUNT);
+			cdev_init(&this_board->extra->cdev, &pcieportal_fops);
+			if (cdev_add(&this_board->extra->cdev, this_device_number, 1)) {
+				printk(KERN_ERR "%s: cdev_add board failed\n", DEV_NAME);
+			}
+			device_create(pcieportal_class, &dev->dev, this_device_number, NULL, "connectal");
+		}
                 if (err == 0)
                     return err; /* if board activated correctly, return */
         } /* end of if(activate) */
 
         /******** deactivate board *******/
-	device_destroy(pcieportal_class, MKDEV(MAJOR(device_number), MINOR(device_number) + MAX_MINOR_COUNT));
-        cdev_del(&this_board->extra->cdev);
+	if (this_board->info.board_number == 0) {
+		// /dev/connectal
+		device_destroy(pcieportal_class, MKDEV(MAJOR(device_number), MINOR(device_number) + MAX_MINOR_COUNT));
+		cdev_del(&this_board->extra->cdev);
+	}
 	fpn = 0;
 	while(fpn < this_board->info.num_portals) {
                 tPortal *this_portal = &this_board->portal[fpn];
@@ -558,8 +564,8 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		dev_t this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + this_portal->device_number);
 		portalp[this_portal->device_name] = 0;
                 device_destroy(pcieportal_class, this_device_number);
-                printk(KERN_INFO "%s: /dev/%s_%d_%d = %x removed\n",
-		       DEV_NAME, DEV_NAME, this_portal->device_tile, this_portal->device_name, this_device_number); 
+                printk(KERN_INFO "%s: /dev/%s%d_%d_%d = %x removed\n",
+		       DEV_NAME, DEV_NAME, this_portal->board->info.board_number, this_portal->device_tile, this_portal->device_name, this_device_number); 
                 /* remove device */
                 cdev_del(&this_board->portal[fpn].extra->cdev);
 		fpn++;
