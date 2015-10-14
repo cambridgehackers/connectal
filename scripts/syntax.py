@@ -1002,7 +1002,7 @@ def p_package(p):
     '''package : beginPackage exportDecls importDecls packageStmts exportDecls endPackage'''
     p[0] = p[4]
 
-def preprocess(source, defs):
+def preprocess(source, defs, bsvpath):
     stack = [(True,True)]
     def nexttok(s):
         k = re.search('\s', s)
@@ -1048,6 +1048,16 @@ def preprocess(source, defs):
             sym = s[:min(k,foo)]
             defs.append(sym)
             s = s[k:]
+        elif tok == 'include':
+            m = re.search('\s*\"([^\"]+)\"\s*', s)
+            filename = m.group(1)
+            inc = ''
+            for d in bsvpath:
+                fn = os.path.join(d, filename)
+                if os.path.exists(fn):
+                    inc = open(fn).read()
+                    break
+            s = inc + s[m.end():]
         else:
             print '%s: unhandled preprocessor token %s' % (globalfilename, tok)
             assert(tok in ['ifdef', 'ifndef', 'else', 'endif', 'define'])
@@ -1056,10 +1066,10 @@ def preprocess(source, defs):
 
     return pp(source)
 
-def syntax_parse(argdata, inputfilename, bsvdefines):
+def syntax_parse(argdata, inputfilename, bsvdefines, bsvpath):
     global globalfilename
     globalfilename = inputfilename
-    data = preprocess(argdata + '\n', bsvdefines)
+    data = preprocess(argdata + '\n', bsvdefines, bsvpath)
     lexer = lex.lex(errorlog=lex.NullLogger())
     parserdir=scripthome+'/syntax'
     if not os.path.isdir(parserdir):
@@ -1073,9 +1083,9 @@ def syntax_parse(argdata, inputfilename, bsvdefines):
         return parser.parse(data,debug=1)
     return  parser.parse(data)
 
-def generate_bsvcpp(filelist, project_dir, bsvdefines, interfaces):
+def generate_bsvcpp(filelist, project_dir, bsvdefines, interfaces, bsvpath):
     for inputfile in filelist:
-        syntax_parse(open(inputfile).read(),inputfile, bsvdefines)
+        syntax_parse(open(inputfile).read(), inputfile, bsvdefines, bsvpath)
     ## code generation pass
     ilist = []
     for i in interfaces:
@@ -1136,5 +1146,6 @@ if __name__=='__main__':
         cppgen.generate_cpp(project_dir, noisyFlag, jsondata)
         bsvgen.generate_bsv(project_dir, noisyFlag, True, jsondata)
     else:
-        generate_bsvcpp(sys.argv[1:], project_dir, deflist, ifitems)
+        bsvpath = os.environ.get('BSVPATH', []).split(':')
+        generate_bsvcpp(sys.argv[1:], project_dir, deflist, ifitems, bsvpath)
 

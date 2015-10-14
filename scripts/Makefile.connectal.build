@@ -318,7 +318,7 @@ bsim: prepare_bin_target $(DTOP)/jni/TlpReplay.cpp $(BSIM_CXX_LOCAL)
 
 syntax.timestamp: $(BSVFILES)
 	@#$syntax.py uses environment variables: V INTERFACES BSVDEFINES_LIST DTOP DUT_NAME
-	$(Q)$(CONNECTALDIR)/scripts/syntax.py $(BSVFILES)
+	$(Q)BSVPATH=$(BSVPATH) $(CONNECTALDIR)/scripts/syntax.py $(BSVFILES)
 	$(Q)touch syntax.timestamp
 
 verilog: $(VFILE)
