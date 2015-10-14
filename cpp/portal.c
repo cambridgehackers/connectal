@@ -68,6 +68,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     memset(pint, 0, sizeof(*pint));
     if(!utility_portal)
       utility_portal = pint;
+    pint->board_number = 0;
     pint->fpga_number = id;
     pint->fpga_tile = tile;
     pint->fpga_fd = -1;
@@ -76,8 +77,15 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     pint->cb = (PortalHandlerTemplate *)cb;
     pint->parent = parent;
     pint->reqinfo = reqinfo;
+#ifndef __KERNEL__
+    {
+	const char *board_number = getenv("BOARD_NUMBER");
+	if (board_number  != 0)
+	    pint->board_number = strtoul(board_number, 0, 0);
+    }
+#endif
     if(trace_portal)
-        PORTAL_PRINTF("%s: **initialize portal_%d_%d handler %p cb %p parent %p\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number, handler, cb, parent);
+        PORTAL_PRINTF("%s: **initialize portal%d_%d_%d handler %p cb %p parent %p\n", __FUNCTION__, pint->board_number, pint->fpga_tile, pint->fpga_number, handler, cb, parent);
     if (!item) {
         // Use defaults for transport handling methods
 #ifdef BSIM
@@ -91,7 +99,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     pint->item = item;
     rc = pint->item->init(pint, param);
     if (rc != 0) {
-        PORTAL_PRINTF("%s: failed to initialize Portal portal_%d_%d\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number);
+	PORTAL_PRINTF("%s: failed to initialize Portal portal%d_%d_%d\n", __FUNCTION__, pint->board_number, pint->fpga_tile, pint->fpga_number);
 #ifndef __KERNEL__
         exit(1);
 #endif

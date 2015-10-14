@@ -161,7 +161,7 @@ static int init_hardware(struct PortalInternal *pint, void *param)
     }
 #else
     char buff[128];
-    snprintf(buff, sizeof(buff), "/dev/portal_%d_%d", pint->fpga_tile, pint->fpga_number);
+    snprintf(buff, sizeof(buff), "/dev/portal%d_%d_%d", pint->board_number, pint->fpga_tile, pint->fpga_number);
     pint->fpga_fd = open(buff, O_RDWR);
     if (pint->fpga_fd < 0) {
 	PORTAL_PRINTF("Failed to open %s fd=%d errno=%d\n", buff, pint->fpga_fd, errno);

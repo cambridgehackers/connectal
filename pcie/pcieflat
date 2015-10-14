@@ -20,7 +20,7 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-import fcntl, glob, json, struct, subprocess, sys
+import fcntl, glob, json, struct, subprocess, sys, os
 from gmpy import mpz
 BNOC_TRACE = 0xc008b508
 Trace_len = 144
@@ -367,7 +367,8 @@ if __name__ == '__main__':
         argcount = argcount - 3
         for item in jsondata['interfaces']:
             interfaceMap[item['name']] = [mitem['name'] for mitem in item['decls']]
-    devfilenames = glob.glob('/dev/portal_*')
+    board_number = int(os.environ['BOARD_NUMBER']) if ('BOARD_NUMBER' in os.environ) else 0
+    devfilenames = glob.glob('/dev/portal%d_*' % board_number)
     print 'pcieflat: devices are', devfilenames
     if argcount == 2:
         tlplog = open(sys.argv[argindex]).read().split('\n')
