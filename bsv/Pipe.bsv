@@ -825,7 +825,7 @@ instance ReducePipe#(1, a);
 endinstance
 instance ReducePipe#(2, a)
    provisos(Bits#(a,a__));
-   module  mkReducePipe((CombinePipe#(Tuple2#(a,a), a) combinepipe,
+   module  mkReducePipe#(CombinePipe#(Tuple2#(a,a), a) combinepipe,
 			 PipeOut#(Vector#(2,a)) inpipe)
 			(PipeOut#(a) ifc);
       function a foo(Vector#(2,a) invec); 
