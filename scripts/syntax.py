@@ -1008,7 +1008,7 @@ def preprocess(source, defs, bsvpath):
         k = re.search('\s', s)
         sym = s[:k.start()]
         s = s[k.end():]
-        return (k, s)
+        return (sym, s)
     def pp(s):
         cond  = stack[-1][0]
         valid = stack[-1][1]
@@ -1021,12 +1021,12 @@ def preprocess(source, defs, bsvpath):
         tok = s[:j.start()]
         s = s[j.end():]
         if tok == 'ifdef':
-            (k, s) = nexttok(s)
+            (sym, s) = nexttok(s)
             new_cond = sym in defs
             new_valid = new_cond and valid
             stack.append((new_cond,new_valid))
         elif tok == 'ifndef':
-            (k, s) = nexttok(s)
+            (sym, s) = nexttok(s)
             new_cond = not sym in defs
             new_valid = valid and new_cond
             stack.append((new_cond,new_valid))
@@ -1036,7 +1036,7 @@ def preprocess(source, defs, bsvpath):
             stack.append((new_cond,valid))
         elif tok == 'elsif':
             stack.pop()
-            (k, s) = nexttok(s)
+            (sym, s) = nexttok(s)
             new_cond = sym in defs
             new_valid = new_cond and valid
             stack.append((new_cond,new_valid))
