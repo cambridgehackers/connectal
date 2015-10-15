@@ -29,6 +29,9 @@ BNOC_GET_TLP = 0x8008b507
 Tlp_len = 24
 BNOC_ENABLE_TRACE = 0x8008b508
 Enable_len = 4
+PCIE_CHANGE_ENTRY = 0x8008b50f
+struct_changeEntry = '@ I I'
+ChangeEntry_len = 8
 
 # 64-bit BAR
 tlpdatalog = [
@@ -378,6 +381,14 @@ if __name__ == '__main__':
         base = int(tlpfirst[0:8],16)
     else:
         fd = open(devfilenames[0], 'rw')
+        while 1:
+            buf = fcntl.ioctl(fd, PCIE_CHANGE_ENTRY, ' ' * ChangeEntry_len)
+            (ts,v) = struct.unpack_from(struct_changeEntry, buf)
+            if (v == 0):
+                break
+            print 'pcie status change: %0x src=%d value=%#x' % (ts, v >> 24, v & 0x00FFFFFF)
+            pass
+
         buf = fcntl.ioctl(fd, BNOC_TRACE, ' ' * Trace_len)
         traceData = struct.unpack_from(struct_traceData, buf)
         #print 'SSS', traceData
