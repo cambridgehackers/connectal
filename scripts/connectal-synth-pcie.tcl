@@ -64,8 +64,8 @@ if {$need_pcie == "x7_gen3x8"} {
 							 CONFIG.PF0_MSIX_CAP_TABLE_SIZE {010} CONFIG.PF0_MSIX_CAP_TABLE_OFFSET {00000200} \
 							 CONFIG.PF0_MSIX_CAP_PBA_OFFSET {000001f0} CONFIG.axisten_if_width {256_bit} \
 							 CONFIG.AXISTEN_IF_RC_STRADDLE {false} CONFIG.AXISTEN_IF_ENABLE_CLIENT_TAG {false} \
-							 CONFIG.cfg_ctl_if {false} CONFIG.cfg_ext_if {false} CONFIG.cfg_fc_if {false} \
-							 CONFIG.cfg_mgmt_if {false} CONFIG.cfg_status_if {false} CONFIG.cfg_tx_msg_if \
+							 CONFIG.cfg_ctl_if {true} CONFIG.cfg_ext_if {false} CONFIG.cfg_fc_if {false} \
+							     CONFIG.cfg_mgmt_if {false} CONFIG.cfg_status_if {true} CONFIG.cfg_tx_msg_if \
 							 {false} CONFIG.en_ext_clk {false} CONFIG.axisten_freq {250} \
 							 CONFIG.PF0_PM_CAP_SUPP_D1_STATE {false} CONFIG.pf0_dsn_enabled {true} \
 							 CONFIG.mode_selection {Advanced} CONFIG.pcie_blk_locn {X0Y1} \
