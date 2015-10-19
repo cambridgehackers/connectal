@@ -82,7 +82,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
         // Use defaults for transport handling methods
 #ifdef BSIM
         item = &transportBsim;
-#elif defined(BOARD_xsim)
+#elif defined(BOARD_xsim) || defined(BOARD_verilator)
         item = &transportXsim;
 #else
         item = &transportHardware;
@@ -269,14 +269,19 @@ endloop:
         }
         if (getenv("NOFPGAJTAG"))
             exit(0);
-#ifdef BOARD_bluesim
+#if defined(BOARD_bluesim) || defined(BOARD_verilator)
         char *bindir = dirname(filename);
         static char exename[MAX_PATH];
         char *library_path = 0;
 	const char *old_library_path = getenv("LD_LIBRARY_PATH");
 	int library_path_len = strlen(bindir);
-        sprintf(exename, "%s/bsim", bindir);
-fprintf(stderr, "[%s:%d] BSIM %s *******\n", __FUNCTION__, __LINE__, exename);
+#if defined(BOARD_bluesim)
+	const char *exetype = "bsim";
+#else
+	const char *exetype = "vlsim";
+#endif
+        sprintf(exename, "%s/%s", bindir, exetype);
+fprintf(stderr, "[%s:%d] %s %s *******\n", __FUNCTION__, __LINE__, exetype, exename);
         argv[ind++] = NULL;
 	if (old_library_path)
 	  library_path_len += strlen(old_library_path);
