@@ -32,9 +32,18 @@ import "DPI-C" function bit dpi_finish();
   `define BSV_RESET_EDGE negedge
 `endif
 
-module xsimtop();
-   reg CLK;
+module xsimtop(
+`ifndef XSIM
+	       CLK, DERIVED_CLK
+`endif
+);
+`ifndef XSIM
+   input CLK;
+   input DERIVED_CLK;
+`else
+   reg 	 CLK;
    reg DERIVED_CLK;
+`endif
    reg RST_N;
    reg DERIVED_RST_N;
    reg [31:0] count;
@@ -42,9 +51,11 @@ module xsimtop();
 
    mkXsimTop xsimtop(.CLK(CLK), .RST_N(RST_N), .CLK_derivedClock(DERIVED_CLK), .RST_N_derivedReset(DERIVED_RST_N)); 
    initial begin
+`ifdef XSIM
       CLK = 0;
-      RST_N = `BSV_RESET_VALUE;
       DERIVED_CLK = 0;
+`endif
+      RST_N = `BSV_RESET_VALUE;
       DERIVED_RST_N = `BSV_RESET_VALUE;
       $display("asserting reset to value %d", `BSV_RESET_VALUE);
       count = 0;
@@ -52,6 +63,7 @@ module xsimtop();
       dpi_init();
    end
 
+`ifdef XSIM
    always begin
       #(`MainClockPeriod/2)
 	CLK = !CLK;
@@ -60,6 +72,7 @@ module xsimtop();
       #(`DerivedClockPeriod/2)
 	DERIVED_CLK = !DERIVED_CLK;
    end
+`endif
    
    always @(posedge CLK) begin
       count <= count + 1;
