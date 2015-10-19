@@ -84,6 +84,10 @@ ifeq ($(BOARD),xsim)
 CONNECTALFLAGS += -D CnocTop
 CNOC?=--cnoc
 endif
+ifeq ($(BOARD),verilator)
+CONNECTALFLAGS += -D CnocTop
+CNOC?=--cnoc
+endif
 ifneq ($(AUTOTOP),)
 USE_AUTOTOP = 1
 endif
@@ -112,6 +116,16 @@ CPPFILES2 += $(CONNECTALDIR)/cpp/dmaManager.c $(CONNECTALDIR)/cpp/platformMemory
 endif
 endif
 
+ifeq ($(BOARD),bluesim)
+INTERFACES += XsimMsgRequest XsimMsgIndication
+CPPFILES += $(CONNECTALDIR)/cpp/transportXsim.c
+BSVFILES += $(CONNECTALDIR)/bsv/XsimIF.bsv
+endif
+ifeq ($(BOARD),verilator)
+INTERFACES += XsimMsgRequest XsimMsgIndication
+CPPFILES += $(CONNECTALDIR)/cpp/transportXsim.c
+BSVFILES += $(CONNECTALDIR)/bsv/XsimIF.bsv
+endif
 ifeq ($(BOARD),xsim)
 INTERFACES += XsimMsgRequest XsimMsgIndication
 CPPFILES += $(CONNECTALDIR)/cpp/transportXsim.c
