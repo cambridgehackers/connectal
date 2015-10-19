@@ -296,10 +296,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 	  interface Get response;
 	     method ActionValue#(Bit#(addrWidth)) get();
 		let rv <- toGet(pageResponseFifos[i]).get();
-`ifdef BSIM
-		rv = rv | (fromInteger(iid)<<valueOf(addrWidth)-3);
-`endif
-`ifdef XSIM
+`ifdef SIMULATION
 		rv = rv | (fromInteger(iid)<<valueOf(addrWidth)-3);
 `endif
 		return rv;
