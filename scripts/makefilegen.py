@@ -31,6 +31,7 @@ import util
 import boardinfo
 import pprint
 import json
+import re
 
 supported_os = ['android', 'ubuntu']
 
@@ -514,6 +515,18 @@ if __name__=='__main__':
     for (var, val) in map(util.splitBinding, bsvdefines):
         configbsv.write('`define %(var)s %(val)s\n' % { 'var': var, 'val': val })
     configbsv.close()
+    configh = util.createDirAndOpen(os.path.join(project_dir, 'jni', 'ConnectalProjectConfig.h'), 'w')
+    configh.write('#ifndef _ConnectalProjectConfig_h\n')
+    configh.write('#define _ConnectalProjectConfig_h\n')
+    configh.write('\n')
+    for (var, val) in map(util.splitBinding, bsvdefines):
+        if re.match("^[0-9]+(.[0-9]*)?$", val):
+            configh.write('#define %(var)s %(val)s\n' % { 'var': var, 'val': val })
+        else:
+            configh.write('#define %(var)s "%(val)s"\n' % { 'var': var, 'val': val })
+    configh.write('\n')
+    configh.write('#endif // _ConnectalProjectConfig_h\n')
+    configh.close()
 
     if options.make:
         os.chdir(project_dir)
