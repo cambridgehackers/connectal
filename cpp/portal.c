@@ -270,12 +270,25 @@ endloop:
         if (getenv("NOFPGAJTAG"))
             exit(0);
 #ifdef BOARD_bluesim
-        char *p = dirname(filename);
-        static char buf2[MAX_PATH];
-        sprintf(buf2, "%s/bsim", p);
-fprintf(stderr, "[%s:%d] BSIM %s *******\n", __FUNCTION__, __LINE__, buf2);
+        char *bindir = dirname(filename);
+        static char exename[MAX_PATH];
+        char *library_path = 0;
+	const char *old_library_path = getenv("LD_LIBRARY_PATH");
+	int library_path_len = strlen(bindir);
+        sprintf(exename, "%s/bsim", bindir);
+fprintf(stderr, "[%s:%d] BSIM %s *******\n", __FUNCTION__, __LINE__, exename);
         argv[ind++] = NULL;
-        rc = execvp (buf2, argv);
+	if (old_library_path)
+	  library_path_len += strlen(old_library_path);
+	library_path = (char *)malloc(library_path_len + 2);
+	if (old_library_path)
+	  snprintf(library_path, library_path_len+2, "%s:%s", bindir, old_library_path);
+	else
+	  snprintf(library_path, library_path_len+1, "%s", bindir);
+	setenv("LD_LIBRARY_PATH", library_path, 1);
+fprintf(stderr, "[%s:%d] LD_LIBRARY_PATH %s *******\n", __FUNCTION__, __LINE__, library_path);
+
+        rc = execvp (exename, argv);
 #elif defined(BOARD_xsim)
         argv[ind++] = (char *)"-R";
         argv[ind++] = (char *)"work.xsimtop";
