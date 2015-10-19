@@ -296,8 +296,8 @@ xsim: verilog $(XSIM_OBJECTS)
 	xelab --stats $(XVLOGDEFINES) -cc gcc -svlog $(CONNECTALDIR)/verilog/xsimtop.sv --debug wave -L unisim -L unifast -L unimacro work.xsimtop -sv_lib xsimtop
 endif #VIVADO
 
-vlsim: $(DTOP)/bin/libconnectal-sim.so
-	verilator -cc -exe $(CONNECTALDIR)/verilog/xsimtop.sv -DMainClockPeriod=4 -DDerivedClockPeriod=4 --top-module xsimtop -Iverilog -Wno-fatal $(CONNECTALDIR)/cpp/verilatortop.cpp $(DTOP)/bin/libconnectal-sim.so -LDFLAGS -lpthread
+vlsim: $(DTOP)/bin/libconnectal-sim.so verilog
+	verilator -cc -exe $(CONNECTALDIR)/verilog/xsimtop.sv -DMainClockPeriod=4 -DDerivedClockPeriod=4 --top-module xsimtop -I$(DTOP)/verilog -Wno-fatal $(CONNECTALDIR)/cpp/verilatortop.cpp $(DTOP)/bin/libconnectal-sim.so -LDFLAGS -lpthread
 	make -C obj_dir -f Vxsimtop.mk
 	cp obj_dir/Vxsimtop bin/vlsim
 
