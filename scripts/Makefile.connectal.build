@@ -311,7 +311,7 @@ $(DTOP)/jni/%.c: $(CONNECTALDIR)/cpp/%.c
 
 $(DTOP)/bin/libconnectal-bsim.so: $(BSIM_CXX_LOCAL) $(BSIM_CXX_PROJECT)
 	$(Q)mkdir -p $(DTOP)/bin
-	g++ -shared -fpic $(BSC_CXXFLAGS) $(BSIM_CXX_LOCAL) $(BSIM_CXX_PROJECT)
+	g++ -shared -fpic $(BSC_CXXFLAGS) -o $(DTOP)/bin/libconnectal-bsim.so $(BSIM_CXX_LOCAL) $(BSIM_CXX_PROJECT)
 
 bsim: prepare_bin_target $(DTOP)/jni/TlpReplay.cpp $(BSIM_CXX_LOCAL) $(DTOP)/bin/libconnectal-bsim.so
 	$(Q)mkdir -p $(DTOP)/obj verilog
