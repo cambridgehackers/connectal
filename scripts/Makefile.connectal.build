@@ -309,11 +309,15 @@ $(DTOP)/jni/%.cpp: $(CONNECTALDIR)/cpp/%.cpp
 $(DTOP)/jni/%.c: $(CONNECTALDIR)/cpp/%.c
 	$(Q)cp $< $@
 
-bsim: prepare_bin_target $(DTOP)/jni/TlpReplay.cpp $(BSIM_CXX_LOCAL)
+$(DTOP)/bin/libconnectal-bsim.so: $(BSIM_CXX_LOCAL) $(BSIM_CXX_PROJECT)
+	$(Q)mkdir -p $(DTOP)/bin
+	g++ -shared -fpic $(BSC_CXXFLAGS) $(BSIM_CXX_LOCAL) $(BSIM_CXX_PROJECT)
+
+bsim: prepare_bin_target $(DTOP)/jni/TlpReplay.cpp $(BSIM_CXX_LOCAL) $(DTOP)/bin/libconnectal-bsim.so
 	$(Q)mkdir -p $(DTOP)/obj verilog
 	@echo BSCBSIM [$(DTOP)]
 	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -D BSIM -sim -u -g $(MKTOP) $(TOPBSVFILE)
-	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) $(BSC_CXXFLAGS) -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba $(BSIM_CXX_LOCAL) $(BSIM_CXX_PROJECT)
+	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) $(BSC_CXXFLAGS) -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba -L $(DTOP)/bin -lconnectal-bsim
 	$(Q)cp -v generatedbsv/bsim* bin
 
 syntax.timestamp: $(BSVFILES)
