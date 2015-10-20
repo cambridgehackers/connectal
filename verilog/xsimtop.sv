@@ -22,6 +22,7 @@
 //`timescale 1ns / 1ps
 
 import "DPI-C" function void dpi_init();
+import "DPI-C" function void dpi_poll();
 import "DPI-C" function bit dpi_finish();
 
 `ifdef BSV_POSITIVE_RESET
@@ -76,13 +77,16 @@ module xsimtop(
    
    always @(posedge CLK) begin
       count <= count + 1;
+      dpi_poll();
       finish <= dpi_finish();
-      if (finish)
-	$finish();
+      if (finish) begin
+	 $display("simulator calling $finish");
+	 $finish();
+      end
    end
    always @(`BSV_RESET_EDGE CLK) begin
       if (count == 20) begin
-	 //$display("deasserting reset to value %d", !`BSV_RESET_VALUE);
+	 $display("deasserting reset to value %d", !`BSV_RESET_VALUE);
 	 RST_N <= !`BSV_RESET_VALUE;
       end
    end
@@ -102,10 +106,25 @@ module XsimSource( input CLK, input CLK_GATE, input RST, input [31:0] portal, in
    end
 endmodule
 
-import "DPI-C" function void dpi_msgSink_beat(input int portal, output int beat, output bit src_rdy);
-module XsimSink(input CLK, input CLK_GATE, input RST, input [31:0] portal, output reg src_rdy, output reg [31:0] beat);
+import "DPI-C" function longint dpi_msgSink_beat(input int portal);
+module XsimSink(input CLK, input CLK_GATE, input RST, input [31:0] portal, output RDY_beat, input EN_beat, output [31:0] beat);
+   reg     valid_reg;
+   reg 	   [31:0] beat_reg;
+   
+   assign RDY_beat = valid_reg;
+   assign beat = beat_reg;
+   
    always @(posedge CLK) begin
-      dpi_msgSink_beat(portal, beat, src_rdy);
+      if (RST == `BSV_RESET_VALUE) begin
+	 valid_reg <= 0;
+	 beat_reg <= 32'haaaaaaaa;
+      end
+      else if (EN_beat == 1 || valid_reg == 0) begin
+	 longint v = dpi_msgSink_beat(portal);
+	 valid_reg <= v[32];
+	 beat_reg <= v[31:0];
+	 $display("XsimSink: v=%h beat=%h src_rdy=%d", v, v[31:0], v[32]);
+      end
    end
 endmodule
 
