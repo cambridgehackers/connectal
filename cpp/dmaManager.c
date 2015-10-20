@@ -31,7 +31,7 @@
 #include "drivers/pcieportal/pcieportal.h"
 #endif
 #endif
-#if defined(BSIM) || defined(BOARD_xsim)
+#if defined(SIMULATION)
 #include "dmaSendFd.h"
 #endif
 #include "GeneratedTypes.h"
@@ -51,7 +51,7 @@ void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *sglDevice)
 
 void DmaManager_dereference(DmaManagerPrivate *priv, int ref)
 {
-#if  !defined(BSIM) && !defined(BOARD_xsim) && !defined(__KERNEL__)
+#if  !defined(SIMULATION) && !defined(__KERNEL__)
 #ifdef ZYNQ
     int rc = ioctl(priv->sglDevice->fpga_fd, PORTAL_DEREFERENCE, ref);
 #else
@@ -77,7 +77,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
     else
         sem_wait(&priv->sglIdSem);
     id = priv->sglId;
-#if  !defined(BSIM) && !defined(BOARD_xsim) && !defined(__KERNEL__)
+#if  !defined(SIMULATION) && !defined(__KERNEL__)
 #ifdef ZYNQ
     PortalSendFd sendFd;
     sendFd.fd = fd;
@@ -99,7 +99,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
             sem_wait(&priv->confSem);
     }
     rc = id;
-#else // defined(BSIM) || defined(BOARD_xsim) || defined(__KERNEL__)
+#else // defined(SIMULATION) || defined(__KERNEL__)
     rc = send_fd_to_portal(priv->sglDevice, fd, id, global_pa_fd);
     if (rc >= 0) {
         //PORTAL_PRINTF("%s:%d sem_wait\n", __FUNCTION__, __LINE__);
@@ -111,7 +111,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
         else
             sem_wait(&priv->confSem);
     }
-#endif // defined(BSIM) || defined(BOARD_xsim) || defined(__KERNEL__)
+#endif // defined(SIMULATION) || defined(__KERNEL__)
     return rc;
 }
 
