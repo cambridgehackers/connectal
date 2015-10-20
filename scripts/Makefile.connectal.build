@@ -247,7 +247,7 @@ else
     endif
   else
     ifeq ($(BOARD),verilator)
-	echo running verilated simulation
+	$(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; exit $$retcode
     else
     ifeq ($(OS),android)
 	$(CONNECTALDIR)/scripts/run.android bin/android.exe $(RUN_ARGS)
@@ -296,9 +296,14 @@ xsim: verilog $(XSIM_OBJECTS)
 	xelab --stats $(XVLOGDEFINES) -cc gcc -svlog $(CONNECTALDIR)/verilog/xsimtop.sv --debug wave -L unisim -L unifast -L unimacro work.xsimtop -sv_lib xsimtop
 endif #VIVADO
 
-vlsim: $(DTOP)/bin/libconnectal-sim.so verilog
-	verilator -cc -exe $(CONNECTALDIR)/verilog/xsimtop.sv -DMainClockPeriod=4 -DDerivedClockPeriod=4 --top-module xsimtop -I$(DTOP)/verilog -Wno-fatal $(CONNECTALDIR)/cpp/verilatortop.cpp $(DTOP)/bin/libconnectal-sim.so -LDFLAGS -lpthread
-	make -C obj_dir -f Vxsimtop.mk
+vlsim: $(DTOP)/obj_dir/Vxsimtop
+
+$(DTOP)/obj_dir/Vxsimtop.mk: $(DTOP)/bin/libconnectal-sim.so verilog
+	sed -i 's/", "/ /' verilog/*.v
+	verilator --trace -cc -exe $(CONNECTALDIR)/verilog/xsimtop.sv -DMainClockPeriod=4 -DDerivedClockPeriod=4 --top-module xsimtop -I$(DTOP)/verilog -Wno-fatal $(CONNECTALDIR)/cpp/verilatortop.cpp $(DTOP)/bin/libconnectal-sim.so -LDFLAGS -lpthread
+
+$(DTOP)/obj_dir/Vxsimtop: $(DTOP)/obj_dir/Vxsimtop.mk
+	$(MAKE) -C obj_dir -f Vxsimtop.mk
 	cp obj_dir/Vxsimtop bin/vlsim
 
 bin/vsim:
@@ -319,7 +324,7 @@ $(VFILE): $(TOPBSVFILE) $(BSVFILES)
 
 $(DTOP)/bin/libconnectal-sim.so: $(BSIM_CXX_COMMON) $(BSIM_CXX_PROJECT)
 	$(Q)mkdir -p $(DTOP)/bin
-	g++ -O -I$(DTOP)/jni -shared -fpic $(BSC_CXXFLAGS) -o $(DTOP)/bin/libconnectal-sim.so $(BSIM_CXX_LOCAL) $(BSIM_CXX_PROJECT)
+	g++ -O -g -I$(DTOP)/jni -shared -fpic $(BSC_CXXFLAGS) -o $(DTOP)/bin/libconnectal-sim.so $(BSIM_CXX_LOCAL) $(BSIM_CXX_PROJECT)
 
 bsim: prepare_bin_target $(DTOP)/bin/libconnectal-sim.so
 	$(Q)mkdir -p $(DTOP)/obj verilog
