@@ -130,7 +130,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 
    interface MemwriteRequest request;
        method Action startWrite(Bit#(32) wp, Bit#(32) nw, Bit#(32) nreq, Bit#(32) bl, Bit#(8) be);
-	  $dumpvars();
+	  //$dumpvars();
           $display("startWrite pointer=%d numWords=%d (%d) numReqs=%d burstLen=%d", pointer, nw, nreq*bl, nreq, bl);
           pointer <= wp;
           numWords  <= nw;
