@@ -52,9 +52,7 @@ static struct miscdevice miscdev;
 
 static void free_buffer_page(struct page *page, unsigned int order)
 {
-        // this is causing kernel panic on x86
-        // i'll leave it commented out for now
-        //__free_pages(page, order);
+        __free_pages(page, order);
 }
 
 static int pa_buffer_free(struct pa_buffer *buffer)
