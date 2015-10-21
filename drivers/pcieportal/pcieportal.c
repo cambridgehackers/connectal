@@ -67,6 +67,9 @@
 #define CSR_TLPDATABRAMRESPONSESLICE4 ( 780 << 2)
 #define CSR_TLPDATABRAMRESPONSESLICE5 ( 781 << 2)
 #define CSR_TLPPCIEWRADDRREG          ( 792 << 2)
+#define CSR_CHANGELO                  ( 801 << 2)
+#define CSR_CHANGEHI                  ( 802 << 2)
+
 /* MSIX must be in separate 4kb page */
 #define CSR_MSIX_ADDR_LO              (1024 << 2)
 #define CSR_MSIX_ADDR_HI              (1025 << 2)
@@ -306,6 +309,18 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                         return -EFAULT;
                 return 0;
                 }
+        case PCIE_CHANGE_ENTRY: {
+		tChangeEntry entry;
+		uint32_t vlo;
+		vlo = ioread32(this_board->bar0io + CSR_CHANGELO);
+		entry.timestamp = ioread32(this_board->bar0io + CSR_CHANGEHI);
+		entry.src = (vlo >> 24);
+		entry.value = vlo;
+		printk("%s: timestamp=%08x src=%02x value=%96x\n", "portal", entry.timestamp, entry.src, entry.value);
+		if (copy_to_user((void __user *)arg, &entry, sizeof(entry)))
+			return -EFAULT;
+		return 0;
+	} break;
         default:
                 return -ENOTTY;
         }

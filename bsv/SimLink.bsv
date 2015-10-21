@@ -114,7 +114,7 @@ module mkSimLink(SimLink#(dataWidth)) provisos (SelectLinkWidth#(dataWidth));
 endmodule
 `endif
 
-`ifdef XSIM
+`ifdef SVDPI
 import "BVI" XsimLink =
 module mkSimLink(SimLink#(dataWidth));
    parameter DATAWIDTH=valueOf(dataWidth);
@@ -131,4 +131,4 @@ module mkSimLink(SimLink#(dataWidth));
    endinterface
    schedule (rx_first, rx_notEmpty, tx_notFull, rx_deq, tx_enq, start, linkUp) CF (rx_first, rx_notEmpty, tx_notFull, rx_deq, tx_enq, start, linkUp);
 endmodule
-`endif
+`endif //SVDPI

@@ -22,7 +22,7 @@
 #include <XsimMsgRequest.h>
 #include <XsimMsgIndication.h>
 
-static int trace_xsimtop = 0;
+static int trace_xsimtop;// = 1;
 
 class XsimMsgRequest : public XsimMsgRequestWrapper {
 public:
@@ -36,7 +36,7 @@ public:
       sinkbeats[portal].push(data);
   }
   void msgSinkFd ( const uint32_t portal, const uint32_t data ) {
-      //if (trace_xsimtop)
+      if (trace_xsimtop)
           fprintf(stderr, "XsimRXFD: portal %d data=%08x\n", portal, data);
       sinkbeats[portal].push(data);
   }
@@ -76,22 +76,26 @@ extern "C" void dpi_init()
     fprintf(stderr, "%s: end\n", __FUNCTION__);
 }
 
-extern "C" void dpi_msgSink_beat(int portal, int *p_beat, int *p_src_rdy)
+extern "C" void dpi_poll()
 {
+      void *rc = defaultPoller->pollFn(1);
+      //fprintf(stderr, "%s:%d: rc=%ld\n", __FUNCTION__, __LINE__, (long)rc);
+      if ((long)rc > 0)
+	  defaultPoller->event();
+}
+
+extern "C" long long dpi_msgSink_beat(int portal)
+{
+  long long result = 0xbadad7a;
+  //if (trace_xsimtop) fprintf(stderr, "%s: portal %d rdy %d\n", __FUNCTION__, portal, (int)xsimRequest->sinkbeats[portal].size());
   if (xsimRequest->sinkbeats[portal].size() > 0) {
       uint32_t beat = xsimRequest->sinkbeats[portal].front();
       if (trace_xsimtop)
           fprintf(stderr, "%s: portal %d beat %08x\n", __FUNCTION__, portal, beat);
-      *p_beat = beat;
-      *p_src_rdy = 1;
       xsimRequest->sinkbeats[portal].pop();
-  } else {
-      *p_beat = 0xbad0da7a;
-      *p_src_rdy = 0;
-      void *rc = defaultPoller->pollFn(1);
-      if ((long)rc > 0)
-          defaultPoller->event();
+      result = (1ll << 32) | beat;
   }
+  return result;
 }
 
 extern "C" void dpi_msgSource_beat(int portal, int beat)

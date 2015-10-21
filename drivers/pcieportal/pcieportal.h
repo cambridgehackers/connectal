@@ -57,6 +57,11 @@ typedef struct {
 
 typedef unsigned int tTlpData[6];
 
+typedef struct ChangeEntry {
+  unsigned int timestamp;
+  unsigned char src;
+  unsigned int value : 24;
+} tChangeEntry;
 /* IOCTL code definitions */
 
 #define BNOC_GET_TLP         _IOR(BNOC_IOC_MAGIC,7,tTlpData*)
@@ -65,6 +70,7 @@ typedef unsigned int tTlpData[6];
 #define PCIE_SEND_FD         _IOR(BNOC_IOC_MAGIC,12,tSendFd*)
 #define PCIE_DEREFERENCE     _IOR(BNOC_IOC_MAGIC,13,int)
 #define PCIE_SIGNATURE       _IOR(BNOC_IOC_MAGIC,14,PortalSignaturePcie)
+#define PCIE_CHANGE_ENTRY    _IOR(BNOC_IOC_MAGIC,15,tChangeEntry*)
 
 #ifdef __KERNEL__
 /*
