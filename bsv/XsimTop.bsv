@@ -53,6 +53,7 @@ import "BVI" XsimSource =
 module mkXsimSourceBVI#(Bit#(32) portal)(XsimSource);
     port portal = portal;
     method beat(beat) enable(en_beat);
+    schedule (beat) C (beat);
 endmodule
 module mkXsimSource#(PortalMsgIndication indication)(Empty);
    let tmp <- mkXsimSourceBVI(indication.id);
@@ -70,8 +71,9 @@ import "BVI" XsimSink =
 module mkXsimSinkBVI#(Bit#(32) portal)(MsgSinkR#(4));
    port portal = portal;
    method beat beat() enable (EN_beat) ready (RDY_beat);
+   schedule (beat) C (beat);
 endmodule
-module mkXsimSink#(PortalMsgRequest request)(MsgSinkR#(4));
+module mkXsimSink#(PortalMsgRequest request)(Empty);
    let sink <- mkXsimSinkBVI(request.id);
 
    rule req_src_rdy;
