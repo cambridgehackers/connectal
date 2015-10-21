@@ -165,6 +165,8 @@ void initPortalHardware(void)
 {
     static int once = 0;
 
+    if (trace_portal) fprintf(stderr, "[%s:%d] pid=%d\n", __FUNCTION__, __LINE__, getpid());
+
     if (once)
         return;
     once = 1;
@@ -281,7 +283,7 @@ endloop:
 	const char *exetype = "vlsim";
 #endif
         sprintf(exename, "%s/%s", bindir, exetype);
-fprintf(stderr, "[%s:%d] %s %s *******\n", __FUNCTION__, __LINE__, exetype, exename);
+if (trace_portal) fprintf(stderr, "[%s:%d] %s %s *******\n", __FUNCTION__, __LINE__, exetype, exename);
         argv[ind++] = NULL;
 	if (old_library_path)
 	  library_path_len += strlen(old_library_path);
@@ -291,7 +293,7 @@ fprintf(stderr, "[%s:%d] %s %s *******\n", __FUNCTION__, __LINE__, exetype, exen
 	else
 	  snprintf(library_path, library_path_len+1, "%s", bindir);
 	setenv("LD_LIBRARY_PATH", library_path, 1);
-fprintf(stderr, "[%s:%d] LD_LIBRARY_PATH %s *******\n", __FUNCTION__, __LINE__, library_path);
+if (trace_portal) fprintf(stderr, "[%s:%d] LD_LIBRARY_PATH %s *******\n", __FUNCTION__, __LINE__, library_path);
 
         rc = execvp (exename, argv);
 #elif defined(BOARD_xsim)
@@ -316,7 +318,8 @@ fprintf(stderr, "[%s:%d] rc %d\n", __FUNCTION__, __LINE__, rc);
         execvp ("fpgajtag", argv);
 #endif // !__arm__
         }
-#endif // SIMULATION
+#endif // !SIMULATION
+	fprintf(stderr, "[%s:%d] pid=%d exiting\n", __FUNCTION__, __LINE__, getpid());
         exit(-1);
     }
 #endif // !__KERNEL__
