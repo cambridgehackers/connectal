@@ -336,7 +336,7 @@ int portalmem_dmabuffer_destroy(int fd)
 {
         struct file *fmem = fget(fd);
         pa_dma_buf_release(fmem->private_data);
-        printk("%s:%d: fput fd=%d fmem=%p\n", __FUNCTION__, __LINE__, fd, fmem);
+        //printk("%s:%d: fput fd=%d fmem=%p\n", __FUNCTION__, __LINE__, fd, fmem);
         fput(fmem);
         return 0;
 }
@@ -496,7 +496,7 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
                 if (copy_from_user(&req, (void __user *)arg, sizeof(req)))
                         return -EFAULT;
                 fmem = fget(req.fd);
-                printk("%s:%d: fget fd=%d fmem=%p\n", __FUNCTION__, __LINE__, req.fd, fmem);
+                //printk("%s:%d: fget fd=%d fmem=%p\n", __FUNCTION__, __LINE__, req.fd, fmem);
                 sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
                 for_each_sg(sgtable->sgl, sg, sgtable->nents, i) {
                         if (i == req.index) {
@@ -504,7 +504,7 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
                                 break;
                         }
                 }
-                printk("%s:%d: fput fd=%d fmem=%p\n", __FUNCTION__, __LINE__, req.fd, fmem);
+                //printk("%s:%d: fput fd=%d fmem=%p\n", __FUNCTION__, __LINE__, req.fd, fmem);
                 fput(fmem);
                 return retsize;
         }
