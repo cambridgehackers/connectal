@@ -58,7 +58,6 @@ module xsimtop(
 `endif
       RST_N = `BSV_RESET_VALUE;
       DERIVED_RST_N = `BSV_RESET_VALUE;
-      $display("asserting reset to value %d", `BSV_RESET_VALUE);
       count = 0;
       finish = 0;
       dpi_init();
@@ -86,7 +85,6 @@ module xsimtop(
    end
    always @(`BSV_RESET_EDGE CLK) begin
       if (count == 20) begin
-	 $display("deasserting reset to value %d", !`BSV_RESET_VALUE);
 	 RST_N <= !`BSV_RESET_VALUE;
       end
    end
@@ -123,7 +121,6 @@ module XsimSink(input CLK, input CLK_GATE, input RST, input [31:0] portal, outpu
 	 longint v = dpi_msgSink_beat(portal);
 	 valid_reg <= v[32];
 	 beat_reg <= v[31:0];
-	 $display("XsimSink: v=%h beat=%h src_rdy=%d", v, v[31:0], v[32]);
       end
    end
 endmodule
