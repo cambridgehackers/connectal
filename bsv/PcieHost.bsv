@@ -129,6 +129,7 @@ module mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    interface pcic = splitter;
    interface pcir = traceif.pci;
 `endif
+   interface changes = csr.changes;
 endmodule: mkPcieHost
 `else //NOT PCIE3
 // ======================================================
@@ -267,6 +268,7 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_
 `ifdef PCIE3
    mkConnection(ep7.tlpr, pciehost.pcir, clocked_by pcieClock_, reset_by pcieReset_);
    mkConnection(ep7.tlpc, pciehost.pcic, clocked_by pcieClock_, reset_by pcieReset_);
+   mkConnection(ep7.regChanges, pciehost.changes);
    let ipciehost = (interface PcieHost;
 		    interface msixEntry = pciehost.msixEntry;
 		    interface master = pciehost.master;

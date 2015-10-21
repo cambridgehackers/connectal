@@ -106,7 +106,7 @@ module mkSimDma(SimDma#(dataWidth) ifc)
 endmodule
 `endif
 		 
-`ifdef XSIM
+`ifdef SVDPI
 interface XsimDmaReadWrite;
    method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
    method Action initfd(Bit#(32) id, Bit#(32) fd);
@@ -173,8 +173,7 @@ module mkSimDma(SimDma#(dataWidth) ifc)
 endmodule
 `endif
 
-`ifndef BSIM
-`ifndef XSIM
+`ifndef SIMULATION
 module mkSimDma(SimDma#(dataWidth) ifc);
    method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
    endmethod
@@ -190,8 +189,7 @@ module mkSimDma(SimDma#(dataWidth) ifc);
       return 0;
    endmethod
 endmodule
-`endif
-`endif
+`endif // SIMULATION
 
 module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
    provisos(Div#(serverBusWidth,8,dataWidthBytes),

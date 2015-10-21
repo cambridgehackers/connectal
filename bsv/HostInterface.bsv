@@ -79,6 +79,7 @@ import Bscan             :: *;
 import PcieCsr           :: *;
 import PcieTracer        :: *;
 import MemTypes          :: *;
+import Pipe              :: *;
 `ifndef BSIM
 `ifdef XILINX
 `ifdef PCIE1
@@ -108,6 +109,7 @@ interface PcieHost#(numeric type dsz, numeric type nSlaves);
 `ifdef PCIE3
    interface Client#(TLPData#(16), TLPData#(16)) pcir;
    interface Client#(TLPData#(16), TLPData#(16)) pcic;
+   interface PipeIn#(Bit#(64)) changes;
 `else
    interface Client#(TLPData#(16), TLPData#(16)) pci;
 `endif

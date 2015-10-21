@@ -85,7 +85,7 @@ module mkConnectalTop(ConnectalTop);
    rule count;
       cycles <= cycles + 1;
       if (cycles == 1)
-	 $dumpvars();
+	 //$dumpvars();
       if (cycles == 10000)
 	 $dumpoff();
    endrule

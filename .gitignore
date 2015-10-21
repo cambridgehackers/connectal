@@ -35,3 +35,14 @@ examples/*/zedboard
 examples/*/zybo
 generated/xilinx/*
 dkms.conf.out
+*.vcd
+bluesim
+xsim
+vc709
+vc707
+vc707g2
+usage_statistics_webtalk.*
+vivado_pid*
+nfsume
+.cache
+ubuntu.exe

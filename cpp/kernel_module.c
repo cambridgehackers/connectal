@@ -71,7 +71,7 @@ int main_program_finished = 0;
 
 static struct file_operations pa_fops = {
     .owner = THIS_MODULE,
-#if defined(BSIM) || defined(BOARD_xsim)
+#if defined(SIMULATION)
     .read = connectal_kernel_read,
     .write = connectal_kernel_write,
 #endif
@@ -106,7 +106,7 @@ static int __init pa_init(void)
 static void __exit pa_exit(void)
 {
   printk("TestProgram::pa_exit %s\n", THIS_MODULE->name);
-#ifdef BOARD_bluesim
+#ifdef SIMULATION
   if (!bsim_relay_running) {
     printk("TestProgram::pa_exit terminate main program\n");
     main_program_finished = 1;
