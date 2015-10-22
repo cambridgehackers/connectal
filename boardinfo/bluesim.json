@@ -1,6 +1,6 @@
 {
     "options": {
-        "os" : "android",
+        "os" : "ubuntu",
         "partname" : "xc7z020clg484-1",
         "rewireclockstring" : "tclzynqrewireclock",
         "TOP" : "BsimTop",
