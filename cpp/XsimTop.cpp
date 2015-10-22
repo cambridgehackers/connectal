@@ -73,7 +73,7 @@ extern "C" void dpi_init()
     param.pint = &mcommon->pint;
     xsimIndicationProxy = new XsimMsgIndicationProxy(XsimIfcNames_XsimMsgIndication, &transportMux, &param);
     xsimRequest = new XsimMsgRequest(XsimIfcNames_XsimMsgRequest, &transportMux, &param);
-    fprintf(stderr, "%s: end\n", __FUNCTION__);
+    if (trace_xsimtop) fprintf(stderr, "%s: end\n", __FUNCTION__);
 }
 
 extern "C" void dpi_poll()
