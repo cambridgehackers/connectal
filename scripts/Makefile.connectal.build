@@ -67,9 +67,9 @@ endif
 BSCOPTFLAGS= -show-schedule -aggressive-conditions
 BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj
 BSCFLAGS_COMMON += $(BSCWARNFLAGS) $(BSCOPTFLAGS) $(BSCPATHFLAGS) --wait-for-license
-export BSC_CXXFLAGS= -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -D BSIM $(BSVDEFINES)
-BSIM_CXX_COMMON = $(foreach f, TlpReplay.cpp BsimCtrl.cpp BsimDma.cpp sock_utils.c portalPrintf.c XsimTop.cpp poller.cpp transportSocket.c transportHardware.c portal.c, $(CONNECTALDIR)/cpp/$f)
-BSIM_CXX_LOCAL = $(BSIM_CXX_COMMON) $(DTOP)/jni/XsimMsgRequest.c $(DTOP)/jni/XsimMsgIndication.c $(DTOP)/jni/GeneratedCppCallbacks.cpp
+export SIM_CXXFLAGS= -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -D BSIM $(BSVDEFINES)
+SIM_CXX_COMMON = $(foreach f, TlpReplay.cpp BsimCtrl.cpp BsimDma.cpp sock_utils.c portalPrintf.c XsimTop.cpp poller.cpp transportSocket.c transportHardware.c transportXsim.c portal.c, $(CONNECTALDIR)/cpp/$f)
+SIM_CXX_LOCAL = $(SIM_CXX_COMMON) $(DTOP)/jni/XsimMsgRequest.c $(DTOP)/jni/XsimMsgIndication.c $(DTOP)/jni/GeneratedCppCallbacks.cpp
 
 ifneq ($(ALTERA),)
 BLUESPEC_VERILOG+=$(BLUESPECDIR)/lib/Verilog.Quartus
@@ -305,15 +305,15 @@ $(VFILE): $(TOPBSVFILE) $(BSVFILES)
 	$(Q)sed -i 's|  wire.*PROBE_VALID[,;]|(* mark_debug="true" *)&|' verilog/*.v 
 	$(Q)for v in verilog/*.v; do $(CONNECTALDIR)/scripts/copy_verilog.py $$v $(VERILOG_PATH); done
 
-$(DTOP)/bin/libconnectal-sim.so: $(BSIM_CXX_COMMON) $(BSIM_CXX_PROJECT)
+$(DTOP)/bin/libconnectal-sim.so: $(SIM_CXX_COMMON) $(SIM_CXX_PROJECT)
 	$(Q)mkdir -p $(DTOP)/bin
-	g++ -O -g -I$(DTOP)/jni -shared -fpic $(BSC_CXXFLAGS) -o $(DTOP)/bin/libconnectal-sim.so $(BSIM_CXX_LOCAL) $(BSIM_CXX_PROJECT)
+	g++ -O -g -I$(DTOP)/jni -shared -fpic $(SIM_CXXFLAGS) -o $(DTOP)/bin/libconnectal-sim.so $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)
 
 bsim: prepare_bin_target $(DTOP)/bin/libconnectal-sim.so
 	$(Q)mkdir -p $(DTOP)/obj verilog
 	@echo BSCBSIM [$(DTOP)]
 	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -D BSIM -sim -u -g $(MKTOP) $(TOPBSVFILE)
-	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) $(BSC_CXXFLAGS) -L $(DTOP)/bin  -l connectal-sim -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba
+	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) $(SIM_CXXFLAGS) -L $(DTOP)/bin  -l connectal-sim -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba
 	$(Q)cp -v generatedbsv/bsim* bin
 
 syntax.timestamp: $(BSVFILES)

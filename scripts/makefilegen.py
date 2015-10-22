@@ -159,7 +159,7 @@ export INTERFACES = %(interfaces)s
 BSVFILES = %(bsvfiles)s
 
 BSCFLAGS_PROJECT = %(bscflags)s
-BSIM_CXX_PROJECT = %(bsimsource)s
+SIM_CXX_PROJECT = %(bsimsource)s
 XELABFLAGS = %(xelabflags)s
 XSIMFLAGS  = %(xsimflags)s
 TOPBSVFILE = %(topbsvfile)s
