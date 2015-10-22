@@ -56,7 +56,7 @@ synth-ip.tcl:
 	ln -svf $(CONNECTALDIR)/examples/matmul/synth-ip.tcl .
 
 prebuild:: synth-ip.tcl
-	if [ "$(BOARD)" != "bluesim" ] ; then cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) vivado -notrace -mode batch -source ../synth-ip.tcl; fi
+	if [ "$(BOARD)" != "bluesim" -a "$(BOARD)" != verilator ] ; then cd $(BOARD); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) vivado -notrace -mode batch -source ../synth-ip.tcl; fi
 
 FPGAMAKE_CONNECTALFLAGS += -P mkMmTile --xci=$(IPDIR)/$(BOARD)/fp_add/fp_add.xci --xci=$(IPDIR)/$(BOARD)/fp_mul/fp_mul.xci
 
