@@ -31,7 +31,7 @@
 
 static int spew = 1;
 static int host_sw = 1;
-#ifdef BSIM
+#ifdef SIMULATION
 static int alloc_sz = 1<<7;
 #else
 static int alloc_sz = 1<<10;
@@ -67,7 +67,7 @@ int main(int argc, const char **argv)
   int drop = 0;
 
   while(true){
-#ifdef BSIM
+#ifdef SIMULATION
     sleep(5);
 #else
     usleep(80000);

@@ -75,7 +75,7 @@ int main(int argc, const char **argv)
   bool sane = 1;
 #define LARGE_MAT
 #ifdef LARGE_MAT
-#ifdef BSIM
+#ifdef SIMULATION
   int A = 64;
   int B = 256;
 #else

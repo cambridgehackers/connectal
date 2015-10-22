@@ -22,7 +22,7 @@
 #include "ReadTestRequest.h"
 #include "ReadTestIndication.h"
 
-#ifdef BSIM
+#ifdef SIMULATION
 static size_t test_sz = 0x124000; // make sure to allocate at least one entry of each size
 #else
 static size_t test_sz = 0x1240000; // make sure to allocate at least one entry of each size

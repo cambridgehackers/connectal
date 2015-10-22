@@ -133,7 +133,7 @@ int main(int argc, const char **argv)
   pthread_create(&threaddata, NULL, &drive_hbridges, (void*)hbridge_ctrl);
   
   while(true){
-#ifdef BSIM
+#ifdef SIMULATION
     sleep(5);
 #else
     usleep(50000*2);
