@@ -90,7 +90,6 @@ module xsimtop(
    end
    always @(`BSV_RESET_EDGE DERIVED_CLK) begin
       if (count == (20*`MainClockPeriod/`DerivedClockPeriod)) begin
-	 //$display("deasserting derived_reset to value %d", !`BSV_RESET_VALUE);
 	 DERIVED_RST_N <= !`BSV_RESET_VALUE;
       end
    end
