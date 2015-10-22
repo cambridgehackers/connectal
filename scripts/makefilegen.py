@@ -71,7 +71,7 @@ argparser.add_argument('-b', '--bscflags', default=[], help='Options to pass to 
 argparser.add_argument('--xelabflags', default=[], help='Options to pass to the xelab compiler', action='append')
 argparser.add_argument('--xsimflags', default=[], help='Options to pass to the xsim simulator', action='append')
 argparser.add_argument('--ipdir', help='Directory in which to store generated IP')
-argparser.add_argument('-q', '--qtused', help='Qt used in Bsim test application', action='store_true')
+argparser.add_argument('-q', '--qtused', help='Qt used in simulator test application', action='store_true')
 argparser.add_argument('--stl', help='STL implementation to use for Android builds', default=None)
 argparser.add_argument('--floorplan', help='Floorplan XDC', default=None)
 argparser.add_argument('-P', '--partition-module', default=[], help='Modules to separately synthesize/place/route', action='append')
@@ -234,16 +234,10 @@ ubuntu.exe: $(SOURCES)
 	$(Q)[ ! -f ../bin/mkTop.bin.gz ] || objcopy --add-section fpgadata=../bin/mkTop.bin.gz ubuntu.exe
 
 connectal.so: $(SOURCES)
-	$(Q)g++ -shared -fpic $(CFLAGS) -o connectal.so %(bsimcxx)s $(SOURCES) $(LDLIBS)
+	$(Q)g++ -shared -fpic $(CFLAGS) -o connectal.so $(SOURCES) $(LDLIBS)
 
 ubuntu.exe2: $(SOURCES2)
 	$(Q)g++ $(CFLAGS) $(CFLAGS2) -o ubuntu.exe2 $(SOURCES2) $(LDLIBS)
-
-bsim_exe: $(SOURCES)
-	$(Q)g++ $(CFLAGS_COMMON) -o bsim_exe -DBSIM $(SOURCES) $(BSIM_EXE_CXX) $(LDLIBS)
-
-bsim_exe2: $(SOURCES2)
-	$(Q)g++ $(CFLAGS_COMMON) $(CFLAGS2) -o bsim_exe2 -DBSIM $(SOURCES2) $(BSIM_EXE_CXX) $(LDLIBS)
 
 xsim: $(XSOURCES)
 	g++ $(CFLAGS) -o xsim $(XSOURCES)
@@ -390,7 +384,6 @@ if __name__=='__main__':
         'cdefines': ' '.join([ '-D%s' % d for d in bsvdefines ]),
         'cdefines2': ' '.join([ '-D%s' % d for d in options.bsvdefine2 ]),
         'cincludes': ' '.join([ '-I%s' % os.path.abspath(i) for i in options.cinclude ]),
-        'bsimcxx': '-DBSIM $(BSIM_EXE_CXX)' if boardname == 'bluesim' else '',
         'werr': '-Werror' if not options.nonstrict else '-Wall'
     }
     includelist = ['-I$(DTOP)/jni', '-I$(CONNECTALDIR)', \
