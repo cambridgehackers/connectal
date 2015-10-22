@@ -28,7 +28,7 @@ import Portal::*;
 import ConnectalConfig::*;
 import MemTypes::*;
 import PcieHost ::*;
-`ifndef BSIM
+`ifndef SIMULATION
 import PCIEWRAPPER          ::*;
 import PcieEndpointX7       ::*;
 import ConnectalXilinxCells ::*;

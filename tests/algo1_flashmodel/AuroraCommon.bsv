@@ -92,7 +92,7 @@ endinterface
 
 (* synthesize *)
 module mkGtxClockImport (GtxClockImportIfc);
-`ifndef BSIM
+`ifndef SIMULATION
 	B2C i_gtx_clk_p <- mkB2C();
 	B2C i_gtx_clk_n <- mkB2C();
 

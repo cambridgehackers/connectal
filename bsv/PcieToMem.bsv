@@ -44,7 +44,7 @@ endinterface
 
 `ifdef XILINX
    `define AXI
-`elsif BSIM
+`elsif SIMULATION
    `define AXI
 `elsif ALTERA
    `define AVALON

@@ -73,7 +73,7 @@ interface ImageonCapture;
 endinterface
 
 module mkImageonCapture#(ImageonSerdesIndication serdes_indication, HdmiGeneratorIndication hdmi_ind, ImageonCaptureIndication cap_ind)(ImageonCapture);
-`ifndef BSIM
+`ifndef SIMULATION
     B2C1 iclock <- mkB2C1();
     Clock fmc_imageon_clk1 <- mkClockBUFG(clocked_by iclock.c);
 `else
@@ -134,7 +134,7 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, HdmiGenerato
     endrule
 
     // fromSensor: sensor specific processing of serdes input, resulting in pixels
-`ifndef BSIM
+`ifndef SIMULATION
     ConnectalODDR#(Bit#(1)) pll_out <- mkConnectalODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"}, clocked_by imageon_clock, reset_by imageon_reset);
     ConnectalODDR#(Bit#(1)) pll_t <- mkConnectalODDR(ODDRParams{ddr_clk_edge:"SAME_EDGE", init:1, srtype:"ASYNC"}, clocked_by imageon_clock, reset_by imageon_reset);
     ReadOnly#(Bit#(1)) vita_clk_pll <- mkOBUFT(roval(pll_out.q()), roval(pll_t.q()), clocked_by imageon_clock, reset_by imageon_reset);
@@ -243,7 +243,7 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, HdmiGenerato
         endmethod
     endinterface
     interface ImageonCapturePins pins;
-`ifndef BSIM
+`ifndef SIMULATION
         method Action fmc_video_clk1(Bit#(1) v);
             iclock.inputclock(v);
         endmethod

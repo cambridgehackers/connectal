@@ -80,7 +80,7 @@ import PcieCsr           :: *;
 import PcieTracer        :: *;
 import MemTypes          :: *;
 import Pipe              :: *;
-`ifndef BSIM
+`ifndef SIMULATION
 `ifdef XILINX
 `ifdef PCIE1
 import PCIEWRAPPER       :: *;

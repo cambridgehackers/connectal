@@ -118,7 +118,7 @@ void setup_registers(GyroCtrlIndication *ind, GyroCtrlRequestProxy *device, int 
   write_reg(ind,device, CTRL_REG5, 0b00000000);
   // make sure the memwrite is disabled before we start
   set_en(ind,device,0); 
-#ifdef BSIM
+#ifdef SIMULATION
   device->sample(ref_dstAlloc, alloc_sz, 10);
 #else
 #ifdef HIGH_SAMPLE_RATE

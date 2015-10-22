@@ -40,7 +40,7 @@ import PcieToMem   :: *;
 import PcieCsr           :: *;
 import MemTypes          :: *;
 `include "ConnectalProjectConfig.bsv"
-`ifndef BSIM
+`ifndef SIMULATION
 `ifdef XILINX
 `ifdef PCIE1
 import PCIEWRAPPER       :: *;
@@ -171,7 +171,7 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
                                  interface response = dispatcher.inFromBus;
                               endinterface));
 
-`ifndef BSIM
+`ifndef SIMULATION
 `ifdef PCIE_BSCAN
    Reg#(Bit#(TAdd#(TlpTraceAddrSize,1))) bscanPcieTraceBramWrAddrReg <- mkReg(0);
    BscanBram#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) pcieBscanBram <- mkBscanBram(127, bscanPcieTraceBramWrAddrReg, lbscan.loc[1]);
@@ -202,7 +202,7 @@ endmodule: mkPcieHost
 `endif //PCIE3
 
 interface PcieTop#(type ipins);
-`ifndef BSIM
+`ifndef SIMULATION
    (* prefix="PCIE" *)
    interface PciewrapPci_exp#(PcieLanes) pcie;
 `ifdef PINS_ALWAYS_READY
@@ -213,7 +213,7 @@ interface PcieTop#(type ipins);
 `endif
 endinterface
 
-`ifdef BSIM
+`ifdef SIMULATION
 module mkBsimPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_PARAM Reset pci_sys_reset_n)(PcieHostTop);
    let dc <- exposeCurrentClock;
    let dr <- exposeCurrentReset;
@@ -335,7 +335,7 @@ module mkAlteraPcieHostTop #(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(P
 endmodule
 `endif
 
-`ifdef BSIM
+`ifdef SIMULATION
    module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_PARAM Reset pci_sys_reset_n)(PcieHostTop);
    PcieHostTop _a <- mkBsimPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, `SYS_CLK_ARG pci_sys_reset_n); return _a;
    endmodule

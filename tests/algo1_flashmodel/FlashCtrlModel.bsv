@@ -16,13 +16,13 @@ import ControllerTypes::*;
 import FlashBusModel::*;
 
 //simulator options
-//Integer BSIM_CHIPS_PER_BUS 	= 2;
-//Integer BSIM_BLOCKS_PER_CHIP 	= 2;
-//Integer BSIM_PAGES_PER_BLOCK	= 2;
-//Integer BSIM_BUSES				= 4;
+//Integer SIMULATION_CHIPS_PER_BUS 	= 2;
+//Integer SIMULATION_BLOCKS_PER_CHIP 	= 2;
+//Integer SIMULATION_PAGES_PER_BLOCK	= 2;
+//Integer SIMULATION_BUSES				= 4;
 
 //use hashed read data (so we don't have to write before read)
-//Integer BSIM_USE_HASHED_DATA	= 1; 
+//Integer SIMULATION_USE_HASHED_DATA	= 1; 
 
 /*
 interface FlashCtrlUser;

@@ -64,7 +64,7 @@ module mkMaxSonarController#(MaxSonarCtrlIndication ind)(MaxSonarController);
    Reg#(Bit#(1)) last_pulse <- mkReg(0);
    Reg#(Bool) end_pulse <- mkReg(False);
    FIFO#(Bool)     pw_fifo    <- mkSizedFIFO(1);
-`ifdef BSIM
+`ifdef SIMULATION
    Reg#(Bit#(32))  bsim_cnt   <- mkReg(0);
    Reg#(Bit#(32))  bsim_pulse <- mkReg(0);
 `endif
@@ -73,7 +73,7 @@ module mkMaxSonarController#(MaxSonarCtrlIndication ind)(MaxSonarController);
    Gearbox#(1,2,Bit#(32)) gb   <- mk1toNGearbox(clk,rst,clk,rst);
    let verbose = True;
    
-`ifdef BSIM
+`ifdef SIMULATION
    rule bsim_pulse_rule if (!end_pulse);
       if (bsim_pulse[10] == 1) begin
 	 bsim_cnt <= bsim_cnt+1;

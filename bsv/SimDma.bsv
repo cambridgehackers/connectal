@@ -50,7 +50,7 @@ interface SimDma#(numeric type dataWidth);
    method ActionValue#(Bit#(dataWidth)) readresponse();
 endinterface
 
-`ifdef BSIM
+`ifdef BOARD_bluesim
 import "BDPI" function ActionValue#(Bit#(32)) simDma_init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
 import "BDPI" function ActionValue#(Bit#(32)) simDma_initfd(Bit#(32) id, Bit#(32) fd);
 import "BDPI" function ActionValue#(Bit#(32)) simDma_idreturn(Bit#(32) id);
