@@ -1,6 +1,23 @@
 C/C++ Portal
 ============
 
+Connecting to Bluesim
+---------------------
+
+.. envvar:: BLUESIM_SOCKET_NAME
+
+   Controls the name of the socket used for connecting software and hardware simulated by bluesim.
+
+Connecting to Xsim and Verilator
+--------------------------------
+
+.. envvar:: SOFTWARE_SOCKET_NAME
+
+   Controls the name of the socket used for connecting software and hardware simulated by xsim/verilator.
+
+Zynq Clock Control
+------------------
+
 .. c:function:: void setClockFrequency(int clkNum, long requestedFrequency, long *actualFrequency)
 
    Changes the frequency of Zynq FPGA Clock clkNum to the closest
