@@ -162,7 +162,7 @@ static int recv_socket(struct PortalInternal *pint, volatile unsigned int *buffe
         fprintf(stderr, "[%s:%d] len %d fd %d rc %d\n", __FUNCTION__, __LINE__, len, pint->client_fd[pint->indication_index], rc);
         if (rc > 0) {
         char bname[100];
-        sprintf(bname,"RECV%d", pint->client_fd[pint->indication_index]);
+        sprintf(bname,"RECV%d.%d", getpid(), pint->client_fd[pint->indication_index]);
         memdump((uint8_t*)buffer, rc, bname);
         }
     }
@@ -179,7 +179,6 @@ static int event_socket(struct PortalInternal *pint)
            pint->client_fd_number--;
            for (j = i; j < pint->client_fd_number; j++)
                 pint->client_fd[j] = pint->client_fd[j+1];
-fprintf(stderr, "[%s:%d] disconnect num %d cb %p\n", __FUNCTION__, __LINE__, pint->client_fd_number, pint->cb);
            if (pint->cb)
                pint->cb->disconnect(pint);
        }
@@ -224,7 +223,7 @@ static void send_socket(struct PortalInternal *pint, volatile unsigned int *data
         event_socket(pint);
     if(trace_socket) {
         char bname[100];
-        sprintf(bname,"SEND%d", pint->client_fd[pint->request_index]);
+        sprintf(bname,"SEND%d.%d", getpid(), pint->client_fd[pint->request_index]);
         memdump((uint8_t*)buffer, (hdr & 0xffff) * sizeof(uint32_t), bname);
     }
     portalSendFd(pint->client_fd[pint->request_index], (void *)buffer, (hdr & 0xffff) * sizeof(uint32_t), sendFd);
