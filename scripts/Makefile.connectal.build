@@ -108,40 +108,23 @@ ifeq ($(CONNECTAL_SHARED),1)
   ifeq ($(RUNSOURCE2),)
     exe: connectal.so
   else
-    exe: connectal.so bsim_exe2
+    exe: connectal.so ubuntu.exe2
   endif
 else
-  ifeq ($(BOARD),bluesim)
-    ifeq ($(RUNSOURCE2),)
-      exe: bsim_exe
-    else
-      exe: bsim_exe bsim_exe2
-    endif
-  else
     ifneq ($(OS),android)
       ifeq ($(RUNSOURCE2),)
         exe: ubuntu.exe
       else
         exe: ubuntu.exe ubuntu.exe2
       endif
-    else
+    else # android
       ifeq ($(CONNECTAL_DEBUG),1)
         exe: android.debug.exe
       else
         exe: android.exe
       endif
-    endif
-  endif
-endif
-
-bsim_exe: prepare_bin_target
-	$(Q)cd jni; $(MAKE) --no-print-directory -f Ubuntu.mk bsim_exe
-	@cp -v jni/bsim_exe bin
-	$(QTUSED)
-
-bsim_exe2: prepare_bin_target
-	$(Q)cd jni; $(MAKE) --no-print-directory -f Ubuntu.mk bsim_exe2
-	@cp -v jni/bsim_exe2 bin
+    endif # android
+endif # !shared
 
 ubuntu.exe: prepare_bin_target
 	@echo "ubuntu.exe"
@@ -230,13 +213,13 @@ android.debug.exe: prepare_bin_target
 
 run:
 ifeq ($(CONNECTAL_SHARED),1)
-	$(RUN_BSC_LM_LICENSE_FILE) $(GDB) ./bin/bsim_exe2 $(RUN_ARGS); retcode=$$?; exit $$retcode
+	$(RUN_BSC_LM_LICENSE_FILE) $(GDB) ./bin/ubuntu.exe2 $(RUN_ARGS); retcode=$$?; exit $$retcode
 else
 ifeq ($(BOARD),bluesim)
     ifeq ($(RUNSOURCE2),)
-	$(RUN_BSC_LM_LICENSE_FILE) $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; exit $$retcode
+	$(RUN_BSC_LM_LICENSE_FILE) $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; exit $$retcode
     else
-	$(RUN_BSC_LM_LICENSE_FILE) $(GDB2) ./bin/bsim_exe2& bsim2pid=$$!; $(GDB) ./bin/bsim_exe $(RUN_ARGS); retcode=$$?; kill $$bsim2pid; exit $$retcode
+	$(RUN_BSC_LM_LICENSE_FILE) $(GDB2) ./bin/ubuntu.exe2& bsim2pid=$$!; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; kill $$bsim2pid; exit $$retcode
     endif
 else
   ifeq ($(BOARD),xsim)
