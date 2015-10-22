@@ -298,9 +298,9 @@ endif #VIVADO
 
 vlsim: $(DTOP)/obj_dir/Vxsimtop
 
+VERILATOR_ARGS?= -O3 -CFLAGS "-O"
 $(DTOP)/obj_dir/Vxsimtop.mk: $(DTOP)/bin/libconnectal-sim.so verilog
-	sed -i 's/", "/ /' verilog/*.v
-	verilator --trace -cc -exe $(CONNECTALDIR)/verilog/xsimtop.sv -DMainClockPeriod=4 -DDerivedClockPeriod=4 --top-module xsimtop -I$(DTOP)/verilog -Wno-fatal $(CONNECTALDIR)/cpp/verilatortop.cpp $(DTOP)/bin/libconnectal-sim.so -LDFLAGS -lpthread
+	verilator $(VERILATOR_ARGS) -cc -exe $(CONNECTALDIR)/verilog/xsimtop.sv -DMainClockPeriod=4 -DDerivedClockPeriod=4 --top-module xsimtop -I$(DTOP)/verilog -Wno-fatal $(CONNECTALDIR)/cpp/verilatortop.cpp $(DTOP)/bin/libconnectal-sim.so -LDFLAGS -lpthread
 
 $(DTOP)/obj_dir/Vxsimtop: $(DTOP)/obj_dir/Vxsimtop.mk
 	$(MAKE) -C obj_dir -f Vxsimtop.mk
