@@ -28,13 +28,13 @@
 static int trace_socket; // = 1;
 
 static unsigned int tag_counter;
-#define MAX_BSIM_TILES     4
+#define MAX_SIMULATOR_TILES     4
 typedef struct bsim_fpga_map_entry{
   uint32_t name;
   int offset;
   int valid;
 } bsim_fpga_map_entry;
-static bsim_fpga_map_entry bsim_fpga_map[MAX_BSIM_TILES][MAX_BSIM_PORTAL_ID];
+static bsim_fpga_map_entry bsim_fpga_map[MAX_SIMULATOR_TILES][MAX_SIMULATOR_PORTAL_ID];
 
 static uint32_t read_bsim(uint32_t portal_index, long base, uint32_t offset)
 {
@@ -48,8 +48,8 @@ static void initialize_bsim_map(void)
   long base_tile = 0;
   uint32_t tile_index = 0;
   uint32_t num_tiles = read_bsim(0, base_tile, PORTAL_CTRL_NUM_TILES);
-  if (num_tiles >= MAX_BSIM_TILES) {
-      PORTAL_PRINTF("%s: Number of tiles %d exceeds max allowed %d\n", num_tiles, MAX_BSIM_TILES);
+  if (num_tiles >= MAX_SIMULATOR_TILES) {
+      PORTAL_PRINTF("%s: Number of tiles %d exceeds max allowed %d\n", num_tiles, MAX_SIMULATOR_TILES);
       exit(-1);
   }
   do{
@@ -60,7 +60,7 @@ static void initialize_bsim_map(void)
       uint32_t id = read_bsim(portal_index, base_ptr, PORTAL_CTRL_PORTAL_ID);
       assert(num_portals == read_bsim(portal_index, base_ptr, PORTAL_CTRL_NUM_PORTALS));
       assert(num_tiles   == read_bsim(portal_index, base_ptr, PORTAL_CTRL_NUM_TILES));
-      if (id >= MAX_BSIM_PORTAL_ID) {
+      if (id >= MAX_SIMULATOR_PORTAL_ID) {
 	PORTAL_PRINTF("%s: [%d] readid too large %d\n", __FUNCTION__, portal_index, id);
 	break;
       }
@@ -75,7 +75,7 @@ static void initialize_bsim_map(void)
     } while (portal_index < num_portals && portal_index < 32);
     tile_index++;
     base_tile += TILE_BASE_OFFSET;
-  } while (tile_index < num_tiles && tile_index < MAX_BSIM_TILES);
+  } while (tile_index < num_tiles && tile_index < MAX_SIMULATOR_TILES);
 }
 
 #ifndef __KERNEL__
@@ -279,7 +279,7 @@ PortalTransportFunctions transportMux = {
     send_mux, recv_mux, busy_portal_null, enableint_portal_null, event_null, notfull_null};
 
 /*
- * BSIM
+ * BOARD_bluesim
  */
 static struct memresponse shared_response;
 static int shared_response_valid;
@@ -340,7 +340,7 @@ static void write_fd_portal_bsim(PortalInternal *pint, volatile unsigned int **a
 #else // __KERNEL__
 
 /*
- * Used when running application in kernel and BSIM in userspace
+ * Used when running application in kernel and BOARD_bluesim in userspace
  */
 
 #include <linux/kernel.h>
@@ -473,13 +473,13 @@ void write_fd_portal_bsim(struct PortalInternal *pint, volatile unsigned int **a
 #endif
 static int init_bsim(struct PortalInternal *pint, void *param)
 {
-#ifdef BSIM
+#ifdef BOARD_bluesim
     int found = 0;
     int i;
     initPortalHardware();
     connect_to_bsim();
 #ifndef __KERNEL__
-    assert(pint->fpga_number < MAX_BSIM_PORTAL_ID);
+    assert(pint->fpga_number < MAX_SIMULATOR_PORTAL_ID);
 #endif
     struct bsim_fpga_map_entry* entry = bsim_fpga_map[pint->fpga_tile];
     for (i = 0; entry[i].valid; i++)
@@ -505,7 +505,7 @@ static int init_bsim(struct PortalInternal *pint, void *param)
 }
 int event_portal_bsim(struct PortalInternal *pint)
 {
-#ifdef BSIM
+#ifdef BOARD_bluesim
     if (pint->fpga_fd == -1 && !bsim_poll_interrupt())
         return -1;
 #endif
