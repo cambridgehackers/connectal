@@ -6,7 +6,7 @@
         "need_pcie" : "x7_gen1x8",
         "TOP" : "PcieTop",
         "constraints": [],
-        "implconstraints": ["constraints/xilinx/ac701.xdc"],
+        "implconstraints": ["constraints/xilinx/ac701.xdc", "constraints/xilinx/pcie-clocks.xdc"],
         "runscript" : "run.pcietest",
         "CONNECTALFLAGS" : ["--mainclockperiod=8", "--derivedclockperiod=4", "--pcieclockperiod=8"],
         "rewireclockstring" : ""
