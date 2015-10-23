@@ -58,6 +58,11 @@ interface XsimHost;
    interface Reset derivedReset;
 endinterface
 
+module  mkXsimHost#(Clock derivedClock, Reset derivedReset)(XsimHost);
+   interface derivedClock = derivedClock;
+   interface derivedReset = derivedReset;
+endmodule
+
 typedef XsimHost HostInterface;
 `endif
 

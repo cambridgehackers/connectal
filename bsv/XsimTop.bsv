@@ -41,11 +41,6 @@ import BuildVector::*;
 
 `include "ConnectalProjectConfig.bsv"
 
-module  mkXsimHost#(Clock derivedClock, Reset derivedReset)(XsimHost);
-   interface derivedClock = derivedClock;
-   interface derivedReset = derivedReset;
-endmodule
-
 interface XsimSource;
     method Action beat(Bit#(32) v);
 endinterface
