@@ -286,7 +286,7 @@ $(DTOP)/obj_dir/Vxsimtop.mk: $(DTOP)/bin/libconnectal-sim.so verilog
 	verilator $(VERILATOR_ARGS) -cc -exe $(CONNECTALDIR)/verilog/xsimtop.sv -DMainClockPeriod=4 -DDerivedClockPeriod=4 --top-module xsimtop -I$(DTOP)/verilog -Wno-fatal $(CONNECTALDIR)/cpp/verilatortop.cpp $(DTOP)/bin/libconnectal-sim.so -LDFLAGS -lpthread
 
 $(DTOP)/obj_dir/Vxsimtop: $(DTOP)/obj_dir/Vxsimtop.mk
-	$(MAKE) -C obj_dir -f Vxsimtop.mk
+	+$(MAKE) -C obj_dir -f Vxsimtop.mk
 	cp obj_dir/Vxsimtop bin/vlsim
 
 bin/vsim:
