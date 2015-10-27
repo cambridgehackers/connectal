@@ -4,10 +4,6 @@ H2S_INTERFACES = Echo:EchoIndication
 
 BSVFILES = Echo.bsv
 CPPFILES= testecho.cpp
-CONNECTALFLAGS += --verilog .
-
-#prebuild::
-#	$(CONNECTALDIR)/generated/scripts/importbvi.py -I Clai -P Clap --o Clai.bsv $(CONNECTALDIR)/verilog/l_class_OC_Fifo1.v 
+CONNECTALFLAGS += --verilog $(CONNECTALDIR)/../llvm-translate/generated
 
 include $(CONNECTALDIR)/Makefile.connectal
-
