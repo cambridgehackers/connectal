@@ -35,6 +35,8 @@ import MemTypes::*;
 import Pipe::*;
 import MemUtils::*;
 
+`include "ConnectalProjectConfig.bsv"
+
 module mkMemReadEngine(MemReadEngine#(busWidth, userWidth, cmdQDepth, numServers))
    provisos( Mul#(TDiv#(busWidth, 8), 8, busWidth)
 	    ,Add#(1, a__, numServers)

@@ -26,16 +26,30 @@ import Connectable::*;
 import BRAMFIFO::*;
 import GetPut::*;
 import ClientServer::*;
+
+import ConnectalConfig::*;
 import Pipe::*;
 import ConnectalMemory::*;
 import DefaultValue::*;
+
+`include "ConnectalProjectConfig.bsv"
 
 typedef Bit#(32) SGLId;
 typedef 44 MemOffsetSize;
 typedef 6 MemTagSize;
 typedef `BurstLenSize BurstLenSize;
+
 `ifndef USE_ACP
+`ifdef PCIE3
+// as configured, the Xilinx gen3 PCIe core supports 5 bit tags, and
+// we need to use unique tags for all transactions in flight. Since
+// MemServer uses the same tag numbers for reads and writes, we use
+// tag[4] to distinguish the two, leaving 4 bits for unique tags.
+// TODO: There is an option for longer tags in the gen3 core.
+typedef 16 MemServerTags;
+`else
 typedef 32 MemServerTags;
+`endif
 `else
 typedef 8 MemServerTags;
 `endif

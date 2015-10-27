@@ -3,6 +3,7 @@ import FIFO::*;
 import FIFOF::*;
 import Clocks::*;
 import ConnectalClocks::*;
+`include "ConnectalProjectConfig.bsv"
 
 interface Dsp48E1;
    method Bool     notEmpty();
@@ -20,7 +21,7 @@ interface Dsp48E1;
    method Action last(Bit#(1) v);
 endinterface
 
-`ifndef BSIM
+`ifndef SIMULATION //fixme xsim
 (* always_ready, always_enabled *)
 interface PRIM_DSP48E1;
    method Bit#(48) p();

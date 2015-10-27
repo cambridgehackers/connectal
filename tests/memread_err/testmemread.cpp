@@ -31,7 +31,7 @@ int burstLen = 32;
 int burstLen = 16;
 #endif
 
-#ifndef BSIM
+#ifndef SIMULATION
 int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
 #else
 int numWords = 0x1240/4;

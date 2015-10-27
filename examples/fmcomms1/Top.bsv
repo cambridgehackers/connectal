@@ -25,6 +25,7 @@ import Connectable :: *;
 import Clocks :: *;
 import FIFO::*;
 import Portal::*;
+import ConnectalConfig::*;
 import HostInterface::*;
 import CtrlMux::*;
 import MemTypes::*;

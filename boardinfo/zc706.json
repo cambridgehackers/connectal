@@ -7,7 +7,7 @@
         "implconstraints": ["constraints/xilinx/xc7z045ffg900.xdc", "constraints/xilinx/zc706.xdc"],
         "TOP" : "ZynqTop",
         "runscript" : "run.android",
-        "bsvdefines" : ["XILINX=1", "ZynqHostInterface", "PhysAddrWidth=32", "NUMBER_OF_LEDS=4"],
+        "bsvdefines" : ["XILINX=1", "ZynqHostInterface", "PhysAddrWidth=32", "NUMBER_OF_LEDS=4", "PcieLanes=4"],
         "CONNECTALFLAGS": ["--mainclockperiod=5", "--derivedclockperiod=2.5"],
         "need_pcie" : "unused"
     },

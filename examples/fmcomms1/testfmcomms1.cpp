@@ -36,7 +36,7 @@ int writeBurstLen = 16;
 
 #define WHERE(x) fprintf(stdout, "at %s:%d\n",__FILE__, __LINE__)
 
-#ifndef BSIM
+#ifndef SIMULATION
 int numWords = 0x4096; // make sure to allocate at least one entry of each size
 #else
 int numWords = 0x4096;

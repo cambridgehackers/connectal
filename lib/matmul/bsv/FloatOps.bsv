@@ -30,6 +30,16 @@ import Pipe::*;
 import FIFO::*;
 import FpMac::*;
 
+`ifdef SIMULATION
+`ifndef BOARD_xsim
+`define USE_BSV_FP
+`endif // xsim
+`else // !SIMULATION
+`ifndef XILINX
+`define USE_BSV_FP
+`endif // !XILINX
+`endif // !SIMULATION
+
 interface FloatAlu;
    interface Put#(Tuple2#(Float,Float)) request;
    interface Get#(Tuple2#(Float,Exception)) response;
@@ -65,7 +75,7 @@ endmodule
 
 (* synthesize *)
 module mkFloatAdder#(RoundMode rmode)(FloatAlu);
-`ifdef BSIM
+`ifdef USE_BSV_FP
    let adder <- mkFPAdder(rmode);
 `else
    let adder <- mkXilinxFPAdder(rmode);
@@ -102,7 +112,7 @@ endmodule
 
 (* synthesize *)
 module mkFloatSubtracter#(RoundMode rmode)(FloatAlu);
-`ifdef BSIM
+`ifdef USE_BSV_FP
    let adder <- mkFPAdder(rmode);
 `else
    let adder <- mkXilinxFPAdder(rmode);
@@ -139,7 +149,7 @@ endmodule
 
 (* synthesize *)
 module mkFloatMultiplier#(RoundMode rmode)(FloatAlu);
-`ifdef BSIM
+`ifdef USE_BSV_FP
    let multiplier <- mkFPMultiplier(rmode);
 `else
    let multiplier <- mkXilinxFPMultiplier(rmode);

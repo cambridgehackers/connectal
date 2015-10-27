@@ -45,7 +45,7 @@ interface BscanTop;
    method Bit#(1)     update();
    method Bool        first();
 endinterface
-`ifdef BSIM
+`ifdef SIMULATION
 module mkBscanTop#(Integer bus)(BscanTop);
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();

@@ -24,6 +24,8 @@ import Connectable       :: *;
 import FIFOF             :: *;
 import Pipe              :: *;
 
+`include "ConnectalProjectConfig.bsv"
+
 interface SimLink#(numeric type dataWidth);
    method Action start(Bit#(32) linknumber, Bool listening);
    method Bool   linkUp();
@@ -31,7 +33,7 @@ interface SimLink#(numeric type dataWidth);
    interface PipeIn#(Bit#(dataWidth)) tx;
 endinterface
 
-`ifdef BSIM
+`ifdef BOARD_bluesim
 import "BDPI" function Action                 bsimLinkOpen(Bit#(32) linknumber, Bool listening);
 import "BDPI" function Bit#(1)                bsimLinkUp(Bit#(32) linknumber, Bool listening);
 import "BDPI" function Bool                   bsimLinkCanReceive(Bit#(32) linknumber, Bool listening);
@@ -112,7 +114,7 @@ module mkSimLink(SimLink#(dataWidth)) provisos (SelectLinkWidth#(dataWidth));
 endmodule
 `endif
 
-`ifdef XSIM
+`ifdef SVDPI
 import "BVI" XsimLink =
 module mkSimLink(SimLink#(dataWidth));
    parameter DATAWIDTH=valueOf(dataWidth);
@@ -129,4 +131,4 @@ module mkSimLink(SimLink#(dataWidth));
    endinterface
    schedule (rx_first, rx_notEmpty, tx_notFull, rx_deq, tx_enq, start, linkUp) CF (rx_first, rx_notEmpty, tx_notFull, rx_deq, tx_enq, start, linkUp);
 endmodule
-`endif
+`endif //SVDPI

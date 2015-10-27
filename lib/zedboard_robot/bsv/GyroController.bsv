@@ -67,7 +67,7 @@ module mkGyroController#(GyroCtrlIndication ind)(GyroController);
    Reg#(Bit#(32))  sampleFreq <- mkReg(0);
    Reg#(Bit#(32))  sampleCnt  <- mkReg(0);
    FIFO#(Bool)     rc_fifo    <- mkFIFO1;
-`ifdef BSIM
+`ifdef SIMULATION
    Reg#(Bit#(8))   bsim_cnt   <- mkReg(0);
 `endif
    let clk <- exposeCurrentClock;
@@ -138,7 +138,7 @@ module mkGyroController#(GyroCtrlIndication ind)(GyroController);
       spi_aux.deq;
       if(verbose) $display("sample_resp");
       let rv <- spiCtrl.response.get;
-`ifdef BSIM
+`ifdef SIMULATION
       bsim_cnt <= (bsim_cnt == 5) ? 0 : bsim_cnt+1;
       let bsim_val = bsim_cnt[0]==1'b0 ? bsim_cnt+1 : 0;
       gb.enq(cons(bsim_val,nil));

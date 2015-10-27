@@ -26,6 +26,7 @@ import GetPut::*;
 import Connectable::*;
 import RegFile::*;
 import MemTypes::*;
+import ConnectalConfig::*;
 
 typedef struct {
    Bit#(addrWidth) addr;

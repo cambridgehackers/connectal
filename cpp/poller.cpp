@@ -46,7 +46,7 @@ PortalPoller::PortalPoller(int autostart)
     addFd(pipefd[0]);
 
     timeout = -1;
-#if defined(BSIM) || defined(BOARD_xsim)
+#if defined(SIMULATION)
     timeout = 100;
 #endif
 }
@@ -123,7 +123,7 @@ int PortalPoller::registerInstance(Portal *portal)
 
 void* PortalPoller::init(void)
 {
-#ifdef BSIM
+#ifdef SIMULATION
     if (global_sockfd != -1) {
         pthread_mutex_lock(&mutex);
         addFd(global_sockfd);

@@ -20,7 +20,7 @@
  */
 #include "GeneratedTypes.h"
 
-static int trace_xsim ;//= 1;
+static int trace_xsim; // = 1;
 
 static int indicationIndex[16];
 static PortalInternal mcommon, indPortal, reqPortal;

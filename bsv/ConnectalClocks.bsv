@@ -22,6 +22,8 @@
 
 import Clocks::*;
 
+`include "ConnectalProjectConfig.bsv"
+
 `ifdef PcieClockPeriod
 Real pcieClockPeriod = `PcieClockPeriod;
 `endif

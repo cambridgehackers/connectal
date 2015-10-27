@@ -29,6 +29,9 @@ import PCIE         :: *;
 import DefaultValue :: *;
 import ClientServer :: *;
 import MemTypes     :: *;
+import ConnectalConfig::*;
+
+`include "ConnectalProjectConfig.bsv"
 
 //
 // Top interface: PCIe transaction level packets (TLPs)
@@ -41,7 +44,7 @@ endinterface
 
 `ifdef XILINX
    `define AXI
-`elsif BSIM
+`elsif SIMULATION
    `define AXI
 `elsif ALTERA
    `define AVALON

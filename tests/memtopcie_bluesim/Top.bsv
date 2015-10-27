@@ -35,7 +35,7 @@ import CtrlMux::*;
 import Portal::*;
 import ConnectalMemory::*;
 import MemTypes::*;
-import HostInterface::*;
+import ConnectalConfig::*;
 import MemToPcie::*;
 import AddressGenerator::*;
 import MemreadRequest::*;
@@ -85,7 +85,7 @@ module mkConnectalTop(ConnectalTop);
    rule count;
       cycles <= cycles + 1;
       if (cycles == 1)
-	 $dumpvars();
+	 //$dumpvars();
       if (cycles == 10000)
 	 $dumpoff();
    endrule

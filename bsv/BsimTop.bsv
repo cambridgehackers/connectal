@@ -19,6 +19,8 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+`include "ConnectalProjectConfig.bsv"
+import ConnectalConfig   :: *;
 import Clocks            :: *;
 import Vector            :: *;
 import FIFOF             :: *;
@@ -150,7 +152,7 @@ module  mkBsimTop(Empty);
        clocked_by singleClock, reset_by singleReset));
    Platform top <- mkPlatform(ts, clocked_by singleClock, reset_by singleReset);
    mapM(uncurry(mkConnection),zip(top.masters, host.mem_servers), clocked_by singleClock, reset_by singleReset);
-`ifndef BSIM_EXERCISE_MEM_MASTER_SLAVE
+`ifndef SIMULATION_EXERCISE_MEM_MASTER_SLAVE
    mkConnection(host.mem_client, top.slave, clocked_by singleClock, reset_by singleReset);
 `else
    PciId masterPciId = unpack(22);
@@ -168,7 +170,7 @@ module  mkBsimTop(Empty);
       interruptLevel(truncate(pack(intr_mux)));
    endrule
 
-`ifdef BSIMRESPONDER
-   `BSIMRESPONDER (top.pins);
+`ifdef SIMULATIONRESPONDER
+   `SIMULATIONRESPONDER (top.pins);
 `endif
 endmodule

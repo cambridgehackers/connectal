@@ -27,7 +27,7 @@ import FIFOF::*;
 import BRAMFIFO::*;
 import ClientServer::*;
 import GetPut::*;
-import HostInterface::*;
+import ConnectalConfig::*;
 import MemTypes::*;
 import Pipe::*;
 import ConfigCounter::*;
@@ -107,7 +107,7 @@ module  mkMemcopy#(MemcopyIndication indication) (Memcopy);
 
    interface MemcopyRequest request;
        method Action startCopy(Bit#(32) rp, Bit#(32) wp, Bit#(32) nw, Bit#(32) nreq, Bit#(32) bl);
-	  $dumpvars();
+	  //$dumpvars();
           $display("startCopy readPointer=%d writePointer=%d numWords=%d (%d) numReqs=%d burstLen=%d", rp, wp, nw, nreq*bl, nreq, bl);
           readPointer <= rp;
           writePointer <= wp;

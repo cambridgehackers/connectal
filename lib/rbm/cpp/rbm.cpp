@@ -158,7 +158,7 @@ float sumOfErrorSquared(cv::Mat &a, cv::Mat &b)
 void RBM::train(int numVisible, int numHidden, const cv::Mat &trainingData)
 {
   bool verify = false;
-#ifdef BSIM
+#ifdef SIMULATION
   int numEpochs = 10;
 #else
   int numEpochs = 100;
@@ -387,7 +387,7 @@ void RBM::run()
   
   numImages = 200;
   int cols = 783; // one more column is added below to make the total 784.
-#ifdef BSIM
+#ifdef SIMULATION
   numImages = 32;
   cols = 31; // one more column is added to make the total 32
 #endif

@@ -43,6 +43,7 @@ import Adapter::*;
 import Leds::*;
 import Vector::*;
 import SpecialFIFOs::*;
+import ConnectalConfig::*;
 import ConnectalMemory::*;
 import Portal::*;
 import CtrlMux::*;

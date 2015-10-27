@@ -26,6 +26,9 @@ import FIFOF::*;
 import GetPut::*;
 
 import MemTypes::*;
+import ConnectalConfig::*;
+
+`include "ConnectalProjectConfig.bsv"
 
 `ifdef SIM_DMA_READ_LATENCY
 typedef `SIM_DMA_READ_LATENCY SimDmaReadLatency;
@@ -47,7 +50,7 @@ interface SimDma#(numeric type dataWidth);
    method ActionValue#(Bit#(dataWidth)) readresponse();
 endinterface
 
-`ifdef BSIM
+`ifdef BOARD_bluesim
 import "BDPI" function ActionValue#(Bit#(32)) simDma_init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
 import "BDPI" function ActionValue#(Bit#(32)) simDma_initfd(Bit#(32) id, Bit#(32) fd);
 import "BDPI" function ActionValue#(Bit#(32)) simDma_idreturn(Bit#(32) id);
@@ -103,7 +106,7 @@ module mkSimDma(SimDma#(dataWidth) ifc)
 endmodule
 `endif
 		 
-`ifdef XSIM
+`ifdef SVDPI
 interface XsimDmaReadWrite;
    method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
    method Action initfd(Bit#(32) id, Bit#(32) fd);
@@ -170,8 +173,7 @@ module mkSimDma(SimDma#(dataWidth) ifc)
 endmodule
 `endif
 
-`ifndef BSIM
-`ifndef XSIM
+`ifndef SIMULATION
 module mkSimDma(SimDma#(dataWidth) ifc);
    method Action init(Bit#(32) id, Bit#(32) handle, Bit#(32) size);
    endmethod
@@ -187,8 +189,7 @@ module mkSimDma(SimDma#(dataWidth) ifc);
       return 0;
    endmethod
 endmodule
-`endif
-`endif
+`endif // SIMULATION
 
 module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
    provisos(Div#(serverBusWidth,8,dataWidthBytes),

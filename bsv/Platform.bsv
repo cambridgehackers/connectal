@@ -19,6 +19,7 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+import ConnectalConfig::*;
 import Vector::*;
 import Portal::*;
 import HostInterface::*;
@@ -36,6 +37,7 @@ import MMUIndication::*;
 import MemServerIndication::*;
 import MemServerRequest::*;
 import IfcNames::*;
+`include "ConnectalProjectConfig.bsv"
 import `PinTypeInclude::*;
 
 interface Platform;
@@ -143,4 +145,5 @@ module mkPlatform#(Vector#(NumberOfUserTiles, ConnectalTop) tiles)(Platform);
    interface interrupt = interrupts;
    interface slave = ctrl_mux;
    interface masters = lMemServer.masters;
+   interface pins = tiles[0].pins;
 endmodule

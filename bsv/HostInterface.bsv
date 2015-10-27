@@ -19,25 +19,11 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-import `PinTypeInclude::*;
+import ConnectalConfig::*;
+`include "ConnectalProjectConfig.bsv"
 
 ////////////////////////////// common /////////////////////////////////
 
-`ifndef DataBusWidth
-`define DataBusWidth 64
-`endif
-
-typedef `PhysAddrWidth PhysAddrWidth;
-typedef `SlaveDataBusWidth SlaveDataBusWidth;
-typedef `DataBusWidth DataBusWidth;
-typedef `NumberOfMasters NumberOfMasters;
-typedef `SlaveControlAddrWidth SlaveControlAddrWidth;
-typedef `NumberOfUserTiles NumberOfUserTiles;
-typedef TAdd#(`NumberOfUserTiles,1) NumberOfTiles;
-typedef 2 NumReadClients;
-typedef 2 NumWriteClients;
-typedef `PinType TileExtType;
-typedef 16 MaxNumberOfPortals;
 
 ////////////////////////////// Bsim /////////////////////////////////
 `ifdef BsimHostInterface
@@ -93,7 +79,8 @@ import Bscan             :: *;
 import PcieCsr           :: *;
 import PcieTracer        :: *;
 import MemTypes          :: *;
-`ifndef BSIM
+import Pipe              :: *;
+`ifndef SIMULATION
 `ifdef XILINX
 `ifdef PCIE1
 import PCIEWRAPPER       :: *;
@@ -122,6 +109,7 @@ interface PcieHost#(numeric type dsz, numeric type nSlaves);
 `ifdef PCIE3
    interface Client#(TLPData#(16), TLPData#(16)) pcir;
    interface Client#(TLPData#(16), TLPData#(16)) pcic;
+   interface PipeIn#(Bit#(64)) changes;
 `else
    interface Client#(TLPData#(16), TLPData#(16)) pci;
 `endif
@@ -138,8 +126,10 @@ endinterface
 interface PcieHostTop;
    interface PcieHost#(DataBusWidth, NumberOfMasters) tpciehost;
 `ifdef XILINX
+`ifdef XILINX_SYS_CLK
    interface Clock tsys_clk_200mhz;
    interface Clock tsys_clk_200mhz_buf;
+`endif
    interface Clock tpci_clk_100mhz_buf;
    interface PcieEndpointX7#(PcieLanes) tep7;
 `elsif ALTERA

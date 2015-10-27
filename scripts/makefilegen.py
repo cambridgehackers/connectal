@@ -31,6 +31,7 @@ import util
 import boardinfo
 import pprint
 import json
+import re
 
 supported_os = ['android', 'ubuntu']
 
@@ -70,7 +71,7 @@ argparser.add_argument('-b', '--bscflags', default=[], help='Options to pass to 
 argparser.add_argument('--xelabflags', default=[], help='Options to pass to the xelab compiler', action='append')
 argparser.add_argument('--xsimflags', default=[], help='Options to pass to the xsim simulator', action='append')
 argparser.add_argument('--ipdir', help='Directory in which to store generated IP')
-argparser.add_argument('-q', '--qtused', help='Qt used in Bsim test application', action='store_true')
+argparser.add_argument('-q', '--qtused', help='Qt used in simulator test application', action='store_true')
 argparser.add_argument('--stl', help='STL implementation to use for Android builds', default=None)
 argparser.add_argument('--floorplan', help='Floorplan XDC', default=None)
 argparser.add_argument('-P', '--partition-module', default=[], help='Modules to separately synthesize/place/route', action='append')
@@ -158,7 +159,7 @@ export INTERFACES = %(interfaces)s
 BSVFILES = %(bsvfiles)s
 
 BSCFLAGS_PROJECT = %(bscflags)s
-BSIM_CXX_PROJECT = %(bsimsource)s
+SIM_CXX_PROJECT = %(bsimsource)s
 XELABFLAGS = %(xelabflags)s
 XSIMFLAGS  = %(xsimflags)s
 TOPBSVFILE = %(topbsvfile)s
@@ -233,16 +234,10 @@ ubuntu.exe: $(SOURCES)
 	$(Q)[ ! -f ../bin/mkTop.bin.gz ] || objcopy --add-section fpgadata=../bin/mkTop.bin.gz ubuntu.exe
 
 connectal.so: $(SOURCES)
-	$(Q)g++ -shared -fpic $(CFLAGS) -o connectal.so %(bsimcxx)s $(SOURCES) $(LDLIBS)
+	$(Q)g++ -shared -fpic $(CFLAGS) -o connectal.so $(SOURCES) $(LDLIBS)
 
 ubuntu.exe2: $(SOURCES2)
 	$(Q)g++ $(CFLAGS) $(CFLAGS2) -o ubuntu.exe2 $(SOURCES2) $(LDLIBS)
-
-bsim_exe: $(SOURCES)
-	$(Q)g++ $(CFLAGS_COMMON) -o bsim_exe -DBSIM $(SOURCES) $(BSIM_EXE_CXX) $(LDLIBS)
-
-bsim_exe2: $(SOURCES2)
-	$(Q)g++ $(CFLAGS_COMMON) $(CFLAGS2) -o bsim_exe2 -DBSIM $(SOURCES2) $(BSIM_EXE_CXX) $(LDLIBS)
 
 xsim: $(XSOURCES)
 	g++ $(CFLAGS) -o xsim $(XSOURCES)
@@ -389,7 +384,6 @@ if __name__=='__main__':
         'cdefines': ' '.join([ '-D%s' % d for d in bsvdefines ]),
         'cdefines2': ' '.join([ '-D%s' % d for d in options.bsvdefine2 ]),
         'cincludes': ' '.join([ '-I%s' % os.path.abspath(i) for i in options.cinclude ]),
-        'bsimcxx': '-DBSIM $(BSIM_EXE_CXX)' if boardname == 'bluesim' else '',
         'werr': '-Werror' if not options.nonstrict else '-Wall'
     }
     includelist = ['-I$(DTOP)/jni', '-I$(CONNECTALDIR)', \
@@ -510,6 +504,22 @@ if __name__=='__main__':
         for name in options.prvariant:
             make.write(variantTemplate % {'varname': name})
     make.close()
+    configbsv = util.createDirAndOpen(os.path.join(project_dir, 'generatedbsv', 'ConnectalProjectConfig.bsv'), 'w')
+    for (var, val) in map(util.splitBinding, bsvdefines):
+        configbsv.write('`define %(var)s %(val)s\n' % { 'var': var, 'val': val })
+    configbsv.close()
+    configh = util.createDirAndOpen(os.path.join(project_dir, 'jni', 'ConnectalProjectConfig.h'), 'w')
+    configh.write('#ifndef _ConnectalProjectConfig_h\n')
+    configh.write('#define _ConnectalProjectConfig_h\n')
+    configh.write('\n')
+    for (var, val) in map(util.splitBinding, bsvdefines):
+        if re.match("^[0-9]+(.[0-9]*)?$", val):
+            configh.write('#define %(var)s %(val)s\n' % { 'var': var, 'val': val })
+        else:
+            configh.write('#define %(var)s "%(val)s"\n' % { 'var': var, 'val': val })
+    configh.write('\n')
+    configh.write('#endif // _ConnectalProjectConfig_h\n')
+    configh.close()
 
     if options.make:
         os.chdir(project_dir)

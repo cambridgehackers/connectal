@@ -20,7 +20,24 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-interface LoopbackControl;
-   method Action loopback(Bool lb);
-   method Action marker(Bit#(32) fb);
-endinterface
+`include "ConnectalProjectConfig.bsv"
+
+`ifndef DataBusWidth
+`define DataBusWidth 64
+`endif
+
+typedef `PhysAddrWidth PhysAddrWidth;
+typedef `SlaveDataBusWidth SlaveDataBusWidth;
+typedef `DataBusWidth DataBusWidth;
+typedef `NumberOfMasters NumberOfMasters;
+typedef `SlaveControlAddrWidth SlaveControlAddrWidth;
+typedef `NumberOfUserTiles NumberOfUserTiles;
+typedef TAdd#(`NumberOfUserTiles,1) NumberOfTiles;
+typedef 2 NumReadClients;
+typedef 2 NumWriteClients;
+//typedef `PinType TileExtType;
+//typedef `PinType PinType;
+typedef 16 MaxNumberOfPortals;
+`ifdef PcieLanes
+typedef `PcieLanes PcieLanes;
+`endif

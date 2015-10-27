@@ -23,6 +23,7 @@
 import Vector         :: *;
 import BRAM           :: *;
 import FIFOF          :: *;
+import BRAMFIFO       :: *;
 import GetPut         :: *;
 import Connectable    :: *;
 import PCIE           :: *;
@@ -30,6 +31,9 @@ import Clocks         :: *;
 import PcieTracer     :: *;
 import MemTypes       :: *;
 import AddressGenerator::*;
+import Pipe           :: *;
+
+`include "ConnectalProjectConfig.bsv"
 
 `define msix_base 1024
 
@@ -61,6 +65,7 @@ endfunction
 interface PcieControlAndStatusRegs;
    interface PhysMemSlave#(32,32) memSlave;
    interface Vector#(16,ReadOnly_MSIX_Entry) msixEntry;
+   interface PipeIn#(Bit#(64)) changes;
    interface TlpTraceClient traceClient;
 endinterface: PcieControlAndStatusRegs
 
@@ -103,6 +108,7 @@ module mkPcieControlAndStatusRegs(PcieControlAndStatusRegs);
    Reg#(Bool)                   tlpTracingReg                <- mkReg(True);
    Reg#(Bit#(TlpTraceAddrSize)) tlpTraceLimitReg             <- mkReg(0);
    Reg#(Bit#(TlpTraceAddrSize)) tlpTraceBramWrAddrReg        <- mkReg(0);
+   FIFOF#(Bit#(64))             changeFifo                   <- mkSizedBRAMFIFOF(256);
 
    // State used to actually service read and write requests
    rule brmMuxResponse;
@@ -119,7 +125,7 @@ module mkPcieControlAndStatusRegs(PcieControlAndStatusRegs);
    FIFOF#(AddrBeat#(16)) csrRagBeatFifo <- mkFIFOF();
    FIFOF#(Bool)       csrIsMsixAddrFifo <- mkFIFOF();
    FIFOF#(Bit#(2))     csrOneHotFifo000 <- mkFIFOF();
-   FIFOF#(Bit#(27))    csrOneHotFifo774 <- mkFIFOF();
+   FIFOF#(Bit#(29))    csrOneHotFifo774 <- mkFIFOF();
    FIFOF#(Bit#(2))     csrOneHotFifo992 <- mkFIFOF();
 
    FIFOF#(AddrBeat#(16)) csrWagBeatFifo <- mkFIFOF();
@@ -138,7 +144,7 @@ module mkPcieControlAndStatusRegs(PcieControlAndStatusRegs);
       csrIsMsixAddrFifo.enq(msixaddr >= 0 && msixaddr <= 63);
       Bit#(1024) onehot = (1 << addr[9:0]);
       csrOneHotFifo000.enq(onehot[1:0]);
-      csrOneHotFifo774.enq(onehot[800:774]);
+      csrOneHotFifo774.enq(onehot[802:774]);
       csrOneHotFifo992.enq(onehot[993:992]);
    endrule
    rule readDataRule2;
@@ -187,7 +193,9 @@ module mkPcieControlAndStatusRegs(PcieControlAndStatusRegs);
 	  if (oneHotDecode774[797-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 8);
 	  if (oneHotDecode774[798-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 9);
 	  if (oneHotDecode774[799-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 10);
-	  if (oneHotDecode774[790-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 11);
+	  if (oneHotDecode774[800-774] == 1) data = tlpTraceBramResponseSlice(pcieTraceBramResponse, 11);
+   	  if (oneHotDecode774[801-774] == 1) data = (changeFifo.notEmpty()) ? (changeFifo.first()[31:0]) : 0;
+   	  if (oneHotDecode774[802-774] == 1) data = (changeFifo.notEmpty()) ? (changeFifo.first()[63:32]) : 0;
 
          //******************************** msix_base has to match CONFIG.MXIx_PBA_Offset in scripts/connectal-synth-pcie.tcl
 	  // 4-bit MSIx pending bit field
@@ -195,6 +203,8 @@ module mkPcieControlAndStatusRegs(PcieControlAndStatusRegs);
 	  if (oneHotDecode992[993-992] == 1) data = '0;                               // PBA structure (high)
 	  //******************************** end of PBA Table
       end
+      if (oneHotDecode774[802-774] == 1 && changeFifo.notEmpty())
+	 changeFifo.deq();
       readResponseFifo.enq(MemData { data: data, tag: beat.tag, last: beat.last });
    endrule
 
@@ -278,6 +288,7 @@ module mkPcieControlAndStatusRegs(PcieControlAndStatusRegs);
      interface Get writeDone = toGet(writeDoneFifo);
    endinterface: write_server
    endinterface
+   interface changes = toPipeIn(changeFifo);
    interface TlpTraceClient traceClient;
       interface Reg tlpTracing = tlpTracingReg;
       interface Reg tlpTraceLimit = tlpTraceLimitReg;

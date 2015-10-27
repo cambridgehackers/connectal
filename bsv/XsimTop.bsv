@@ -19,6 +19,7 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+import ConnectalConfig::*;
 import Vector            :: *;
 import GetPut::*;
 import Connectable::*;
@@ -38,6 +39,8 @@ import SimDma::*;
 import IfcNames::*;
 import BuildVector::*;
 
+`include "ConnectalProjectConfig.bsv"
+
 module  mkXsimHost#(Clock derivedClock, Reset derivedReset)(XsimHost);
    interface derivedClock = derivedClock;
    interface derivedReset = derivedReset;
@@ -50,6 +53,7 @@ import "BVI" XsimSource =
 module mkXsimSourceBVI#(Bit#(32) portal)(XsimSource);
     port portal = portal;
     method beat(beat) enable(en_beat);
+    schedule (beat) C (beat);
 endmodule
 module mkXsimSource#(PortalMsgIndication indication)(Empty);
    let tmp <- mkXsimSourceBVI(indication.id);
@@ -60,22 +64,21 @@ module mkXsimSource#(PortalMsgIndication indication)(Empty);
 endmodule
 
 interface MsgSinkR#(numeric type bytes_per_beat);
-   method Bool src_rdy();
-   method Bit#(32) beat();
+   method ActionValue#(Bit#(32)) beat();
 endinterface
 
 import "BVI" XsimSink =
 module mkXsimSinkBVI#(Bit#(32) portal)(MsgSinkR#(4));
-    port portal = portal;
-    method src_rdy src_rdy();
-    method beat beat();
-    schedule (src_rdy, beat) CF (src_rdy, beat);
+   port portal = portal;
+   method beat beat() enable (EN_beat) ready (RDY_beat);
+   schedule (beat) C (beat);
 endmodule
-module mkXsimSink#(PortalMsgRequest request)(MsgSinkR#(4));
+module mkXsimSink#(PortalMsgRequest request)(Empty);
    let sink <- mkXsimSinkBVI(request.id);
 
-   rule req_src_rdy if (sink.src_rdy);
-      request.message.enq(sink.beat);
+   rule req_src_rdy;
+      let beat <- sink.beat();
+      request.message.enq(beat);
    endrule
 endmodule
 

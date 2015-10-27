@@ -26,6 +26,9 @@ import FIFO              :: *;
 import Connectable       :: *;
 import ClientServer      :: *;
 import DefaultValue      :: *;
+
+import ConnectalConfig::*;
+`include "ConnectalProjectConfig.bsv"
 import PcieSplitter      :: *;
 import Xilinx            :: *;
 import Portal            :: *;
@@ -60,17 +63,25 @@ import Platform          :: *;
 `define DataBusWidth 64
 `endif
 
+`ifdef XILINX_SYS_CLK
+`define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n,
+`define SYS_CLK_ARG sys_clk_p, sys_clk_n,
+`else
+`define SYS_CLK_PARAM
+`define SYS_CLK_ARG
+`endif
+
 (* synthesize, no_default_clock, no_default_reset *)
 `ifdef XILINX
-module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, Clock sys_clk_p, Clock sys_clk_n, Reset pci_sys_reset_n) (PcieTop#(`PinType));
-   PcieHostTop host <- mkPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, sys_clk_p, sys_clk_n, pci_sys_reset_n);
+module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_PARAM Reset pci_sys_reset_n) (PcieTop#(`PinType));
+   PcieHostTop host <- mkPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, `SYS_CLK_ARG pci_sys_reset_n);
 `elsif ALTERA
 (* clock_prefix="", reset_prefix="" *)
 module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (PcieTop#(`PinType));
    PcieHostTop host <- mkPcieHostTop(pcie_refclk_p, osc_50_b3b, pcie_perst_n);
 `endif
 
-   Vector#(NumberOfUserTiles,ConnectalTop) ts <- replicateM(mkConnectalTop(
+   Vector#(NumberOfUserTiles,ConnectalTop) tile <- replicateM(mkConnectalTop(
 `ifdef IMPORT_HOSTIF // no synthesis boundary
       host,
 `else                // enables synthesis boundary
@@ -79,7 +90,7 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
 `endif
 `endif
        clocked_by host.portalClock, reset_by host.portalReset));
-   Platform portalTop <- mkPlatform(ts, clocked_by host.portalClock, reset_by host.portalReset);
+   Platform portalTop <- mkPlatform(tile, clocked_by host.portalClock, reset_by host.portalReset);
 
    if (mainClockPeriod == pcieClockPeriod) begin
        mkConnection(host.tpciehost.master, portalTop.slave, clocked_by host.portalClock, reset_by host.portalReset);

@@ -32,7 +32,7 @@ int burstLen = 16;
 #if defined(BOARD_xsim)
 int numWords = 0x40/4;
 int iterCnt = 1;
-#elif defined(BSIM)
+#elif defined(SIMULATION)
 int numWords = 0x124000/4;
 int iterCnt = 3;
 #else

@@ -19,6 +19,7 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+import ConnectalConfig::*;
 import Connectable::*;
 import ConnectableWithTrace::*;
 import Vector::*;
@@ -30,6 +31,8 @@ import AxiDma::*;
 import AxiBits::*;
 import AxiGather::*;
 import Platform::*;
+
+`include "ConnectalProjectConfig.bsv"
 
 `ifdef USE_ACP
 typedef 1 NumAcp;

@@ -29,6 +29,7 @@ import GetPut::*;
 import Connectable::*;
 import BRAMFIFO::*;
 import BRAM::*;
+
 import ConnectalBram::*;
 import MemTypes::*;
 import StmtFSM::*;
@@ -37,6 +38,7 @@ import ConnectalMemory::*;
 import ConnectalCompletionBuffer::*;
 import SimDma::*;
 
+`include "ConnectalProjectConfig.bsv"
 
 typedef 32 MaxNumSGLists;
 typedef Bit#(TLog#(MaxNumSGLists)) SGListId;
@@ -51,11 +53,11 @@ typedef 8 IndexWidth;
 typedef struct {
    SGListId             id;
    Bit#(MemOffsetSize) off;
-} ReqTup deriving (Eq,Bits,FShow);
+} AddrTransRequest deriving (Eq,Bits,FShow);
 
 interface MMU#(numeric type addrWidth);
    interface MMURequest request;
-   interface Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addr;
+   interface Vector#(2,Server#(AddrTransRequest,Bit#(addrWidth))) addr;
 endinterface
 
 typedef struct {
@@ -94,7 +96,7 @@ typedef struct {
    Bit#(IndexWidth) idxOffset8;
    Bit#(IndexWidth) idxOffset4;
    Bit#(IndexWidth) idxOffset0;
-   ReqTup req;
+   AddrTransRequest req;
    } Stage3Params deriving (Bits);
 
 typedef struct {
@@ -121,13 +123,13 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
    SimDma#(32) simDma <- mkSimDma();
 
    // stage 0 (latency == 1)
-   Vector#(2, FIFO#(ReqTup)) incomingReqs <- replicateM(mkFIFO);
+   Vector#(2, FIFO#(AddrTransRequest)) incomingReqs <- replicateM(mkFIFO);
 
    // stage 1 (latency == 2)
    BRAM_Configure bramConfig = defaultValue;
    bramConfig.latency        = 2;
    BRAM2Port#(RegionsIdx, Maybe#(Region)) regall <- ConnectalBram::mkBRAM2Server(bramConfig);
-   Vector#(2,FIFOF#(ReqTup))          reqs0 <- replicateM(mkSizedFIFOF(3));
+   Vector#(2,FIFOF#(AddrTransRequest))          reqs0 <- replicateM(mkSizedFIFOF(3));
    
    // stage 2 (latency == 1)
    Vector#(2, FIFOF#(Stage3Params)) stage3Params <- replicateM(mkFIFOF);
@@ -163,7 +165,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
    
    for (Integer i = 0; i < 2; i=i+1) begin
       rule stage1;  // first read in the address cutoff values between regions
-	 ReqTup req <- toGet(incomingReqs[i]).get();
+	 AddrTransRequest req <- toGet(incomingReqs[i]).get();
 	 portsel(regall, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
             address:truncate(req.id), datain:?});
 	 reqs0[i].enq(req);
@@ -171,7 +173,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 
       // pipeline the address lookup
       rule stage2; // Now compare address cutoffs with requested offset
-	 ReqTup req <- toGet(reqs0[i]).get;
+	 AddrTransRequest req <- toGet(reqs0[i]).get;
 	 Maybe#(Region) m_regionall <- portsel(regall,i).response.get;
 	 
 	 case (m_regionall) matches 
@@ -200,7 +202,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
       endrule
       rule stage3; // Based on results of comparision, select a region, putting it into 'o.pageSize'.  idxOffset holds offset in sglist table of relevant entry
 	 let params <- toGet(stage3Params[i]).get();
-	 ReqTup req = params.req;
+	 AddrTransRequest req = params.req;
 	 Offset o = Offset{pageSize: 0, value: truncate(req.off)};
 	 Bit#(IndexWidth) pbase = 0;
 	 Bit#(IndexWidth) idxOffset = 0;
@@ -282,30 +284,26 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
       portsel(regall, 1).request.put(BRAMRequest{write:True, responseOnWrite:False, address: truncate(sglId), datain: tagged Invalid });
       $display("idReturn %d", sglId);
    endrule
-      
    
-   Vector#(2,Server#(ReqTup,Bit#(addrWidth))) addrServers;
-   for(Integer i = 0; i < 2; i=i+1)
-      addrServers[i] =
-      (interface Server#(ReqTup,Bit#(addrWidth));
+   function Server#(AddrTransRequest,Bit#(addrWidth)) addrServer(Integer i);
+   return
+      (interface Server#(AddrTransRequest,Bit#(addrWidth));
 	  interface Put request;
-	     method Action put(ReqTup req);
+	     method Action put(AddrTransRequest req);
 		incomingReqs[i].enq(req);
 	     endmethod
 	  endinterface
 	  interface Get response;
 	     method ActionValue#(Bit#(addrWidth)) get();
 		let rv <- toGet(pageResponseFifos[i]).get();
-`ifdef BSIM
-		rv = rv | (fromInteger(iid)<<valueOf(addrWidth)-3);
-`endif
-`ifdef XSIM
+`ifdef SIMULATION
 		rv = rv | (fromInteger(iid)<<valueOf(addrWidth)-3);
 `endif
 		return rv;
 	     endmethod
 	  endinterface
        endinterface);
+   endfunction
       
    interface MMURequest request;
    method Action idRequest(SpecialTypeForSendingFd fd);
@@ -347,18 +345,17 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
        /* this method is only implemented in s/w responders */
    endmethod
    endinterface
-   interface addr = addrServers;
+   interface addr = genWith(addrServer);
 
 endmodule
 
-interface MMUAddrServer#(numeric type addrWidth, numeric type numServers);
-   interface Vector#(numServers,Server#(ReqTup,Bit#(addrWidth))) servers;
+interface ArbitratedMMU#(numeric type addrWidth, numeric type numServers);
+   interface Vector#(numServers,Server#(AddrTransRequest,Bit#(addrWidth))) servers;
 endinterface
 
-module mkMMUAddrServer#(Server#(ReqTup,Bit#(addrWidth)) server) (MMUAddrServer#(addrWidth,numServers));
+module mkArbitratedMMU#(Server#(AddrTransRequest,Bit#(addrWidth)) server) (ArbitratedMMU#(addrWidth,numServers));
    
    FIFOF#(Bit#(TAdd#(1,TLog#(numServers)))) tokFifo <- mkSizedFIFOF(9);
-   Vector#(numServers, Server#(ReqTup,Bit#(addrWidth))) addrServers;
    Reg#(Bit#(TLog#(numServers))) arb <- mkReg(0);
 
    // this is a very crude arbiter.  something more sophisticated may be required (mdk)
@@ -366,11 +363,11 @@ module mkMMUAddrServer#(Server#(ReqTup,Bit#(addrWidth)) server) (MMUAddrServer#(
       arb <= arb+1;
    endrule
    
-   for(Integer i = 0; i < valueOf(numServers); i=i+1)
-      addrServers[i] = 
-      (interface Server#(ReqTup,Bit#(addrWidth));
+   function Server#(AddrTransRequest,Bit#(addrWidth)) arbitratedServer(Integer i);
+   return
+      (interface Server#(AddrTransRequest,Bit#(addrWidth));
 	  interface Put request;
-	     method Action put(ReqTup req) if (arb == fromInteger(i));
+	     method Action put(AddrTransRequest req) if (arb == fromInteger(i));
 		tokFifo.enq(fromInteger(i));
 		server.request.put(req);
 	     endmethod
@@ -383,7 +380,8 @@ module mkMMUAddrServer#(Server#(ReqTup,Bit#(addrWidth)) server) (MMUAddrServer#(
 	     endmethod
 	  endinterface
        endinterface);
+   endfunction
 
-   interface servers = addrServers;
+   interface servers = genWith(arbitratedServer);
 
 endmodule

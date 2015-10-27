@@ -32,7 +32,7 @@ import MemTypes::*;
 import ConnectalMemory::*;
 import MMU::*;
 
-`ifdef BSIM
+`ifdef SIMULATION
 import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) size);
 `endif
 
@@ -380,7 +380,7 @@ module mkMemServer#(DmaIndication dmaIndication,
       method Action sglist(Bit#(32) pref, Bit#(MemOffsetSize) addr, Bit#(32) len);
 	 if (bad_pointer(pref))
 	    dmaIndication.badPointer(pref);
-`ifdef BSIM
+`ifdef SIMULATION
 	 let va <- pareff(pref, len);
          addr[39:32] = truncate(pref);
 `endif

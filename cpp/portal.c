@@ -80,9 +80,9 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
         PORTAL_PRINTF("%s: **initialize portal_%d_%d handler %p cb %p parent %p\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number, handler, cb, parent);
     if (!item) {
         // Use defaults for transport handling methods
-#ifdef BSIM
+#ifdef BOARD_bluesim
         item = &transportBsim;
-#elif defined(BOARD_xsim)
+#elif defined(BOARD_xsim) || defined(BOARD_verilator)
         item = &transportXsim;
 #else
         item = &transportHardware;
@@ -165,6 +165,8 @@ void initPortalHardware(void)
 {
     static int once = 0;
 
+    if (trace_portal) fprintf(stderr, "[%s:%d] pid=%d\n", __FUNCTION__, __LINE__, getpid());
+
     if (once)
         return;
     once = 1;
@@ -202,7 +204,7 @@ void initPortalHardware(void)
 	    }
 	    len = read(fd, &status, sizeof(status));
 	    if (len < sizeof(status))
-	      fprintf(stderr, "[%s:%d] fd %d len %lu\n", __FUNCTION__, __LINE__, fd, len);
+	      fprintf(stderr, "[%s:%d] fd %d len %lu\n", __FUNCTION__, __LINE__, fd, (unsigned long)len);
 	    close(fd);
 	    break;
 	  }
@@ -269,13 +271,31 @@ endloop:
         }
         if (getenv("NOFPGAJTAG"))
             exit(0);
-#ifdef BOARD_bluesim
-        char *p = dirname(filename);
-        static char buf2[MAX_PATH];
-        sprintf(buf2, "%s/bsim", p);
-fprintf(stderr, "[%s:%d] BSIM %s *******\n", __FUNCTION__, __LINE__, buf2);
+#if defined(BOARD_bluesim) || defined(BOARD_verilator)
+        char *bindir = dirname(filename);
+        static char exename[MAX_PATH];
+        char *library_path = 0;
+	const char *old_library_path = getenv("LD_LIBRARY_PATH");
+	int library_path_len = strlen(bindir);
+#if defined(BOARD_bluesim)
+	const char *exetype = "bsim";
+#else
+	const char *exetype = "vlsim";
+#endif
+        sprintf(exename, "%s/%s", bindir, exetype);
+if (trace_portal) fprintf(stderr, "[%s:%d] %s %s *******\n", __FUNCTION__, __LINE__, exetype, exename);
         argv[ind++] = NULL;
-        rc = execvp (buf2, argv);
+	if (old_library_path)
+	  library_path_len += strlen(old_library_path);
+	library_path = (char *)malloc(library_path_len + 2);
+	if (old_library_path)
+	  snprintf(library_path, library_path_len+2, "%s:%s", bindir, old_library_path);
+	else
+	  snprintf(library_path, library_path_len+1, "%s", bindir);
+	setenv("LD_LIBRARY_PATH", library_path, 1);
+if (trace_portal) fprintf(stderr, "[%s:%d] LD_LIBRARY_PATH %s *******\n", __FUNCTION__, __LINE__, library_path);
+
+        rc = execvp (exename, argv);
 #elif defined(BOARD_xsim)
         argv[ind++] = (char *)"-R";
         argv[ind++] = (char *)"work.xsimtop";
@@ -298,7 +318,8 @@ fprintf(stderr, "[%s:%d] rc %d\n", __FUNCTION__, __LINE__, rc);
         execvp ("fpgajtag", argv);
 #endif // !__arm__
         }
-#endif // SIMULATION
+#endif // !SIMULATION
+	fprintf(stderr, "[%s:%d] pid=%d exiting\n", __FUNCTION__, __LINE__, getpid());
         exit(-1);
     }
 #endif // !__KERNEL__

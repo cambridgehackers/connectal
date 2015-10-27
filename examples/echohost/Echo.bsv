@@ -22,6 +22,7 @@
 // SOFTWARE.
 import FIFO::*;
 import Vector::*;
+import ConnectalConfig::*;
 import HostInterface::*;
 
 interface EchoIndication;

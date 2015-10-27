@@ -29,6 +29,9 @@ BNOC_GET_TLP = 0x8008b507
 Tlp_len = 24
 BNOC_ENABLE_TRACE = 0x8008b508
 Enable_len = 4
+PCIE_CHANGE_ENTRY = 0x8008b50f
+struct_changeEntry = '@ I I'
+ChangeEntry_len = 8
 
 # 64-bit BAR
 tlpdatalog = [
@@ -90,6 +93,31 @@ TlpPacketFormat = [
     'MEM_READ__4DW     ',
     'MEM_WRITE_3DW_DATA',
     'MEM_WRITE_4DW_DATA'
+]
+
+Pcie3ChangeSrc = [
+    'none',
+    'current_speed',
+    'dpa_substate_change',
+    'err_cor_out',
+    'err_fatal_out',
+    'err_nonfatal_out',
+    'flr_in_process',
+    'function_power_state',
+    'function_status',
+    'hot_reset_out',
+    'link_power_state',
+    'ltr_enable',
+    'ltssm_state',
+    'max_payload',
+    'max_read_req',
+    'negotiated_width',
+    'obff_enable',
+    'phy_link_down',
+    'phy_link_status',
+    'pl_status_change',
+    'power_state_change_interrupt',
+    'rcb_status'
 ]
 
 first_vcd_timestamp = mpz(0)
@@ -378,6 +406,18 @@ if __name__ == '__main__':
         base = int(tlpfirst[0:8],16)
     else:
         fd = open(devfilenames[0], 'rw')
+        try:
+            while 1:
+                buf = fcntl.ioctl(fd, PCIE_CHANGE_ENTRY, ' ' * ChangeEntry_len)
+                (ts,v) = struct.unpack_from(struct_changeEntry, buf)
+                if (v == 0 or v == 0xbad0add0 or ts == 0xbad0add0):
+                    break
+                src = v & 0xff
+                value = v >> 8
+                print 'pcie status change: %12d src=%20s:%02d value=%#06x' % (ts, Pcie3ChangeSrc[src], src, value)
+                pass
+        except:
+            pass
         buf = fcntl.ioctl(fd, BNOC_TRACE, ' ' * Trace_len)
         traceData = struct.unpack_from(struct_traceData, buf)
         #print 'SSS', traceData

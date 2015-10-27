@@ -6,6 +6,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 package PcieEndpointX7;
 
+import ConnectalConfig   ::*;
 import Clocks            ::*;
 import Vector            ::*;
 import Connectable       ::*;
@@ -28,6 +29,8 @@ import PCIE              ::*;
 import PCIEWRAPPER       ::*;
 import Bufgctrl           ::*;
 import PcieGearbox       :: *;
+
+`include "ConnectalProjectConfig.bsv"
 
 (* always_ready, always_enabled *)
 interface PCIE_X7#(numeric type lanes);
@@ -174,10 +177,6 @@ interface PcieEndpointX7#(numeric type lanes);
    interface PciewrapUser#(lanes)      user;
    interface PciewrapCfg#(lanes)       cfg;
    interface Server#(TLPData#(16), TLPData#(16)) tlp;
-   interface Clock epClock125;
-   interface Reset epReset125;
-   interface Clock epClock250;
-   interface Reset epReset250;
    interface Clock epPcieClock;
    interface Reset epPcieReset;
    interface Clock epPortalClock;
@@ -198,25 +197,6 @@ typedef struct {
    Bit#(8)       keep;
    Bit#(64)      data;
 } AxiTx deriving (Bits, Eq);
-
-`ifdef Artix7
-typedef 4 PcieLanes;
-`endif
-`ifdef BOARD_zc706
-typedef 4 PcieLanes;
-`endif
-`ifdef BOARD_vc707
-typedef 8 PcieLanes;
-`endif
-`ifdef BOARD_kc705
-typedef 8 PcieLanes;
-`endif
-`ifdef BOARD_kc160
-typedef 8 PcieLanes;
-`endif
-`ifdef BOARD_nfsume
-typedef 8 PcieLanes;
-`endif
 
 (* synthesize *)
 module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
@@ -396,10 +376,6 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    interface pcie    = pcie_ep.pcie;
    interface PciewrapUser user = pcie_ep.user;
    interface PciewrapCfg cfg = pcie_ep.cfg;
-   interface Clock epClock125 = clock125;
-   interface Reset epReset125 = reset125;
-   interface Clock epClock250 = clock250;
-   interface Reset epReset250 = reset250;
    interface Clock epPcieClock = clock125;
    interface Reset epPcieReset = reset125;
    interface Clock epPortalClock = portalClock;

@@ -19,7 +19,7 @@ I2C_JSON_FILE = --pinoutfile i2c.json
 endif
 REALCONNECTALDIR=$(realpath ../..)
 CONNECTALFLAGS += -q -D LIBNAME=\\\"$(REALCONNECTALDIR)/examples/hdmidisplay/bluesim/jni/libHdmi.so\\\"
-CONNECTALFLAGS += -D BSIMRESPONDER=mkResponder -m $(CONNECTALDIR)/examples/hdmidisplay/BsimHdmi.cpp 
+CONNECTALFLAGS += -D SIMULATIONRESPONDER=mkResponder -m $(CONNECTALDIR)/examples/hdmidisplay/BsimHdmi.cpp 
 
 CONNECTALFLAGS += -C $(BOARD)/sources/hdmi.xdc
 CONNECTALFLAGS += -D SIM_DMA_READ_LATENCY=1 -D SIM_DMA_WRITE_LATENCY=1

@@ -27,6 +27,9 @@ import BRAMFIFO::*;
 import ConfigCounter::*;
 import MemTypes::*;
 import Pipe::*;
+import ConnectalConfig::*;
+
+`include "ConnectalProjectConfig.bsv"
 
 module mkMemWriteEngine(MemWriteEngine#(busWidth, userWidth, cmdQDepth, numServers))
    provisos( Add#(1, d__, busWidth)

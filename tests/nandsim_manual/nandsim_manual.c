@@ -35,7 +35,7 @@
 #define MAX_INDARRAY 4
 static PortalInternal intarr[MAX_INDARRAY];
 static sem_t test_sem;
-#ifndef BSIM
+#ifndef SIMULATION
 #define numWords 0x1240000/4 // make sure to allocate at least one entry of each size
 #else
 #define numWords 0x124000/4

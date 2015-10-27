@@ -27,10 +27,21 @@ import FIFOF::*;
 import BRAMFIFO::*;
 import CBus::*; // extendNP and truncateNP
 
+`include "ConnectalProjectConfig.bsv"
 import Arith::*;
 import ConnectalClocks::*;
 
-`ifndef BSIM
+`ifdef SIMULATION
+`ifdef BOARD_xsim
+`define USE_XILINX_MACRO
+`endif // xsim
+`else // not SIMULATION
+`ifdef XILINX
+`define USE_XILINX_MACRO
+`endif // XILINX
+`endif // not SIMULATION
+
+`ifdef USE_XILINX_MACRO
 (* always_ready, always_enabled *)
 interface X7FifoSyncMacro#(numeric type data_width);
    method Bit#(1) empty();
@@ -129,9 +140,7 @@ module mkDualClockBramFIFO#(Clock srcClock, Reset srcReset, Clock dstClock, Rese
    method first = syncFifo.first;
 endmodule
 
-`endif // not BSIM
-
-`ifdef BSIM
+`else // compatibility mode
 module mkDualClockBramFIFOF#(Clock srcClock, Reset srcReset, Clock dstClock, Reset dstReset)(FIFOF#(t))
    provisos (Bits#(t,sizet),
 	     Add#(1,a__,sizet));

@@ -23,7 +23,7 @@ import FIFO::*;
 import Connectable::*;
 import CtrlMux::*;
 import Portal::*;
-import HostInterface::*;
+import ConnectalConfig::*;
 import SimpleIndication::*;
 import SimpleRequest::*;
 import Simple::*;

@@ -37,7 +37,25 @@ Connectal supports bluesim as a simulated hardware platform.
 Installation
 ------------
 
-0. Checkout out the following from github:
+1. Install the Bluespec compiler. Connectal is known to work with 2014.07.A and 2015.05.beta1
+
+Install the bluespec compiler. Make sure the BLUESPECDIR environment
+variable is set appropriately:
+
+    export BLUESPECDIR=~/bluespec/Bluespec-2014.07.A/lib
+
+2. Install Vivado 2014.4 or later
+
+3. Install Connectal
+
+    sudo add-apt-repository -y ppa:jamey-hicks/connectal
+    sudo apt-get update
+    sudo apt-get -y install connectal
+
+Building from Source
+--------------------
+
+1. Checkout out the following from github:
     git clone git://github.com/cambridgehackers/connectal
 
 If you are generating code for an FPGA, check out fpgamake:
@@ -47,13 +65,6 @@ It appears that this requires buildcache to be checked out also:
     git clone git://github.com/cambridgehackers/buildcache
 
 Add USE_BUILDCACHE=1 to your calls to make to enable it to cache, otherwise it will rerun all compilation steps.
-
-1. Install the Bluespec compiler. Connectal is known to work with 2013.09.beta1, 2014.05.beta1, and 2014.07.A
-
-Install the bluespec compiler. Make sure the BLUESPECDIR environment
-variable is set appropriately:
-
-    export BLUESPECDIR=~/bluespec/Bluespec-2013.09.beta1/lib
 
 2. Install connectal dependences. This installs ubuntu packages used by connectal or during compilation:
 
@@ -145,22 +156,22 @@ Examples
 Generally cd to the project directory, then type
 
     cd examples/examplename
-    make build.<something>
+    make build.<target>
+    make run.<target>
 
-where something is
+where target is
 
 Command suffix | Function
 --------------|----------
 bluesim | compile for simulation
-bluesimrun | build and run simulator
 zedboard| compile for zedboard
-zedboardrun | compile and run on attached zedboard
+zybo| compile for zybo
 zc702| compile for zc702 board
-zc702run| compile and run on attached board
+zc706| compile for zc706 board
 kc705| compile for kc705 board
-kc705run| compile and run on attached board
 vc707| compile for vc707 board
-vc707run| compile and run on attached board
+vc709| compile for vc709 board
+nfsume| compile for NetFPGA-SUME board
 
 To turn on more verbosity for debugging when running make,
 add V=1 to command line, as
@@ -169,35 +180,45 @@ add V=1 to command line, as
 or
     V=1 make examples/examplename.<something>
 
+To run the example on a machine different than the build machine, use RUNPARAM=hostname-or-addr:
+
+    make RUNPARAM=zedtest run.zedboard
+    make RUNPARAM=192.168.1.123 run.vc707
+
+Bitstream Packaging
+~~~~~~~~~~~~~~~~~~~
+
+The FPGA bitstream is included in the application executable, and the
+FPGA is automatically programmed when the application is run:
+
+    cd examples/echo
+    make build.vc707
+    ./vc707/bin/ubuntu.exe
+
+We are running Android on the Zynq devices and so the application
+executable is called android.exe.
+
 Echo Example
 ~~~~~~~~~~~~~
 
     ## this has only been tested with the Vivado 2013.2 release
     . Xilinx/Vivado/2013.2/settings64.sh
 
-    make examples/echo.zedboard
+    make -C examples/echo build..zedboard
 or
-    make examples/echo.zc702
+    make -C examples/echo build.zc702
 or
-    make examples/echo.kc705
+    make -C examples/echo build.kc705
 or
-    make examples/echo.vc707
+    make -C examples/echo build.vc707
 
 To run on a zedboard with IP address aa.bb.cc.dd:
-    RUNPARAM=aa.bb.cc.dd make examples/echo.zedboardrun
+    RUNPARAM=aa.bb.cc.dd make -C examples/echo run.zedboard
 
 Memcpy Example
 ~~~~~~~~~~~~~
 
-    BOARD=vc707 make -C examples/memcpy
-
-Zynq Hints
--------------
-
-To remount /system read/write:
-
-    mount -o rw,remount /dev/block/mmcblk0p1 /system
-
+    make -C examples/memcpy build.vc707
 
 
 [![Analytics](https://ga-beacon.appspot.com/UA-15845210-3/connectal/README.md)](https://github.com/igrigorik/ga-beacon)

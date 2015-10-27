@@ -18,19 +18,19 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+import ConnectalConfig::*;
 import Vector::*;
 import FIFO::*;
 import Connectable::*;
 import Portal::*;
 import CtrlMux::*;
 import MemTypes::*;
-import HostInterface::*;
 import FpMulIndication::*;
 import FpMulRequest::*;
 import RbmTypes::*;
 import FpMacTb::*;
 
-module  mkConnectalTop#(HostInterface host)(ConnectalTop);
+module  mkConnectalTop(ConnectalTop);
 
    FpMulIndicationProxy ind <- mkFpMulIndicationProxy(IfcNames_FpMulIndicationPortal);
    FpMulRequest req <- mkFpMulRequest(ind.ifc);

@@ -22,12 +22,14 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-
 import Vector::*;
 import GetPut::*;
 import FIFOF::*;
 import SpecialFIFOs::*;
 import FIFO::*;
+
+`include "ConnectalProjectConfig.bsv"
+import ConnectalConfig::*;
 import HostInterface::*;
 import Connectable::*;
 import AddressGenerator::*;
