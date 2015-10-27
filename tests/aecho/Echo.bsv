@@ -45,9 +45,9 @@ typedef struct {
 } EchoPair deriving (Bits);
 
 module mkEcho#(EchoIndication indication)(Echo);
-    FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
+    //FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
+    Clai delay <- mkClai;
     FIFO#(EchoPair) delay2 <- mkSizedFIFO(8);
-    Clai foo <- mkClai;
 
     rule heard;
         delay.deq;

@@ -22,26 +22,18 @@
 //import Clocks::*;
 
 interface Clai;
-    method Action      deq(Bit#(1) ff);
-    //method Bit#(1)     RDY_deq();
+    method Action      deq();
     method Action      enq(Bit#(32) v);
     method Bit#(32)    first();
-    method Bit#(1)     first__guard();
-    method Bit#(1)     notempty();
-    method Bit#(1)     notfull();
 endinterface
 
 import "BVI" l_class_OC_Fifo1 =
 module mkClai(Clai);
+    default_reset rst(nRST);
     default_clock clk(CLK);
-    default_reset rst(RST);
-    method deq(deq) enable(EN_deq) ready(RDY_deq);
-    method enq(enq_v) enable(enq_ENA);// ready(enq__guard);
-    method first first();
-    method first__guard first__guard();
-    method notEmpty notempty();
-    method notFull notfull();
-    schedule(first, first__guard, notempty, notfull, deq, enq)
-          CF(first, first__guard, notempty, notfull, deq, enq);
+    method deq() enable(deq__ENA) ready(deq__RDY);
+    method enq(enq_v) enable(enq__ENA) ready(enq__RDY);
+    method first first() ready(first__RDY);
+    schedule(first, deq, enq) CF(first, deq, enq);
 endmodule
 
