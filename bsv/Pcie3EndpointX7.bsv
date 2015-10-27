@@ -566,8 +566,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    rule rl_cycles;
       cyclesReg <= cyclesReg + 1;
    endrule
-   module mkChangeSource#(Tuple2#(Pcie3CfgType,Bit#(dsz)) tpl)(PipeOut#(RegChange))
-      provisos (Add#(a__, dsz, 24));
+   module mkChangeSource#(Tuple2#(Pcie3CfgType,Bit#(24)) tpl)(PipeOut#(RegChange));
       match { .src, .v } = tpl;
       let snapshot <- mkReg(0);
       let changeFifo <- mkFIFOF1();
@@ -580,27 +579,27 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       return toPipeOut(changeFifo);
    endmodule
 
-   let changeValues = vec(tuple2(Pcie3Cfg_current_speed, pcie_ep.cfg.current_speed),
-      tuple2(Pcie3Cfg_dpa_substate_change, pcie_ep.cfg.dpa_substate_change),
-      tuple2(Pcie3Cfg_err_cor_out, pcie_ep.cfg.err_cor_out),
-      tuple2(Pcie3Cfg_err_fatal_out, pcie_ep.cfg.err_fatal_out),
-      tuple2(Pcie3Cfg_err_nonfatal_out, pcie_ep.cfg.err_nonfatal_out),
-      tuple2(Pcie3Cfg_flr_in_process, pcie_ep.cfg.flr_in_process),
-      tuple2(Pcie3Cfg_function_power_state, pcie_ep.cfg.function_power_state),
-      tuple2(Pcie3Cfg_function_status, pcie_ep.cfg.function_status),
-      tuple2(Pcie3Cfg_hot_reset_out, pcie_ep.cfg.hot_reset_out),
-      tuple2(Pcie3Cfg_link_power_state, pcie_ep.cfg.link_power_state),
-      tuple2(Pcie3Cfg_ltr_enable, pcie_ep.cfg.ltr_enable),
-      tuple2(Pcie3Cfg_ltssm_state, pcie_ep.cfg.ltssm_state),
-      tuple2(Pcie3Cfg_max_payload, pcie_ep.cfg.max_payload),
-      tuple2(Pcie3Cfg_max_read_req, pcie_ep.cfg.max_read_req),
-      tuple2(Pcie3Cfg_negotiated_width, pcie_ep.cfg.negotiated_width),
-      tuple2(Pcie3Cfg_obff_enable, pcie_ep.cfg.obff_enable),
-      tuple2(Pcie3Cfg_phy_link_down, pcie_ep.cfg.phy_link_down),
-      tuple2(Pcie3Cfg_phy_link_status, pcie_ep.cfg.phy_link_status),
-      tuple2(Pcie3Cfg_pl_status_change, pcie_ep.cfg.pl_status_change),
-      tuple2(Pcie3Cfg_power_state_change_interrupt, pcie_ep.cfg.power_state_change_interrupt),
-      tuple2(Pcie3Cfg_rcb_status, pcie_ep.cfg.rcb_status));
+   Vector#(21,Tuple2#(Pcie3CfgType,Bit#(24))) changeValues = vec(tuple2(Pcie3Cfg_current_speed, extend(pcie_ep.cfg.current_speed)),
+      tuple2(Pcie3Cfg_dpa_substate_change, extend(pcie_ep.cfg.dpa_substate_change)),
+      tuple2(Pcie3Cfg_err_cor_out, extend(pcie_ep.cfg.err_cor_out)),
+      tuple2(Pcie3Cfg_err_fatal_out, extend(pcie_ep.cfg.err_fatal_out)),
+      tuple2(Pcie3Cfg_err_nonfatal_out, extend(pcie_ep.cfg.err_nonfatal_out)),
+      tuple2(Pcie3Cfg_flr_in_process, extend(pcie_ep.cfg.flr_in_process)),
+      tuple2(Pcie3Cfg_function_power_state, extend(pcie_ep.cfg.function_power_state)),
+      tuple2(Pcie3Cfg_function_status, extend(pcie_ep.cfg.function_status)),
+      tuple2(Pcie3Cfg_hot_reset_out, extend(pcie_ep.cfg.hot_reset_out)),
+      tuple2(Pcie3Cfg_link_power_state, extend(pcie_ep.cfg.link_power_state)),
+      tuple2(Pcie3Cfg_ltr_enable, extend(pcie_ep.cfg.ltr_enable)),
+      tuple2(Pcie3Cfg_ltssm_state, extend(pcie_ep.cfg.ltssm_state)),
+      tuple2(Pcie3Cfg_max_payload, extend(pcie_ep.cfg.max_payload)),
+      tuple2(Pcie3Cfg_max_read_req, extend(pcie_ep.cfg.max_read_req)),
+      tuple2(Pcie3Cfg_negotiated_width, extend(pcie_ep.cfg.negotiated_width)),
+      tuple2(Pcie3Cfg_obff_enable, extend(pcie_ep.cfg.obff_enable)),
+      tuple2(Pcie3Cfg_phy_link_down, extend(pcie_ep.cfg.phy_link_down)),
+      tuple2(Pcie3Cfg_phy_link_status, extend(pcie_ep.cfg.phy_link_status)),
+      tuple2(Pcie3Cfg_pl_status_change, extend(pcie_ep.cfg.pl_status_change)),
+      tuple2(Pcie3Cfg_power_state_change_interrupt, extend(pcie_ep.cfg.power_state_change_interrupt)),
+      tuple2(Pcie3Cfg_rcb_status, extend(pcie_ep.cfg.rcb_status)));
    let change_pipes <- mapM(mkChangeSource, changeValues, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
 
    FunnelPipe#(1,21,RegChange,3) changePipe <- mkFunnelPipesPipelined(change_pipes, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
