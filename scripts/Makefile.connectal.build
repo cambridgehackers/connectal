@@ -321,7 +321,7 @@ syntax.timestamp: $(BSVFILES)
 	$(Q)BSVPATH=$(BSVPATH) $(CONNECTALDIR)/scripts/syntax.py $(BSVFILES)
 	$(Q)touch syntax.timestamp
 
-verilog: $(VFILE)
+verilog: $(VFILE) syntax.timestamp
 	@echo "verilog"
 
 lint: $(VFILE)
