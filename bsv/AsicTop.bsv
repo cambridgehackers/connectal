@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Quanta Research Cambridge, Inc.
+// Copyright (c) 2015 Connectal Project
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -38,61 +38,22 @@ import MemServerRequest::*;
 import SimDma::*;
 import IfcNames::*;
 import BuildVector::*;
+import Top::*;
 
 `include "ConnectalProjectConfig.bsv"
 
-interface XsimSource;
-    method Action beat(Bit#(32) v);
-endinterface
-import "BVI" XsimSource =
-module mkXsimSourceBVI#(Bit#(32) portal)(XsimSource);
-    port portal = portal;
-    method beat(beat) enable(en_beat);
-    schedule (beat) C (beat);
-endmodule
-module mkXsimSource#(PortalMsgIndication indication)(Empty);
-   let tmp <- mkXsimSourceBVI(indication.id);
-   rule ind_dst_rdy;
-      indication.message.deq();
-      tmp.beat(indication.message.first());
-   endrule
-endmodule
-
-interface MsgSinkR#(numeric type bytes_per_beat);
-   method ActionValue#(Bit#(32)) beat();
+interface AsicTop;
+   interface Vector#(TAdd#(2,NumberOfRequests), PortalMsgRequest) requests;
+   interface Vector#(TAdd#(2,NumberOfIndications), PortalMsgIndication) indications;
 endinterface
 
-import "BVI" XsimSink =
-module mkXsimSinkBVI#(Bit#(32) portal)(MsgSinkR#(4));
-   port portal = portal;
-   method beat beat() enable (EN_beat) ready (RDY_beat);
-   schedule (beat) C (beat);
-endmodule
-module mkXsimSink#(PortalMsgRequest request)(Empty);
-   let sink <- mkXsimSinkBVI(request.id);
-
-   rule req_src_rdy;
-      let beat <- sink.beat();
-      request.message.enq(beat);
-   endrule
-endmodule
-
-module mkXsimMemoryConnection#(PhysMemMaster#(addrWidth, dataWidth) master)(Empty)
-   provisos (Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
-	     Mul#(TDiv#(dataWidth, 32), 32, dataWidth),
-	     Add#(a__, TDiv#(DataBusWidth,8), TDiv#(dataWidth, 8)),
-	     Mul#(TDiv#(dataWidth, 32), 4, TDiv#(dataWidth, 8)));
-   PhysMemSlave#(addrWidth,dataWidth) slave <- mkSimDmaDmaMaster();
-   mkConnection(master, slave);
-endmodule
-
-module mkXsimTop#(Clock derivedClock, Reset derivedReset)(Empty);
+module mkAsicTop#(Clock derivedClock, Reset derivedReset)(AsicTop);
 
    Reg#(Bool) dumpstarted <- mkReg(False);
    rule startdump if (!dumpstarted);
       //$dumpfile("dump.vcd");
       //$dumpvars;
-      $display("XsimTop starting");
+      $display("AsicTop starting");
       dumpstarted <= True;
    endrule
    XsimHost host <- mkXsimHost(derivedClock, derivedReset);
@@ -123,7 +84,7 @@ module mkXsimTop#(Clock derivedClock, Reset derivedReset)(Empty);
    let lMemServerIndicationOutputNoc <- mkPortalMsgIndication(extend(pack(IfcNames_MemServerIndicationH2S)), lMemServerIndicationOutput.portalIfc.indications, lMemServerIndicationOutput.portalIfc.messageSize);
    let lMemServerRequestInputNoc <- mkPortalMsgRequest(extend(pack(IfcNames_MemServerRequestS2H)), lMemServerRequestInput.portalIfc.requests);
 
-   mapM_(mkXsimSink, append(top.requests, append(vec(lMMURequestInputNoc), vec(lMemServerRequestInputNoc))));
-   mapM_(mkXsimSource, append(top.indications, append(vec(lMMUIndicationOutputNoc), vec(lMemServerIndicationOutputNoc))));
-   mapM_(mkXsimMemoryConnection, lMemServer.masters);
+   interface requests = append(top.requests, vec(lMMURequestInputNoc, lMemServerRequestInputNoc));
+   interface indications = append(top.indications, vec(lMMUIndicationOutputNoc, lMemServerIndicationOutputNoc));
+   //  mapM_(mkAsicMemoryConnection, lMemServer.masters);
 endmodule

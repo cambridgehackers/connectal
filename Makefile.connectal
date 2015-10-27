@@ -88,6 +88,10 @@ ifeq ($(BOARD),verilator)
 CONNECTALFLAGS += -D CnocTop
 CNOC?=--cnoc
 endif
+ifeq ($(BOARD),asic)
+CONNECTALFLAGS += -D CnocTop
+CNOC?=--cnoc
+endif
 ifneq ($(AUTOTOP),)
 USE_AUTOTOP = 1
 endif

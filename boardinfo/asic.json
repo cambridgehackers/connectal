@@ -1,0 +1,13 @@
+{
+    "options": {
+        "os" : "ubuntu",
+        "partname" : "asic",
+	"rewireclockstring" : "",
+        "TOP" : "AsicTop",
+	"bsvdefines": ["ASIC", "CnocTop", "XsimHostInterface", "PhysAddrWidth=32"],
+        "CONNECTALFLAGS" : ["--mainclockperiod=20", "--derivedclockperiod=10"],
+        "need_pcie" : "unused"
+    }
+}
+
+
