@@ -283,6 +283,7 @@ endloop:
 	const char *exetype = "vlsim";
 #endif
         sprintf(exename, "%s/%s", bindir, exetype);
+	argv[0] = exename;
 if (trace_portal) fprintf(stderr, "[%s:%d] %s %s *******\n", __FUNCTION__, __LINE__, exetype, exename);
         argv[ind++] = NULL;
 	if (old_library_path)
