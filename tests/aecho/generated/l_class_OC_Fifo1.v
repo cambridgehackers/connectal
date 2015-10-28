@@ -15,28 +15,28 @@ module l_class_OC_Fifo1 (
     if (!nRST) begin
     end
     else begin
-        // Start of enq__RDY
-    enq__RDY = ((full) ^ 1);
+        // Method: enq__RDY
+        enq__RDY = ((full) ^ 1);
 
-        // Start of enq
+        // Method: enq
         if (enq__ENA) begin
         element <= enq_v;
         full <= 1;
         end; // End of enq
 
-        // Start of deq__RDY
-    deq__RDY = (full);
+        // Method: deq__RDY
+        deq__RDY = (full);
 
-        // Start of deq
+        // Method: deq
         if (deq__ENA) begin
         full <= 0;
         end; // End of deq
 
-        // Start of first__RDY
-    first__RDY = (full);
+        // Method: first__RDY
+        first__RDY = (full);
 
-        // Start of first
-    first = (element);
+        // Method: first
+        first = (element);
 
     end; // nRST
   end; // always @ (posedge CLK)

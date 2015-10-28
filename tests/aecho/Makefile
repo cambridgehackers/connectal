@@ -8,6 +8,7 @@ GENDIR = generated
 BSVFILES = Echo.bsv
 CPPFILES = testecho.cpp
 CONNECTALFLAGS += --verilog $(GENDIR) --bsvpath $(GENDIR)
+BSCFLAGS += -show-bvi
 
 prebuild::
 	$(LLVMT) --odir=$(GENDIR) $(ACCDIR)/echo.ll $(ACCDIR)/atomicc.ll
