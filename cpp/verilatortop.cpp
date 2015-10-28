@@ -20,10 +20,10 @@ int main(int argc, char **argv, char **env)
 
   //top->CLK = 0;
   while (!Verilated::gotFinish()) {
-    if ((main_time % 4) == 1) {	// Toggle clock
+    if ((main_time % 2) == 1) {	// Toggle clock
       top->CLK = 1;
     }
-    if ((main_time % 4) == 3) {
+    if ((main_time % 2) == 0) {
       top->CLK = 0;
     }
     top->eval();
