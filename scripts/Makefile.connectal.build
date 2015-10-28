@@ -68,7 +68,7 @@ BSCOPTFLAGS= -show-schedule -aggressive-conditions
 BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj
 BSCFLAGS_COMMON += $(BSCWARNFLAGS) $(BSCOPTFLAGS) $(BSCPATHFLAGS) --wait-for-license
 PROF_FLAGS= #-pg
-export SIM_CXXFLAGS= -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -D SIMULATION $(BSVDEFINES) -O -g $(PROF_FLAGS)
+export SIM_CXXFLAGS= -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -D SIMULATION $(BSVDEFINES) -O $(PROF_FLAGS)
 SIM_CXX_COMMON = $(foreach f, TlpReplay.cpp BsimCtrl.cpp BsimDma.cpp sock_utils.c portalPrintf.c XsimTop.cpp poller.cpp transportSocket.c transportHardware.c transportXsim.c portal.c, $(CONNECTALDIR)/cpp/$f)
 SIM_CXX_LOCAL = $(SIM_CXX_COMMON) $(DTOP)/jni/XsimMsgRequest.c $(DTOP)/jni/XsimMsgIndication.c $(DTOP)/jni/GeneratedCppCallbacks.cpp
 
@@ -308,7 +308,7 @@ $(VFILE): $(TOPBSVFILE) $(BSVFILES)
 
 $(DTOP)/bin/libconnectal-sim.so: $(SIM_CXX_COMMON) $(SIM_CXX_PROJECT)
 	$(Q)mkdir -p $(DTOP)/bin
-	g++ -O -g -I$(DTOP)/jni -shared -fpic $(SIM_CXXFLAGS) -o $(DTOP)/bin/libconnectal-sim.so $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)
+	g++ -O -g -I$(DTOP)/jni -shared -fpic $(SIM_CXXFLAGS) -g -o $(DTOP)/bin/libconnectal-sim.so $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)
 
 bsim: prepare_bin_target $(DTOP)/bin/libconnectal-sim.so
 	$(Q)mkdir -p $(DTOP)/obj verilog
