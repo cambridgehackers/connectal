@@ -269,7 +269,7 @@ endloop:
 	    fprintf(stderr, "[%s:%d] could not find execution filename\n", __FUNCTION__, __LINE__);
             exit(0);
         }
-        if (getenv("NOFPGAJTAG"))
+        if (getenv("NOFPGAJTAG") || getenv("NOPROGRAM"))
             exit(0);
 #if defined(BOARD_bluesim) || defined(BOARD_verilator)
         char *bindir = dirname(filename);
