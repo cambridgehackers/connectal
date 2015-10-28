@@ -22,7 +22,7 @@
 // SOFTWARE.
 import FIFO::*;
 import Vector::*;
-import Clai::*;
+import L_class_OC_Fifo1::*;
 
 interface EchoIndication;
     method Action heard(Bit#(32) v);
@@ -46,7 +46,7 @@ typedef struct {
 
 module mkEcho#(EchoIndication indication)(Echo);
     //FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
-    Clai delay <- mkClai;
+    L_class_OC_Fifo1 delay <- mkL_class_OC_Fifo1;
     FIFO#(EchoPair) delay2 <- mkSizedFIFO(8);
 
     rule heard;
