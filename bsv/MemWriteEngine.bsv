@@ -58,6 +58,7 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
    FIFO#(Tuple3#(Bit#(serverIdxSz),Bit#(MemTagSize),Bool)) serverDone <- mkSizedFIFO(valueOf(cmdQDepth));
 
    Vector#(numServers, Reg#(Bool))              clientInFlight <- replicateM(mkReg(False));
+   Vector#(numServers, Reg#(Bool))              clientBursts <- replicateM(mkReg(False));
    Vector#(numServers, ConfigCounter#(16))      clientAvail <- replicateM(mkConfigCounter(0));
    Vector#(numServers, Reg#(MemengineCmd))      clientStart <- replicateM(mkReg(unpack(0)));
    Vector#(numServers, FIFO#(Bool))             clientFinished <- replicateM(mkSizedFIFO(1));
@@ -86,16 +87,17 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
       rule store_cmd if (!clientInFlight[idx]);
 	 let cmd <- toGet(clientCommand[idx]).get();
 	 clientInFlight[idx] <= True;
+	 clientBursts[idx] <= True;
 	 clientStart[idx] <= cmd;
-	 clientCycles[idx] <= 0;
 	 $display("cycles %d starting request %d bytes %d", cycles, cmd.tag, cmd.len);
+	 clientCycles[loadIdx] <= 0;
       endrule
       rule rule_request_cycles;
 	 clientCycles[idx].incr(1);
       endrule
    end
    rule load_ctxt_a if (!load_in_progress);
-      if (clientInFlight[loadIdx]) begin
+      if (clientBursts[loadIdx]) begin
 	 load_in_progress <= True;
 	 let cmd = clientStart[loadIdx];
 	 let cond0 <- clientAvail[loadIdx].maybeDecrement(unpack(extend(cmd.burstLen>>beat_shift)));
@@ -112,10 +114,10 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
       incr_loadIdx;
       match {.cmd,.cond0,.cond1} <- toGet(serverCond).get;
       if  (cond0) begin
-	 //$display("load_ctxt_b %h %d", cmd.base, idx);
+	 //$display("load_ctxt_b cycles %d %h %d", cycles, cmd.base, loadIdx);
 	 serverReq.enq(tuple2(truncate(loadIdx),cmd));
 	 if (cond1) begin
-	    clientInFlight[loadIdx] <= False;
+	    clientBursts[loadIdx] <= False;
 	 end
 	 else begin
 	    clientStart[loadIdx] <= MemengineCmd{sglId:cmd.sglId, base:cmd.base+extend(cmd.burstLen),
@@ -192,7 +194,7 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
 	    if (new_respCnt == rc) begin
 	       respCnt <= 0;
 	       inProgress.deq;
-	       serverDone.enq(tuple3(idx,new_tag,last));
+	       serverDone.enq(tuple3(idx,new_tag>>valueOf(serverIdxSz),last));
 	       lastBeat = True;
 	    end
 	    else begin
@@ -206,6 +208,7 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
 	 method Action put(Bit#(MemTagSize) tag);
 	    match {.idx, .req_tag, .last} <- toGet(serverDone).get;
 	    if (last) begin
+	       clientInFlight[idx] <= False;
 	       clientFinished[idx].enq(True);
 `ifdef MEMENGINE_REQUEST_CYCLES
 	       $display("cycles %d req_tag %d clientCycles[%d] = %d", cycles, req_tag, idx, clientCycles[idx]);
