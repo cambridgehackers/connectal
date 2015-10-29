@@ -39,10 +39,13 @@ int main(int argc, char **argv, char **env)
   while (!Verilated::gotFinish()) {
     if (main_time >= 10) {
       if ((top->CLK == BSV_RESET_EDGE) && (top->RST_N == BSV_RESET_VALUE)) {
-	fprintf(stderr, "time=%d leaving reset new value %d\n", main_time, !BSV_RESET_VALUE);
+	fprintf(stderr, "time=%ld leaving reset new value %d\n", (long)main_time, !BSV_RESET_VALUE);
 	top->RST_N = !BSV_RESET_VALUE;
       }
     }
+
+    if (dpi_finish())
+      vl_finish(__FILE__, __LINE__, "vlsim");
 
     if ((main_time % 2) == 1) {	// Toggle clock
       top->CLK = 1;
