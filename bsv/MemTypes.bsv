@@ -159,9 +159,15 @@ typedef struct {
    Bool last;
    } MemDataF#(numeric type dsz) deriving (Bits);
 
+typedef struct {
+   Bit#(MemTagSize) tag;
+   Bit#(32)         cycles;
+   } MemRequestCycles deriving (Bits);
+
 interface MemReadEngineServer#(numeric type userWidth);
    interface Put#(MemengineCmd)             request;
    interface PipeOut#(MemDataF#(userWidth)) data;
+   interface PipeOut#(MemRequestCycles)     requestCycles;
 endinterface
 
 interface MemReadEngine#(numeric type busWidth, numeric type userWidth, numeric type cmdQDepth, numeric type numServers);
