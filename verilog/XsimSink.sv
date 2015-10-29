@@ -21,10 +21,6 @@
 // SOFTWARE.
 //`timescale 1ns / 1ps
 
-import "DPI-C" function void dpi_init();
-import "DPI-C" function void dpi_poll();
-import "DPI-C" function bit dpi_finish();
-
 `ifdef BSV_POSITIVE_RESET
   `define BSV_RESET_VALUE 1'b1
   `define BSV_RESET_EDGE posedge
@@ -33,65 +29,23 @@ import "DPI-C" function bit dpi_finish();
   `define BSV_RESET_EDGE negedge
 `endif
 
-module xsimtop(
-`ifndef XSIM
-	       CLK, DERIVED_CLK
-`endif
-);
-`ifndef XSIM
-   input CLK;
-   input DERIVED_CLK;
-`else
-   reg 	 CLK;
-   reg DERIVED_CLK;
-`endif
-   reg RST_N;
-   reg DERIVED_RST_N;
-   reg [31:0] count;
-   reg finish;
-
-   mkXsimTop xsimtop(.CLK(CLK), .RST_N(RST_N), .CLK_derivedClock(DERIVED_CLK), .RST_N_derivedReset(DERIVED_RST_N)); 
-   initial begin
-`ifdef XSIM
-      CLK = 0;
-      DERIVED_CLK = 0;
-`endif
-      RST_N = `BSV_RESET_VALUE;
-      DERIVED_RST_N = `BSV_RESET_VALUE;
-      count = 0;
-      finish = 0;
-      dpi_init();
-   end
-
-`ifdef XSIM
-   always begin
-      #(`MainClockPeriod/2)
-	CLK = !CLK;
-   end
-   always begin
-      #(`DerivedClockPeriod/2)
-	DERIVED_CLK = !DERIVED_CLK;
-   end
-`endif
+import "DPI-C" function longint dpi_msgSink_beat(input int portal);
+module XsimSink(input CLK, input CLK_GATE, input RST, input [31:0] portal, output RDY_beat, input EN_beat, output [31:0] beat);
+   reg     valid_reg;
+   reg 	   [31:0] beat_reg;
+   
+   assign RDY_beat = valid_reg;
+   assign beat = beat_reg;
    
    always @(posedge CLK) begin
-      count <= count + 1;
-      finish <= dpi_finish();
-      if (finish) begin
-	 $display("simulator calling $finish");
-	 $finish();
+      if (RST == `BSV_RESET_VALUE) begin
+	 valid_reg <= 0;
+	 beat_reg <= 32'haaaaaaaa;
       end
-   end
-   always @(`BSV_RESET_EDGE CLK) begin
-      if (count == 20) begin
-	 RST_N <= !`BSV_RESET_VALUE;
-      end
-   end
-   always @(`BSV_RESET_EDGE DERIVED_CLK) begin
-      if (count == (20*`MainClockPeriod/`DerivedClockPeriod)) begin
-	 DERIVED_RST_N <= !`BSV_RESET_VALUE;
+      else if (EN_beat == 1 || valid_reg == 0) begin
+	 longint v = dpi_msgSink_beat(portal);
+	 valid_reg <= v[32];
+	 beat_reg <= v[31:0];
       end
    end
 endmodule
-
-

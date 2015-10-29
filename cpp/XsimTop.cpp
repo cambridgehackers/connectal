@@ -19,11 +19,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include <queue>
+#include <XsimTop.h>
 #include <XsimMsgRequest.h>
 #include <XsimMsgIndication.h>
 #include <pthread.h>
 
-static int trace_xsimtop;// = 1;
+static int trace_xsimtop; // = 1;
 
 class XsimMsgRequest : public XsimMsgRequestWrapper {
   pthread_mutex_t mutex;
@@ -100,15 +101,15 @@ extern "C" void dpi_init()
     if (trace_xsimtop) fprintf(stderr, "%s: end\n", __FUNCTION__);
 }
 
+#ifdef POLL_IN_DPI_POLL
 extern "C" void dpi_poll()
 {
-#ifdef POLL_IN_DPI_POLL
       void *rc = defaultPoller->pollFn(1);
       //fprintf(stderr, "%s:%d: rc=%ld\n", __FUNCTION__, __LINE__, (long)rc);
       if ((long)rc > 0)
 	  defaultPoller->event();
-#endif
 }
+#endif
 
 extern "C" long long dpi_msgSink_beat(int portal)
 {

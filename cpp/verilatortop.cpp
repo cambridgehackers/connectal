@@ -1,5 +1,16 @@
-#include "Vxsimtop.h"
+#include "vlsim.h"
 #include "verilated.h"
+#include <XsimTop.h>
+#include <ConnectalProjectConfig.h>
+
+#ifdef BSV_POSITIVE_RESET
+  #define BSV_RESET_VALUE 1
+  #define BSV_RESET_EDGE 0 //posedge
+#else
+  #define BSV_RESET_VALUE 0
+  #define BSV_RESET_EDGE 1 //negedge
+#endif
+
 #if VM_TRACE
 # include <verilated_vcd_c.h>   // Trace file format header                                                                                        
 #endif
@@ -7,8 +18,12 @@
 vluint64_t main_time = 0;
 int main(int argc, char **argv, char **env)
 {
+  fprintf(stderr, "vlsim::main\n");
   Verilated::commandArgs(argc, argv);
-  Vxsimtop* top = new Vxsimtop;
+  vlsim* top = new vlsim;
+
+  fprintf(stderr, "vlsim calling dpi_init\n");
+  dpi_init();
 
 #if VM_TRACE                    // If verilator was invoked with --trace                                                                           
   Verilated::traceEverOn(true);       // Verilator must compute traced signals                                                                   
@@ -18,8 +33,17 @@ int main(int argc, char **argv, char **env)
   tfp->open ("vlt_dump.vcd"); // Open the dump file                                                                                              
 #endif
 
-  //top->CLK = 0;
+  fprintf(stderr, "starting simulation\n");
+  top->CLK = 0;
+  top->RST_N = BSV_RESET_VALUE;
   while (!Verilated::gotFinish()) {
+    if (main_time >= 10) {
+      if ((top->CLK == BSV_RESET_EDGE) && (top->RST_N == BSV_RESET_VALUE)) {
+	fprintf(stderr, "time=%d leaving reset new value %d\n", main_time, !BSV_RESET_VALUE);
+	top->RST_N = !BSV_RESET_VALUE;
+      }
+    }
+
     if ((main_time % 2) == 1) {	// Toggle clock
       top->CLK = 1;
     }
