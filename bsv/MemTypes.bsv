@@ -145,6 +145,7 @@ interface MemWriteEngineServer#(numeric type userWidth);
    interface Put#(MemengineCmd)       request;
    interface Get#(Bool)               done;
    interface PipeIn#(Bit#(userWidth)) data;
+   interface PipeOut#(MemRequestCycles)     requestCycles;
 endinterface
 
 interface MemWriteEngine#(numeric type busWidth, numeric type userWidth, numeric type cmdQDepth, numeric type numServers);

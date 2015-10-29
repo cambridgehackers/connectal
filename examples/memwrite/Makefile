@@ -6,5 +6,6 @@ MEM_WRITE_INTERFACES = lMemwrite.dmaClient
 BSVFILES = Memwrite.bsv
 CPPFILES=testmemwrite.cpp
 CONNECTALFLAGS += --bscflags " -show-schedule"
+CONNECTALFLAGS += -DMEMENGINE_REQUEST_CYCLES
 
 include $(CONNECTALDIR)/Makefile.connectal

@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 import Vector::*;
+import Cntrs::*;
 import FIFOF::*;
 import FIFO::*;
 import GetPut::*;
@@ -54,15 +55,21 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
    FIFO#(Tuple3#(MemengineCmd,Bool,Bool))       serverCond <- mkFIFO1();
    FIFO#(Tuple2#(Bit#(serverIdxSz),MemengineCmd)) serverReq <- mkSizedFIFO(valueOf(cmdQDepth));
    FIFO#(Tuple3#(Bit#(8),Bit#(MemTagSize),Bool))inProgress <- mkSizedFIFO(valueOf(cmdQDepth));
-   FIFO#(Tuple2#(Bit#(serverIdxSz),Bool))       serverDone <- mkSizedFIFO(valueOf(cmdQDepth));
+   FIFO#(Tuple3#(Bit#(serverIdxSz),Bit#(MemTagSize),Bool)) serverDone <- mkSizedFIFO(valueOf(cmdQDepth));
 
    Vector#(numServers, Reg#(Bool))              clientInFlight <- replicateM(mkReg(False));
    Vector#(numServers, ConfigCounter#(16))      clientAvail <- replicateM(mkConfigCounter(0));
    Vector#(numServers, Reg#(MemengineCmd))      clientStart <- replicateM(mkReg(unpack(0)));
    Vector#(numServers, FIFO#(Bool))             clientFinished <- replicateM(mkSizedFIFO(1));
    Vector#(numServers, FIFOF#(MemengineCmd))    clientCommand <- replicateM(mkSizedFIFOF(1));
+   Vector#(numServers, Count#(Bit#(32)))        clientCycles     <- replicateM(mkCount(0));
+   Vector#(numServers, FIFOF#(MemRequestCycles)) clientCyclesFifo <- replicateM(mkFIFOF());
    Vector#(numServers, FIFOF#(Bit#(userWidth))) dataBuffer <- replicateM(mkSizedBRAMFIFOF(bufferSizeBeats));
-
+   Reg#(Bit#(32)) cycles <- mkReg(0);
+   rule rl_cycles;
+      cycles <= cycles + 1;
+   endrule
+   
    Reg#(Bit#(8))                    respCnt <- mkReg(0);
    Reg#(Bit#(TAdd#(1,serverIdxSz))) loadIdx <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
@@ -75,13 +82,18 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
 	  loadIdx <= loadIdx+1;
        endaction);
 
-   for (Integer idx = 0; idx < valueOf(numServers); idx = idx + 1)
+   for (Integer idx = 0; idx < valueOf(numServers); idx = idx + 1) begin
       rule store_cmd if (!clientInFlight[idx]);
 	 let cmd <- toGet(clientCommand[idx]).get();
 	 clientInFlight[idx] <= True;
 	 clientStart[idx] <= cmd;
+	 clientCycles[idx] <= 0;
+	 $display("cycles %d starting request %d bytes %d", cycles, cmd.tag, cmd.len);
       endrule
-
+      rule rule_request_cycles;
+	 clientCycles[idx].incr(1);
+      endrule
+   end
    rule load_ctxt_a if (!load_in_progress);
       if (clientInFlight[loadIdx]) begin
 	 load_in_progress <= True;
@@ -138,7 +150,7 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
 `endif
                            begin
                            clientCommand[i].enq(cmd);
-                           //$display("(%d) %h %h %h", i, cmd.base, cmd.len, cmd.burstLen);
+                           $display("(%d) %h %h %h", i, cmd.base, cmd.len, cmd.burstLen);
                            end
                       endmethod
                   endinterface
@@ -152,6 +164,7 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
 	                     clientAvail[i].increment(1);
 	                  endmethod
                        endinterface;
+		  interface PipeOut requestCycles = toPipeOut(clientCyclesFifo[i]);
               endinterface);
    interface writeServers = rs;
    interface MemWriteClient dmaClient;
@@ -179,7 +192,7 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
 	    if (new_respCnt == rc) begin
 	       respCnt <= 0;
 	       inProgress.deq;
-	       serverDone.enq(tuple2(idx,last));
+	       serverDone.enq(tuple3(idx,new_tag,last));
 	       lastBeat = True;
 	    end
 	    else begin
@@ -191,9 +204,14 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
       endinterface
       interface Put writeDone;
 	 method Action put(Bit#(MemTagSize) tag);
-	    match {.idx, .last} <- toGet(serverDone).get;
-	    if (last)
+	    match {.idx, .req_tag, .last} <- toGet(serverDone).get;
+	    if (last) begin
 	       clientFinished[idx].enq(True);
+`ifdef MEMENGINE_REQUEST_CYCLES
+	       $display("cycles %d req_tag %d clientCycles[%d] = %d", cycles, req_tag, idx, clientCycles[idx]);
+	       clientCyclesFifo[idx].enq(MemRequestCycles { tag: req_tag, cycles: clientCycles[idx] });
+`endif
+	    end
 	    //$display("writeDone %d %d", idx, last);
 	 endmethod
       endinterface
