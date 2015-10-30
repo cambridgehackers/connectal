@@ -70,7 +70,7 @@ Controlling the Build
 
 .. make:var:: CONNECTALFLAGS
 
-   Flags to pass to makefilegen.py
+   Flags to pass to makefilegen.py. See :ref:`_invocation_makefilegen.py` for its options.
 
 .. make:var:: V
 
