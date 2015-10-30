@@ -48,6 +48,9 @@
 #include "drivers/pcieportal/pcieportal.h" // BNOC_TRACE
 #endif
 
+int simulator_dump_vcd = 0;
+const char *simulator_vcd_name = "dump.vcd";
+
 static int trace_portal;//= 1;
 
 int global_pa_fd = -1;
@@ -277,8 +280,16 @@ endloop:
         char *library_path = 0;
 	const char *old_library_path = getenv("LD_LIBRARY_PATH");
 	int library_path_len = strlen(bindir);
+	if (getenv("DUMP_VCD")) {
+	  simulator_dump_vcd = 1;
+	  simulator_vcd_name = getenv("DUMP_VCD");
+	}
 #if defined(BOARD_bluesim)
 	const char *exetype = "bsim";
+	if (simulator_dump_vcd) {
+	  argv[ind++] = (char*)"-V";
+	  argv[ind++] = (char*)simulator_vcd_name;
+	}
 #else
 	const char *exetype = "vlsim";
 #endif
