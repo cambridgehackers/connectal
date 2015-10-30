@@ -15,6 +15,24 @@ Connecting to Xsim and Verilator
 
    Controls the name of the socket used for connecting software and hardware simulated by xsim/verilator.
 
+Tracing Simulation
+------------------
+
+.. envvar:: DUMP_VCD
+
+   If set, directs the simulator to dump a VCD trace to the $DUMP_VCD.
+
+.. c:var:: int simulator_dump_vcd
+
+   The application can enable VCD tracing by setting
+   :c:data:`simulator_dump_vcd` to 1. It takes the file name from
+   :c:data:`simulator_vcd_name`. DUMP_VCD overrides this variable.
+
+.. c:var::  const char *simulator_vcd_name;
+
+   Specifies the name of the vcd file. Defaults to
+   "dump.vcd". DUMP_VCD overrides this variable.
+
 Zynq Clock Control
 ------------------
 
