@@ -292,6 +292,10 @@ endloop:
 	}
 #else
 	const char *exetype = "vlsim";
+	if (simulator_dump_vcd) {
+	  argv[ind++] = (char*)"-t";
+	  argv[ind++] = (char*)simulator_vcd_name;
+	}
 #endif
         sprintf(exename, "%s/%s", bindir, exetype);
 	argv[0] = exename;

@@ -1,5 +1,6 @@
 #include "vlsim.h"
 #include "verilated.h"
+#include <unistd.h>
 #include <XsimTop.h>
 #include <ConnectalProjectConfig.h>
 
@@ -12,25 +13,46 @@
 #endif
 
 #if VM_TRACE
-# include <verilated_vcd_c.h>   // Trace file format header                                                                                        
+# include <verilated_vcd_c.h>   // Trace file format header
 #endif
+
+bool dump_vcd = false;
+const char *vcd_file_name = "dump.vcd";
+
+void parseArgs(int argc, char **argv)
+{
+    signed char opt;
+    while ((opt = getopt(argc, argv, "ht:")) != -1) {
+      switch (opt) {
+      case 't':
+	dump_vcd = true;
+	vcd_file_name = optarg;
+	break;
+      }
+    }
+}
 
 vluint64_t main_time = 0;
 int main(int argc, char **argv, char **env)
 {
   fprintf(stderr, "vlsim::main\n");
   Verilated::commandArgs(argc, argv);
+  parseArgs(argc, argv);
+
   vlsim* top = new vlsim;
 
   fprintf(stderr, "vlsim calling dpi_init\n");
   dpi_init();
 
-#if VM_TRACE                    // If verilator was invoked with --trace                                                                           
-  Verilated::traceEverOn(true);       // Verilator must compute traced signals                                                                   
-  VL_PRINTF("Enabling waves...\n");
-  VerilatedVcdC* tfp = new VerilatedVcdC;
-  top->trace (tfp, 4);       // Trace 4 levels of hierarchy
-  tfp->open ("vlt_dump.vcd"); // Open the dump file                                                                                              
+#if VM_TRACE                    // If verilator was invoked with --trace
+  VerilatedVcdC* tfp = 0;
+  if (dump_vcd) {
+        Verilated::traceEverOn(true);       // Verilator must compute traced signals
+	VL_PRINTF("Enabling vcd waves to %s\n", vcd_file_name);
+	tfp = new VerilatedVcdC;
+	top->trace (tfp, 4);       // Trace 4 levels of hierarchy
+	tfp->open (vcd_file_name); // Open the dump file
+  }
 #endif
 
   fprintf(stderr, "starting simulation\n");
@@ -62,9 +84,8 @@ int main(int argc, char **argv, char **env)
     main_time++;
   }
   top->final();
-
-#if VM_TRACE                                                                                                                                       
-  if (tfp) tfp->close();                                                                                                                         
+#if VM_TRACE
+  if (tfp) tfp->close();
 #endif                                                                                                                                             
 
   delete top;
