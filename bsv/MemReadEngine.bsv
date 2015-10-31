@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 import Vector::*;
+import Cntrs::*;
 import FIFOF::*;
 import FIFO::*;
 import GetPut::*;
@@ -106,6 +107,8 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
    Vector#(numServers, Reg#(Bit#(32)))      clientLen <- replicateM(mkReg(unpack(0)));
    Vector#(numServers, Reg#(Bit#(32)))      clientBase <- replicateM(mkReg(unpack(0)));
    Vector#(numServers, Reg#(NextReq))       clientNext <- replicateM(mkReg(unpack(0)));
+   Vector#(numServers, Count#(Bit#(32)))    clientCycles <- replicateM(mkCount(0));
+   Vector#(numServers, FIFOF#(MemRequestCycles)) clientCyclesFifo <- replicateM(mkFIFOF());
    Vector#(numServers, FIFOF#(ServerRequest#(serverIdxSz))) clientSReq <- replicateM(mkSizedFIFOF(1));
    
    Vector#(numServers, FIFO#(Tuple3#(Bool,Bool,Bit#(BurstLenSize)))) serverCheckAvail <- replicateM(mkSizedFIFO(1));
@@ -130,9 +133,12 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
          clientLen[idx] <= cmd.len - extend(cmd.burstLen);
          clientBase[idx] <= cmd.base;
          clientNext[idx] <= getNext(cmd.len, cmd.burstLen);
+	 clientCycles[idx] <= 0;
 	 if (verbose) $display("mkMemReadEngineBuff::%d rule_startNew %d %d", counter, idx, clientAvail[idx].read);
       endrule
-
+      rule rule_cycles;
+	 clientCycles[idx].incr(1);
+      endrule
       rule rule_checkAvail if (clientInFlight[idx]);
          let cmd_len = clientNext[idx].len;
          let last_burst = clientNext[idx].last;
@@ -154,6 +160,10 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
 	    if (last_burst) begin
 	       if (verbose) $display("mkMemReadEngineBuff::%d rule_requestServer last_burst %d", counter, last_burst);
 	       clientInFlight[idx] <= False;
+`ifdef MEMENGINE_REQUEST_CYCLES
+	       $display("clientCycles[%d] = %d", idx, clientCycles[idx]);
+	       clientCyclesFifo[idx].enq(MemRequestCycles { tag:clientCommand[idx].tag, cycles: clientCycles[idx] });
+`endif
 	    end
          end
       endrule
@@ -211,6 +221,7 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
 	             endmethod
 	             method Bool notEmpty = clientDataFifo[i].notEmpty;
                   endinterface;
+	       interface requestCycles = toPipeOut(clientCyclesFifo[i]);
                endinterface);
    interface readServers = rs;
    interface MemReadClient dmaClient;

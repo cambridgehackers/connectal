@@ -19,29 +19,33 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-//import Clocks::*;
+//`timescale 1ns / 1ps
 
-interface Clai;
-    method Action      deq(Bit#(1) ff);
-    //method Bit#(1)     RDY_deq();
-    method Action      enq(Bit#(32) v);
-    method Bit#(32)    first();
-    method Bit#(1)     first__guard();
-    method Bit#(1)     notempty();
-    method Bit#(1)     notfull();
-endinterface
+`ifdef BSV_POSITIVE_RESET
+  `define BSV_RESET_VALUE 1'b1
+  `define BSV_RESET_EDGE posedge
+`else
+  `define BSV_RESET_VALUE 1'b0
+  `define BSV_RESET_EDGE negedge
+`endif
 
-import "BVI" l_class_OC_Fifo1 =
-module mkClai(Clai);
-    default_clock clk(CLK);
-    default_reset rst(RST);
-    method deq(deq) enable(EN_deq) ready(RDY_deq);
-    method enq(enq_v) enable(enq_ENA);// ready(enq__guard);
-    method first first();
-    method first__guard first__guard();
-    method notEmpty notempty();
-    method notFull notfull();
-    schedule(first, first__guard, notempty, notfull, deq, enq)
-          CF(first, first__guard, notempty, notfull, deq, enq);
+import "DPI-C" function longint dpi_msgSink_beat(input int portal);
+module XsimSink(input CLK, input CLK_GATE, input RST, input [31:0] portal, output RDY_beat, input EN_beat, output [31:0] beat);
+   reg     valid_reg;
+   reg 	   [31:0] beat_reg;
+   
+   assign RDY_beat = valid_reg;
+   assign beat = beat_reg;
+   
+   always @(posedge CLK) begin
+      if (RST == `BSV_RESET_VALUE) begin
+	 valid_reg <= 0;
+	 beat_reg <= 32'haaaaaaaa;
+      end
+      else if (EN_beat == 1 || valid_reg == 0) begin
+	 longint v = dpi_msgSink_beat(portal);
+	 valid_reg <= v[32];
+	 beat_reg <= v[31:0];
+      end
+   end
 endmodule
-

@@ -46,7 +46,9 @@ if {$need_pcie == "x7_gen2x8"} {
 }
 
 if {$need_pcie == "x7_gen3x8"} {
-    if {[version -short] >= "2015.2"} {
+    if {[version -short] >= "2015.3"} {
+	set pcieversion {4.1}
+    } elseif {[version -short] >= "2015.2"} {
 	set pcieversion {4.0}
     } else {
 	set pcieversion {3.0}

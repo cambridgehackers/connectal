@@ -13,6 +13,9 @@ include $(CONNECTALDIR)/Makefile.version
 
 obj-m += pcieportal.o
 
+PKG_NAME?=connectal
+# DKMS only looks in /usr/src
+PREFIX?=/usr
 KVERSION=$(shell uname -r)
 KROOT=/lib/modules/$(KVERSION)/build
 export BS_MOD_DIR=$(DESTDIR)/lib/modules/$(KVERSION)/connectal
@@ -76,16 +79,16 @@ insmod: rmmod
 .PHONY: install-dkms
 install-dkms: pcieportal_signature_file.h
 	make -C ../portalmem portalmem_signature_file.h
-	mkdir -p $(DESTDIR)//usr/src/connectal-$(VERSION)
-	sed "s/@VERSION@/$(VERSION)/" dkms.conf > dkms.conf.out
+	mkdir -p $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
+	sed "s/@VERSION@/$(VERSION)/" dkms.conf | sed "s/@PKG_NAME@/$(PKG_NAME)/" > dkms.conf.out
 	sed "s/@VERSION@/$(VERSION)/" Makefile.dkms > Makefile.dkms.out
-	cp -fv dkms.conf.out $(DESTDIR)/usr/src/connectal-$(VERSION)/dkms.conf
-	cp -fv Makefile.dkms.out $(DESTDIR)/usr/src/connectal-$(VERSION)/Makefile
-	cp -fv pcieportal_signature_file.h pcieportal.c pcieportal.h $(DESTDIR)/usr/src/connectal-$(VERSION)
+	cp -fv dkms.conf.out $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/dkms.conf
+	cp -fv Makefile.dkms.out $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/Makefile
+	cp -fv pcieportal_signature_file.h pcieportal.c pcieportal.h $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
 	cp -fv ../../cpp/*.[ch] ../portalmem/*.[ch] \
 	../../generated/cpp/*.[ch] \
-	$(DESTDIR)/usr/src/connectal-$(VERSION)
-	sed -i 's|drivers/portalmem/||' $(DESTDIR)/usr/src/connectal-$(VERSION)/*.[ch]
-	sed -i 's|drivers/pcieportal/||' $(DESTDIR)/usr/src/connectal-$(VERSION)/*.[ch]
-	sed -i 's|drivers/zynqportal/||' $(DESTDIR)/usr/src/connectal-$(VERSION)/*.[ch]
-	sed -i 's|../../cpp/||g' $(DESTDIR)/usr/src/connectal-$(VERSION)/*.[ch]
+	$(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
+	sed -i 's|drivers/portalmem/||' $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/*.[ch]
+	sed -i 's|drivers/pcieportal/||' $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/*.[ch]
+	sed -i 's|drivers/zynqportal/||' $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/*.[ch]
+	sed -i 's|../../cpp/||g' $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/*.[ch]

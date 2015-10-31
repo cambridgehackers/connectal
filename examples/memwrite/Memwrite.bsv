@@ -79,6 +79,12 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 	 cfs[i].enq(?);
 	 iterCnts[i] <= iterCnts[i]-1;
       endrule
+`ifdef MEMENGINE_REQUEST_CYCLES
+      rule requestCycles;
+	 let reqcycles <- toGet(we.writeServers[i].requestCycles).get();
+	 $display("request %d took %d cycles", reqcycles.tag, reqcycles.cycles);
+      endrule
+`endif
       rule finish;
 	 $display("finish %d 0x%x", i, iterCnts[i]);
 	 let rv <- we.writeServers[i].done.get;

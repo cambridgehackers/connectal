@@ -41,7 +41,7 @@ INSTALL_SHARED = install-shared
 endif
 
 install: $(INSTALL_SHARED)
-	install -d -m755 $(DESTDIR)/$(UDEV_RULES_DIR)
+	install -d -m755 $(DESTDIR)/$(UDEV_RULES_DIR) $(DESTDIR)/etc/modules-load.d
 	if [ -d $(DESTDIR)/$(MODULES_LOAD_D_DIR) ]; then \
 	    for fname in ./$(MODULES_LOAD_D_DIR)/* ; do \
 		install -m644 $$fname $(DESTDIR)$(MODULES_LOAD_D_DIR) ; \
@@ -49,6 +49,7 @@ install: $(INSTALL_SHARED)
 	fi
 	echo 'Installing from' $(CURDIR)
 	(cd drivers/pcieportal; CONNECTALDIR=$(CURDIR) make install)
+	install -m644 etc/modules-load.d/connectal.conf $(DESTDIR)/etc/modules-load.d
 	make -C pcie install
 	install -d -m755 $(DESTDIR)$(UDEV_RULES_DIR)
 	for fname in $(UDEV_RULES) ; do \

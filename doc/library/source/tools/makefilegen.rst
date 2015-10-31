@@ -178,9 +178,16 @@ Bluesim Options
 
    Link the bluesim `bsim` executable with libQt.
 
-.. option:: -m foo.c, --bsimsource foo.c
+.. option:: -m foo.cpp, --bsimsource foo.cpp
 
-   Additional sources to compile into the `bsim` executable.
+   Specifies additional sources to compile into the `bsim`
+   executable. If you are using Bluespec import "BDPI" or
+   SystemVerilog "DPI"/"DPI-C", you will need to link additional
+   sources into the simulator.
+
+   Note: These files are currently compiled with g++, even if they are
+   C files. You will need to use extern "C" to export symbols to the
+   simulator.
 
 Xsim Options
 ------------

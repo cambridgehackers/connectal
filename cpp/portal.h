@@ -45,6 +45,9 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
 #include <pthread.h> // pthread_mutex_t
 #endif
 
+extern int simulator_dump_vcd;
+extern const char *simulator_vcd_name;
+
 #define PORTAL_PRINTF portal_printf
 #endif
 

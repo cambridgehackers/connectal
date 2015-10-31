@@ -1,1 +1,0 @@
-../../../llvm-translate/foo.tmp.vh

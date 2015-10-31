@@ -48,6 +48,9 @@
 #include "drivers/pcieportal/pcieportal.h" // BNOC_TRACE
 #endif
 
+int simulator_dump_vcd = 0;
+const char *simulator_vcd_name = "dump.vcd";
+
 static int trace_portal;//= 1;
 
 int global_pa_fd = -1;
@@ -269,7 +272,7 @@ endloop:
 	    fprintf(stderr, "[%s:%d] could not find execution filename\n", __FUNCTION__, __LINE__);
             exit(0);
         }
-        if (getenv("NOFPGAJTAG"))
+        if (getenv("NOFPGAJTAG") || getenv("NOPROGRAM"))
             exit(0);
 #if defined(BOARD_bluesim) || defined(BOARD_verilator)
         char *bindir = dirname(filename);
@@ -277,12 +280,25 @@ endloop:
         char *library_path = 0;
 	const char *old_library_path = getenv("LD_LIBRARY_PATH");
 	int library_path_len = strlen(bindir);
+	if (getenv("DUMP_VCD")) {
+	  simulator_dump_vcd = 1;
+	  simulator_vcd_name = getenv("DUMP_VCD");
+	}
 #if defined(BOARD_bluesim)
 	const char *exetype = "bsim";
+	if (simulator_dump_vcd) {
+	  argv[ind++] = (char*)"-V";
+	  argv[ind++] = (char*)simulator_vcd_name;
+	}
 #else
 	const char *exetype = "vlsim";
+	if (simulator_dump_vcd) {
+	  argv[ind++] = (char*)"-t";
+	  argv[ind++] = (char*)simulator_vcd_name;
+	}
 #endif
         sprintf(exename, "%s/%s", bindir, exetype);
+	argv[0] = exename;
 if (trace_portal) fprintf(stderr, "[%s:%d] %s %s *******\n", __FUNCTION__, __LINE__, exetype, exename);
         argv[ind++] = NULL;
 	if (old_library_path)
