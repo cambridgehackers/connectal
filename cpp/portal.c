@@ -232,19 +232,23 @@ void initPortalHardware(void)
 #ifndef SIMULATION
         int status;
         waitpid(pid, &status, 0);
-#if defined(__arm__)
+	fprintf(stderr, "subprocess pid %d completed status=%x %d\n", pid, status, WEXITSTATUS(status));
+	if (WEXITSTATUS(status) != 0)
+	    exit(-1);
 	{
-	  int fd;
+	  int fd = -1;
 	  ssize_t len;
-	  int try;
-	  fprintf(stderr, "subprocess pid %d completed status=%x %d\n", pid, status, WEXITSTATUS(status));
-	  if (WEXITSTATUS(status) != 0)
-	      exit(-1);
-	  for (try = 0; try < 10; try++) {
+	  int attempt;
+	  for (attempt = 0; attempt < 10; attempt++) {
+            struct stat statbuf;
+            int rc = stat("/dev/connectal", &statbuf); /* wait for driver to load */
+            if (rc == -1)
+                continue;
 	    fd = open("/dev/connectal", O_RDONLY); /* scan the fpga directory */
 	    if (fd < 0) {
-	      fprintf(stderr, "[%s:%d] error opening /dev/connectal %s\n", __FUNCTION__, __LINE__, strerror(errno));
-	      continue;
+		fprintf(stderr, "[%s:%d] waiting for '/dev/connectal'\n", __FUNCTION__, __LINE__);
+		sleep(1);
+		continue;
 	    }
 	    len = read(fd, &status, sizeof(status));
 	    if (len < sizeof(status))
@@ -252,21 +256,11 @@ void initPortalHardware(void)
 	    close(fd);
 	    break;
 	  }
+	  if (fd == -1)
+	      exit(-1);
 	}
-#else // x86
-        while (1) {
-            struct stat statbuf;
-            int rc = stat("/dev/connectal", &statbuf); /* wait for driver to load */
-            if (rc != -1)
-                break;
-            fprintf(stderr, "[%s:%d] waiting for '/dev/connectal'\n", __FUNCTION__, __LINE__);
-            sleep(1);
-        }
-#endif // x86
-#endif
-#ifndef SIMULATION
         checkSignature("/dev/connectal", DEV_CONNECTAL_SIGNATURE);
-#endif
+#endif // !defined(SIMULATION)
         checkSignature("/dev/portalmem", PA_SIGNATURE);
     }
     else {
