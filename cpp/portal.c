@@ -110,6 +110,12 @@ int portal_disconnect(struct PortalInternal *pint)
     return 0;
 }
 
+#ifdef ZYNQ
+#define DEV_CONNECTAL_SIGNATURE PORTAL_SIGNATURE
+#else
+#define DEV_CONNECTAL_SIGNATURE PCIE_SIGNATURE
+#endif
+
 /*
  * Check md5 signatures of Linux device drivers to be sure they are up to date
  */
@@ -161,14 +167,51 @@ static void checkSignature(const char *filename, int ioctlnum)
     close(fd);
 }
 
+char *getExecutionFilename(char *buf, int buflen)
+{
+    int rc, fd;
+    char *filename = 0;
+    buf[0] = 0;
+    fd = open("/proc/self/maps", O_RDONLY);
+    while ((rc = read(fd, buf, buflen-1)) > 0) {
+	buf[rc] = 0;
+	rc = 0;
+	while(buf[rc]) {
+	    char *endptr;
+	    long addr = strtol(&buf[rc], &endptr, 16);
+	    if (endptr && *endptr == '-') {
+		char *endptr2;
+		long addr2 = strtol(endptr+1, &endptr2, 16);
+		if (addr <= (long)&initPortalHardware && (long)&initPortalHardware <= addr2) {
+		    filename = strstr(endptr2, "  ");
+		    while (*filename == ' ')
+			filename++;
+		    endptr2 = strstr(filename, "\n");
+		    if (endptr2)
+			*endptr2 = 0;
+		    fprintf(stderr, "buffer %s\n", filename);
+		    goto endloop;
+		}
+	    }
+	    while(buf[rc] && buf[rc] != '\n')
+		rc++;
+	    if (buf[rc])
+		rc++;
+	}
+    }
+endloop:
+    if (!filename) {
+	fprintf(stderr, "[%s:%d] could not find execution filename\n", __FUNCTION__, __LINE__);
+	return 0;
+    }
+    return filename;
+}
 /*
  * One time initialization of portal framework
  */
 void initPortalHardware(void)
 {
     static int once = 0;
-
-    if (trace_portal) fprintf(stderr, "[%s:%d] pid=%d\n", __FUNCTION__, __LINE__, getpid());
 
     if (once)
         return;
@@ -189,9 +232,7 @@ void initPortalHardware(void)
 #ifndef SIMULATION
         int status;
         waitpid(pid, &status, 0);
-#endif
-#ifdef SIMULATION
-#elif defined(__arm__)
+#if defined(__arm__)
 	{
 	  int fd;
 	  ssize_t len;
@@ -212,7 +253,7 @@ void initPortalHardware(void)
 	    break;
 	  }
 	}
-#else
+#else // x86
         while (1) {
             struct stat statbuf;
             int rc = stat("/dev/connectal", &statbuf); /* wait for driver to load */
@@ -221,15 +262,10 @@ void initPortalHardware(void)
             fprintf(stderr, "[%s:%d] waiting for '/dev/connectal'\n", __FUNCTION__, __LINE__);
             sleep(1);
         }
+#endif // x86
 #endif
 #ifndef SIMULATION
-        checkSignature("/dev/connectal",
-#ifdef ZYNQ
-            PORTAL_SIGNATURE
-#else
-            PCIE_SIGNATURE
-#endif
-            );
+        checkSignature("/dev/connectal", DEV_CONNECTAL_SIGNATURE);
 #endif
         checkSignature("/dev/portalmem", PA_SIGNATURE);
     }
@@ -238,48 +274,14 @@ void initPortalHardware(void)
         static char buf[400000];
         char *filename = NULL;
         char *argv[] = { (char *)"fpgajtag", NULL, NULL, NULL, NULL, NULL, NULL, NULL};
-        int ind = 1, rc, fd;
-        buf[0] = 0;
-        fd = open("/proc/self/maps", O_RDONLY);
-        while ((rc = read(fd, buf, sizeof(buf)-1)) > 0) {
-            buf[rc] = 0;
-            rc = 0;
-            while(buf[rc]) {
-                char *endptr;
-                long addr = strtol(&buf[rc], &endptr, 16);
-                if (endptr && *endptr == '-') {
-                    char *endptr2;
-                    long addr2 = strtol(endptr+1, &endptr2, 16);
-                    if (addr <= (long)&initPortalHardware && (long)&initPortalHardware <= addr2) {
-                        filename = strstr(endptr2, "  ");
-                        while (*filename == ' ')
-                            filename++;
-                        endptr2 = strstr(filename, "\n");
-                        if (endptr2)
-                            *endptr2 = 0;
-                        fprintf(stderr, "buffer %s\n", filename);
-                        goto endloop;
-                    }
-                }
-                while(buf[rc] && buf[rc] != '\n')
-                    rc++;
-                if (buf[rc])
-                    rc++;
-            }
-        }
-endloop:
-	if (!filename) {
-	    fprintf(stderr, "[%s:%d] could not find execution filename\n", __FUNCTION__, __LINE__);
-            exit(0);
-        }
+	int ind = 1;
         if (getenv("NOFPGAJTAG") || getenv("NOPROGRAM"))
             exit(0);
+	filename = getExecutionFilename(buf, sizeof(buf));
 #if defined(BOARD_bluesim) || defined(BOARD_verilator)
-        char *bindir = dirname(filename);
+        char *bindir = (filename) ? dirname(filename) : 0;
         static char exename[MAX_PATH];
         char *library_path = 0;
-	const char *old_library_path = getenv("LD_LIBRARY_PATH");
-	int library_path_len = strlen(bindir);
 	if (getenv("DUMP_VCD")) {
 	  simulator_dump_vcd = 1;
 	  simulator_vcd_name = getenv("DUMP_VCD");
@@ -297,21 +299,27 @@ endloop:
 	  argv[ind++] = (char*)simulator_vcd_name;
 	}
 #endif
-        sprintf(exename, "%s/%s", bindir, exetype);
+	if (filename)
+	    sprintf(exename, "%s/%s", bindir, exetype);
+	else
+	    sprintf(exename, "%s", exetype);
 	argv[0] = exename;
 if (trace_portal) fprintf(stderr, "[%s:%d] %s %s *******\n", __FUNCTION__, __LINE__, exetype, exename);
         argv[ind++] = NULL;
-	if (old_library_path)
-	  library_path_len += strlen(old_library_path);
-	library_path = (char *)malloc(library_path_len + 2);
-	if (old_library_path)
-	  snprintf(library_path, library_path_len+2, "%s:%s", bindir, old_library_path);
-	else
-	  snprintf(library_path, library_path_len+1, "%s", bindir);
-	setenv("LD_LIBRARY_PATH", library_path, 1);
+	if (filename) {
+	    const char *old_library_path = getenv("LD_LIBRARY_PATH");
+	    int library_path_len = strlen(bindir);
+	    if (old_library_path)
+		library_path_len += strlen(old_library_path);
+	    library_path = (char *)malloc(library_path_len + 2);
+	    if (old_library_path)
+		snprintf(library_path, library_path_len+2, "%s:%s", bindir, old_library_path);
+	    else
+		snprintf(library_path, library_path_len+1, "%s", bindir);
+	    setenv("LD_LIBRARY_PATH", library_path, 1);
 if (trace_portal) fprintf(stderr, "[%s:%d] LD_LIBRARY_PATH %s *******\n", __FUNCTION__, __LINE__, library_path);
-
-        rc = execvp (exename, argv);
+	}
+        execvp (exename, argv);
 #elif defined(BOARD_xsim)
         argv[ind++] = (char *)"-R";
         argv[ind++] = (char *)"work.xsimtop";
@@ -335,7 +343,6 @@ fprintf(stderr, "[%s:%d] rc %d\n", __FUNCTION__, __LINE__, rc);
 #endif // !__arm__
         }
 #endif // !SIMULATION
-	fprintf(stderr, "[%s:%d] pid=%d exiting\n", __FUNCTION__, __LINE__, getpid());
         exit(-1);
     }
 #endif // !__KERNEL__
