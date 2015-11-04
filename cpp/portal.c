@@ -302,14 +302,14 @@ void initPortalHardware(void)
         argv[ind++] = (char *)"-R";
         argv[ind++] = (char *)"work.xsimtop";
 #endif
-	if (filename)
+	if (bindir)
 	    sprintf(exename, "%s/%s", bindir, exetype);
 	else
 	    sprintf(exename, "%s", exetype);
 	argv[0] = exename;
 if (trace_portal) fprintf(stderr, "[%s:%d] %s %s *******\n", __FUNCTION__, __LINE__, exetype, exename);
         argv[ind++] = NULL;
-	if (filename) {
+	if (bindir) {
 	    const char *old_library_path = getenv("LD_LIBRARY_PATH");
 	    int library_path_len = strlen(bindir);
 	    if (old_library_path)
@@ -323,6 +323,7 @@ if (trace_portal) fprintf(stderr, "[%s:%d] %s %s *******\n", __FUNCTION__, __LIN
 if (trace_portal) fprintf(stderr, "[%s:%d] LD_LIBRARY_PATH %s *******\n", __FUNCTION__, __LINE__, library_path);
 	}
         execvp (exename, argv);
+	fprintf(stderr, "[%s:%d] exec(%s) failed errno=%d:%s\n", __FUNCTION__, __LINE__, exename, errno, strerror(errno));
 #else // !defined(SIMULATION)
         char *serial = getenv("SERIALNO");
         if (serial) {
@@ -339,6 +340,7 @@ if (trace_portal) fprintf(stderr, "[%s:%d] LD_LIBRARY_PATH %s *******\n", __FUNC
 #endif // !__arm__
 	  argv[ind++] = filename;
 	  execvp (fpgajtag, argv);
+	  fprintf(stderr, "[%s:%d] exec(%s) failed errno=%d:%s\n", __FUNCTION__, __LINE__, fpgajtag, errno, strerror(errno));
         }
 #endif // !SIMULATION
         exit(-1);
