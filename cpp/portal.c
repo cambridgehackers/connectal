@@ -271,7 +271,9 @@ void initPortalHardware(void)
 	int ind = 1;
         if (getenv("NOFPGAJTAG") || getenv("NOPROGRAM"))
             exit(0);
+#ifndef SIMULATOR_USE_PATH
 	filename = getExecutionFilename(buf, sizeof(buf));
+#endif
 #if defined(BOARD_bluesim) || defined(BOARD_verilator)
         char *bindir = (filename) ? dirname(filename) : 0;
         static char exename[MAX_PATH];
