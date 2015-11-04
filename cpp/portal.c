@@ -251,7 +251,7 @@ void initPortalHardware(void)
 		continue;
 	    }
 	    len = read(fd, &status, sizeof(status));
-	    if (len < sizeof(status))
+	    if (len < (ssize_t)sizeof(status))
 	      fprintf(stderr, "[%s:%d] fd %d len %lu\n", __FUNCTION__, __LINE__, fd, (unsigned long)len);
 	    close(fd);
 	    break;
@@ -274,7 +274,7 @@ void initPortalHardware(void)
 #ifndef SIMULATOR_USE_PATH
 	filename = getExecutionFilename(buf, sizeof(buf));
 #endif
-#if defined(BOARD_bluesim) || defined(BOARD_verilator)
+#ifdef SIMULATION
         char *bindir = (filename) ? dirname(filename) : 0;
         static char exename[MAX_PATH];
         char *library_path = 0;
@@ -288,12 +288,19 @@ void initPortalHardware(void)
 	  argv[ind++] = (char*)"-V";
 	  argv[ind++] = (char*)simulator_vcd_name;
 	}
-#else
+#endif
+#if defined(BOARD_verilator)
 	const char *exetype = "vlsim";
 	if (simulator_dump_vcd) {
 	  argv[ind++] = (char*)"-t";
 	  argv[ind++] = (char*)simulator_vcd_name;
 	}
+#endif
+#if defined(BOARD_xsim)
+	const char *exetype = "xsim";
+	bindir = 0; // the simulation driver is found in $PATH
+        argv[ind++] = (char *)"-R";
+        argv[ind++] = (char *)"work.xsimtop";
 #endif
 	if (filename)
 	    sprintf(exename, "%s/%s", bindir, exetype);
@@ -316,13 +323,7 @@ if (trace_portal) fprintf(stderr, "[%s:%d] %s %s *******\n", __FUNCTION__, __LIN
 if (trace_portal) fprintf(stderr, "[%s:%d] LD_LIBRARY_PATH %s *******\n", __FUNCTION__, __LINE__, library_path);
 	}
         execvp (exename, argv);
-#elif defined(BOARD_xsim)
-        argv[ind++] = (char *)"-R";
-        argv[ind++] = (char *)"work.xsimtop";
-fprintf(stderr, "[%s:%d] RUNNING XSIM\n", __FUNCTION__, __LINE__);
-        rc = execvp ("xsim", argv);
-fprintf(stderr, "[%s:%d] rc %d\n", __FUNCTION__, __LINE__, rc);
-#else
+#else // !defined(SIMULATION)
         char *serial = getenv("SERIALNO");
         if (serial) {
             argv[ind++] = (char *)"-s";
@@ -330,13 +331,14 @@ fprintf(stderr, "[%s:%d] rc %d\n", __FUNCTION__, __LINE__, rc);
         }
         {
 #ifdef __arm__
-        argv[ind++] = (char *)"-x";
-        argv[ind++] = filename;
-        execvp ("/fpgajtag", argv);
+	  // on zynq android, fpgajtag is in the initramdisk in the root directory
+	  const char *fpgajtag = "/fpgajtag";
+	  argv[ind++] = (char *)"-x"; // program via /dev/xdevcfg
 #else
-        argv[ind++] = filename;
-        execvp ("fpgajtag", argv);
+	  const char *fpgajtag = "fpgajtag";
 #endif // !__arm__
+	  argv[ind++] = filename;
+	  execvp (fpgajtag, argv);
         }
 #endif // !SIMULATION
         exit(-1);
