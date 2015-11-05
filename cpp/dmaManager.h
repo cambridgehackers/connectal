@@ -37,6 +37,7 @@ typedef struct semaphore sem_t;
 #define PORTAL_FREE(A) vfree(A)
 #else
 #include <semaphore.h>
+#include <pthread.h>
 #include <stdint.h>
 #define PORTAL_MALLOC(A) malloc(A)
 #define PORTAL_FREE(A) free(A)
@@ -47,6 +48,7 @@ typedef struct semaphore sem_t;
 typedef struct {
   sem_t confSem;
   sem_t sglIdSem;
+  pthread_mutex_t mutex;
   uint32_t sglId;
   PortalInternal *sglDevice;
   int pa_fd;

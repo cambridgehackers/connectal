@@ -40,6 +40,7 @@ void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *sglDevice)
 {
     memset(priv, 0, sizeof(*priv));
     priv->sglDevice = sglDevice;
+    pthread_mutex_init(&priv->mutex, 0);
     initPortalMemory();
     if (sem_init(&priv->sglIdSem, 0, 0)){
         PORTAL_PRINTF("failed to init sglIdSem\n");
@@ -52,11 +53,13 @@ void DmaManager_init(DmaManagerPrivate *priv, PortalInternal *sglDevice)
 void DmaManager_dereference(DmaManagerPrivate *priv, int ref)
 {
 #if  !defined(SIMULATION) && !defined(__KERNEL__)
+  pthread_mutex_lock(&priv->mutex);
 #ifdef ZYNQ
     int rc = ioctl(priv->sglDevice->fpga_fd, PORTAL_DEREFERENCE, ref);
 #else
     int rc = ioctl(priv->sglDevice->fpga_fd, PCIE_DEREFERENCE, ref);
 #endif
+  pthread_mutex_unlock(&priv->mutex);
     if (rc != 0)
       fprintf(stderr, "[%s:%d] dereference ioctl error %d\n", __FUNCTION__, __LINE__, errno);
 #else
@@ -68,6 +71,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
 {
     int id = 0;
     int rc = 0;
+    pthread_mutex_lock(&priv->mutex);
     initPortalMemory();
     MMURequest_idRequest(priv->sglDevice, (SpecialTypeForSendingFd)fd);
     if (priv->poll) {
@@ -112,6 +116,7 @@ int DmaManager_reference(DmaManagerPrivate *priv, int fd)
             sem_wait(&priv->confSem);
     }
 #endif // defined(SIMULATION) || defined(__KERNEL__)
+    pthread_mutex_unlock(&priv->mutex);
     return rc;
 }
 
