@@ -1,3 +1,3 @@
-include ../tests/memserver_copy_slow/Makefile
+include ../memserver_copy/Makefile
 
 CONNECTALFLAGS += --mainclockperiod=30
