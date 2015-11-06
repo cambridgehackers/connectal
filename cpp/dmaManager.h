@@ -48,7 +48,9 @@ typedef struct semaphore sem_t;
 typedef struct {
   sem_t confSem;
   sem_t sglIdSem;
+#ifndef __KERNEL__
   pthread_mutex_t mutex;
+#endif
   uint32_t sglId;
   PortalInternal *sglDevice;
   int pa_fd;
