@@ -209,13 +209,9 @@ endloop:
 /*
  * One time initialization of portal framework
  */
-void initPortalHardware(void)
+static pthread_once_t once_control;
+static void initPortalHardwareOnce(void)
 {
-    static int once = 0;
-
-    if (once)
-        return;
-    once = 1;
 #ifdef __KERNEL__
     tboard = get_pcie_portal_descriptor();
 #else
@@ -346,6 +342,10 @@ if (trace_portal) fprintf(stderr, "[%s:%d] LD_LIBRARY_PATH %s *******\n", __FUNC
         exit(-1);
     }
 #endif // !__KERNEL__
+}
+void initPortalHardware(void)
+{
+    pthread_once(&once_control, initPortalHardwareOnce);
 }
 
 /*
