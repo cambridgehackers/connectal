@@ -47,14 +47,17 @@ interface Platform;
    interface `PinType pins;
 endinterface
 
+function Bit#(TSub#(MemTagSize,2)) tagLsb(Bit#(MemTagSize) tag); return truncate(tag); endfunction
+function Bit#(2) tagMsb(Bit#(MemTagSize) tag); return truncate(tag >> valueOf(TSub#(MemTagSize,2))); endfunction
+
 module renameReads#(Integer tile, MemReadClient#(DataBusWidth) reader, MemServerIndication err)(MemReadClient#(DataBusWidth));
    interface Get readReq;
       method ActionValue#(MemRequest) get;
 	 let req <- reader.readReq.get;
-	 Bit#(4) lsb = req.tag[3:0];
-	 Bit#(2) msb = req.tag[5:4];
-	 if(msb != 0) begin
-	    $display("renameReads tile tag out of range: %h", req.tag);
+	 Bit#(TSub#(MemTagSize,2)) lsb = tagLsb(req.tag);
+	 Bit#(2) msb = tagMsb(req.tag);
+	 if(req.tag != extend(lsb)) begin
+	    $display("renameReads tile tag out of range: 'h%h", req.tag);
 	    err.error(extend(pack(DmaErrorTileTagOutOfRange)), req.sglId, extend(req.tag), fromInteger(tile));
 	 end
 	 req.tag = {fromInteger(tile),lsb};
@@ -63,7 +66,7 @@ module renameReads#(Integer tile, MemReadClient#(DataBusWidth) reader, MemServer
    endinterface
    interface Put readData;
       method Action put(MemData#(DataBusWidth) v);
-	 reader.readData.put(MemData{data:v.data, tag:{0,v.tag[3:0]}, last:v.last});
+	 reader.readData.put(MemData{data:v.data, tag:{0,tagLsb(v.tag)}, last:v.last});
       endmethod
    endinterface
 endmodule
@@ -72,10 +75,10 @@ module renameWrites#(Integer tile, MemWriteClient#(DataBusWidth) writer, MemServ
    interface Get writeReq;
       method ActionValue#(MemRequest) get;
 	 let req <- writer.writeReq.get;
-	 Bit#(4) lsb = req.tag[3:0];
-	 Bit#(2) msb = req.tag[5:4];
-	 if(msb != 0) begin
-	    $display("renameWrites tile tag out of range: %h", req.tag);
+	 Bit#(TSub#(MemTagSize,2)) lsb = tagLsb(req.tag);
+	 Bit#(2) msb = tagMsb(req.tag);
+	 if(req.tag != extend(lsb)) begin
+	    $display("renameWrites tile tag out of range: 'h%h", req.tag);
 	    err.error(extend(pack(DmaErrorTileTagOutOfRange)), req.sglId, extend(req.tag), fromInteger(tile));
 	 end
 	 req.tag = {fromInteger(tile),lsb};
@@ -85,12 +88,12 @@ module renameWrites#(Integer tile, MemWriteClient#(DataBusWidth) writer, MemServ
    interface Get writeData;
       method ActionValue#(MemData#(DataBusWidth)) get;
 	 let rv <- writer.writeData.get;
-   	 return MemData{data:rv.data, tag:{0,rv.tag[3:0]}, last:rv.last};
+   	 return MemData{data:rv.data, tag:{0,tagLsb(rv.tag)}, last:rv.last};
       endmethod
    endinterface
    interface Put writeDone;
       method Action put(Bit#(MemTagSize) v);
-	 writer.writeDone.put({0,v[3:0]});
+	 writer.writeDone.put({0,tagLsb(v)});
       endmethod
    endinterface
 endmodule
