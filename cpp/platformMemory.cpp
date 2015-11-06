@@ -103,11 +103,13 @@ class MemServerIndication : public MemServerIndicationWrapper
 static MemServerRequestProxy *hostMemServerRequest;
 static MemServerIndication *hostMemServerIndication;
 static MMUIndication *mmuIndication;
-DmaManager *platformInit(void)
+static DmaManager *dma;
+static pthread_once_t once_control = PTHREAD_ONCE_INIT;
+void platformInitOnce(void)
 {
     hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H, PLATFORM_TILE);
     MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H, PLATFORM_TILE);
-    DmaManager *dma = new DmaManager(dmap);
+    dma = new DmaManager(dmap);
     hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S, PLATFORM_TILE);
     mmuIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S, PLATFORM_TILE);
 
@@ -117,6 +119,10 @@ DmaManager *platformInit(void)
     setClockFrequency(0, req_freq, &freq);
     fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
 #endif
+}
+DmaManager *platformInit(void)
+{
+    pthread_once(&once_control, platformInitOnce);
     return dma;
 }
 
