@@ -36,7 +36,11 @@ import DefaultValue::*;
 
 typedef Bit#(32) SGLId;
 typedef 44 MemOffsetSize;
+`ifdef MemTagSize
+typedef `MemTagSize MemTagSize;
+`else
 typedef 6 MemTagSize;
+`endif
 typedef `BurstLenSize BurstLenSize;
 
 `ifndef USE_ACP
