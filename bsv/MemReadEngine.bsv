@@ -184,7 +184,7 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
       else begin
 	 respCnt <= new_respCnt;
       end
-      clientDataFifo[idx].enq(MemDataF { data: d.data, tag: d.tag, first: (respCnt == 0), last: l});
+      clientDataFifo[idx].enq(MemDataF { data: d.data, tag: d.tag >> serverIdxSz, first: (respCnt == 0), last: l});
    endrule
 
    Vector#(numServers, MemReadEngineServer#(userWidth)) rs;
