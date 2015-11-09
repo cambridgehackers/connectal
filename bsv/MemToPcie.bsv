@@ -364,7 +364,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 	    let writeIs3dw = False;
 	    let use3dw = True;
 `ifdef PCIE3
-	    awid = awid | 6'h10;
+	    awid = awid | (1 << (valueOf(MemTagSize)-1));
 	    use3dw = False;
 `endif
 	    TLPLength tlplen = fromInteger(valueOf(busWidthWords))*extend(burstLen);

@@ -52,7 +52,7 @@ class MMUIndication : public MMUIndicationWrapper
     portalMemory->confResp(pointer);
   }
   virtual void error (uint32_t code, uint32_t pointer, uint64_t offset, uint64_t extra) {
-    fprintf(stderr, "MMUIndication::error(code=0x%x:%s, pointer=0x%x, offset=0x%"PRIx64" extra=0x%"PRIx64"\n", code, dmaErrors[code], pointer, offset, extra);
+    fprintf(stderr, "MMUIndication::error(code=0x%x:%s, pointer=0x%x, offset=0x%" PRIx64 " extra=0x%" PRIx64 "\n", code, dmaErrors[code], pointer, offset, extra);
     if (--mmu_error_limit < 0)
         exit(-1);
   }
@@ -74,18 +74,18 @@ class MemServerIndication : public MemServerIndicationWrapper
   MemServerIndication(unsigned int  id, int tile=PLATFORM_TILE) : MemServerIndicationWrapper(id,tile), memServerRequestProxy(NULL) {init();}
   MemServerIndication(MemServerRequestProxy *p, unsigned int  id, int tile=PLATFORM_TILE) : MemServerIndicationWrapper(id,tile), memServerRequestProxy(p) {init();}
   virtual void addrResponse(uint64_t physAddr){
-    fprintf(stderr, "DmaIndication::addrResponse(physAddr=%"PRIx64")\n", physAddr);
+    fprintf(stderr, "DmaIndication::addrResponse(physAddr=%" PRIx64 ")\n", physAddr);
   }
   virtual void reportStateDbg(const DmaDbgRec rec){
     fprintf(stderr, "MemServerIndication::reportStateDbg: {x:%08x y:%08x z:%08x w:%08x}\n", rec.x,rec.y,rec.z,rec.w);
   }
   virtual void reportMemoryTraffic(uint64_t words){
-    //fprintf(stderr, "reportMemoryTraffic: words=%"PRIx64"\n", words);
+    //fprintf(stderr, "reportMemoryTraffic: words=%" PRIx64 "\n", words);
     mtCnt = words;
     sem_post(&mtSem);
   }
   virtual void error (uint32_t code, uint32_t pointer, uint64_t offset, uint64_t extra) {
-    fprintf(stderr, "MemServerIndication::error(code=%x, pointer=%x, offset=%"PRIx64" extra=%"PRIx64"\n", code, pointer, offset, extra);
+    fprintf(stderr, "MemServerIndication::error(code=%x, pointer=%x, offset=%" PRIx64 " extra=%" PRIx64 "\n", code, pointer, offset, extra);
     if (--mem_error_limit < 0)
       exit(-1);
   }
@@ -103,13 +103,15 @@ class MemServerIndication : public MemServerIndicationWrapper
 static MemServerRequestProxy *hostMemServerRequest;
 static MemServerIndication *hostMemServerIndication;
 static MMUIndication *mmuIndication;
-DmaManager *platformInit(void)
+static DmaManager *dma;
+static pthread_once_t once_control = PTHREAD_ONCE_INIT;
+void platformInitOnce(void)
 {
-    hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestS2H, PLATFORM_TILE);
-    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestS2H, PLATFORM_TILE);
-    DmaManager *dma = new DmaManager(dmap);
-    hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationH2S, PLATFORM_TILE);
-    mmuIndication = new MMUIndication(dma, IfcNames_MMUIndicationH2S, PLATFORM_TILE);
+    hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestPLATFORMS2H, PLATFORM_TILE);
+    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestPLATFORMS2H, PLATFORM_TILE);
+    dma = new DmaManager(dmap);
+    hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationPLATFORMH2S, PLATFORM_TILE);
+    mmuIndication = new MMUIndication(dma, IfcNames_MMUIndicationPLATFORMH2S, PLATFORM_TILE);
 
 #ifdef FPGA0_CLOCK_FREQ
     long req_freq = FPGA0_CLOCK_FREQ;
@@ -117,6 +119,10 @@ DmaManager *platformInit(void)
     setClockFrequency(0, req_freq, &freq);
     fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
 #endif
+}
+DmaManager *platformInit(void)
+{
+    pthread_once(&once_control, platformInitOnce);
     return dma;
 }
 

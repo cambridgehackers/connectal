@@ -3,7 +3,7 @@ S2H_INTERFACES = EchoRequest:Echo.request
 H2S_INTERFACES = Echo:EchoIndication
 
 LLVMT = $(CONNECTALDIR)/../llvm-translate/Debug+Asserts/bin/llvm-translate
-ACCDIR = $(CONNECTALDIR)/../atomicc/examples/echo_new
+ACCDIR = $(CONNECTALDIR)/../atomicc/examples/echo
 GENDIR = generated
 BSVFILES = Echo.bsv
 CPPFILES = testecho.cpp

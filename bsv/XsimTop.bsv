@@ -41,6 +41,19 @@ import BuildVector::*;
 
 `include "ConnectalProjectConfig.bsv"
 
+`ifdef PIN_TYPE_INCLUDE
+import `PIN_TYPE_INCLUDE::*;
+`endif
+`ifdef PIN_TYPE
+typedef `PIN_TYPE PinType;
+`else
+typedef Empty PinType;
+`endif
+
+interface XsimTop;
+   interface PinType pins;
+endinterface
+
 interface XsimSource;
     method Action beat(Bit#(32) v);
 endinterface
@@ -86,7 +99,7 @@ module mkXsimMemoryConnection#(PhysMemMaster#(addrWidth, dataWidth) master)(Empt
    mkConnection(master, slave);
 endmodule
 
-module mkXsimTop#(Clock derivedClock, Reset derivedReset)(Empty);
+module mkXsimTop#(Clock derivedClock, Reset derivedReset)(XsimTop);
 
    Reg#(Bool) dumpstarted <- mkReg(False);
    rule startdump if (!dumpstarted);
@@ -118,12 +131,16 @@ module mkXsimTop#(Clock derivedClock, Reset derivedReset)(Empty);
    MemServer#(PhysAddrWidth,DataBusWidth,NumberOfMasters) lMemServer <- mkMemServer(top.readers, top.writers, cons(lMMU,nil), lMemServerIndicationOutput.ifc);
    mkConnection(lMemServerRequestInput.pipes, lMemServer.request);
 
-   let lMMUIndicationOutputNoc <- mkPortalMsgIndication(extend(pack(IfcNames_MMUIndicationH2S)), lMMUIndicationOutput.portalIfc.indications, lMMUIndicationOutput.portalIfc.messageSize);
-   let lMMURequestInputNoc <- mkPortalMsgRequest(extend(pack(IfcNames_MMURequestS2H)), lMMURequestInput.portalIfc.requests);
-   let lMemServerIndicationOutputNoc <- mkPortalMsgIndication(extend(pack(IfcNames_MemServerIndicationH2S)), lMemServerIndicationOutput.portalIfc.indications, lMemServerIndicationOutput.portalIfc.messageSize);
-   let lMemServerRequestInputNoc <- mkPortalMsgRequest(extend(pack(IfcNames_MemServerRequestS2H)), lMemServerRequestInput.portalIfc.requests);
+   let lMMUIndicationOutputNoc <- mkPortalMsgIndication(extend(pack(IfcNames_MMUIndicationPLATFORMH2S)), lMMUIndicationOutput.portalIfc.indications, lMMUIndicationOutput.portalIfc.messageSize);
+   let lMMURequestInputNoc <- mkPortalMsgRequest(extend(pack(IfcNames_MMURequestPLATFORMS2H)), lMMURequestInput.portalIfc.requests);
+   let lMemServerIndicationOutputNoc <- mkPortalMsgIndication(extend(pack(IfcNames_MemServerIndicationPLATFORMH2S)), lMemServerIndicationOutput.portalIfc.indications, lMemServerIndicationOutput.portalIfc.messageSize);
+   let lMemServerRequestInputNoc <- mkPortalMsgRequest(extend(pack(IfcNames_MemServerRequestPLATFORMS2H)), lMemServerRequestInput.portalIfc.requests);
 
    mapM_(mkXsimSink, append(top.requests, append(vec(lMMURequestInputNoc), vec(lMemServerRequestInputNoc))));
    mapM_(mkXsimSource, append(top.indications, append(vec(lMMUIndicationOutputNoc), vec(lMemServerIndicationOutputNoc))));
    mapM_(mkXsimMemoryConnection, lMemServer.masters);
+
+`ifdef PIN_TYPE
+   interface pins = top.pins;
+`endif
 endmodule

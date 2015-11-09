@@ -118,7 +118,7 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
   }
   if (trace_memory) {
     PORTAL_PRINTF("regions %d (%x %x %x %x)\n", id, regions[0], regions[1], regions[2], regions[3]);
-    PORTAL_PRINTF("borders %d (%"PRIx64" %"PRIx64" %"PRIx64" %"PRIx64")\n", id,borderVal[0], borderVal[1], borderVal[2], borderVal[3]);
+    PORTAL_PRINTF("borders %d (%" PRIx64 " %" PRIx64 " %" PRIx64 " %" PRIx64 ")\n", id,borderVal[0], borderVal[1], borderVal[2], borderVal[3]);
   }
   MMURequest_region(device, id, borderVal[0], indexVal[0], borderVal[1], indexVal[1], borderVal[2], indexVal[2], borderVal[3], indexVal[3]);
   /* ifdefs here to supress warning during kernel build */

@@ -35,7 +35,7 @@ import ConnectalConfig::*;
 module mkMemWriteEngine(MemWriteEngine#(busWidth, userWidth, cmdQDepth, numServers))
    provisos( Add#(1, d__, busWidth)
 	    ,Add#(1, d__, userWidth)
-	    ,Add#(e__, TLog#(numServers), 6)
+	    ,Add#(e__, TLog#(numServers), MemTagSize)
 	    );
    let rv <- mkMemWriteEngineBuff(valueOf(TExp#(BurstLenSize)));
    return rv;
@@ -47,7 +47,7 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
 	     ,Log#(numServers, serverIdxSz)
 	     ,Add#(1, d__, userWidth)
 	     ,Add#(userWidth, 0, busWidth)
-	     ,Add#(g__, serverIdxSz, 6)
+	     ,Add#(a__, serverIdxSz, MemTagSize)
 	     );
 
    Integer bufferSizeBeats = bufferSizeBytes/valueOf(busWidthBytes);

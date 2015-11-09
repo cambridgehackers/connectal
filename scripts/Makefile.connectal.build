@@ -64,7 +64,7 @@ ifeq ($(BSCMAJOR), 2015)
     BSCFLAGS_COMMON += -D ClockDefaultParam
 endif
 
-BSCOPTFLAGS= -show-schedule -aggressive-conditions
+BSCOPTFLAGS= -show-schedule -aggressive-conditions -show-method-bvi
 BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj
 BSCFLAGS_COMMON += $(BSCWARNFLAGS) $(BSCOPTFLAGS) $(BSCPATHFLAGS) --wait-for-license
 PROF_FLAGS= #-pg

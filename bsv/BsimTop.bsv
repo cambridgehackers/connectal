@@ -133,7 +133,13 @@ module  mkBsimHost#(Clock derived_clock, Reset derived_reset)(BsimHost#(clientAd
    interface derivedReset = derived_reset;
 endmodule
 
-module  mkBsimTop(Empty);
+interface BsimTop;
+`ifndef SIMULATIONRESPONDER
+   interface `PinType pins;
+`endif
+endinterface
+
+module  mkBsimTop(BsimTop);
    let divider <- mkClockDivider(2);
    Clock derivedClock = divider.fastClock;
    Clock singleClock = divider.slowClock;
@@ -172,5 +178,7 @@ module  mkBsimTop(Empty);
 
 `ifdef SIMULATIONRESPONDER
    `SIMULATIONRESPONDER (top.pins);
+`else
+   interface pins = top.pins;
 `endif
 endmodule

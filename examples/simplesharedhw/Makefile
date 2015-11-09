@@ -7,7 +7,7 @@ MEM_WRITE_INTERFACES = "cons(lSharewriteEngine.dmaClient,nil)"
 
 CONNECTALFLAGS += -D USE_ACP -D USE_DUAL_CLOCK_FIFOF
 BSVFILES = Simple.bsv $(CONNECTALDIR)/bsv/Portal.bsv
-CPPFILES=testsimple.cpp $(CONNECTALDIR)/cpp/transportShared.c
+CPPFILES=testsimple.cpp
 CONNECTALFLAGS += -D USE_ACP
 AUTOTOP = --importfiles SharedMemoryPortal --importfiles SharedMemoryPortalConfig --importfiles MemTypes --importfiles MemReadEngine --importfiles MemWriteEngine
 
