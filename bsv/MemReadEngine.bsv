@@ -155,9 +155,15 @@ module mkMemReadChannel#(Integer bufferSizeBytes, Integer channelNumber) (MemRea
       match {.cond0,.last_burst,.cmd_len} <- toGet(serverCheckAvail).get;
       if  (cond0) begin
 	 if (verbose) $display("mkMemReadEngineBuff::%d rule_requestServer clientLen %d cond0 %d last_burst %d", counter, clientLen, cond0, last_burst);
-	 serverRequest.enq(ServerRequest{
-	    idx:fromInteger(0),sglId:clientCommand.sglId,base:clientBase,
-	    tag:clientCommand.tag,last:last_burst,burstLen:cmd_len});
+	 serverProcessing.enq(tuple3(truncate(cmd_len>>beatShift), 0, last_burst));
+	 if (verbose) $display("MemReadEngine::%d readReq idx %d offset %h burstLenBytes %h last %d", counter, 0, clientBase, cmd_len, last_burst);
+
+	 dmaRequest.enq(MemRequest { sglId: clientCommand.sglId, offset: extend(clientBase),
+	    burstLen:cmd_len, tag: fromInteger(channelNumber)
+	    `ifdef BYTE_ENABLES
+				    , firstbe: maxBound, lastbe: maxBound
+	    `endif
+	    });
          clientBase <= clientBase + extend(cmd_len);
          clientLen <= clientLen - extend(cmd_len);
          clientNext <= getNext(clientLen, clientCommand.burstLen);
@@ -170,19 +176,6 @@ module mkMemReadChannel#(Integer bufferSizeBytes, Integer channelNumber) (MemRea
 	    `endif
 	 end
       end
-   endrule
-   
-   rule rl_serverRequest;
-      let sr <- toGet(serverRequest).get;
-      serverProcessing.enq(tuple3(truncate(sr.burstLen>>beatShift), sr.idx, sr.last));
-      if (verbose) $display("MemReadEngine::%d readReq idx %d offset %h burstLenBytes %h last %d", counter, sr.idx, sr.base, sr.burstLen, sr.last);
-
-      dmaRequest.enq(MemRequest { sglId: sr.sglId, offset: extend(sr.base),
-	 burstLen:sr.burstLen, tag: fromInteger(channelNumber)
-`ifdef BYTE_ENABLES
-				 , firstbe: maxBound, lastbe: maxBound
-`endif
-	       });
    endrule
 
    rule read_data_rule;
