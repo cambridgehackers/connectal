@@ -47,16 +47,17 @@ interface Platform;
    interface `PinType pins;
 endinterface
 
-function Bit#(TSub#(MemTagSize,2)) tagLsb(Bit#(MemTagSize) tag); return truncate(tag); endfunction
-function Bit#(2) tagMsb(Bit#(MemTagSize) tag); return truncate(tag >> valueOf(TSub#(MemTagSize,2))); endfunction
+typedef TMax#(TLog#(TSub#(NumberOfTiles,1)),1) TileTagBits;
+function Bit#(TSub#(MemTagSize,TileTagBits)) tagLsb(Bit#(MemTagSize) tag); return truncate(tag); endfunction
+function Bit#(TileTagBits) tagMsb(Bit#(MemTagSize) tag); return truncate(tag >> valueOf(TSub#(MemTagSize,TileTagBits))); endfunction
 
 module renameReads#(Integer tile, MemReadClient#(DataBusWidth) reader, MemServerIndication err)(MemReadClient#(DataBusWidth));
    interface Get readReq;
       method ActionValue#(MemRequest) get;
 	 let req <- reader.readReq.get;
-	 Bit#(TSub#(MemTagSize,2)) lsb = tagLsb(req.tag);
-	 Bit#(2) msb = tagMsb(req.tag);
-	 if(req.tag != extend(lsb)) begin
+	 Bit#(TSub#(MemTagSize,TileTagBits)) lsb = tagLsb(req.tag);
+	 Bit#(TileTagBits) msb = tagMsb(req.tag);
+	 if(req.tag != extend(lsb) && valueOf(NumberOfTiles) > 2) begin // one mgmt tile and one user tile
 	    $display("renameReads tile tag out of range: 'h%h", req.tag);
 	    err.error(extend(pack(DmaErrorTileTagOutOfRange)), req.sglId, extend(req.tag), fromInteger(tile));
 	 end
@@ -75,9 +76,9 @@ module renameWrites#(Integer tile, MemWriteClient#(DataBusWidth) writer, MemServ
    interface Get writeReq;
       method ActionValue#(MemRequest) get;
 	 let req <- writer.writeReq.get;
-	 Bit#(TSub#(MemTagSize,2)) lsb = tagLsb(req.tag);
-	 Bit#(2) msb = tagMsb(req.tag);
-	 if(req.tag != extend(lsb)) begin
+	 Bit#(TSub#(MemTagSize,TileTagBits)) lsb = tagLsb(req.tag);
+	 Bit#(TileTagBits) msb = tagMsb(req.tag);
+	 if(req.tag != extend(lsb) && valueOf(NumberOfTiles) > 2) begin // one mgmt tile and one user tile
 	    $display("renameWrites tile tag out of range: 'h%h", req.tag);
 	    err.error(extend(pack(DmaErrorTileTagOutOfRange)), req.sglId, extend(req.tag), fromInteger(tile));
 	 end
