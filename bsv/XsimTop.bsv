@@ -131,10 +131,10 @@ module mkXsimTop#(Clock derivedClock, Reset derivedReset)(XsimTop);
    MemServer#(PhysAddrWidth,DataBusWidth,NumberOfMasters) lMemServer <- mkMemServer(top.readers, top.writers, cons(lMMU,nil), lMemServerIndicationOutput.ifc);
    mkConnection(lMemServerRequestInput.pipes, lMemServer.request);
 
-   let lMMUIndicationOutputNoc <- mkPortalMsgIndication(extend(pack(IfcNames_MMUIndicationH2S)), lMMUIndicationOutput.portalIfc.indications, lMMUIndicationOutput.portalIfc.messageSize);
-   let lMMURequestInputNoc <- mkPortalMsgRequest(extend(pack(IfcNames_MMURequestS2H)), lMMURequestInput.portalIfc.requests);
-   let lMemServerIndicationOutputNoc <- mkPortalMsgIndication(extend(pack(IfcNames_MemServerIndicationH2S)), lMemServerIndicationOutput.portalIfc.indications, lMemServerIndicationOutput.portalIfc.messageSize);
-   let lMemServerRequestInputNoc <- mkPortalMsgRequest(extend(pack(IfcNames_MemServerRequestS2H)), lMemServerRequestInput.portalIfc.requests);
+   let lMMUIndicationOutputNoc <- mkPortalMsgIndication(extend(pack(IfcNames_MMUIndicationPLATFORMH2S)), lMMUIndicationOutput.portalIfc.indications, lMMUIndicationOutput.portalIfc.messageSize);
+   let lMMURequestInputNoc <- mkPortalMsgRequest(extend(pack(IfcNames_MMURequestPLATFORMS2H)), lMMURequestInput.portalIfc.requests);
+   let lMemServerIndicationOutputNoc <- mkPortalMsgIndication(extend(pack(IfcNames_MemServerIndicationPLATFORMH2S)), lMemServerIndicationOutput.portalIfc.indications, lMemServerIndicationOutput.portalIfc.messageSize);
+   let lMemServerRequestInputNoc <- mkPortalMsgRequest(extend(pack(IfcNames_MemServerRequestPLATFORMS2H)), lMemServerRequestInput.portalIfc.requests);
 
    mapM_(mkXsimSink, append(top.requests, append(vec(lMMURequestInputNoc), vec(lMemServerRequestInputNoc))));
    mapM_(mkXsimSource, append(top.indications, append(vec(lMMUIndicationOutputNoc), vec(lMemServerIndicationOutputNoc))));

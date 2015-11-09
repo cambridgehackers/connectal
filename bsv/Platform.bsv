@@ -119,16 +119,16 @@ module mkPlatform#(Vector#(NumberOfUserTiles, ConnectalTop) tiles)(Platform);
    /////////////////////////////////////////////////////////////
    // framework internal portals
 
-   MMUIndicationProxy lMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_MMUIndicationH2S);
-   MemServerIndicationProxy lMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_MemServerIndicationH2S);
+   MMUIndicationProxy lMMUIndicationProxy <- mkMMUIndicationProxy(IfcNames_MMUIndicationPLATFORMH2S);
+   MemServerIndicationProxy lMemServerIndicationProxy <- mkMemServerIndicationProxy(IfcNames_MemServerIndicationPLATFORMH2S);
 
    MMU#(PhysAddrWidth) lMMU <- mkMMU(0,True, lMMUIndicationProxy.ifc);
    Vector#(TMul#(NumberOfUserTiles,NumReadClients), MemReadClient#(DataBusWidth)) tile_read_clients_renamed <- zipWith3M(renameReads, genVector, concat(tile_read_clients), replicate(lMemServerIndicationProxy.ifc));
    Vector#(TMul#(NumberOfUserTiles,NumWriteClients), MemWriteClient#(DataBusWidth)) tile_write_clients_renamed <- zipWith3M(renameWrites, genVector, concat(tile_write_clients), replicate(lMemServerIndicationProxy.ifc));
    MemServer#(PhysAddrWidth,DataBusWidth,NumberOfMasters) lMemServer <- mkMemServer(tile_read_clients_renamed, tile_write_clients_renamed, cons(lMMU,nil), lMemServerIndicationProxy.ifc);
 
-   MMURequestWrapper lMMURequestWrapper <- mkMMURequestWrapper(IfcNames_MMURequestS2H, lMMU.request);
-   MemServerRequestWrapper lMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_MemServerRequestS2H, lMemServer.request);
+   MMURequestWrapper lMMURequestWrapper <- mkMMURequestWrapper(IfcNames_MMURequestPLATFORMS2H, lMMU.request);
+   MemServerRequestWrapper lMemServerRequestWrapper <- mkMemServerRequestWrapper(IfcNames_MemServerRequestPLATFORMS2H, lMemServer.request);
 
    Vector#(4,StdPortal) framework_portals;
    framework_portals[0] = lMMUIndicationProxy.portalIfc;

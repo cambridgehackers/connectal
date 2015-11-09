@@ -304,7 +304,7 @@ if __name__=='__main__':
     pipeInstantiate = []
     connectInstantiate = []
     instantiateRequest = {}
-    for item in ['IfcNames_MemServerRequestS2H', 'IfcNames_MMURequestS2H', 'IfcNames_MemServerIndicationH2S', 'IfcNames_MMUIndicationH2S']:
+    for item in ['IfcNames_MemServerRequestPLATFORMS2H', 'IfcNames_MMURequestPLATFORMS2H', 'IfcNames_MemServerIndicationPLATFORMH2S', 'IfcNames_MMUIndicationPLATFORMH2S']:
         options.portname.append(item)
     requestList = []
     indicationList = []
