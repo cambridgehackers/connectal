@@ -120,7 +120,7 @@ module mkMemReadChannel#(Integer bufferSizeBytes, Integer channelNumber) (MemRea
    FIFO#(Tuple3#(Bool,Bool,Bit#(BurstLenSize))) serverCheckAvail <- mkSizedFIFO(1);
    FIFOF#(ServerRequest#(serverIdxSz))      serverRequest <- mkFIFOF();
    FIFOF#(MemRequest)                          dmaRequest <- mkSizedFIFOF(valueOf(cmdQDepth));
-   FIFO#(Tuple3#(Bit#(8),Bit#(serverIdxSz),Bool)) serverProcessing <- mkSizedFIFO(valueOf(cmdQDepth));
+   FIFO#(Tuple3#(Bit#(8),Bit#(MemTagSize),Bool)) serverProcessing <- mkSizedFIFO(valueOf(cmdQDepth));
    FIFOF#(MemData#(busWidth))                       serverDataFifo <- mkFIFOF;
 
    Reg#(Bit#(8))                    respCnt <- mkReg(0);
@@ -155,7 +155,7 @@ module mkMemReadChannel#(Integer bufferSizeBytes, Integer channelNumber) (MemRea
       match {.cond0,.last_burst,.cmd_len} <- toGet(serverCheckAvail).get;
       if  (cond0) begin
 	 if (verbose) $display("mkMemReadEngineBuff::%d rule_requestServer clientLen %d cond0 %d last_burst %d", counter, clientLen, cond0, last_burst);
-	 serverProcessing.enq(tuple3(truncate(cmd_len>>beatShift), 0, last_burst));
+	 serverProcessing.enq(tuple3(truncate(cmd_len>>beatShift), clientCommand.tag, last_burst));
 	 if (verbose) $display("MemReadEngine::%d readReq idx %d offset %h burstLenBytes %h last %d", counter, 0, clientBase, cmd_len, last_burst);
 
 	 dmaRequest.enq(MemRequest { sglId: clientCommand.sglId, offset: extend(clientBase),
@@ -180,20 +180,19 @@ module mkMemReadChannel#(Integer bufferSizeBytes, Integer channelNumber) (MemRea
 
    rule read_data_rule;
       let d <- toGet(serverDataFifo).get();
-      match {.rc, .idx, .last_burst} = serverProcessing.first;
+      match {.rc, .tag, .last_burst} = serverProcessing.first;
       let new_respCnt = respCnt+1;
       let l = False;
-      if (verbose) $display("mkMemReadEngineBuff::%d data %h new_respCnt %d rc %d last_burst %d idx %d clientInFlight %d eob %d", counter, d.data, new_respCnt, rc, last_burst, idx, clientInFlight, d.last);
+      if (verbose) $display("mkMemReadEngineBuff::%d data %h new_respCnt %d rc %d last_burst %d tag %d clientInFlight %d eob %d", counter, d.data, new_respCnt, rc, last_burst, tag, clientInFlight, d.last);
       if (new_respCnt == rc) begin
 	 respCnt <= 0;
 	 serverProcessing.deq;
-	 //$display("eob %d", idx);
 	 l = last_burst;
       end
       else begin
 	 respCnt <= new_respCnt;
       end
-      clientDataFifo.enq(MemDataF { data: d.data, tag: d.tag >> valueOf(serverIdxSz), first: (respCnt == 0), last: l});
+      clientDataFifo.enq(MemDataF { data: d.data, tag: d.tag, first: (respCnt == 0), last: l});
    endrule
 
    MemReadEngineServer#(userWidth) rs = (interface MemReadEngineServer#(userWidth);
