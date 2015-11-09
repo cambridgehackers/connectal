@@ -39,6 +39,7 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <libgen.h>  // dirname
+#include <pthread.h>
 #endif
 #include "drivers/portalmem/portalmem.h" // PA_MALLOC
 
