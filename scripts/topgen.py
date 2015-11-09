@@ -263,16 +263,6 @@ def instMod(pmap, args, modname, modext, constructor, tparam, memFlag, inverseFl
                 pmap['hostif'] = ''
             else:
                 pmap['hostif'] = ''
-# If needed, can't these be passed in as extra args on H2S or S2H spec line? jca 2015/7/22
-#                pmap['hostif'] = ('\n'
-#                                  '`ifdef IMPORT_HOSTIF\n'
-#                                  '                    host,\n'
-#                                  '`else\n'
-#                                  '`ifdef IMPORT_HOST_CLOCKS\n'
-#                                  '                    host.derivedClock, host.derivedReset,\n'
-#                                  '`endif\n'
-#                                  '`endif\n'
-#                                  '                    ')
             instantiateRequest[pmap['modname']].inst = '   %(modname)s%(tparam)s l%(modname)s <- mk%(modname)s(%(hostif)s%%s);' % pmap
         instantiateRequest[pmap['modname']].args.append(pmap['args'])
     if pmap['modname'] not in instantiatedModules:
