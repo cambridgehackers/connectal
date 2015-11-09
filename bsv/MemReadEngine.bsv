@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 import Vector::*;
+import BuildVector::*;
 import Cntrs::*;
 import FIFOF::*;
 import FIFO::*;
@@ -35,6 +36,7 @@ import ConnectalBramFifo::*;
 import MemTypes::*;
 import Pipe::*;
 import MemUtils::*;
+import ConnectalConfig::*;
 
 `include "ConnectalProjectConfig.bsv"
 
@@ -44,7 +46,7 @@ module mkMemReadEngine(MemReadEngine#(busWidth, userWidth, cmdQDepth, numServers
 	    ,Add#(busWidth, 0, userWidth)
 	    ,Add#(b__, TLog#(numServers), TAdd#(1, TLog#(TMul#(cmdQDepth,numServers))))
 	    ,Add#(c__, TLog#(numServers), TLog#(TMul#(cmdQDepth, numServers)))
-	    ,Add#(d__, TLog#(numServers), 6)
+	    ,Add#(d__, TLog#(numServers), MemTagSize)
 	    );
    let rv <- mkMemReadEngineBuff(valueOf(cmdQDepth) * valueOf(TExp#(BurstLenSize)));
    return rv;
@@ -87,7 +89,7 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
 	     Add#(a__, serverIdxSz, cmdBuffAddrSz),
 	     Min#(2,TLog#(numServers),bpc),
 	     Add#(d__, TLog#(numServers), TAdd#(1, serverIdxSz)),
-	     Add#(f__, serverIdxSz, 6));
+	     Add#(f__, serverIdxSz, MemTagSize));
    let verbose = False;
    let beatShift = fromInteger(valueOf(beatShift));
 
@@ -184,7 +186,7 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
       else begin
 	 respCnt <= new_respCnt;
       end
-      clientDataFifo[idx].enq(MemDataF { data: d.data, tag: d.tag >> serverIdxSz, first: (respCnt == 0), last: l});
+      clientDataFifo[idx].enq(MemDataF { data: d.data, tag: d.tag >> valueOf(serverIdxSz), first: (respCnt == 0), last: l});
    endrule
 
    Vector#(numServers, MemReadEngineServer#(userWidth)) rs;
