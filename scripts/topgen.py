@@ -259,10 +259,7 @@ def instMod(pmap, args, modname, modext, constructor, tparam, memFlag, inverseFl
     else:
         if not instantiateRequest.get(pmap['modname']):
             instantiateRequest[pmap['modname']] = iReq()
-            if pmap['modname'] in ['MMU', 'MemServer']:
-                pmap['hostif'] = ''
-            else:
-                pmap['hostif'] = ''
+            pmap['hostif'] = ''
             instantiateRequest[pmap['modname']].inst = '   %(modname)s%(tparam)s l%(modname)s <- mk%(modname)s(%(hostif)s%%s);' % pmap
         instantiateRequest[pmap['modname']].args.append(pmap['args'])
     if pmap['modname'] not in instantiatedModules:
@@ -354,13 +351,13 @@ if __name__=='__main__':
         pmap['userIf'] = pmap['name']
         pmap['name'] = pmap['usermod']
         pmap['number'] = ''
-        pr = pmap['userIf'].split('.')
-        pmap['usermod'] = pr[0]
-        modintf_list = pr[1].split(',')
-        numbers = range(0,len(modintf_list)) if len(modintf_list) > 1 else ['']
-        for (modintf,number) in zip(modintf_list, numbers):
-            pmap['number'] = str(number)
-            pmap['userIf'] = '%s.%s' % (pmap['usermod'], modintf)
+        modintf_list = pmap['userIf'].split(',')
+        number = 0
+        for pmap['userIf'] in modintf_list:
+            if len(modintf_list) > 1:
+                pmap['number'] = str(number)
+            number += 1
+            pmap['usermod'] = pmap['userIf'].split('.')[0]
             if pmap['usermod'] not in instantiatedModules:
                 instMod(pmap, pmap['uparam'], pmap['usermod'], '', '', pmap['xparam'], False, False)
             flushModules(pmap['usermod'])
