@@ -138,7 +138,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
    Vector#(2, FIFOF#(Stage4Params)) stage4Params <- replicateM(mkFIFOF);
 
    // stage 4 (latency == 2)
-   BRAM2Port#(Bit#(entryIdxSize),Page0) pages <- ConnectalBram::mkBRAM2Server(bramConfig);
+   BRAM2Port#(Bit#(entryIdxSize),Page0) translationTable <- ConnectalBram::mkBRAM2Server(bramConfig);
    Vector#(2,FIFOF#(Offset))           offs1 <- replicateM(mkSizedFIFOF(3));
 
    // stage 4 (latnecy == 1)
@@ -246,14 +246,14 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 	    dmaErrorFifos[1].enq(DmaError { errorType: DmaErrorOffsetOutOfRange, pref: extend(ptr), off:extend(off.value) });
 	 end
 	 else begin
-	    if (verbose) $display("mkMMU::pages[%d].read %h", i, {ptr,p});
-	    portsel(pages, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
+	    if (verbose) $display("mkMMU::translationTable[%d].read %h", i, {ptr,p});
+	    portsel(translationTable, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
 						      address:{ptr,p}, datain:?});
 	    offs1[i].enq(off);
 	 end
       endrule
       rule stage5; // Concatenate page base address from sglist entry with LSB offset bits from request and return
-	 Page0 page <- portsel(pages, i).response.get;
+	 Page0 page <- portsel(translationTable, i).response.get;
 	 let offset <- toGet(offs1[i]).get();
 	 if (verbose) $display("mkMMU::p ages[%d].response page=%h offset=%h", i, page, offset);
 	 Bit#(MemOffsetSize) rv = ?;
@@ -337,7 +337,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 	 if(hostMapped)
 	    let va <- simDma.init({0,pointer[31:16]}, {0,pointer[15:0]}, len);
          Bit#(IndexWidth) ind = truncate(pointerIndex);
-	 portsel(pages, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
+	 portsel(translationTable, 0).request.put(BRAMRequest{write:True, responseOnWrite:False,
              address:{truncate(pointer),ind}, datain:truncate(addr)});
          if (verbose) $display("mkMMU::sglist pointer=%d pointerIndex=%d addr=%d len=%d", pointer, pointerIndex, addr, len);
    endmethod
