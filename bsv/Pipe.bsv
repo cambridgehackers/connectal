@@ -385,11 +385,15 @@ module mkUnFunnelPipesPipelinedInternal#(Vector#(1, PipeOut#(Tuple2#(Bit#(TLog#(
    provisos (Log#(k, logk),
 	     Bits#(a,a__),
 	     Add#(1,b__,k),
+	     Div#(k,TExp#(bpc),c__),
+	     Mul#(c__,TExp#(bpc),krounded),
+	     Add#(1, d__, krounded),
+	     Add#(k, e__, krounded),
 	     Div#(logk,bpc,stages));
-   Vector#(k, PipeOut#(Tuple2#(Bit#(logk),a))) ins  = append(in,replicate(?));
-   Vector#(k, PipeOut#(Tuple2#(Bit#(logk),a))) outs = newVector;
+   Vector#(krounded, PipeOut#(Tuple2#(Bit#(logk),a))) ins  = append(in,replicate(?));
+   Vector#(krounded, PipeOut#(Tuple2#(Bit#(logk),a))) outs = newVector;
    for(Integer j = 0; j < valueOf(stages); j=j+1) begin 
-      for(Integer i = 0; i < 2**(j*valueOf(bpc)); i=i+1) begin
+      for(Integer i = 0; i < min(valueOf(krounded), 2**(j*valueOf(bpc))); i=i+1) begin
 	 Integer bits = (j == valueOf(stages)-1) ? valueOf(logk)-(j*valueOf(bpc)) : valueOf(bpc);
 	 function Bit#(bpc) sh(Bit#(bpc) x) = x<<(valueOf(bpc)-bits);
 	 for(Integer l = 0; l < 2**bits; l=l+1)  begin
@@ -407,7 +411,7 @@ module mkUnFunnelPipesPipelinedInternal#(Vector#(1, PipeOut#(Tuple2#(Bit#(TLog#(
       end
       ins = outs;
    end
-   return map(pipeSecond,outs);
+   return take(map(pipeSecond,outs));
 endmodule
    
 module mkFunnelNode#(Vector#(n, PipeOut#(a)) inpipes, Integer numPipes, Put#(a) outpipe)(Empty);
@@ -454,7 +458,8 @@ instance FunnelPipesPipelined#(1,k,a,bpc)
 	     Div#(logk,bpc,stages),
 	     Mul#(TDiv#(k, TExp#(bpc)), TExp#(bpc), krounded),
 	     Add#(k, c__, krounded),
-	     Add#(TExp#(bpc), d__, krounded)
+	     Add#(TExp#(bpc), d__, krounded),
+	     Add#(1, e__, krounded)
 	     );
    module mkFunnelPipesPipelined#(Vector#(k,PipeOut#(a)) in) (FunnelPipe#(1,k,a,bpc));
       Vector#(stages, Vector#(krounded, FIFOF#(a))) buffs  <- replicateM(replicateM(mkFIFOF));
