@@ -452,18 +452,20 @@ instance FunnelPipesPipelined#(1,k,a,bpc)
 	     Bits#(a,a__),
 	     Add#(1,b__,k),
 	     Div#(logk,bpc,stages),
-	     Add#(k, c__, TExp#(logk)),
-	     Add#(TExp#(bpc), d__, TExp#(logk))
+	     Mul#(TDiv#(k, TExp#(bpc)), TExp#(bpc), krounded),
+	     Add#(k, c__, krounded),
+	     Add#(TExp#(bpc), d__, krounded)
 	     );
    module mkFunnelPipesPipelined#(Vector#(k,PipeOut#(a)) in) (FunnelPipe#(1,k,a,bpc));
-      Vector#(stages, Vector#(k, FIFOF#(a))) buffs  <- replicateM(replicateM(mkFIFOF));
-      Vector#(TAdd#(stages,1), Vector#(k, PipeOut#(a))) infss = append(map(map(toPipeOut),buffs), vec(in));
+      Vector#(stages, Vector#(krounded, FIFOF#(a))) buffs  <- replicateM(replicateM(mkFIFOF));
+      Vector#(krounded, PipeOut#(a)) paddedIn = append(in, replicate(?));
+      Vector#(TAdd#(stages,1), Vector#(krounded, PipeOut#(a))) infss = append(map(map(toPipeOut),buffs), vec(paddedIn));
       for(Integer j = valueOf(stages); j > 0; j=j-1) begin
 	 Integer width = 2**(j*valueOf(bpc));
-	 Integer stride = 2**valueOf(bpc);
+	 Integer stride = valueOf(TExp#(bpc));
+	 Vector#(krounded,PipeOut#(a)) pipes = infss[j];
 	 for(Integer i = 0; i < width && i < valueOf(k); i=i+stride) begin
-	    Vector#(TExp#(logk),PipeOut#(a)) paddedPipes = append(infss[j], replicate(?));
-	    Vector#(TExp#(bpc),PipeOut#(a)) inpipes = takeAt(i, paddedPipes);
+	    Vector#(TExp#(bpc),PipeOut#(a)) inpipes = takeAt(i, pipes);
 	    Integer numPipes = stride;
 	    if (i + stride > valueOf(k))
 	       numPipes = valueOf(k) - i;
