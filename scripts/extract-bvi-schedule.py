@@ -33,9 +33,7 @@ if __name__=='__main__':
     for vfilename in options.vfile:
         vf = open(vfilename, 'r')
         basename = os.path.basename(vfilename)
-        print 'basename', basename
         (name, ext) = os.path.splitext(basename)
-        print 'name', name
         bvif = open(os.path.join(options.dir, '%s.bvi' % name), 'w')
         bvif.write('// BVI Schedule from %s\n' % vfilename)
         inschedule = False
