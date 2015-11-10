@@ -402,7 +402,7 @@ module mkUnFunnelPipesPipelinedInternal#(Vector#(1, PipeOut#(Tuple2#(Bit#(TLog#(
 	    let idx = (2**bits)*i+l;
 	    if (idx < valueOf(k)) begin
 	       outs[idx] = toPipeOut(buff);
-	       rule xfer if(tpl_1(ins[i].first)[(valueOf(logk)-1):(valueOf(logk)-valueOf(bpc))] == sh(fromInteger(l)));
+	       rule xfer if(tpl_1(ins[i].first)[(valueOf(logk)-1):max(0,(valueOf(logk)-valueOf(bpc)))] == sh(fromInteger(l)));
 		  match{.idx, .v} <- toGet(ins[i]).get;
 		  buff.enq(tuple2(idx<<valueOf(bpc), v));
 	       endrule
