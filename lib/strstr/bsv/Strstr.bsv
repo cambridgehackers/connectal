@@ -70,6 +70,8 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(haystackBusWidth, configBu
    ,Add#(1, h__, TDiv#(haystackBusWidth, 32))
    ,Add#(i__, 32, haystackBusWidth)
    ,Add#(j__, 8, haystackBusWidth)
+   ,FunnelPipesPipelined#(1, DegPar, MemData#(haystackBusWidth), MemReadFunnelBPC)
+   ,FunnelPipesPipelined#(1, DegPar, MemData#(configBusWidth), MemReadFunnelBPC)
 	    );
    
    let verbose = True;
