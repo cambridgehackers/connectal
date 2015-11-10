@@ -54,7 +54,9 @@ interface MemWriteChannel#(numeric type busWidth, numeric type userWidth, numeri
    interface MemWriteEngineServer#(userWidth) writeServer;
 endinterface
 
-module mkMemWriteChannel#(Integer bufferSizeBytes, Integer channelNumber)(MemWriteChannel#(busWidth, userWidth, cmdQDepth))
+module mkMemWriteChannel#(Integer bufferSizeBytes, Integer channelNumber,
+			  PipeOut#(Bit#(MemTagSize)) writeGntPipe, PipeOut#(Bit#(MemTagSize)) writeDonePipe)
+   (MemWriteChannel#(busWidth, userWidth, cmdQDepth))
    provisos ( Div#(busWidth,8,busWidthBytes)
 	     ,Log#(busWidthBytes,beatShift)
 	     ,Add#(1, d__, userWidth)
@@ -69,9 +71,6 @@ module mkMemWriteChannel#(Integer bufferSizeBytes, Integer channelNumber)(MemWri
    FIFO#(Tuple3#(Bit#(MemTagSize),Bit#(MemTagSize),Bool)) serverDone <- mkSizedFIFO(valueOf(cmdQDepth));
    FIFOF#(MemRequest)           writeReqFifo <- mkFIFOF();
    FIFOF#(MemData#(userWidth)) writeDataFifo <- mkFIFOF();
-   FIFOF#(Bit#(MemTagSize))    writeDoneFifo <- mkFIFOF();
-   FIFOF#(Bit#(MemTagSize))     writeGntFifo <- mkFIFOF();
-   
 
    Reg#(Bool)              clientInFlight <- mkReg(False);
    Reg#(Bool)              clientBursts <- mkReg(False);
@@ -143,13 +142,13 @@ module mkMemWriteChannel#(Integer bufferSizeBytes, Integer channelNumber)(MemWri
 
    rule rlWriteData;
       match {.rc, .client_tag, .last} = inProgress.first;
-      let gnt = writeGntFifo.first;
+      let gnt = writeGntPipe.first;
       let new_respCnt = respCnt+1;
       let lastBeat = False;
       if (new_respCnt == rc) begin
 	 respCnt <= 0;
 	 inProgress.deq();
-	 writeGntFifo.deq();
+	 writeGntPipe.deq();
 	 serverDone.enq(tuple3(0,client_tag,last));
 	 lastBeat = True;
       end
@@ -161,7 +160,7 @@ module mkMemWriteChannel#(Integer bufferSizeBytes, Integer channelNumber)(MemWri
    endrule      
 
    rule rlWriteDone;
-      let tag <- toGet(writeDoneFifo).get();
+      let tag <- toGet(writeDonePipe).get();
       match {.idx, .req_tag, .last} <- toGet(serverDone).get;
       if (last) begin
 	 clientInFlight <= False;
@@ -215,10 +214,8 @@ module mkMemWriteChannel#(Integer bufferSizeBytes, Integer channelNumber)(MemWri
 	 interface PipeOut requestCycles = toPipeOut(clientCyclesFifo);
 	 endinterface);
    interface writeServer = ws;
-   interface writeGnt = toPipeIn(writeGntFifo);
    interface writeReq = toPipeOut(writeReqFifo);
    interface writeData = toPipeOut(writeDataFifo);
-   interface writeDone = toPipeIn(writeDoneFifo);
 endmodule
 
 module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, userWidth, cmdQDepth, numServers))
@@ -231,7 +228,18 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
              ,FunnelPipesPipelined#(1, numServers, MemRequest, 2)
              ,FunnelPipesPipelined#(1, numServers, Bit#(MemTagSize), 2)
 	     );
-   Vector#(numServers, MemWriteChannel#(busWidth,userWidth,cmdQDepth)) writeChannels <- genWithM(mkMemWriteChannel(bufferSizeBytes));
+
+   FIFOF#(Bit#(MemTagSize)) writeDoneFifo <- mkFIFOF();
+   FIFOF#(Bit#(MemTagSize))       arbFifo <- mkFIFOF1();
+   function Tuple2#(Bit#(TLog#(numServers)),Bit#(MemTagSize)) tagDone(Bit#(MemTagSize) tag);
+      return tuple2(truncate(tag), tag);
+   endfunction
+   UnFunnelPipe#(1,numServers,Bit#(MemTagSize),2) arbPipes <- mkUnFunnelPipesPipelined(vec(mapPipe(tagDone, toPipeOut(arbFifo))));
+   UnFunnelPipe#(1,numServers,Bit#(MemTagSize),2) donePipes <- mkUnFunnelPipesPipelined(vec(mapPipe(tagDone, toPipeOut(writeDoneFifo))));
+   Vector#(numServers, MemWriteChannel#(busWidth,userWidth,cmdQDepth)) writeChannels <- zipWith3M(mkMemWriteChannel(bufferSizeBytes),
+												  genVector(),
+												  arbPipes,
+												  donePipes);
    function PipeOut#(MemRequest) writeChannelDmaWriteReq(Integer i);
       return writeChannels[i].writeReq;
    endfunction
@@ -245,21 +253,8 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
    Reg#(Bool)         reqInFlight <- mkReg(False);
    FIFOF#(MemRequest)          writeReqFifo <- mkFIFOF();
    FIFOF#(MemData#(userWidth)) writeDataFifo <- mkFIFOF();
-   FIFOF#(Bit#(MemTagSize))    writeDoneFifo <- mkFIFOF();
-
-   FIFOF#(Bit#(MemTagSize)) arbFifo <- mkFIFOF1();
    FunnelPipe#(1,numServers,MemRequest,2) reqFunnel <- mkFunnelPipesPipelined(genWith(writeChannelDmaWriteReq));
    FunnelPipe#(1,numServers,MemData#(userWidth),2) dataFunnel <- mkFunnelPipesPipelined(genWith(writeChannelDmaWriteData));
-   function Tuple2#(Bit#(TLog#(numServers)),Bit#(MemTagSize)) tagDone(Bit#(MemTagSize) tag);
-      return tuple2(truncate(tag), tag);
-   endfunction
-   UnFunnelPipe#(1,numServers,Bit#(MemTagSize),2) arbPipes <- mkUnFunnelPipesPipelined(vec(mapPipe(tagDone, toPipeOut(arbFifo))));
-   UnFunnelPipe#(1,numServers,Bit#(MemTagSize),2) donePipes <- mkUnFunnelPipesPipelined(vec(mapPipe(tagDone, toPipeOut(writeDoneFifo))));
-   // FIXME: pass arbPipe and donePipe as parameters to mkMemWriteChannel
-   for (Integer channel = 0; channel < valueOf(numServers); channel = channel + 1) begin
-      mkConnection(arbPipes[channel], writeChannels[channel].writeGnt);
-      mkConnection(donePipes[channel], writeChannels[channel].writeDone);
-   end
 
    rule rl_arbitration if (!reqInFlight);
       let req <- toGet(reqFunnel[0]).get();
