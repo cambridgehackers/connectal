@@ -95,14 +95,14 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
    if (mainClockPeriod == pcieClockPeriod) begin
        mkConnection(host.tpciehost.master, portalTop.slave, clocked_by host.portalClock, reset_by host.portalReset);
        if (valueOf(NumberOfMasters) > 0) begin
-	  mapM(uncurry(mkConnection),zip(portalTop.masters, host.tpciehost.slave));
+	  zipWithM_(mkConnection,portalTop.masters, host.tpciehost.slave);
        end
    end
    else begin
        GetPutWithClocks::mkConnectionWithClocks(host.tpciehost.master, portalTop.slave, host.pcieClock, host.pcieReset, host.portalClock, host.portalReset);
        if (valueOf(NumberOfMasters) > 0) begin
-	  mapM(uncurry(mkConnectionWithClocksFirst(host.portalClock, host.portalReset, host.pcieClock, host.pcieReset)),
-               zip(portalTop.masters, host.tpciehost.slave));
+	  zipWithM_(mkConnectionWithClocksFirst(host.portalClock, host.portalReset, host.pcieClock, host.pcieReset),
+		    portalTop.masters, host.tpciehost.slave);
        end
    end
 

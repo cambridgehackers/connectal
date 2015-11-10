@@ -81,13 +81,12 @@ module mkSimDma(SimDma#(dataWidth) ifc)
       method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v, Bit#(TDiv#(dataWidth,8)) byteEnable);
 	  Vector#(TDiv#(dataWidth, 32), Bit#(32)) vs = unpack(v);
 	  Vector#(TDiv#(dataWidth, 32), Bit#(4)) byteEnables = unpack(byteEnable);
-	  function Action write32(Tuple3#(Integer,Bit#(32),Bit#(4)) tpl);
+	  function Action write32(Integer i, Bit#(32) vv, Bit#(4) byteEnable)
 	     action
-		match { .i, .vv, .byteEnable } = tpl;
 		write_simDma32(handle, addr+4*fromInteger(i), vv, byteEnable);
 	     endaction
 	  endfunction
-	  mapM_(write32, zip3(genVector(), vs, byteEnables));
+	  let unused <- zipWith3M(write32, genVector(), vs, byteEnables);
       endmethod
       method Action  readrequest(Bit#(32) handle, Bit#(32) addr);
 	  function ActionValue#(Bit#(32)) read32(Integer i);
@@ -143,13 +142,12 @@ module mkSimDma(SimDma#(dataWidth) ifc)
    method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v, Bit#(TDiv#(dataWidth,8)) byteEnable);
       Vector#(TDiv#(dataWidth, 32), Bit#(32)) vs = unpack(v);
       Vector#(TDiv#(dataWidth, 32), Bit#(4)) byteEnables = unpack(byteEnable);
-      function Action write32(Tuple3#(Integer,Bit#(32),Bit#(4)) tpl);
+      function Action write32(Integer i, Bit#(32) vv, Bit#(4) byteEnable);
 	 action
-	    match { .i, .vv, .byteEnable } = tpl;
 	    rws[i].write32(handle, addr+4*fromInteger(i), vv, byteEnable);
 	 endaction
       endfunction
-      mapM_(write32, zip3(genVector(), vs, byteEnables));
+      let unused <- zipWith3M(write32, genVector(), vs, byteEnables);
    endmethod
    method Action readrequest(Bit#(32) handle, Bit#(32) addr);
       function Action doreadrequest(Integer i);

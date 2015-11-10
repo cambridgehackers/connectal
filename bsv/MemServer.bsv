@@ -79,8 +79,8 @@ module mkMemServer#(Vector#(numReadClients, MemReadClient#(busWidth)) readClient
    MemServerRead#(addrWidth,busWidth,nMasters,nrs)  reader <- mkMemServerRead(indication, mmus);
    MemServerWrite#(addrWidth,busWidth,nMasters,nws) writer <- mkMemServerWrite(indication, mmus);
    
-   zipWithM(mkConnection,readClients,take(reader.servers));
-   zipWithM(mkConnection,writeClients,take(writer.servers));
+   zipWithM_(mkConnection,readClients,take(reader.servers));
+   zipWithM_(mkConnection,writeClients,take(writer.servers));
    
    function PhysMemMaster#(addrWidth,busWidth) mkm(Integer i) = (interface PhysMemMaster#(addrWidth,busWidth);
 		     interface PhysMemReadClient read_client = reader.clients[i];
