@@ -142,7 +142,7 @@ int main(int argc, const char **argv)
     dma = platformInit();
 
 //#define FF {dma}
-#define FF SHARED_DMA(IfcNames_MMURequestS2H, IfcNames_MMUIndicationH2S)
+#define FF SHARED_DMA(PlatformIfcNames_MMURequestS2H, PlatformIfcNames_MMUIndicationH2S)
     PortalSharedParam parami = {FF, alloc_sz, SHARED_HARDWARE(IfcNames_SimpleRequestPipesH2S)};
     indication = new Simple(IfcNames_SimpleRequestH2S,
 			    (wait_per_iter) ? 1 : numtimes
