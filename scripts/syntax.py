@@ -1058,6 +1058,9 @@ def preprocess(source, defs, bsvpath):
                     inc = open(fn).read()
                     break
             s = inc + s[m.end():]
+        elif re.match('[A-Z][A-Za-z0-9_]*', tok):
+            ## must be an undefined variable
+            sys.stderr.write('syntax.py: undefined preprocessor variable `%s\n' % tok)
         else:
             print '%s: unhandled preprocessor token %s' % (globalfilename, tok)
             assert(tok in ['ifdef', 'ifndef', 'else', 'endif', 'define'])
