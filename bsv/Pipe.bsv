@@ -461,7 +461,7 @@ instance FunnelPipesPipelined#(1,k,a,bpc)
       Vector#(krounded, PipeOut#(a)) paddedIn = append(in, replicate(?));
       Vector#(TAdd#(stages,1), Vector#(krounded, PipeOut#(a))) infss = append(map(map(toPipeOut),buffs), vec(paddedIn));
       for(Integer j = valueOf(stages); j > 0; j=j-1) begin
-	 Integer width = 2**(j*valueOf(bpc));
+	 Integer width = min(valueOf(krounded),2**(j*valueOf(bpc)));
 	 Integer stride = valueOf(TExp#(bpc));
 	 Vector#(krounded,PipeOut#(a)) pipes = infss[j];
 	 for(Integer i = 0; i < width && i < valueOf(k); i=i+stride) begin
