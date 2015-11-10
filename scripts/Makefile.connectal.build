@@ -309,6 +309,7 @@ $(VFILE): $(TOPBSVFILE) $(BSVFILES)
 	$(Q)for v in verilog/*.v; do $(CONNECTALDIR)/scripts/copy_verilog.py $$v $(VERILOG_PATH); done
 
 obj/Makefile:
+	@mkdir -p obj
 	$(CONNECTALDIR)/scripts/bsvdepend.py -o obj/Makefile $(BSVDEFINES) --bsvpath=$(BSVPATH) --all $(TOPBSVFILE)
 
 include obj/Makefile
