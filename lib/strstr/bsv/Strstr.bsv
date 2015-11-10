@@ -53,8 +53,7 @@ function Bool my_or(Bool a, Bool b) = a || b;
 typedef `DEGPAR DegPar;   
    
 module mkStrstr#(StrstrIndication indication)(Strstr#(haystackBusWidth, configBusWidth))
-   provisos( Add#(0,DegPar,p)
-	    ,Log#(p,lp)
+   provisos( Log#(DegPar,logDegPar)
 
 
    ,Mul#(TDiv#(configBusWidth, 8), 8, configBusWidth)
@@ -71,14 +70,13 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(haystackBusWidth, configBu
    ,Add#(1, h__, TDiv#(haystackBusWidth, 32))
    ,Add#(i__, 32, haystackBusWidth)
    ,Add#(j__, 8, haystackBusWidth)
-   
 	    );
    
    let verbose = True;
 
    Reg#(Bit#(32)) needleLen <- mkReg(0);
-   MemReadEngine#(haystackBusWidth,haystackBusWidth,1,p) haystack_re <- mkMemReadEngineBuff(1024);
-   MemReadEngine#(configBusWidth,configBusWidth,1,p) config_re <- mkMemReadEngineBuff(1024);
+   MemReadEngine#(haystackBusWidth,haystackBusWidth,1,DegPar) haystack_re <- mkMemReadEngineBuff(1024);
+   MemReadEngine#(configBusWidth,configBusWidth,1,DegPar) config_re <- mkMemReadEngineBuff(1024);
    
    Reg#(Bit#(32)) needleSGLId <- mkReg(0);
    Reg#(Bit#(32)) mpNextSGLId <- mkReg(0);
@@ -90,20 +88,20 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(haystackBusWidth, configBu
    Reg#(Bit#(32)) doneCnt <- mkReg(0);
 
    let read_servers = zip(haystack_re.readServers,config_re.readServers);
-   Vector#(p, MPEngine#(haystackBusWidth,configBusWidth)) engines <- mapM(uncurry(mkMPEngine),read_servers);
-   Vector#(p, PipeOut#(Int#(32))) locdonePipes;
+   Vector#(DegPar, MPEngine#(haystackBusWidth,configBusWidth)) engines <- mapM(uncurry(mkMPEngine),read_servers);
+   Vector#(DegPar, PipeOut#(Int#(32))) locdonePipes;
 
    FIFOF#(Tripple#(Bit#(32))) setsearchFIFO <- mkFIFOF;
-   UnFunnelPipe#(1,p,Tripple#(Bit#(32)),1) setsearchPipeUnFunnel <- mkUnFunnelPipesPipelinedRR(cons(toPipeOut(setsearchFIFO),nil), 1);
+   UnFunnelPipe#(1,DegPar,Tripple#(Bit#(32)),1) setsearchPipeUnFunnel <- mkUnFunnelPipesPipelinedRR(cons(toPipeOut(setsearchFIFO),nil), 1);
 
-   for(Integer i = 0; i < valueOf(p); i=i+1) begin 
+   for(Integer i = 0; i < valueOf(DegPar); i=i+1) begin
       locdonePipes[i] = engines[i].locdone;
       mkConnection(setsearchPipeUnFunnel[i],engines[i].setsearch);
    end
 
-   FunnelPipe#(1,p,Int#(32),1) locdonePipe <- mkFunnelPipesPipelined(locdonePipes);
-   let lpv = fromInteger(valueOf(lp));
-   let pv = fromInteger(valueOf(p));
+   FunnelPipe#(1,DegPar,Int#(32),1) locdonePipe <- mkFunnelPipesPipelined(locdonePipes);
+   let lpv = fromInteger(valueOf(logDegPar));
+   let pv = fromInteger(valueOf(DegPar));
 
    rule resr;
       let rv <- toGet(locdonePipe[0]).get;
