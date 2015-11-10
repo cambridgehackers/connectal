@@ -308,6 +308,9 @@ $(VFILE): $(TOPBSVFILE) $(BSVFILES)
 	$(Q)sed -i 's|  wire.*PROBE_VALID[,;]|(* mark_debug="true" *)&|' verilog/*.v 
 	$(Q)for v in verilog/*.v; do $(CONNECTALDIR)/scripts/copy_verilog.py $$v $(VERILOG_PATH); done
 
+%.bvi: %.v
+	$(CONNECTALDIR)/scripts/extract-bvi-schedule.py -d $(dir $(*).v) $(*).v
+
 $(DTOP)/bin/libconnectal-sim.so: $(SIM_CXX_COMMON) $(SIM_CXX_PROJECT)
 	$(Q)mkdir -p $(DTOP)/bin
 	g++ -O -g -I$(DTOP)/jni -shared -fpic $(SIM_CXXFLAGS) -g -o $(DTOP)/bin/libconnectal-sim.so $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)
