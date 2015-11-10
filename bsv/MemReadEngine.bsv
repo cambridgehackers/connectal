@@ -40,13 +40,17 @@ import ConnectalConfig::*;
 
 `include "ConnectalProjectConfig.bsv"
 
+typedef 2 MemReadFunnelBPC;
+
 module mkMemReadEngine(MemReadEngine#(busWidth, userWidth, cmdQDepth, numServers))
    provisos( Mul#(TDiv#(busWidth, 8), 8, busWidth)
 	    ,Add#(1, a__, numServers)
 	    ,Add#(busWidth, 0, userWidth)
-	    ,FunnelPipesPipelined#(1, numServers, MemTypes::MemData#(userWidth), 2)
-	    ,Pipe::FunnelPipesPipelined#(1, numServers, MemTypes::MemRequest, 2)
-	    ,Add#(b__, TLog#(numServers), 6)
+//	     ,Min#(MemReadFunnelBPC, TLog#(numServers), bpc)
+	     ,Add#(0,MemReadFunnelBPC,bpc)
+	    ,FunnelPipesPipelined#(1, numServers, MemTypes::MemData#(userWidth), bpc)
+	    ,Pipe::FunnelPipesPipelined#(1, numServers, MemTypes::MemRequest, bpc)
+	    ,Add#(b__, TLog#(numServers), MemTagSize)
       	    );
    let rv <- mkMemReadEngineBuff(valueOf(cmdQDepth) * valueOf(TExp#(BurstLenSize)));
    return rv;
@@ -64,15 +68,6 @@ function NextReq getNext(Bit#(32) len, Bit#(BurstLenSize) burst);
    return v;
 endfunction
 
-typedef struct {
-   Bit#(indexSize)    idx;
-   SGLId              sglId;
-   Bit#(32)           base;
-   Bit#(MemTagSize)   tag;
-   Bool               last;
-   Bit#(BurstLenSize) burstLen;
-} ServerRequest#(numeric type indexSize) deriving (Bits, Eq);
-
 interface MemReadChannel#(numeric type busWidth, numeric type userWidth, numeric type cmdQDepth);
    interface PipeOut#(MemRequest)        readReq;
    interface PipeIn#(MemData#(busWidth)) readData;
@@ -84,17 +79,8 @@ module mkMemReadChannel#(Integer bufferSizeBytes, Integer channelNumber) (MemRea
 	     Mul#(busWidthBytes,8,busWidth),
 	     Log#(busWidthBytes,beatShift),
 	     Log#(cmdQDepth,logCmdQDepth),
-	     Log#(cmdQDepth, cmdBuffAddrSz),
-	     Log#(1, serverIdxSz),
 	     Add#(busWidth, 0, userWidth),
-	     Add#(1,logCmdQDepth, outCntSz),
-	     Add#(1, c__, 1),
-	     Add#(b__, TLog#(1), cmdBuffAddrSz),
-	     Add#(e__, TLog#(1), TAdd#(1, cmdBuffAddrSz)),
-	     Add#(a__, serverIdxSz, cmdBuffAddrSz),
-	     Min#(2,TLog#(1),bpc),
-	     Add#(d__, TLog#(1), TAdd#(1, serverIdxSz)),
-	     Add#(f__, serverIdxSz, MemTagSize));
+	     Add#(1,logCmdQDepth, outCntSz));
    let verbose = False;
    let beatShift = fromInteger(valueOf(beatShift));
 
@@ -118,7 +104,6 @@ module mkMemReadChannel#(Integer bufferSizeBytes, Integer channelNumber) (MemRea
    FIFOF#(MemRequestCycles) clientCyclesFifo <- mkFIFOF();
    
    FIFO#(Tuple3#(Bool,Bool,Bit#(BurstLenSize))) serverCheckAvail <- mkSizedFIFO(1);
-   FIFOF#(ServerRequest#(serverIdxSz))      serverRequest <- mkFIFOF();
    FIFOF#(MemRequest)                          dmaRequest <- mkSizedFIFOF(valueOf(cmdQDepth));
    FIFO#(Tuple3#(Bit#(8),Bit#(MemTagSize),Bool)) serverProcessing <- mkSizedFIFO(valueOf(cmdQDepth));
    FIFOF#(MemData#(busWidth))                       serverDataFifo <- mkFIFOF;
@@ -238,10 +223,12 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
    provisos (Div#(busWidth,8,busWidthBytes),
 	     Mul#(busWidthBytes,8,busWidth),
 	     Add#(busWidth, 0, userWidth),
-	     FunnelPipesPipelined#(1, numServers, MemTypes::MemData#(userWidth), 2),
-	     FunnelPipesPipelined#(1, numServers, MemTypes::MemRequest, 2),
-	     Add#(a__, TLog#(numServers), 6)
-	     );
+//	     Min#(MemReadFunnelBPC, TLog#(numServers), bpc),
+	     Add#(0,MemReadFunnelBPC,bpc),
+	     FunnelPipesPipelined#(1, numServers, MemTypes::MemData#(userWidth), bpc),
+	     FunnelPipesPipelined#(1, numServers, MemTypes::MemRequest, bpc),
+	     Add#(a__, TLog#(numServers), MemTagSize)
+      );
    let verbose = False;
 
    let clock <- exposeCurrentClock();
@@ -259,12 +246,12 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
    endfunction
 
    FIFOF#(MemRequest) reqFifo <- mkFIFOF();
-   FunnelPipe#(1,numServers,MemRequest,2) reqFunnel <- mkFunnelPipesPipelined(genWith(readChannelDmaReadReq));
+   FunnelPipe#(1,numServers,MemRequest,bpc) reqFunnel <- mkFunnelPipesPipelined(genWith(readChannelDmaReadReq));
    FIFOF#(MemData#(busWidth)) readDataFifo <- mkFIFOF();
    function Tuple2#(Bit#(TLog#(numServers)),MemData#(userWidth)) tagData(MemData#(userWidth) md);
       return tuple2(truncate(md.tag), md);
    endfunction
-   UnFunnelPipe#(1,numServers,MemData#(userWidth),2) dataPipes <- mkUnFunnelPipesPipelined(vec(mapPipe(tagData, toPipeOut(readDataFifo))));
+   UnFunnelPipe#(1,numServers,MemData#(userWidth),bpc) dataPipes <- mkUnFunnelPipesPipelined(vec(mapPipe(tagData, toPipeOut(readDataFifo))));
    // FIXME: pass this a parameter to mkMemReadChannel
    for (Integer channel = 0; channel < valueOf(numServers); channel = channel + 1)
       mkConnection(dataPipes[channel], readChannels[channel].readData);
