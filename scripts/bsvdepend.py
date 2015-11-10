@@ -60,19 +60,20 @@ if __name__=='__main__':
         ps = p.split(':')
         bsvpath.extend(ps)
     bsvpackages = getBsvPackages(options.bluespecdir)
-    makef = open(options.output, 'w')
-    makef.write('# BSV dependences\n')
-    makef.write('BSVDEFINES = %s\n' % ' '.join(['-D %s' % d for d in options.bsvdefine]))
-    makef.write('BSVPATH = %s\n' % ':'.join(options.bsvpath))
-    makef.write('\n')
-    makef.write('# BSV files\n#\t')
-    makef.write('\n#\t'.join(options.bsvfile))
-    makef.write('\n')
+
     if options.all:
         for d in bsvpath:
             for bsvfilename in glob.glob('%s/*.bsv' % d):
                 if bsvfilename not in options.bsvfile:
                     options.bsvfile.append(bsvfilename)
+
+    makef = open(options.output, 'w')
+    makef.write('# BSV dependences\n')
+    makef.write('BSVDEFINES = %s\n' % ' '.join(['-D %s' % d for d in options.bsvdefine]))
+    makef.write('BSVPATH = %s\n' % ':'.join(options.bsvpath))
+    makef.write('\n')
+    makef.write('OBJMAKEFILE_DEP = %s\n' % ' '.join(options.bsvfile))
+    makef.write('\n')
     for bsvfilename in options.bsvfile:
         print bsvfilename
         vf = open(bsvfilename, 'r')
