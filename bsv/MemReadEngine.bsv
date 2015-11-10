@@ -242,8 +242,8 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
    endfunction
    UnFunnelPipe#(1,numServers,MemData#(userWidth),bpc) dataPipes <- mkUnFunnelPipesPipelined(vec(mapPipe(tagData, toPipeOut(readDataFifo))));
 
-   Vector#(numServers, MemReadChannel#(busWidth,userWidth,cmdQDepth)) readChannels <- mapM(uncurry(mkMemReadChannel(bufferSizeBytes)),
-											   zip(genVector(), dataPipes));
+   Vector#(numServers, MemReadChannel#(busWidth,userWidth,cmdQDepth)) readChannels <- zipWithM(mkMemReadChannel(bufferSizeBytes),
+											       genVector(), dataPipes);
    Vector#(numServers, FIFOF#(Bit#(MemTagSize))) readtagFifos <- replicateM(mkSizedFIFOF(valueOf(cmdQDepth)));
    function PipeOut#(MemRequest) readChannelDmaReadReq(Integer i);
       return readChannels[i].readReq;
