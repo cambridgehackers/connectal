@@ -74,7 +74,8 @@ interface MemReadChannel#(numeric type busWidth, numeric type userWidth, numeric
    interface MemReadEngineServer#(userWidth) readServer;
 endinterface
 
-module mkMemReadChannel#(Integer bufferSizeBytes, Integer channelNumber) (MemReadChannel#(busWidth, userWidth, cmdQDepth))
+module mkMemReadChannel#(Integer bufferSizeBytes, Integer channelNumber, PipeOut#(MemData#(userWidth)) dataPipe)
+   (MemReadChannel#(busWidth, userWidth, cmdQDepth))
    provisos (Div#(busWidth,8,busWidthBytes),
 	     Mul#(busWidthBytes,8,busWidth),
 	     Log#(busWidthBytes,beatShift),
@@ -164,7 +165,7 @@ module mkMemReadChannel#(Integer bufferSizeBytes, Integer channelNumber) (MemRea
    endrule
 
    rule read_data_rule;
-      let d <- toGet(serverDataFifo).get();
+      let d <- toGet(dataPipe).get();
       match {.rc, .tag, .last_burst} = serverProcessing.first;
       let new_respCnt = respCnt+1;
       let l = False;
@@ -216,7 +217,6 @@ module mkMemReadChannel#(Integer bufferSizeBytes, Integer channelNumber) (MemRea
                endinterface);
    interface readServer = rs;
    interface PipeOut readReq = toPipeOut(dmaRequest);
-   interface PipeIn readData = toPipeIn(serverDataFifo);
 endmodule
 
 module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, userWidth, cmdQDepth, numServers))
@@ -236,7 +236,14 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
 
    Integer bufferSizeBeats = bufferSizeBytes/valueOf(busWidthBytes);
 
-   Vector#(numServers, MemReadChannel#(busWidth,userWidth,cmdQDepth)) readChannels <- genWithM(mkMemReadChannel(bufferSizeBytes));
+   FIFOF#(MemData#(busWidth)) readDataFifo <- mkFIFOF();
+   function Tuple2#(Bit#(TLog#(numServers)),MemData#(userWidth)) tagData(MemData#(userWidth) md);
+      return tuple2(truncate(md.tag), md);
+   endfunction
+   UnFunnelPipe#(1,numServers,MemData#(userWidth),bpc) dataPipes <- mkUnFunnelPipesPipelined(vec(mapPipe(tagData, toPipeOut(readDataFifo))));
+
+   Vector#(numServers, MemReadChannel#(busWidth,userWidth,cmdQDepth)) readChannels <- mapM(uncurry(mkMemReadChannel(bufferSizeBytes)),
+											   zip(genVector(), dataPipes));
    Vector#(numServers, FIFOF#(Bit#(MemTagSize))) readtagFifos <- replicateM(mkSizedFIFOF(valueOf(cmdQDepth)));
    function PipeOut#(MemRequest) readChannelDmaReadReq(Integer i);
       return readChannels[i].readReq;
@@ -247,14 +254,6 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
 
    FIFOF#(MemRequest) reqFifo <- mkFIFOF();
    FunnelPipe#(1,numServers,MemRequest,bpc) reqFunnel <- mkFunnelPipesPipelined(genWith(readChannelDmaReadReq));
-   FIFOF#(MemData#(busWidth)) readDataFifo <- mkFIFOF();
-   function Tuple2#(Bit#(TLog#(numServers)),MemData#(userWidth)) tagData(MemData#(userWidth) md);
-      return tuple2(truncate(md.tag), md);
-   endfunction
-   UnFunnelPipe#(1,numServers,MemData#(userWidth),bpc) dataPipes <- mkUnFunnelPipesPipelined(vec(mapPipe(tagData, toPipeOut(readDataFifo))));
-   // FIXME: pass this a parameter to mkMemReadChannel
-   for (Integer channel = 0; channel < valueOf(numServers); channel = channel + 1)
-      mkConnection(dataPipes[channel], readChannels[channel].readData);
 
    interface Vector  readServers = genWith(readChannelServer);
    interface MemReadClient dmaClient;
