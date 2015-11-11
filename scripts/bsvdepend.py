@@ -47,9 +47,10 @@ def getBsvPackages(bluespecdir):
 makefiletemplate='''
 %(name)s_BO  = obj/%(name)s.bo
 %(name)s_DEP = %(dependences)s
+%(name)s_INC = %(includes)s
 %(name)s_BSV = %(bsvfilename)s
 
-$(eval $(call BSV_BO_RULE, $(%(name)s_BO), $(%(name)s_BSV), $(%(name)s_DEP)))
+$(eval $(call BSV_BO_RULE, $(%(name)s_BO), $(%(name)s_BSV), $(%(name)s_DEP), $(%(name)s_INC)))
 
 '''
 
@@ -66,6 +67,9 @@ if __name__=='__main__':
             for bsvfilename in glob.glob('%s/*.bsv' % d):
                 if bsvfilename not in options.bsvfile:
                     options.bsvfile.append(bsvfilename)
+    abspaths = {}
+    for f in options.bsvfile:
+        abspaths[os.path.basename(f)] = f
 
     makef = open(options.output, 'w')
     makef.write('# BSV dependences\n')
@@ -75,24 +79,38 @@ if __name__=='__main__':
     makef.write('OBJMAKEFILE_DEP = %s\n' % ' '.join(options.bsvfile))
     makef.write('\n')
     for bsvfilename in options.bsvfile:
-        print bsvfilename
         vf = open(bsvfilename, 'r')
         basename = os.path.basename(bsvfilename)
         (name, ext) = os.path.splitext(basename)
         source = vf.read()
-        preprocess = syntax.preprocess(source, options.bsvdefine, bsvpath)
+        preprocess = syntax.preprocess(bsvfilename, source, options.bsvdefine, bsvpath)
         packages = []
+        includes = []
         for line in preprocess.split('\n'):
+            #print 'bsvdepend: %s' % line
             m = re.match('import ([A-Za-z0-9_]+)\w*', line)
             if m:
                 pkg = m.group(1)
                 if pkg not in packages and pkg not in bsvpackages:
                     packages.append(pkg)
+            m = re.match('//`include "([^\"]+)"', line)
+            m1 = re.match('//`include(.*)', line)
+            if m:
+                iname = m.group(1)
+                if iname in abspaths:
+                    iname = abspaths[iname]
+                else:
+                    iname = 'obj/%s' % iname
+                #print 'm:', m.group(1), iname
+                includes.append(iname)
+            elif m1:
+                sys.stderr.write('bsvdepend %s: unhandled `include %s\n' % (bsvfilename, m1.group(1)))
             pass
         makef.write(makefiletemplate % {
                 'name': name,
                 'bsvfilename': bsvfilename,
                 'dependences': ' '.join(['obj/%s.bo' % pkg for pkg in packages]),
+                'includes':    ' '.join(includes)
                 })
         pass
     makef.close()
