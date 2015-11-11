@@ -423,7 +423,7 @@ if __name__=='__main__':
 
     if noisyFlag:
         print 'Writing Makefile', makename
-    make = util.createDirAndOpen(makename, 'w')
+    make = util.createDirAndOpen(makename + '.new', 'w')
 
     genxdc_dep = ''
     if options.pinout:
@@ -504,11 +504,17 @@ if __name__=='__main__':
         for name in options.prvariant:
             make.write(variantTemplate % {'varname': name})
     make.close()
-    configbsv = util.createDirAndOpen(os.path.join(project_dir, 'generatedbsv', 'ConnectalProjectConfig.bsv'), 'w')
+    util.replaceIfChanged(makename, makename + '.new')
+
+    configbsvname = os.path.join(project_dir, 'generatedbsv', 'ConnectalProjectConfig.bsv')
+    configbsv = util.createDirAndOpen(configbsvname + '.new', 'w')
     for (var, val) in map(util.splitBinding, bsvdefines):
         configbsv.write('`define %(var)s %(val)s\n' % { 'var': var, 'val': val })
     configbsv.close()
-    configh = util.createDirAndOpen(os.path.join(project_dir, 'jni', 'ConnectalProjectConfig.h'), 'w')
+    util.replaceIfChanged(configbsvname, configbsvname + '.new')
+
+    confighname = os.path.join(project_dir, 'jni', 'ConnectalProjectConfig.h')
+    configh = util.createDirAndOpen(confighname + '.new', 'w')
     configh.write('#ifndef _ConnectalProjectConfig_h\n')
     configh.write('#define _ConnectalProjectConfig_h\n')
     configh.write('\n')
@@ -520,6 +526,7 @@ if __name__=='__main__':
     configh.write('\n')
     configh.write('#endif // _ConnectalProjectConfig_h\n')
     configh.close()
+    util.replaceIfChanged(confighname, confighname + '.new')
 
     if options.make:
         os.chdir(project_dir)
