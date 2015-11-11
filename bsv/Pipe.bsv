@@ -518,6 +518,7 @@ instance FunnelPipesPipelined#(1,k,a,bpc)
       return cons(infss[0][0],nil);
    endmodule
    module mkUnFunnelPipesPipelined#(Vector#(1, PipeOut#(Tuple2#(Bit#(logk),a))) in) (UnFunnelPipe#(1,k,a,bpc));
+      (* hide *)
       let rv <- mkUnFunnelPipesPipelinedInternal(in);
       return rv;
    endmodule
