@@ -252,7 +252,7 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
 
    Reg#(Bool)         reqInFlight <- mkReg(False);
    FIFOF#(MemRequest)          writeReqFifo <- mkFIFOF();
-   FIFOF#(MemData#(userWidth)) writeDataFifo <- mkFIFOF();
+   FIFOF#(MemData#(userWidth)) writeDataFifo <- mkSizedFIFOF(16);
    FunnelPipe#(1,numServers,MemRequest,2) reqFunnel <- mkFunnelPipesPipelined(genWith(writeChannelDmaWriteReq));
    FunnelPipe#(1,numServers,MemData#(userWidth),2) dataFunnel <- mkFunnelPipesPipelined(genWith(writeChannelDmaWriteData));
 
