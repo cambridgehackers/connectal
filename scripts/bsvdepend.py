@@ -61,7 +61,7 @@ synthmoduletemplate = '''
 %(name)s_DEP = %(dependences)s
 %(name)s_INC = %(includes)s
 
-$(eval $(call BSV_V_RULE, $(%(name)s_MOD), $(%(name)s_V), $(%(name)s_BSV) $(%(name)s_DEP), $(%(name)s_INC)))
+$(eval $(call BSV_V_RULE, $(%(name)s_MOD), $(%(name)s_V), $(%(name)s_BSV), $(%(name)s_DEP), $(%(name)s_INC)))
 '''
 
 if __name__=='__main__':
