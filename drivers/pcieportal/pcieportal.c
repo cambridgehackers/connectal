@@ -22,6 +22,7 @@
  * Linux device driver for CONNECTAL portals on FPGAs connected via PCIe.
  */
 
+#include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/version.h>      /* LINUX_VERSION_CODE, KERNEL_VERSION */
 #include <linux/pci.h>          /* pci device types, fns, etc. */
@@ -381,6 +382,57 @@ static const struct file_operations pcieportal_fops = {
         .mmap = portal_mmap
 };
 
+static void tune_pcie_caps(struct pci_dev *dev)
+{
+	struct pci_dev *parent;
+	u16 rc_mpss, rc_mps, ep_mpss, ep_mps;
+	u16 rc_mrrs, ep_mrrs, max_mrrs;
+
+	printk("%s: %s:%d\n", DEV_NAME, __FUNCTION__, __LINE__);
+	parent = dev->bus->self;
+	// why does parent have to be root?
+	if (!pci_is_root_bus(parent->bus)) {
+		printk("%s: parent is not root\n", DEV_NAME);
+		return;
+	}
+
+	/* max payload size adjustment */
+	rc_mpss = parent->pcie_mpss;
+	rc_mps  = ffs(pcie_get_mps(parent)) - 8;
+
+	ep_mpss = dev->pcie_mpss;
+	ep_mps  = ffs(pcie_get_mps(dev))    - 8;
+
+	rc_mpss = max(rc_mpss, ep_mpss);
+	if (rc_mpss > rc_mps) {
+		rc_mps = rc_mpss;
+		pcie_set_mps(parent, 128 << rc_mps);
+	}
+	if (rc_mpss > ep_mps) {
+		ep_mps = rc_mpss;
+		pcie_set_mps(dev, 128 << ep_mps);
+	}
+
+	printk("%s: %s:%d parent.mps=%d dev.mps=%d\n", DEV_NAME, __FUNCTION__, __LINE__, pcie_get_mps(parent), pcie_get_mps(dev));
+
+	/* max read request size, limited to 4096 by PCIe spec */
+	max_mrrs = 128 << 5;
+	rc_mrrs = pcie_get_readrq(parent);
+	ep_mrrs = pcie_get_readrq(dev);
+
+	if (max_mrrs > rc_mrrs) {
+		rc_mrrs = max_mrrs;
+		pcie_set_readrq(parent, rc_mrrs);
+	}
+	if (max_mrrs > ep_mrrs) {
+		ep_mrrs = max_mrrs;
+		pcie_set_readrq(dev, ep_mrrs);
+	}
+
+	printk("%s: %s:%d parent.readrq=%d dev.readrq=%d\n", DEV_NAME, __FUNCTION__, __LINE__, pcie_get_readrq(parent), pcie_get_readrq(dev));
+
+}
+
 static int board_activate(int activate, tBoard *this_board, struct pci_dev *dev)
 {
 	int i;
@@ -559,6 +611,9 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		    printk(KERN_ERR "%s: cdev_add board failed\n", DEV_NAME);
                 }
 		device_create(pcieportal_class, &dev->dev, this_device_number, NULL, "connectal");
+
+		tune_pcie_caps(dev);
+
                 if (err == 0)
                     return err; /* if board activated correctly, return */
         } /* end of if(activate) */
