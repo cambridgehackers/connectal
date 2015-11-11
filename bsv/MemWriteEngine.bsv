@@ -236,11 +236,13 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
 `ifdef ARB_FUNNEL
    FIFOF#(Bit#(MemTagSize))       arbFifo <- mkFIFOF1();
    UnFunnelPipe#(1,numServers,Bit#(MemTagSize),2) arbPipes <- mkUnFunnelPipesPipelined(vec(mapPipe(tagDone, toPipeOut(arbFifo))));
+   UnFunnelPipe#(1,numServers,Bit#(MemTagSize),2) donePipes <- mkUnFunnelPipesPipelined(vec(mapPipe(tagDone, toPipeOut(writeDoneFifo))));
 `else
    Vector#(numServers, FIFOF#(Bit#(MemTagSize)))   arbFifos <- replicateM(mkFIFOF);
    Vector#(numServers, PipeOut#(Bit#(MemTagSize))) arbPipes = map(toPipeOut, arbFifos);
+   Vector#(numServers, FIFOF#(Bit#(MemTagSize)))   doneFifos <- replicateM(mkFIFOF);
+   Vector#(numServers, PipeOut#(Bit#(MemTagSize))) donePipes = map(toPipeOut, doneFifos);
 `endif
-   UnFunnelPipe#(1,numServers,Bit#(MemTagSize),2) donePipes <- mkUnFunnelPipesPipelined(vec(mapPipe(tagDone, toPipeOut(writeDoneFifo))));
    Vector#(numServers, MemWriteChannel#(busWidth,userWidth,cmdQDepth)) writeChannels <- zipWith3M(mkMemWriteChannel(bufferSizeBytes),
 												  genVector(),
 												  arbPipes,
@@ -278,6 +280,13 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
 	 reqInFlight <= False;
       writeDataFifo.enq(md);
    endrule
+
+`ifndef ARB_FUNNEL
+   rule rl_writeDone;
+      let tag <- toGet(writeDoneFifo).get();
+      doneFifos[tag].enq(tag);
+   endrule
+`endif
 
    interface writeServers = genWith(writeChannelServer);
    interface MemWriteClient dmaClient;
