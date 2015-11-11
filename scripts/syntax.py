@@ -1033,15 +1033,18 @@ def preprocess(source, defs, bsvpath):
         elif tok == 'else':
             new_cond = not cond
             stack.pop()
+            valid = stack[-1][1]
             stack.append((new_cond,valid))
         elif tok == 'elsif':
             stack.pop()
+            valid = stack[-1][1]
             (sym, s) = nexttok(s)
             new_cond = sym in defs
             new_valid = new_cond and valid
             stack.append((new_cond,new_valid))
         elif tok == 'endif':
             stack.pop()
+            valid = stack[-1][1]
         elif tok == 'define':
             k = re.search('\n', s).start()
             foo = re.search('\s',s).start()
@@ -1051,13 +1054,16 @@ def preprocess(source, defs, bsvpath):
         elif tok == 'include':
             m = re.search('\s*\"([^\"]+)\"\s*', s)
             filename = m.group(1)
-            inc = ''
-            for d in bsvpath:
-                fn = os.path.join(d, filename)
-                if os.path.exists(fn):
-                    inc = open(fn).read()
-                    break
-            s = inc + s[m.end():]
+            if valid:
+                inc = ''
+                for d in bsvpath:
+                    fn = os.path.join(d, filename)
+                    if os.path.exists(fn):
+                        inc = open(fn).read()
+                        break
+                s = '\\`include "%s"\n%s%s' % (filename, inc, s[m.end():])
+            else:
+                s = '\\`include "%s"\n%s%s' % (filename, '', s[m.end():])
         elif re.match('[A-Z][A-Za-z0-9_]*', tok):
             ## must be an undefined variable
             sys.stderr.write('syntax.py: undefined preprocessor variable `%s\n' % tok)
