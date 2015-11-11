@@ -128,7 +128,6 @@ if __name__=='__main__':
                     print 'expecting module: ', line
             find = line.find('(* synthesize *)')
             if find >= 0:
-                print line
                 synthesize = True
             else:
                 synthesize = False
