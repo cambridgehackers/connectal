@@ -51,6 +51,8 @@
 
 int simulator_dump_vcd = 0;
 const char *simulator_vcd_name = "dump.vcd";
+// set this to 1 to suppress call to fpgajtag
+int noprogram = 0;
 
 static int trace_portal;//= 1;
 
@@ -266,7 +268,7 @@ static void initPortalHardwareOnce(void)
         char *filename = NULL;
         char *argv[] = { (char *)"fpgajtag", NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 	int ind = 1;
-        if (getenv("NOFPGAJTAG") || getenv("NOPROGRAM"))
+        if (noprogram || getenv("NOFPGAJTAG") || getenv("NOPROGRAM"))
             exit(0);
 #ifndef SIMULATOR_USE_PATH
 	filename = getExecutionFilename(buf, sizeof(buf));
