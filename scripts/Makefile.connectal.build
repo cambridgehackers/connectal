@@ -301,18 +301,21 @@ vsim: verilog bin/vsim
 	$(MAKE) -C vsim all
 	$(MAKE) -C vsim simulate
 
+obj/%.bvi: verilog/%.v
+	$(CONNECTALDIR)/scripts/extract-bvi-schedule.py -d obj verilog/$(*).v
+
 define BSV_BO_RULE
-$(1): $(2) $(3)
+$(1): $(2) $(3) $(4)
 	$(Q)mkdir -p $(DTOP)/obj
 	@echo BSV_BO  [$(2)]
 	$(Q)MAKEFLAGS="" $(RUN_BSC) $(2)
 endef
 
-define BO_VERILOG_RULE
-verilog/mk$(1).v: obj/$(1).bo
+define BSV_V_RULE
+$(2): $(3)
 	$(Q)mkdir -p verilog
 	@echo BSCVERILOG [$(1)]
-	cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -remove-dollar -verilog -g mk$(1) obj/$(1).bo
+	cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -remove-dollar -verilog -g $(1) $(3)
 endef
 
 include obj/Makefile
@@ -329,9 +332,6 @@ $(VFILE): $(addprefix obj/, $(patsubst %.bsv, %.bo, $(notdir $(TOPBSVFILE))))
 obj/Makefile: $(OBJMAKEFILE_DEP)
 	@mkdir -p obj
 	$(CONNECTALDIR)/scripts/bsvdepend.py -o obj/Makefile $(BSVDEFINES) --bsvpath=$(BSVPATH) --all $(TOPBSVFILE)
-
-%.bvi: %.v
-	$(CONNECTALDIR)/scripts/extract-bvi-schedule.py -d $(dir $(*).v) $(*).v
 
 $(DTOP)/bin/libconnectal-sim.so: $(SIM_CXX_COMMON) $(SIM_CXX_PROJECT)
 	$(Q)mkdir -p $(DTOP)/bin

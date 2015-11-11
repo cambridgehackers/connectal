@@ -51,7 +51,15 @@ makefiletemplate='''
 %(name)s_BSV = %(bsvfilename)s
 
 $(eval $(call BSV_BO_RULE, $(%(name)s_BO), $(%(name)s_BSV), $(%(name)s_DEP), $(%(name)s_INC)))
+'''
 
+synthmoduletemplate = '''
+%(name)s_MOD = %(module)s
+%(name)s_V   = verilog/%(module)s.v
+%(name)s_BO  = obj/%(name)s.bo
+%(name)s_BSV = %(bsvfilename)s
+
+$(eval $(call BSV_V_RULE, $(%(name)s_MOD), $(%(name)s_V), $(%(name)s_BSV)))
 '''
 
 if __name__=='__main__':
@@ -86,13 +94,10 @@ if __name__=='__main__':
         preprocess = syntax.preprocess(bsvfilename, source, options.bsvdefine, bsvpath)
         packages = []
         includes = []
+        synthesizedModules = []
+        synthesize = False
         for line in preprocess.split('\n'):
             #print 'bsvdepend: %s' % line
-            m = re.match('import ([A-Za-z0-9_]+)\w*', line)
-            if m:
-                pkg = m.group(1)
-                if pkg not in packages and pkg not in bsvpackages:
-                    packages.append(pkg)
             m = re.match('//`include "([^\"]+)"', line)
             m1 = re.match('//`include(.*)', line)
             if m:
@@ -105,6 +110,26 @@ if __name__=='__main__':
                 includes.append(iname)
             elif m1:
                 sys.stderr.write('bsvdepend %s: unhandled `include %s\n' % (bsvfilename, m1.group(1)))
+
+            if re.match('^//', line):
+                continue
+            m = re.match('import ([A-Za-z0-9_]+)\w*', line)
+            if m:
+                pkg = m.group(1)
+                if pkg not in packages and pkg not in bsvpackages:
+                    packages.append(pkg)
+            if synthesize:
+                m = re.match('\s*module\s+([A-Za-z0-9_]+)', line)
+                if m:
+                    synthesizedModules.append(m.group(1))
+                else:
+                    print 'expecting module: ', line
+            find = line.find('(* synthesize *)')
+            if find >= 0:
+                print line
+                synthesize = True
+            else:
+                synthesize = False
             pass
         makef.write(makefiletemplate % {
                 'name': name,
@@ -112,6 +137,12 @@ if __name__=='__main__':
                 'dependences': ' '.join(['obj/%s.bo' % pkg for pkg in packages]),
                 'includes':    ' '.join(includes)
                 })
+        for mod in synthesizedModules:
+            makef.write(synthmoduletemplate % {
+                    'module': mod,
+                    'name': name,
+                    'bsvfilename': bsvfilename
+                    })
         pass
     makef.close()
     vf.close()
