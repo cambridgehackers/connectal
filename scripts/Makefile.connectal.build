@@ -308,11 +308,11 @@ define BSV_BO_RULE
 $(1): $(2) $(3) $(4)
 	$(Q)mkdir -p $(DTOP)/obj
 	@echo BSV_BO  [$(2)]
-	$(Q)MAKEFLAGS="" $(RUN_BSC) $(2)
+	$(Q)MAKEFLAGS="" $(RUN_BSC) -verilog $(2)
 endef
 
 define BSV_V_RULE
-$(2): $(3)
+$(2): $(3) $(4) $(5)
 	$(Q)mkdir -p verilog
 	@echo BSCVERILOG [$(1)]
 	cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -remove-dollar -verilog -g $(1) $(3)

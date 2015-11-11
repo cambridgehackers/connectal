@@ -58,8 +58,10 @@ synthmoduletemplate = '''
 %(name)s_V   = verilog/%(module)s.v
 %(name)s_BO  = obj/%(name)s.bo
 %(name)s_BSV = %(bsvfilename)s
+%(name)s_DEP = %(dependences)s
+%(name)s_INC = %(includes)s
 
-$(eval $(call BSV_V_RULE, $(%(name)s_MOD), $(%(name)s_V), $(%(name)s_BSV)))
+$(eval $(call BSV_V_RULE, $(%(name)s_MOD), $(%(name)s_V), $(%(name)s_BSV) $(%(name)s_DEP), $(%(name)s_INC)))
 '''
 
 if __name__=='__main__':
@@ -141,7 +143,9 @@ if __name__=='__main__':
             makef.write(synthmoduletemplate % {
                     'module': mod,
                     'name': name,
-                    'bsvfilename': bsvfilename
+                    'bsvfilename': bsvfilename,
+                    'dependences': ' '.join(['obj/%s.bo' % pkg for pkg in packages]),
+                    'includes':    ' '.join(includes)
                     })
         pass
     makef.close()
