@@ -23,6 +23,7 @@
 import os, sys
 import argparse
 import re
+import util
 
 argparser = argparse.ArgumentParser("Extract BVI schedule lines from bsc-generated verilog.")
 argparser.add_argument('vfile', help='Verilog files to process', nargs='+')
@@ -34,7 +35,8 @@ if __name__=='__main__':
         vf = open(vfilename, 'r')
         basename = os.path.basename(vfilename)
         (name, ext) = os.path.splitext(basename)
-        bvif = open(os.path.join(options.dir, '%s.bvi' % name), 'w')
+        bvifname = os.path.join(options.dir, '%s.bvi' % name)
+        bvif = open(bvifname + '.new', 'w')
         bvif.write('// BVI Schedule from %s\n' % vfilename)
         inschedule = False
         for line in vf:
@@ -49,4 +51,6 @@ if __name__=='__main__':
                 pass
             pass
         bvif.close()
+        ## only update the file if it changed, to help out make
+        util.replaceIfChanged(bvifname, bvifname + '.new')
         vf.close()
