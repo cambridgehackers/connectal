@@ -65,7 +65,7 @@ printf("[%s:%d]\n", __FUNCTION__, __LINE__);
         indPortal.mux_ports = (PortalMuxHandler *)malloc(indPortal.mux_ports_number * sizeof(PortalMuxHandler));
     }
     //pint->fpga_number = indPortal->fpgaNumber(pint->fpga_number);
-    pint->map_base = ((volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo) + sizeof(uint32_t))) + 1;
+    pint->map_base = ((volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo) + 2*sizeof(uint32_t))) + 1;
     indPortal.mux_ports[pint->fpga_number].pint = pint;  // FIXME: depends on ids < 16
     pint->fpga_fd = mcommon.client_fd[0];
     return 0;
