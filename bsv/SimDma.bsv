@@ -142,9 +142,9 @@ module mkSimDma(SimDma#(dataWidth) ifc)
    method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v, Bit#(TDiv#(dataWidth,8)) byteEnable);
       Vector#(TDiv#(dataWidth, 32), Bit#(32)) vs = unpack(v);
       Vector#(TDiv#(dataWidth, 32), Bit#(4)) byteEnables = unpack(byteEnable);
-      function Action write32(Integer i, Bit#(32) vv, Bit#(4) byteEnable);
+      function Action write32(Integer i, Bit#(32) vv, Bit#(4) be);
 	 action
-	    rws[i].write32(handle, addr+4*fromInteger(i), vv, byteEnable);
+	    rws[i].write32(handle, addr+4*fromInteger(i), vv, be);
 	 endaction
       endfunction
       let unused <- zipWith3M(write32, genVector(), vs, byteEnables);
