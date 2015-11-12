@@ -45,11 +45,11 @@ import Pcie3EndpointX7   :: *;
 `endif
 `ifdef PCIE2
 import PCIEWRAPPER2       :: *;
-import PcieEndpointX7Gen2 :: *;
+import Pcie2EndpointX7 :: *;
 `endif // pcie2
 `ifdef PCIE1
 import PCIEWRAPPER       :: *;
-import PcieEndpointX7    :: *;
+import Pcie1EndpointX7   :: *;
 `endif // pcie2
 `elsif ALTERA
 import PcieEndpointS5    :: *;

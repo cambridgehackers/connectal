@@ -4,7 +4,7 @@
 //  Filename      : ConnectalXilinx7PCIE.bsv
 //  Description   :
 ////////////////////////////////////////////////////////////////////////////////
-package PcieEndpointX7Gen2;
+package Pcie2EndpointX7;
 
 import ConnectalConfig   ::*;
 import Clocks            ::*;
@@ -227,4 +227,4 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    interface Reset epDerivedReset = derivedReset;
 endmodule: mkPcieEndpointX7
 
-endpackage: PcieEndpointX7Gen2
+endpackage: Pcie2EndpointX7

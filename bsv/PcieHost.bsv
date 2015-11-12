@@ -44,11 +44,11 @@ import MemTypes          :: *;
 `ifdef XILINX
 `ifdef PCIE1
 import PCIEWRAPPER       :: *;
-import PcieEndpointX7    :: *;
+import Pcie1EndpointX7   :: *;
 `endif // pcie1
 `ifdef PCIE2
 import PCIEWRAPPER2       :: *;
-import PcieEndpointX7Gen2 :: *;
+import Pcie2EndpointX7 :: *;
 `endif // pcie2
 `ifdef PCIE3
 import PCIEWRAPPER3      :: *;
