@@ -64,7 +64,7 @@ ifeq ($(BSCMAJOR), 2015)
     BSCFLAGS_COMMON += -D ClockDefaultParam
 endif
 
-BSCOPTFLAGS= -show-schedule -aggressive-conditions -show-method-bvi
+BSCOPTFLAGS= -show-schedule -aggressive-conditions -show-method-bvi -remove-dollar
 BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj
 BSCFLAGS_COMMON += $(BSCWARNFLAGS) $(BSCOPTFLAGS) $(BSCPATHFLAGS) --wait-for-license
 PROF_FLAGS= #-pg
@@ -325,7 +325,7 @@ include obj/Makefile
 
 $(VFILE): $(addprefix obj/, $(patsubst %.bsv, %.bo, $(notdir $(TOPBSVFILE))))
 	$(Q)mkdir -p verilog $(DTOP)/obj
-	@echo BSCVERILOG [$(DTOP)]
+	@echo BSCVERILOG [$(VFILE)]
 	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -verilog -g $(MKTOP) $(TOPBSVFILE)
 	$(Q)sed -i 's|// On .*|// timestamp removed|' verilog/*.v
 	$(Q)sed -i 's|  wire.*PROBE[,;]|(* mark_debug="true" *)&|' verilog/*.v 
