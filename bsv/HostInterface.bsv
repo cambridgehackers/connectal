@@ -117,6 +117,7 @@ interface PcieHost#(numeric type dsz, numeric type nSlaves);
    interface PipeIn#(Bit#(64)) changes;
 `else
    interface Client#(TLPData#(16), TLPData#(16)) pci;
+   interface PipeIn#(Bit#(64)) changes;
 `endif
    interface Put#(TimestampedTlpData) trace;
 `ifdef PCIE_BSCAN
