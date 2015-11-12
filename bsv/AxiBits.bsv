@@ -78,8 +78,7 @@ interface ACPType;
     method Action      awuser(Bit#(5) v);
 endinterface
 
-interface AxiSlaveBits#(numeric type addrWidth, numeric type dataWidth, numeric type tagWidth,
-    type extraType);
+interface AxiSlaveBits#(numeric type addrWidth, numeric type dataWidth, numeric type tagWidth, type extraType);
     method Action      araddr(Bit#(addrWidth) v);
     method Action      arburst(Bit#(2) v);
     method Action      arcache(Bit#(4) v);
