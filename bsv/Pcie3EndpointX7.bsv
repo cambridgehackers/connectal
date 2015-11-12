@@ -1,4 +1,5 @@
 // Copyright (c) 2014-2015 Quanta Research Cambridge, Inc.
+// Copyright (c) 2015 Connectal Project
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
