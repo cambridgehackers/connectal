@@ -134,6 +134,7 @@ static int init_socketResp(struct PortalInternal *pint, void *aparam)
     pint->fpga_fd = init_listening(buff, param);
     ioctl(pint->fpga_fd, FIONBIO, &on);
     pint->map_base = (volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo));
+    memset((void *)pint->map_base, 0, REQINFO_SIZE(pint->reqinfo));  // for valgrind
     pint->poller_register = 1;
     return 0;
 }
@@ -148,6 +149,7 @@ static int init_socketInit(struct PortalInternal *pint, void *aparam)
     pint->client_fd[pint->client_fd_number++] = init_connecting(buff, param);
     pint->accept_finished = 1;
     pint->map_base = (volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo));
+    memset((void *)pint->map_base, 0, REQINFO_SIZE(pint->reqinfo));  // for valgrind
     pint->poller_register = 1;
     return 0;
 }
@@ -243,6 +245,7 @@ static int init_mux(struct PortalInternal *pint, void *aparam)
         fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);
     pint->mux = param->pint;
     pint->map_base = ((volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo) + sizeof(uint32_t))) + 1;
+    memset((void *)(pint->map_base-1), 0, REQINFO_SIZE(pint->reqinfo) + sizeof(uint32_t));  // for valgrind
     pint->mux->map_base[0] = -1;
     pint->mux->mux_ports_number++;
     pint->mux->mux_ports = (PortalMuxHandler *)realloc(pint->mux->mux_ports, pint->mux->mux_ports_number * sizeof(PortalMuxHandler));

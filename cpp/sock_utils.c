@@ -150,6 +150,7 @@ ssize_t sock_fd_write(int sockfd, void *ptr, size_t nbytes, int sendfd)
     msg.msg_control = control_un.control;
     msg.msg_controllen = 0;
     if (sendfd >= 0) {
+        memset(&control_un, 0, sizeof(control_un));
         msg.msg_controllen = sizeof(control_un.control);
         cmptr = CMSG_FIRSTHDR(&msg);
         cmptr->cmsg_len = CMSG_LEN(sizeof(int));
