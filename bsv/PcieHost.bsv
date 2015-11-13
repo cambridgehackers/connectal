@@ -44,11 +44,11 @@ import MemTypes          :: *;
 `ifdef XILINX
 `ifdef PCIE1
 import PCIEWRAPPER       :: *;
-import PcieEndpointX7    :: *;
+import Pcie1EndpointX7   :: *;
 `endif // pcie1
 `ifdef PCIE2
 import PCIEWRAPPER2       :: *;
-import PcieEndpointX7Gen2 :: *;
+import Pcie2EndpointX7 :: *;
 `endif // pcie2
 `ifdef PCIE3
 import PCIEWRAPPER3      :: *;
@@ -191,6 +191,7 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    interface slave = slavearr;
    interface interruptRequest = intr.interruptRequest;
    interface pci = traceif.pci;
+   interface changes = csr.changes;
 `ifdef PCIE_BSCAN
    interface BscanTop bscanif = lbscan.loc[0];
 `else
@@ -280,6 +281,7 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_
 		    endinterface);
 `else
    mkConnection(ep7.tlp, pciehost.pci, clocked_by pcieClock_, reset_by pcieReset_);
+   mkConnection(ep7.regChanges, pciehost.changes, clocked_by pcieClock_, reset_by pcieReset_);
    let ipciehost = pciehost;
 `endif
 
@@ -336,19 +338,25 @@ endmodule
 `endif
 
 `ifdef SIMULATION
-   module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_PARAM Reset pci_sys_reset_n)(PcieHostTop);
-   PcieHostTop _a <- mkBsimPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, `SYS_CLK_ARG pci_sys_reset_n); return _a;
-   endmodule
+module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_PARAM Reset pci_sys_reset_n)(PcieHostTop);
+   (* hide *)
+   PcieHostTop pcieHostTop <- mkBsimPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, `SYS_CLK_ARG pci_sys_reset_n);
+   return pcieHostTop;
+endmodule
 `elsif XILINX // XILINX
-   //(* synthesize, no_default_clock, no_default_reset *)
-   (* no_default_clock, no_default_reset *)
-   module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_PARAM Reset pci_sys_reset_n)(PcieHostTop);
-      PcieHostTop _a <- mkXilinxPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, `SYS_CLK_ARG pci_sys_reset_n); return _a;
-   endmodule
+//(* synthesize, no_default_clock, no_default_reset *)
+(* no_default_clock, no_default_reset *)
+module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_PARAM Reset pci_sys_reset_n)(PcieHostTop);
+   (* hide *)
+   PcieHostTop pcieHostTop <- mkXilinxPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, `SYS_CLK_ARG pci_sys_reset_n);
+   return pcieHostTop;
+endmodule
 `elsif ALTERA_TOP
-   //(* synthesize, no_default_clock, no_default_reset *)
-   (* no_default_clock, no_default_reset *)
-   module mkPcieHostTop #(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieHostTop);
-      PcieHostTop _a <- mkAlteraPcieHostTop(clk_100MHz, clk_50MHz, perst_n); return _a;
-   endmodule
+//(* synthesize, no_default_clock, no_default_reset *)
+(* no_default_clock, no_default_reset *)
+module mkPcieHostTop #(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieHostTop);
+   (* hide *)
+   PcieHostTop pcieHostTop <- mkAlteraPcieHostTop(clk_100MHz, clk_50MHz, perst_n);
+   return pcieHostTop;
+endmodule
 `endif // NOT ALTERA

@@ -117,7 +117,8 @@ Pcie3ChangeSrc = [
     'phy_link_status',
     'pl_status_change',
     'power_state_change_interrupt',
-    'rcb_status'
+    'rcb_status',
+    'backpressure_count'
 ]
 
 first_vcd_timestamp = mpz(0)

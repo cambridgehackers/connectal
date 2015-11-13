@@ -154,6 +154,7 @@ static int init_webSocketInit(struct PortalInternal *pint, void *aparam)
     char buffer[INET6_ADDRSTRLEN];
 
     pint->map_base = (volatile unsigned int *)malloc(4+MAX_ZEDBOARD_PAYLOAD+1);
+    memset((void *)pint->map_base, 0, 4+MAX_ZEDBOARD_PAYLOAD+1); // for valgrind
     if (param->addr->ai_family == AF_INET) {
         struct sockaddr_in *sa = (struct sockaddr_in *)param->addr->ai_addr;
         port = htons(sa->sin_port);
@@ -182,6 +183,7 @@ static int init_webSocketResp(struct PortalInternal *pint, void *aparam)
     unsigned short port = 5050;
 
     pint->map_base = (volatile unsigned int *)malloc(4+MAX_ZEDBOARD_PAYLOAD+1);
+    memset((void *)pint->map_base, 0, 4+MAX_ZEDBOARD_PAYLOAD+1); // for valgrind
     if (param->addr->ai_family == AF_INET) {
         struct sockaddr_in *sa = (struct sockaddr_in *)param->addr->ai_addr;
         port = htons(sa->sin_port);

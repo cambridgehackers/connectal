@@ -157,7 +157,7 @@ module  mkBsimTop(BsimTop);
 `endif
        clocked_by singleClock, reset_by singleReset));
    Platform top <- mkPlatform(ts, clocked_by singleClock, reset_by singleReset);
-   mapM(uncurry(mkConnection),zip(top.masters, host.mem_servers), clocked_by singleClock, reset_by singleReset);
+   zipWithM_(mkConnection,top.masters, host.mem_servers, clocked_by singleClock, reset_by singleReset);
 `ifndef SIMULATION_EXERCISE_MEM_MASTER_SLAVE
    mkConnection(host.mem_client, top.slave, clocked_by singleClock, reset_by singleReset);
 `else

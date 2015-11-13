@@ -107,11 +107,11 @@ static DmaManager *dma;
 static pthread_once_t once_control = PTHREAD_ONCE_INIT;
 void platformInitOnce(void)
 {
-    hostMemServerRequest = new MemServerRequestProxy(IfcNames_MemServerRequestPLATFORMS2H, PLATFORM_TILE);
-    MMURequestProxy *dmap = new MMURequestProxy(IfcNames_MMURequestPLATFORMS2H, PLATFORM_TILE);
+    hostMemServerRequest = new MemServerRequestProxy(PlatformIfcNames_MemServerRequestS2H, PLATFORM_TILE);
+    MMURequestProxy *dmap = new MMURequestProxy(PlatformIfcNames_MMURequestS2H, PLATFORM_TILE);
     dma = new DmaManager(dmap);
-    hostMemServerIndication = new MemServerIndication(hostMemServerRequest, IfcNames_MemServerIndicationPLATFORMH2S, PLATFORM_TILE);
-    mmuIndication = new MMUIndication(dma, IfcNames_MMUIndicationPLATFORMH2S, PLATFORM_TILE);
+    hostMemServerIndication = new MemServerIndication(hostMemServerRequest, PlatformIfcNames_MemServerIndicationH2S, PLATFORM_TILE);
+    mmuIndication = new MMUIndication(dma, PlatformIfcNames_MMUIndicationH2S, PLATFORM_TILE);
 
 #ifdef FPGA0_CLOCK_FREQ
     long req_freq = FPGA0_CLOCK_FREQ;
