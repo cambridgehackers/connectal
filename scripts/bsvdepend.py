@@ -125,10 +125,13 @@ if __name__=='__main__':
                 if m:
                     synthesizedModules.append(m.group(1))
                 else:
-                    print 'expecting module: ', line
-            find = line.find('(* synthesize *)')
-            if find >= 0:
+                    sys.stderr.write('bsvdepend: in %s expecting module: %s\n' % (bsvfilename, line))
+            synth = line.find('(* synthesize *)')
+            attr = line.find('(* ')
+            if synth >= 0:
                 synthesize = True
+            elif attr >= 0:
+                pass # no change to synthesize
             else:
                 synthesize = False
             pass
