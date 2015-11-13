@@ -50,7 +50,7 @@ endinterface
 
 interface Ddr3Test;
    interface Ddr3TestRequest request;
-   interface Vector#(1, MemReadClient#(64)) readClient;
+   interface Vector#(1, MemReadClient#(DataBusWidth)) readClient;
 endinterface
 
 module mkDdr3Test#(Ddr3TestIndication indication)(Ddr3Test);
@@ -59,8 +59,8 @@ module mkDdr3Test#(Ddr3TestIndication indication)(Ddr3Test);
    let reset <- exposeCurrentReset();
 
    let ddr3 <- mkDdr3(clock); // fixme clocks
-   MemReadEngine#(64,64,1,1)  re <- mkMemReadEngine();
-   MemWriteEngine#(64,64,1,1)  ddr3we <- mkMemWriteEngine();
+   MemReadEngine#(DataBusWidth,DataBusWidth,1,1)  re <- mkMemReadEngine();
+   MemWriteEngine#(DataBusWidth,DataBusWidth,1,1)  ddr3we <- mkMemWriteEngine();
       
    FIFOF#(MemRequest) readReqFifo <- mkFIFOF();
    FIFOF#(MemData#(DataBusWidth)) readDataFifo <- mkSizedFIFOF(32);
@@ -89,10 +89,10 @@ module mkDdr3Test#(Ddr3TestIndication indication)(Ddr3Test);
    mkConnection(ddr3we.dmaClient.writeData, toPut(gearbox));
    rule rl_wdata;
       let mds <- toGet(gearbox).get();
-
       function Bit#(DataBusWidth) md_data(Integer i); return mds[i].data; endfunction
+      Vector#(4, Bit#(DataBusWidth)) data = genWith(md_data);
       ddr3.slave.resp_write.put(Axi4WriteData {
-	 data: pack(genWith(md_data)),
+	 data: pack(data),
 	 byteEnable: maxBound,
 	 last: 1,
 	 id: mds[0].tag
