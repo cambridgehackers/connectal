@@ -188,7 +188,8 @@ else ifneq ($(XILINX),)
 	$(Q)[ ! -f bin/connectal.so ] || objcopy --remove-section fpgadata bin/connectal.so
 	$(Q)[ ! -f bin/connectal.so ] || objcopy --add-section fpgadata=bin/mkTop.bin.gz bin/connectal.so
 	if [ -f Impl/TopDown/top-post-route.dcp ]; then cp -f Impl/TopDown/top-post-route.dcp bin; fi
-	$(CONNECTALDIR)/scripts/check-timing.py bin/*/top-post-route-timing-summary.*
+	if [ -f Impl/TopDown/top-post-route-timing-summary.rpt ]; then $(CONNECTALDIR)/scripts/check-timing.py Impl/TopDown/top-post-route-timing-summary.rpt; fi
+	if [ -f Impl/TopDown/top-post-route-timing-summary.txt ]; then $(CONNECTALDIR)/scripts/check-timing.py Impl/TopDown/top-post-route-timing-summary.txt; fi
 else
 	@echo "not zipping xilinx"
 endif # XILINX
