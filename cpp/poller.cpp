@@ -91,7 +91,12 @@ void PortalPoller::addFd(int fd)
      * event().
      */
     numFds++;
-    portal_fds = (struct pollfd *)realloc(portal_fds, numFds*sizeof(struct pollfd));
+    struct pollfd *new_portal_fds = (struct pollfd *)malloc(numFds*sizeof(struct pollfd));
+    if (portal_fds) {
+	memcpy((void *)new_portal_fds, (const void *)portal_fds, (numFds-1)*sizeof(struct pollfd));
+	free(portal_fds);
+    }
+    portal_fds = new_portal_fds;
     struct pollfd *pollfd = &portal_fds[numFds-1];
     memset(pollfd, 0, sizeof(struct pollfd));
     pollfd->fd = fd;
