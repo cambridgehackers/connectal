@@ -110,9 +110,9 @@ interface AxiDdr3;
 endinterface
 import "BVI" axiddr3 =
 module mkAxiDdr3#(Clock sys_clk, Reset sys_rst, Clock clk_ref_i)(AxiDdr3);
-   input_clock  sys_clk_i(sys_clk_i) = sys_clk;
+   default_clock  sys_clk_i(sys_clk_i) = sys_clk;
    input_clock  clk_ref_i(clk_ref_i) = clk_ref_i;
-   input_reset  sys_rst(sys_rst) = sys_rst;
+   default_reset  sys_rst(sys_rst) = sys_rst;
    output_clock  ui_clk(ui_clk);
    output_reset  ui_clk_sync_rst(ui_clk_sync_rst);
     method aresetn(aresetn) enable((*inhigh*) EN_aresetn) clocked_by (ui_clk) reset_by (ui_clk_sync_rst);
