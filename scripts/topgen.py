@@ -53,6 +53,7 @@ import MemTypes::*;
 import MemServer::*;
 import IfcNames::*;
 %(generatedImport)s
+`include "ConnectalProjectConfig.bsv"
 
 `ifndef IMPORT_HOSTIF
 (* synthesize *)
@@ -110,6 +111,7 @@ import HostInterface::*;
 import IfcNames::*;
 import MemTypes::*;
 %(generatedImport)s
+`include "ConnectalProjectConfig.bsv"
 
 %(generatedTypedefs)s
 
