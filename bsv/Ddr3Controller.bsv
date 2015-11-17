@@ -33,9 +33,15 @@ import ConnectalClocks ::*;
 typedef 30 Ddr3AddrWidth;
 typedef 512 Ddr3DataWidth;
 
+interface Ddr3Pins;
+   interface AxiDdr3Ddr3 ddr3;
+   interface Clock sysclk_deleteme_unused_clock;
+   interface Reset sysrst_deleteme_unused_reset;
+endinterface
+
 interface Ddr3;
    interface Axi4Slave#(Ddr3AddrWidth,Ddr3DataWidth,6) slave;
-   interface AxiDdr3Ddr3 ddr3; // pins
+   interface Ddr3Pins ddr3; // pins
    interface Clock uiClock;
    interface Reset uiReset;
 endinterface
@@ -86,19 +92,21 @@ function Axi4SlaveBits#(Ddr3AddrWidth,Ddr3DataWidth,6,Empty) toAxiSlaveBits(AxiD
 endfunction
 
 (* synthesize *)
-module mkDdr3#(Clock ddr3Clock)(Ddr3);
+module mkDdr3#(Clock clk200)(Ddr3);
    let clock <- exposeCurrentClock();
    let reset <- exposeCurrentReset();
+
+   Reset rst200 <- mkAsyncReset( 10, reset, clk200 );
+
 `ifndef BSV_POSITIVE_RESET
-   let positiveReset <- mkPositiveReset(10, reset, clock);
-   let mcReset = positiveReset.positiveReset;
+   let mcReset = rst200;
 `else
-   let mcReset = reset;
+   // fixme later
 `endif
 
    //fixme mc.aresetn
 
-   AxiDdr3     mc <- mkAxiDdr3(clock, mcReset, clock); // fixme clocks
+   AxiDdr3     mc <- mkAxiDdr3(clk200, mcReset);
    let ui_reset_n <- mkResetInverter(mc.ui_clk_sync_rst, clocked_by mc.ui_clk);
    let axiBits = toAxiSlaveBits(mc.s_axi);
    Axi4SlaveCommon#(Ddr3AddrWidth,Ddr3DataWidth,6,Empty) axiSlaveCommon <- mkAxi4SlaveGather(axiBits, clocked_by mc.ui_clk, reset_by ui_reset_n);
@@ -110,7 +118,18 @@ module mkDdr3#(Clock ddr3Clock)(Ddr3);
    endrule
    
    interface slave = axiSlaveCommon.server;
-   interface ddr3 = mc.ddr3;
+   interface Ddr3Pins ddr3;
+      interface AxiDdr3Ddr3 ddr3 = mc.ddr3;
+      interface Clock sysclk_deleteme_unused_clock = clock; //fixme
+      interface Reset sysrst_deleteme_unused_reset = reset; //fixme
+   endinterface
    interface Clock uiClock = mc.ui_clk;
    interface Reset uiReset = ui_reset_n;
 endmodule
+
+export Ddr3AddrWidth;
+export Ddr3DataWidth;
+export Ddr3Pins(..);
+export Ddr3(..);
+export AxiDdr3Ddr3(..);
+export mkDdr3;
