@@ -80,7 +80,7 @@ module mkAxiDmaMaster#(PhysMemMaster#(addrWidth,dataWidth) master) (Axi3Master#(
 
    Reg#(Bit#(8))  burstReg <- mkReg(0);
    FIFO#(Tuple3#(Bit#(8),Bit#(ByteEnableSize),Bit#(ByteEnableSize))) reqs <- mkSizedFIFO(32);
-   Reg#(Bit#(ByteEnableSize)) lastbeReg <- mkReg(maxBound);
+   Reg#(Bit#(dataWidthBytes)) lastbeReg <- mkReg(maxBound);
    
    let beat_shift = fromInteger(valueOf(beatShift));
 
@@ -183,7 +183,7 @@ module mkAxi4DmaMaster#(PhysMemMaster#(addrWidth,dataWidth) master) (Axi4Master#
 
    Reg#(Bit#(8))  burstReg <- mkReg(0);
    FIFO#(Tuple3#(Bit#(8),Bit#(ByteEnableSize),Bit#(ByteEnableSize))) reqs <- mkSizedFIFO(32);
-   Reg#(Bit#(ByteEnableSize)) lastbeReg <- mkReg(maxBound);
+   Reg#(Bit#(dataWidthBytes)) lastbeReg <- mkReg(maxBound);
    
    let beat_shift = fromInteger(valueOf(beatShift));
 
