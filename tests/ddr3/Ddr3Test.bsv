@@ -33,43 +33,53 @@ import MemTypes::*;
 import MemReadEngine::*;
 import MemWriteEngine::*;
 import Pipe::*;
-import Ddr3::*;
+import Ddr3Controller::*;
 import GetPutWithClocks::*;
 import AxiMasterSlave::*;
 import Axi4MasterSlave::*;
+import AxiDdr3Wrapper  ::*;
 import AxiDma::*;
 import ConnectalConfig::*;
+import HostInterface::*;
 
 interface Ddr3TestRequest;
    method Action startWriteDram(Bit#(32) sglId);
+   method Action startReadDram(Bit#(32) sglId);
 endinterface
 
 interface Ddr3TestIndication;
    method Action writeDone(Bit#(32) v);
+   method Action readDone(Bit#(32) v);
 endinterface
 
 interface Ddr3Test;
    interface Ddr3TestRequest request;
    interface Vector#(1, MemReadClient#(DataBusWidth)) readClient;
+   interface Vector#(1, MemWriteClient#(DataBusWidth)) writeClient;
+   interface Ddr3Pins ddr3;
 endinterface
 
-module mkDdr3Test#(Ddr3TestIndication indication)(Ddr3Test);
-   
+module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
+
    let clock <- exposeCurrentClock();
    let reset <- exposeCurrentReset();
 
-   let ddr3 <- mkDdr3(clock); // fixme clocks
+   Clock clk200 = host.tsys_clk_200mhz_buf;
+
+   let ddr3Controller <- mkDdr3(clk200);
    MemReadEngine#(DataBusWidth,DataBusWidth,1,1)  re <- mkMemReadEngine();
    MemWriteEngine#(DataBusWidth,DataBusWidth,1,1)  ddr3we <- mkMemWriteEngine();
-      
-   FIFOF#(MemRequest) readReqFifo <- mkFIFOF();
-   FIFOF#(MemData#(DataBusWidth)) readDataFifo <- mkSizedFIFOF(32);
-   
-   Gearbox#(1,4,MemData#(DataBusWidth)) gearbox <- mk1toNGearbox(clock, reset, ddr3.uiClock, ddr3.uiReset);
-   SyncFIFOIfc#(Axi4WriteRequest#(Ddr3AddrWidth,6)) awfifo <- mkSyncFIFO(4, clock, reset, ddr3.uiClock);
-   SyncFIFOIfc#(Axi4WriteResponse#(6)) bfifo <- mkSyncFIFO(4, ddr3.uiClock, ddr3.uiReset, clock);
-   mkConnection(toGet(awfifo), ddr3.slave.req_aw);
-   mkConnection(ddr3.slave.resp_b, toPut(bfifo));
+   MemWriteEngine#(DataBusWidth,DataBusWidth,1,1)  we <- mkMemWriteEngine();
+   MemReadEngine#(DataBusWidth,DataBusWidth,1,1)  ddr3re <- mkMemReadEngine();
+
+   FIFOF#(Bit#(32))   writeReqFifo <- mkFIFOF();
+   FIFOF#(Bit#(32))   readReqFifo <- mkFIFOF();
+
+   Gearbox#(1,4,MemData#(DataBusWidth)) dramWriteGearbox <- mk1toNGearbox(clock, reset, ddr3Controller.uiClock, ddr3Controller.uiReset);
+   SyncFIFOIfc#(Axi4WriteRequest#(Ddr3AddrWidth,6)) awfifo <- mkSyncFIFO(4, clock, reset, ddr3Controller.uiClock);
+   SyncFIFOIfc#(Axi4WriteResponse#(6)) bfifo <- mkSyncFIFO(4, ddr3Controller.uiClock, ddr3Controller.uiReset, clock);
+   mkConnection(toGet(awfifo), ddr3Controller.slave.req_aw);
+   mkConnection(ddr3Controller.slave.resp_b, toPut(bfifo));
 
    rule rl_req_aw;
       let req <- ddr3we.dmaClient.writeReq.get();
@@ -86,12 +96,12 @@ module mkDdr3Test#(Ddr3TestIndication indication)(Ddr3Test);
 	 });
    endrule
 
-   mkConnection(ddr3we.dmaClient.writeData, toPut(gearbox));
+   mkConnection(ddr3we.dmaClient.writeData, toPut(dramWriteGearbox));
    rule rl_wdata;
-      let mds <- toGet(gearbox).get();
+      let mds <- toGet(dramWriteGearbox).get();
       function Bit#(DataBusWidth) md_data(Integer i); return mds[i].data; endfunction
       Vector#(4, Bit#(DataBusWidth)) data = genWith(md_data);
-      ddr3.slave.resp_write.put(Axi4WriteData {
+      ddr3Controller.slave.resp_write.put(Axi4WriteData {
 	 data: pack(data),
 	 byteEnable: maxBound,
 	 last: 1,
@@ -104,21 +114,78 @@ module mkDdr3Test#(Ddr3TestIndication indication)(Ddr3Test);
       ddr3we.dmaClient.writeDone.put(b.id);
    endrule
 
+   rule rl_write_start;
+      let sglId <- toGet(writeReqFifo).get();
+      re.readServers[0].request.put(MemengineCmd { sglId: sglId,
+						  base: 0,
+						  burstLen: fromInteger(valueOf(TDiv#(Ddr3DataWidth,DataBusWidth))),
+						  len: fromInteger(valueOf(TDiv#(Ddr3DataWidth,8))),
+						  tag: 0
+						  });
+      ddr3we.writeServers[0].request.put(MemengineCmd { sglId: 0,
+						       base: 0,
+						       burstLen: fromInteger(valueOf(TDiv#(Ddr3DataWidth,DataBusWidth))),
+						       len: fromInteger(valueOf(TDiv#(Ddr3DataWidth,8))),
+						       tag: 0
+						       });
+   endrule
+
+   Gearbox#(4,1,MemData#(DataBusWidth)) dramReadGearbox <- mkNTo1Gearbox(clock, reset, ddr3Controller.uiClock, ddr3Controller.uiReset);
+   SyncFIFOIfc#(Axi4ReadRequest#(Ddr3AddrWidth,6)) arfifo <- mkSyncFIFO(4, clock, reset, ddr3Controller.uiClock);
+   mkConnection(toGet(arfifo), ddr3Controller.slave.req_ar);
+
+   rule rl_req_ar;
+      let req <- ddr3re.dmaClient.readReq.get();
+      arfifo.enq(Axi4ReadRequest {
+	 address: truncate(req.offset),
+	 len: 1,
+	 size: axiBusSize(valueOf(Ddr3DataWidth)),
+	 id: req.tag,
+	 burst: 2'b01,
+	 prot: 3'b000,   //ignored
+	 cache: 4'b0011, //ignored
+	 lock: 2'b00,    //ignored
+	 qos: 4'b0000    //ignored
+	 });
+   endrule
+
+   rule rl_rdata;
+      let resp <- ddr3Controller.slave.resp_read.get();
+      Vector#(4, Bit#(TDiv#(Ddr3DataWidth,4))) datavec = resp.data;
+
+      function MemData#(DataBusWidth) to_md_data(Integer i);
+	 return MemData { data: datavec[i], resp: 0, last: True, tag: resp.id };
+      endfunction
+      Vector#(4, MemData#(DataBusWidth)) data = genWith(to_md_data);
+      dramReadGearbox.enq(4, data);
+   endrule
+   mkConnection(toGet(dramReadGearbox), ddr3re.dmaClient.readData);
+
+   rule rl_read_start;
+      let sglId <- toGet(readReqFifo).get();
+      we.writeServers[0].request.put(MemengineCmd { sglId: sglId,
+						   base: 0,
+						   burstLen: fromInteger(valueOf(TDiv#(Ddr3DataWidth,DataBusWidth))),
+						   len: fromInteger(valueOf(TDiv#(Ddr3DataWidth,8))),
+						   tag: 0
+						   });
+      ddr3re.readServers[0].request.put(MemengineCmd { sglId: 0,
+						      base: 0,
+						      burstLen: fromInteger(valueOf(TDiv#(Ddr3DataWidth,DataBusWidth))),
+						      len: fromInteger(valueOf(TDiv#(Ddr3DataWidth,8))),
+						      tag: 0
+						      });
+   endrule
+
    interface Ddr3TestRequest request;
       method Action startWriteDram(Bit#(32) sglId);
-	 re.readServers[0].request.put(MemengineCmd { sglId: sglId, 
-						     base: 0,
-						     burstLen: fromInteger(valueOf(TDiv#(Ddr3DataWidth,DataBusWidth))),
-						     len: fromInteger(valueOf(TDiv#(Ddr3DataWidth,8))),
-						     tag: 0
-						     });
-	 ddr3we.writeServers[0].request.put(MemengineCmd { sglId: 0,
-							  base: 0,
-							  burstLen: fromInteger(valueOf(TDiv#(Ddr3DataWidth,DataBusWidth))),
-							  len: fromInteger(valueOf(TDiv#(Ddr3DataWidth,8))),
-							  tag: 0
-							  });
+	 writeReqFifo.enq(sglId);
+      endmethod
+      method Action startReadDram(Bit#(32) sglId);
+	 readReqFifo.enq(sglId);
       endmethod
    endinterface
    interface MemReadClient readClient = vec(re.dmaClient);
+   interface MemWriteClient writeClient = vec(we.dmaClient);
+   interface AxiDdr3 ddr3 = ddr3Controller.ddr3;
 endmodule

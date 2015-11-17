@@ -31,7 +31,11 @@ public:
   Ddr3TestIndication(unsigned int id) : Ddr3TestIndicationWrapper(id){}
   virtual void writeDone(uint32_t v) {
     fprintf(stderr, "writeDone %d\n", v);
-    sem_post(&test_sem);    
+    sem_post(&test_sem);
+  }
+  virtual void readDone(uint32_t v) {
+    fprintf(stderr, "readDone %d\n", v);
+    sem_post(&test_sem);
   }
 };
 
