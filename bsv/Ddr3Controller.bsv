@@ -25,7 +25,7 @@ import GetPut          ::*;
 import ClientServer    ::*;
 import AxiDdr3Wrapper  ::*;
 import AxiBits         ::*;
-import AxiGather       ::*; 
+import AxiGather       ::*;
 import Axi4MasterSlave ::*;
 import ConnectalClocks ::*;
 `include "ConnectalProjectConfig.bsv"
@@ -106,8 +106,14 @@ module mkDdr3#(Clock clk200)(Ddr3);
 
    //fixme mc.aresetn
 
-   AxiDdr3     mc <- mkAxiDdr3(clk200, mcReset);
+
+   let aresetn        <- mkB2R(clocked_by clk200, reset_by mcReset);
+   AxiDdr3     mc <- mkAxiDdr3(clk200, mcReset, aresetn.r);
    let ui_reset_n <- mkResetInverter(mc.ui_clk_sync_rst, clocked_by mc.ui_clk);
+   let ui_reset_b <- mkR2B(ui_reset_n);
+   rule rl_aresetn;
+         aresetn.inputreset(ui_reset_b.o);
+   endrule
    let axiBits = toAxiSlaveBits(mc.s_axi);
    Axi4SlaveCommon#(Ddr3AddrWidth,Ddr3DataWidth,6,Empty) axiSlaveCommon <- mkAxi4SlaveGather(axiBits, clocked_by mc.ui_clk, reset_by ui_reset_n);
 
@@ -116,7 +122,7 @@ module mkDdr3#(Clock clk200)(Ddr3);
       mc.app.sr_req(0);
       mc.app.zq_req(0);
    endrule
-   
+
    interface slave = axiSlaveCommon.server;
    interface Ddr3Pins ddr3;
       interface AxiDdr3Ddr3 ddr3 = mc.ddr3;
