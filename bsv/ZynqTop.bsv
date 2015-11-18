@@ -21,6 +21,7 @@
 // SOFTWARE.
 import ConnectalConfig::*;
 import Clocks :: *;
+import DefaultValue      :: *;
 import Vector            :: *;
 import Connectable       :: *;
 import ConnectableWithTrace::*;
@@ -40,6 +41,14 @@ import HostInterface     :: *;
 import Platform          :: *;
 `include "ConnectalProjectConfig.bsv"
 import `PinTypeInclude::*;
+
+`ifdef XILINX_SYS_CLK
+`define SYS_CLK_PARAM #( Clock sys_clk_p, Clock sys_clk_n )
+`define SYS_CLK_ARG sys_clk_p, sys_clk_n,
+`else
+`define SYS_CLK_PARAM
+`define SYS_CLK_ARG
+`endif
 
 interface I2C_Pins;
    interface Inout#(Bit#(1)) scl;
@@ -64,10 +73,19 @@ interface ZynqTop;
    interface Vector#(4, Reset) deleteme_unused_reset;
 endinterface
 
-module mkZynqTop(ZynqTop);
+module mkZynqTop `SYS_CLK_PARAM (ZynqTop);
    PS7 ps7 <- mkPS7();
    Clock mainclock = ps7.fclkclk[0];
    Reset mainreset = ps7.fclkreset[0];
+
+`ifdef XILINX_SYS_CLK
+   Clock sys_clk_200mhz <- mkClockIBUFDS(
+`ifdef ClockDefaultParam
+       defaultValue,
+`endif
+       sys_clk_p, sys_clk_n);
+   Clock sys_clk_200mhz_buf <- mkClockBUFG(clocked_by sys_clk_200mhz);
+`endif // XILINX_SYS_CLK
 
 `ifdef USE_I2C0
    let tscl0 <- mkIOBUF(~ps7.i2c[0].scltn, ps7.i2c[0].sclo, clocked_by mainclock, reset_by mainreset);
@@ -98,6 +116,10 @@ module mkZynqTop(ZynqTop);
 	  interface derivedClock = ps7.derivedClock;
 	  interface derivedReset = ps7.derivedReset;
           interface bscan = lbscan.loc[0];
+`ifdef XILINX_SYS_CLK
+       interface tsys_clk_200mhz = sys_clk_200mhz;
+       interface tsys_clk_200mhz_buf = sys_clk_200mhz_buf;
+`endif
       endinterface),
 `else                  // enables synthesis boundary
 `ifdef IMPORT_HOST_CLOCKS

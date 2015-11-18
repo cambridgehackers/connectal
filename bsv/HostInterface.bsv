@@ -168,6 +168,10 @@ interface HostInterface;
     interface Clock derivedClock;
     interface Reset derivedReset;
     interface BscanTop bscan;
+`ifdef XILINX_SYS_CLK
+   interface Clock tsys_clk_200mhz;
+   interface Clock tsys_clk_200mhz_buf;
+`endif
 endinterface
 
 //export PS7LIB::*;
