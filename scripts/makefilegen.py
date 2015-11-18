@@ -388,8 +388,8 @@ if __name__=='__main__':
     includelist = ['-I$(DTOP)/jni', '-I$(CONNECTALDIR)', \
                    '-I$(CONNECTALDIR)/cpp', '-I$(CONNECTALDIR)/lib/cpp', \
                    '%(sourceincludes)s', '%(cincludes)s', '%(cdefines)s']
-    substs['cflags'] = (' '.join(includelist) % substs) + ' '.join(options.cflags)
-    substs['cxxflags'] = (' '.join(includelist) % substs) + ' '.join(options.cxxflags)
+    substs['cflags'] = util.escapequotes((' '.join(includelist) % substs) + ' '.join(options.cflags))
+    substs['cxxflags'] = util.escapequotes((' '.join(includelist) % substs) + ' '.join(options.cxxflags))
     f = util.createDirAndOpen(androidmkname, 'w')
     f.write(androidmk_template % substs)
     f.close()
