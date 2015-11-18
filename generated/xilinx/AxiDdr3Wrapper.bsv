@@ -104,17 +104,16 @@ interface AxiDdr3;
     interface AxiDdr3Init     init;
     interface AxiDdr3Mmcm     mmcm;
     interface AxiDdr3S_axi   s_axi;
-    method Action aresetn(Bit#(1) r);
     interface Clock ui_clk;
     interface Reset ui_clk_sync_rst;
 endinterface
 import "BVI" axiddr3 =
-module mkAxiDdr3#(Clock sys_clk, Reset sys_rst)(AxiDdr3);
+module mkAxiDdr3#(Clock sys_clk, Reset sys_rst, Reset aresetn)(AxiDdr3);
    default_clock  sys_clk_i(sys_clk_i) = sys_clk;
    default_reset  sys_rst(sys_rst) = sys_rst;
    output_clock  ui_clk(ui_clk);
    output_reset  ui_clk_sync_rst(ui_clk_sync_rst);
-    method aresetn(aresetn) enable((*inhigh*) EN_aresetn) clocked_by (ui_clk) reset_by (ui_clk_sync_rst);
+   input_reset aresetn(aresetn) = aresetn;
     interface AxiDdr3App     app;
         method app_ref_ack ref_ack() clocked_by (ui_clk) reset_by (ui_clk_sync_rst);
         method ref_req(app_ref_req) enable((*inhigh*) EN_app_ref_req) clocked_by (ui_clk) reset_by (ui_clk_sync_rst);
@@ -124,21 +123,21 @@ module mkAxiDdr3#(Clock sys_clk, Reset sys_rst)(AxiDdr3);
         method zq_req(app_zq_req) enable((*inhigh*) EN_app_zq_req) clocked_by (ui_clk) reset_by (ui_clk_sync_rst);
     endinterface
     interface AxiDdr3Ddr3     ddr3;
-        method ddr3_addr addr();
-        method ddr3_ba ba();
-        method ddr3_cas_n cas_n();
-        method ddr3_ck_n ck_n();
-        method ddr3_ck_p ck_p();
-        method ddr3_cke cke();
-        method ddr3_cs_n cs_n();
-        method ddr3_dm dm();
-        ifc_inout dq(ddr3_dq);
-        ifc_inout dqs_n(ddr3_dqs_n);
-        ifc_inout dqs_p(ddr3_dqs_p);
-        method ddr3_odt odt();
-        method ddr3_ras_n ras_n();
-        method ddr3_reset_n reset_n();
-        method ddr3_we_n we_n();
+        method ddr3_addr addr() clocked_by (no_clock) reset_by (no_reset);
+        method ddr3_ba ba() clocked_by (no_clock) reset_by (no_reset);
+        method ddr3_cas_n cas_n() clocked_by (no_clock) reset_by (no_reset);
+        method ddr3_ck_n ck_n() clocked_by (no_clock) reset_by (no_reset);
+        method ddr3_ck_p ck_p() clocked_by (no_clock) reset_by (no_reset);
+        method ddr3_cke cke() clocked_by (no_clock) reset_by (no_reset);
+        method ddr3_cs_n cs_n() clocked_by (no_clock) reset_by (no_reset);
+        method ddr3_dm dm() clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout dq(ddr3_dq) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout dqs_n(ddr3_dqs_n) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout dqs_p(ddr3_dqs_p) clocked_by (no_clock) reset_by (no_reset);
+        method ddr3_odt odt() clocked_by (no_clock) reset_by (no_reset);
+        method ddr3_ras_n ras_n() clocked_by (no_clock) reset_by (no_reset);
+        method ddr3_reset_n reset_n() clocked_by (no_clock) reset_by (no_reset);
+        method ddr3_we_n we_n() clocked_by (no_clock) reset_by (no_reset);
     endinterface
     interface AxiDdr3Init     init;
         method init_calib_complete calib_complete() clocked_by (ui_clk) reset_by (ui_clk_sync_rst);
@@ -185,5 +184,5 @@ module mkAxiDdr3#(Clock sys_clk, Reset sys_rst)(AxiDdr3);
         method wstrb(s_axi_wstrb) enable((*inhigh*) EN_s_axi_wstrb) clocked_by (ui_clk) reset_by (ui_clk_sync_rst);
         method wvalid(s_axi_wvalid) enable((*inhigh*) EN_s_axi_wvalid) clocked_by (ui_clk) reset_by (ui_clk_sync_rst);
     endinterface
-    schedule (app.ref_ack, app.ref_req, app.sr_active, app.sr_req, app.zq_ack, app.zq_req, aresetn, ddr3.addr, ddr3.ba, ddr3.cas_n, ddr3.ck_n, ddr3.ck_p, ddr3.cke, ddr3.cs_n, ddr3.dm, ddr3.odt, ddr3.ras_n, ddr3.reset_n, ddr3.we_n, init.calib_complete, mmcm.locked, s_axi.araddr, s_axi.arburst, s_axi.arcache, s_axi.arid, s_axi.arlen, s_axi.arlock, s_axi.arprot, s_axi.arqos, s_axi.arready, s_axi.arsize, s_axi.arvalid, s_axi.awaddr, s_axi.awburst, s_axi.awcache, s_axi.awid, s_axi.awlen, s_axi.awlock, s_axi.awprot, s_axi.awqos, s_axi.awready, s_axi.awsize, s_axi.awvalid, s_axi.bid, s_axi.bready, s_axi.bresp, s_axi.bvalid, s_axi.rdata, s_axi.rid, s_axi.rlast, s_axi.rready, s_axi.rresp, s_axi.rvalid, s_axi.wdata, s_axi.wlast, s_axi.wready, s_axi.wstrb, s_axi.wvalid) CF (app.ref_ack, app.ref_req, app.sr_active, app.sr_req, app.zq_ack, app.zq_req, aresetn, ddr3.addr, ddr3.ba, ddr3.cas_n, ddr3.ck_n, ddr3.ck_p, ddr3.cke, ddr3.cs_n, ddr3.dm, ddr3.odt, ddr3.ras_n, ddr3.reset_n, ddr3.we_n, init.calib_complete, mmcm.locked, s_axi.araddr, s_axi.arburst, s_axi.arcache, s_axi.arid, s_axi.arlen, s_axi.arlock, s_axi.arprot, s_axi.arqos, s_axi.arready, s_axi.arsize, s_axi.arvalid, s_axi.awaddr, s_axi.awburst, s_axi.awcache, s_axi.awid, s_axi.awlen, s_axi.awlock, s_axi.awprot, s_axi.awqos, s_axi.awready, s_axi.awsize, s_axi.awvalid, s_axi.bid, s_axi.bready, s_axi.bresp, s_axi.bvalid, s_axi.rdata, s_axi.rid, s_axi.rlast, s_axi.rready, s_axi.rresp, s_axi.rvalid, s_axi.wdata, s_axi.wlast, s_axi.wready, s_axi.wstrb, s_axi.wvalid);
+    schedule (app.ref_ack, app.ref_req, app.sr_active, app.sr_req, app.zq_ack, app.zq_req, ddr3.addr, ddr3.ba, ddr3.cas_n, ddr3.ck_n, ddr3.ck_p, ddr3.cke, ddr3.cs_n, ddr3.dm, ddr3.odt, ddr3.ras_n, ddr3.reset_n, ddr3.we_n, init.calib_complete, mmcm.locked, s_axi.araddr, s_axi.arburst, s_axi.arcache, s_axi.arid, s_axi.arlen, s_axi.arlock, s_axi.arprot, s_axi.arqos, s_axi.arready, s_axi.arsize, s_axi.arvalid, s_axi.awaddr, s_axi.awburst, s_axi.awcache, s_axi.awid, s_axi.awlen, s_axi.awlock, s_axi.awprot, s_axi.awqos, s_axi.awready, s_axi.awsize, s_axi.awvalid, s_axi.bid, s_axi.bready, s_axi.bresp, s_axi.bvalid, s_axi.rdata, s_axi.rid, s_axi.rlast, s_axi.rready, s_axi.rresp, s_axi.rvalid, s_axi.wdata, s_axi.wlast, s_axi.wready, s_axi.wstrb, s_axi.wvalid) CF (app.ref_ack, app.ref_req, app.sr_active, app.sr_req, app.zq_ack, app.zq_req, ddr3.addr, ddr3.ba, ddr3.cas_n, ddr3.ck_n, ddr3.ck_p, ddr3.cke, ddr3.cs_n, ddr3.dm, ddr3.odt, ddr3.ras_n, ddr3.reset_n, ddr3.we_n, init.calib_complete, mmcm.locked, s_axi.araddr, s_axi.arburst, s_axi.arcache, s_axi.arid, s_axi.arlen, s_axi.arlock, s_axi.arprot, s_axi.arqos, s_axi.arready, s_axi.arsize, s_axi.arvalid, s_axi.awaddr, s_axi.awburst, s_axi.awcache, s_axi.awid, s_axi.awlen, s_axi.awlock, s_axi.awprot, s_axi.awqos, s_axi.awready, s_axi.awsize, s_axi.awvalid, s_axi.bid, s_axi.bready, s_axi.bresp, s_axi.bvalid, s_axi.rdata, s_axi.rid, s_axi.rlast, s_axi.rready, s_axi.rresp, s_axi.rvalid, s_axi.wdata, s_axi.wlast, s_axi.wready, s_axi.wstrb, s_axi.wvalid);
 endmodule
