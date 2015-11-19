@@ -40,7 +40,6 @@ import IfcNames::*;
 import BuildVector::*;
 
 `include "ConnectalProjectConfig.bsv"
-import Pcie3IF::*;
 
 `ifdef PinTypeInclude
 import `PinTypeInclude::*;
