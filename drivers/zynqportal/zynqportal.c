@@ -339,6 +339,7 @@ static int portal_release(struct inode *inode, struct file *filep)
 		struct pmentry *pmentry = list_entry(pmlist, struct pmentry, pmlist);
 		printk("    returning id=%d fmem=%p\n", pmentry->id, pmentry->fmem);
 		MMURequest_idReturn(&devptr, pmentry->id);
+		fput(pmentry->fmem);
 		kfree(pmentry);
 	}
 	INIT_LIST_HEAD(&portal_data->pmlist);
