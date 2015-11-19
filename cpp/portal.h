@@ -45,6 +45,10 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
 #include <pthread.h> // pthread_mutex_t
 #endif
 
+extern int simulator_dump_vcd;
+extern const char *simulator_vcd_name;
+extern int noprogram;
+
 #define PORTAL_PRINTF portal_printf
 #endif
 
@@ -211,6 +215,7 @@ typedef uint32_t fixed32; /* for GeneratedTypes.h from protobuf */
 #define PORTAL_CTRL_NUM_PORTALS      5
 #define PORTAL_CTRL_COUNTER_MSB      6
 #define PORTAL_CTRL_COUNTER_LSB      7
+#define PORTAL_CTRL_SIZE            (8 * sizeof(uint32_t))
 
 /*
  * Constants used in shared memory transport for portals
@@ -219,7 +224,9 @@ typedef uint32_t fixed32; /* for GeneratedTypes.h from protobuf */
 #define SHARED_WRITE  1
 #define SHARED_READ   2
 #define SHARED_START  4
-#define REQINFO_SIZE(A)   ((A) & 0xffff)
+// Since PortalCtrl fields appear as 'method 0', we need to be sure we have
+// enough memory allocated to 'read' them on simulation
+#define REQINFO_SIZE(A)  (((A) & 0xffff) > PORTAL_CTRL_SIZE ? ((A) & 0xffff) : PORTAL_CTRL_SIZE)
 #define REQINFO_COUNT(A) (((A) >> 16) & 0xffff)
 
 #ifdef __cplusplus

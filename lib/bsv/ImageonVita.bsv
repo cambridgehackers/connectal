@@ -41,7 +41,7 @@ module mkIserdesCore#(Clock serdes_clock, Reset serdes_reset, Clock serdest,
       Clock serdest_inverted, Bit#(1) astate_reset, SerdesStart param)(IserdesCore);
     Wire#(Bit#(1)) vita_data_p <- mkDWire(0);
     Wire#(Bit#(1)) vita_data_n <- mkDWire(0);
-`ifndef BSIM
+`ifndef SIMULATION
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
     IdelayE2 delaye2 <- mkIDELAYE2(IDELAYE2_Config {
@@ -131,7 +131,7 @@ endinterface
 module mkSerdesClock(SerdesClock);
     Clock defaultClock <- exposeCurrentClock();
     Reset defaultReset <- exposeCurrentReset();
-`ifdef BSIM
+`ifdef SIMULATION
     Wire#(Bit#(1)) vita_clk_p <- mkDWire(0);
     Wire#(Bit#(1)) vita_clk_n <- mkDWire(0);
     interface Clock serdes_clkif = defaultClock;
@@ -170,7 +170,7 @@ interface ImageClocks;
 endinterface
 (* synthesize *)
 module mkImageClocks#(Clock fmc_imageon_clk1)(ImageClocks);
-`ifndef BSIM
+`ifndef SIMULATION
    ClockGenerator7AdvParams clockParams = defaultValue;
    clockParams.bandwidth          = "OPTIMIZED";
    clockParams.compensation       = "ZHOLD";

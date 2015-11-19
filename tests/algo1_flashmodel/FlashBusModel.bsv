@@ -9,8 +9,8 @@ import RegFile::*;
 
 import ControllerTypes::*;
 
-//For BSIM: use hashed read data (so we don't have to write before read)
-typedef 1 BSIM_USE_HASHED_DATA; 
+//For SIMULATION: use hashed read data (so we don't have to write before read)
+typedef 1 SIMULATION_USE_HASHED_DATA; 
 
 typedef enum {
 	ST_CMD,

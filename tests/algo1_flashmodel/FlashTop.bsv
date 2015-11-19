@@ -36,7 +36,7 @@ import MemWriteEngine::*;
 import Pipe::*;
 import Clocks :: *;
 import Xilinx       :: *;
-`ifndef BSIM
+`ifndef SIMULATION
 import XilinxCells ::*;
 `endif
 import AuroraImportFmc1::*;
@@ -99,7 +99,7 @@ module mkFlashTop#(FlashIndication indication, Clock clk250, Reset rst250)(Flash
 	Vector#(NUM_BUSES, FIFO#(Tuple2#(Bit#(WordSz), TagT))) dmaWriteBufOut <- replicateM(mkFIFO());
 
 	GtxClockImportIfc gtx_clk_fmc1 <- mkGtxClockImport;
-	`ifdef BSIM
+	`ifdef SIMULATION
 		FlashCtrlVirtexIfc flashCtrl <- mkFlashCtrlModel(gtx_clk_fmc1.gtx_clk_p_ifc, gtx_clk_fmc1.gtx_clk_n_ifc, clk250);
 	`else
 		FlashCtrlVirtexIfc flashCtrl <- mkFlashCtrlVirtex(gtx_clk_fmc1.gtx_clk_p_ifc, gtx_clk_fmc1.gtx_clk_n_ifc, clk250);

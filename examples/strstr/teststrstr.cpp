@@ -110,7 +110,7 @@ int main(int argc, const char **argv)
     int haystackAlloc;
     int mpNextAlloc;
     const char *needle_text = "I have control\n";
-#ifndef BSIM
+#ifndef SIMULATION
     int BENCHMARK_INPUT_SIZE = 16 << 18;
 #else
     int BENCHMARK_INPUT_SIZE = 16 << 15;

@@ -33,6 +33,4 @@ set_property PULLUP     true        [get_ports { RST_N_pci_sys_reset_n }]
 # TIMING CONSTRAINTS
 ######################################################################################################
 
-create_clock -name bscan_refclk -period 20 [get_pins host_pciehost_bscan_bscan/TCK]
-create_clock -name pci_refclk -period 10 [get_pins *pci_clk_100mhz_buf/O]
-
+create_clock -name pci_refclk -period 10 [get_ports CLK_pci_sys_clk_p]

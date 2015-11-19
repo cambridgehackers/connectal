@@ -1,14 +1,34 @@
-////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2012  Bluespec, Inc.  ALL RIGHTS RESERVED.
-////////////////////////////////////////////////////////////////////////////////
-//  Filename      : ConnectalXilinx7PCIE.bsv
-//  Description   :
-////////////////////////////////////////////////////////////////////////////////
-package PcieEndpointX7Gen2;
+// Copyright (c) 2012-2013 Nokia, Inc.
+// Copyright (c) 2014-2015 Quanta Research Cambridge, Inc.
+// Copyright (c) 2015 Connectal Project
+
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without
+// restriction, including without limitation the rights to use, copy,
+// modify, merge, publish, distribute, sublicense, and/or sell copies
+// of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+// BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+// CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+package Pcie2EndpointX7;
 
 import ConnectalConfig   ::*;
+import BRAMFIFO          ::*;
 import Clocks            ::*;
 import Vector            ::*;
+import BuildVector       ::*;
 import Connectable       ::*;
 import GetPut            ::*;
 import Reserved          ::*;
@@ -27,6 +47,8 @@ import ConnectalXilinxCells   ::*;
 import XilinxCells       ::*;
 import PCIE              ::*;
 import PCIEWRAPPER2      ::*;
+import Pipe              ::*;
+import PcieStateChanges  ::*;
 import Bufgctrl           ::*;
 
 
@@ -39,6 +61,7 @@ interface PcieEndpointX7#(numeric type lanes);
    interface PciewrapUser#(lanes)      user;
    interface PciewrapCfg#(lanes)       cfg;
    interface Server#(TLPData#(16), TLPData#(16)) tlp;
+   interface PipeOut#(Bit#(64)) regChanges;
    interface Clock epPcieClock;
    interface Reset epPcieReset;
    interface Clock epPortalClock;
@@ -135,6 +158,40 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       pcie_ep.pl.upstream_prefer_deemph(1);
    endrule
 
+   Vector#(17,Tuple2#(PcieCfgType,Bit#(24))) changeValues = vec(
+      //tuple2(PcieCfg_initial_link_width, extend(pcie_ep.pl.initial_link_width)),
+      //tuple2(PcieCfg_lane_reversal_mode, extend(pcie_ep.pl.lane_reversal_mode)),
+      tuple2(PcieCfg_ltssm_state, extend(pcie_ep.pl.ltssm_state)),
+      tuple2(PcieCfg_phy_link_up, extend(pcie_ep.pl.phy_lnk_up)),
+      tuple2(PcieCfg_received_hot_rst, extend(pcie_ep.pl.received_hot_rst)),
+      //tuple2(PcieCfg_rx_pm_state, extend(pcie_ep.pl.rx_pm_state)),
+      tuple2(PcieCfg_sel_lnk_rate, extend(pcie_ep.pl.sel_lnk_rate)),
+      //tuple2(PcieCfg_negotiated_width, extend(pcie_ep.pl.sel_lnk_width)),
+      //tuple2(PcieCfg_tx_pm_state, extend(pcie_ep.pl.tx_pm_state)),
+      tuple2(PcieCfg_link_up, extend(pcie_ep.user.lnk_up)),
+      tuple2(PcieCfg_link_gen2_cap, extend(pcie_ep.pl_link_gen2_cap)),
+      tuple2(PcieCfg_link_partner_gen2_supported, extend(pcie_ep.pl_link_partner_gen2_supported)),
+      tuple2(unpack(50), extend(pcie_ep.cfg.pcie_link_state)),
+      tuple2(unpack(51), extend(pcie_ep.cfg_aer.rooterr_corr_err_received)),
+      tuple2(unpack(52), extend(pcie_ep.cfg_aer.rooterr_fatal_err_received)),
+      tuple2(unpack(53), extend(pcie_ep.cfg_msg.received)),
+      tuple2(unpack(54), extend(pcie_ep.cfg_msg.received_err_cor)),
+      tuple2(unpack(55), extend(pcie_ep.cfg_msg.received_err_fatal)),
+      tuple2(unpack(56), extend(pcie_ep.cfg_msg.received_err_non_fatal)),
+      tuple2(unpack(57), extend(pcie_ep.cfg_pmcsr.pme_en)),
+      tuple2(unpack(58), extend(pcie_ep.cfg_pmcsr.pme_status)),
+      tuple2(unpack(59), extend(pcie_ep.cfg_pmcsr.powerstate)));
+
+   Reg#(Bit#(32)) cyclesReg <- mkReg(0, clocked_by user_clk, reset_by user_reset_n);
+   rule rl_cycles;
+      cyclesReg <= cyclesReg + 1;
+   endrule
+   let change_pipes <- mapM(mkChangeSource(cyclesReg), changeValues, clocked_by user_clk, reset_by user_reset_n);
+
+   FunnelPipe#(1,17,RegChange,3) changePipe <- mkFunnelPipesPipelined(change_pipes, clocked_by user_clk, reset_by user_reset_n);
+   FIFOF#(RegChange) changeFifo <- mkSizedBRAMFIFOF(128, clocked_by user_clk, reset_by user_reset_n);
+   mkConnection(changePipe[0], toPipeIn(changeFifo), clocked_by user_clk, reset_by user_reset_n);
+
    let txready = (pcie_ep.s_axis_tx.tready == 1 && fAxiTx.notEmpty);
 
    (* fire_when_enabled *)
@@ -166,8 +223,6 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
                         keep: pcie_ep.m_axis_rx.tkeep,
                         data: pcie_ep.m_axis_rx.tdata });
    endrule
-
-   Reset user_reset <- mkAsyncReset(4, user_reset_n, user_clk);
 
    ClockGenerator7Params     clkgenParams = defaultValue;
    clkgenParams.clkin1_period    = 4.000; //  250MHz
@@ -219,6 +274,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    interface pcie    = pcie_ep.pci_exp;
    interface PciewrapUser user = pcie_ep.user;
    interface PciewrapCfg cfg = pcie_ep.cfg;
+   interface regChanges = mapPipe(pack, toPipeOut(changeFifo));
    interface Clock epPcieClock = user_clk;
    interface Reset epPcieReset = user_reset_n;
    interface Clock epPortalClock = portalClock;
@@ -227,4 +283,4 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    interface Reset epDerivedReset = derivedReset;
 endmodule: mkPcieEndpointX7
 
-endpackage: PcieEndpointX7Gen2
+endpackage: Pcie2EndpointX7

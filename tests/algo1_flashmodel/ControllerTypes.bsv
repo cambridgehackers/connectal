@@ -11,7 +11,7 @@ import FShow::*;
 typedef 8600 			PageSize;
 typedef 8192 			PageSizeUser;
 typedef 17 				PageECCBlks; //16 blocks of k=243; 1 block of k=208
-`ifdef BSIM
+`ifdef SIMULATION
 	typedef 16 			PagesPerBlock;
 	typedef 128			BlocksPerCE;
 	typedef 8 			ChipsPerBus;

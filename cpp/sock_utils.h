@@ -25,7 +25,7 @@
 #define _SOCK_UTILS_H_
 #include "portal.h"   // ssize_t and uint32_t
 
-#define MAX_BSIM_PORTAL_ID 128
+#define MAX_SIMULATOR_PORTAL_ID 128
 #define MAGIC_PORTAL_FOR_SENDING_FD                 666
 #define MAGIC_PORTAL_FOR_SENDING_INTERRUPT          999
 #define SOCKET_NAME                 bluesimSocketName()

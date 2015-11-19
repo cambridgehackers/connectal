@@ -45,7 +45,8 @@ argparser.add_argument(      '--pinfo', default=None, help='Project description 
 argparser.add_argument(      '--protobuf', default=[], help='Interface description in protobuf', action='append')
 argparser.add_argument('-s', '--source', help='C++ source files', action='append')
 argparser.add_argument(      '--source2', help='C++ second program source files', action='append')
-argparser.add_argument(      '--cflags', help='C++ CFLAGS', action='append')
+argparser.add_argument(      '--cflags', help='CFLAGS', default=[], action='append')
+argparser.add_argument(      '--cxxflags', help='CXXFLAGS', default=[], action='append')
 argparser.add_argument(      '--pinout', help='project pinout file', default=[], action='append')
 argparser.add_argument(      '--shared', help='Make a shared library', action='store_true')
 argparser.add_argument(      '--nohardware', help='Do not generate hardware for the design', action='store_true')
@@ -71,7 +72,7 @@ argparser.add_argument('-b', '--bscflags', default=[], help='Options to pass to 
 argparser.add_argument('--xelabflags', default=[], help='Options to pass to the xelab compiler', action='append')
 argparser.add_argument('--xsimflags', default=[], help='Options to pass to the xsim simulator', action='append')
 argparser.add_argument('--ipdir', help='Directory in which to store generated IP')
-argparser.add_argument('-q', '--qtused', help='Qt used in Bsim test application', action='store_true')
+argparser.add_argument('-q', '--qtused', help='Qt used in simulator test application', action='store_true')
 argparser.add_argument('--stl', help='STL implementation to use for Android builds', default=None)
 argparser.add_argument('--floorplan', help='Floorplan XDC', default=None)
 argparser.add_argument('-P', '--partition-module', default=[], help='Modules to separately synthesize/place/route', action='append')
@@ -159,7 +160,7 @@ export INTERFACES = %(interfaces)s
 BSVFILES = %(bsvfiles)s
 
 BSCFLAGS_PROJECT = %(bscflags)s
-BSIM_CXX_PROJECT = %(bsimsource)s
+SIM_CXX_PROJECT = %(bsimsource)s
 XELABFLAGS = %(xelabflags)s
 XSIMFLAGS  = %(xsimflags)s
 TOPBSVFILE = %(topbsvfile)s
@@ -199,7 +200,7 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog %(clibdirs)s %(clibs)s %(clibfiles)s
 LOCAL_CPPFLAGS := "-march=armv7-a"
 LOCAL_CFLAGS := -DZYNQ %(cflags)s %(werr)s
-LOCAL_CXXFLAGS := -DZYNQ %(cflags)s %(werr)s
+LOCAL_CXXFLAGS := -DZYNQ %(cxxflags)s %(werr)s
 LOCAL_CFLAGS2 := $(cdefines2)s
 
 include $(BUILD_EXECUTABLE)
@@ -234,16 +235,10 @@ ubuntu.exe: $(SOURCES)
 	$(Q)[ ! -f ../bin/mkTop.bin.gz ] || objcopy --add-section fpgadata=../bin/mkTop.bin.gz ubuntu.exe
 
 connectal.so: $(SOURCES)
-	$(Q)g++ -shared -fpic $(CFLAGS) -o connectal.so %(bsimcxx)s $(SOURCES) $(LDLIBS)
+	$(Q)g++ -shared -fpic $(CFLAGS) -o connectal.so $(SOURCES) $(LDLIBS)
 
 ubuntu.exe2: $(SOURCES2)
 	$(Q)g++ $(CFLAGS) $(CFLAGS2) -o ubuntu.exe2 $(SOURCES2) $(LDLIBS)
-
-bsim_exe: $(SOURCES)
-	$(Q)g++ $(CFLAGS_COMMON) -o bsim_exe -DBSIM $(SOURCES) $(BSIM_EXE_CXX) $(LDLIBS)
-
-bsim_exe2: $(SOURCES2)
-	$(Q)g++ $(CFLAGS_COMMON) $(CFLAGS2) -o bsim_exe2 -DBSIM $(SOURCES2) $(BSIM_EXE_CXX) $(LDLIBS)
 
 xsim: $(XSOURCES)
 	g++ $(CFLAGS) -o xsim $(XSOURCES)
@@ -285,8 +280,6 @@ if __name__=='__main__':
         options.xsimflags = ['-R']
     if not options.interfaces:
         options.interfaces = []
-    if not options.cflags:
-        options.cflags = []
 
     if noisyFlag:
         pprint.pprint(option_info)
@@ -336,12 +329,12 @@ if __name__=='__main__':
     # 'constraints' is a list of files
     cstr = option_info.get('constraints')
     if cstr:
-        for item in cstr:
-            options.constraint.insert(0, os.path.join(connectaldir, item))
+        ## preserve the order of items
+        options.constraint = [os.path.join(connectaldir, item) for item in cstr] + options.constraint
     cstr = option_info.get('implconstraints')
     if cstr:
-        for item in cstr:
-            options.implconstraint.insert(0, os.path.join(connectaldir, item))
+        ## preserve the order of items
+        options.implconstraint = [os.path.join(connectaldir, item) for item in cstr] + options.implconstraint
 
     bsvdefines += ['BOARD_'+boardname]
 
@@ -390,13 +383,13 @@ if __name__=='__main__':
         'cdefines': ' '.join([ '-D%s' % d for d in bsvdefines ]),
         'cdefines2': ' '.join([ '-D%s' % d for d in options.bsvdefine2 ]),
         'cincludes': ' '.join([ '-I%s' % os.path.abspath(i) for i in options.cinclude ]),
-        'bsimcxx': '-DBSIM $(BSIM_EXE_CXX)' if boardname == 'bluesim' else '',
         'werr': '-Werror' if not options.nonstrict else '-Wall'
     }
     includelist = ['-I$(DTOP)/jni', '-I$(CONNECTALDIR)', \
                    '-I$(CONNECTALDIR)/cpp', '-I$(CONNECTALDIR)/lib/cpp', \
                    '%(sourceincludes)s', '%(cincludes)s', '%(cdefines)s']
-    substs['cflags'] = (' '.join(includelist) % substs) + ' '.join(options.cflags)
+    substs['cflags'] = util.escapequotes((' '.join(includelist) % substs) + ' '.join(options.cflags))
+    substs['cxxflags'] = util.escapequotes((' '.join(includelist) % substs) + ' '.join(options.cxxflags))
     f = util.createDirAndOpen(androidmkname, 'w')
     f.write(androidmk_template % substs)
     f.close()
@@ -430,7 +423,7 @@ if __name__=='__main__':
 
     if noisyFlag:
         print 'Writing Makefile', makename
-    make = util.createDirAndOpen(makename, 'w')
+    make = util.createDirAndOpen(makename + '.new', 'w')
 
     genxdc_dep = ''
     if options.pinout:
@@ -511,11 +504,17 @@ if __name__=='__main__':
         for name in options.prvariant:
             make.write(variantTemplate % {'varname': name})
     make.close()
-    configbsv = util.createDirAndOpen(os.path.join(project_dir, 'generatedbsv', 'ConnectalProjectConfig.bsv'), 'w')
+    util.replaceIfChanged(makename, makename + '.new')
+
+    configbsvname = os.path.join(project_dir, 'generatedbsv', 'ConnectalProjectConfig.bsv')
+    configbsv = util.createDirAndOpen(configbsvname + '.new', 'w')
     for (var, val) in map(util.splitBinding, bsvdefines):
         configbsv.write('`define %(var)s %(val)s\n' % { 'var': var, 'val': val })
     configbsv.close()
-    configh = util.createDirAndOpen(os.path.join(project_dir, 'jni', 'ConnectalProjectConfig.h'), 'w')
+    util.replaceIfChanged(configbsvname, configbsvname + '.new')
+
+    confighname = os.path.join(project_dir, 'jni', 'ConnectalProjectConfig.h')
+    configh = util.createDirAndOpen(confighname + '.new', 'w')
     configh.write('#ifndef _ConnectalProjectConfig_h\n')
     configh.write('#define _ConnectalProjectConfig_h\n')
     configh.write('\n')
@@ -527,6 +526,7 @@ if __name__=='__main__':
     configh.write('\n')
     configh.write('#endif // _ConnectalProjectConfig_h\n')
     configh.close()
+    util.replaceIfChanged(confighname, confighname + '.new')
 
     if options.make:
         os.chdir(project_dir)

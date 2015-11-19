@@ -21,12 +21,26 @@
 ## CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ## SOFTWARE.
 import os
+import filecmp
+import string
 
 def createDirAndOpen(f, m):
     (d, name) = os.path.split(f)
     if not os.path.exists(d):
         os.makedirs(d)
     return open(f, m)
+
+def replaceIfChanged(name, replacement):
+    if not os.path.isfile(name):
+        print 'os.rename(%s, %s)' % (replacement, name)
+        os.rename(replacement, name)
+        return
+    if filecmp.cmp(name, replacement):
+        print 'os.unlink(%s)' % replacement
+        os.unlink(replacement)
+    else:
+        print 'os.rename(%s, %s)' % (replacement, name)
+        os.rename(replacement, name)
 
 ## for camelcase preservation
 def capitalize(s):
@@ -47,3 +61,7 @@ def splitBinding(s):
         return s.split('=')
     else:
         return (s,'')
+
+def escapequotes(s):
+    s = string.replace(s, '\"', '\\\"')
+    return s

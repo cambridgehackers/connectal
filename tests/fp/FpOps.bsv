@@ -28,7 +28,7 @@ import ClientServer::*;
 import FloatingPoint::*;
 import FIFO::*;
 
-`ifdef BSIM
+`ifdef SIMULATION
 
 module mkXilinxFPAdder(Server#(Tuple2#(Float,Float), Float));
 

@@ -22,6 +22,7 @@
  * Linux device driver for CONNECTAL portals on FPGAs connected via PCIe.
  */
 
+#include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/version.h>      /* LINUX_VERSION_CODE, KERNEL_VERSION */
 #include <linux/pci.h>          /* pci device types, fns, etc. */
@@ -109,7 +110,7 @@ static irqreturn_t intr_handler(int irq, void *p)
         tTile *this_tile = p;
         tBoard *this_board = this_tile->board;
 	int i;
-        printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_tile->device_tile-1);
+        //printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_tile->device_tile-1);
 	for (i = 0; i < MAX_NUM_PORTALS; i++)
             if (this_tile->device_tile-1 == this_board->portal[i].device_tile
               && this_board->portal[i].extra)
@@ -161,6 +162,7 @@ static int pcieportal_release(struct inode *inode, struct file *filp)
 		struct pmentry *pmentry = list_entry(pmlist, struct pmentry, pmlist);
 		printk("    returning id=%d fmem=%p\n", pmentry->id, pmentry->fmem);
 		MMURequest_idReturn(&devptr, pmentry->id);
+		fput(pmentry->fmem);
 		kfree(pmentry);
 	}
 	INIT_LIST_HEAD(&this_portal->pmlist);
@@ -175,7 +177,7 @@ static unsigned int pcieportal_poll(struct file *filp, poll_table *poll_table)
         unsigned int mask = 0;
         uint32_t status = 0;
 
-        printk(KERN_INFO "%s_%d_%d: poll function called\n", DEV_NAME, this_portal->device_tile, this_portal->device_name);
+        //printk(KERN_INFO "%s_%d_%d: poll function called\n", DEV_NAME, this_portal->device_tile, this_portal->device_name);
         poll_wait(filp, &this_portal->extra->wait_queue, poll_table);
 	if (this_portal->regs) {
             status = *this_portal->regs;
@@ -183,7 +185,7 @@ static unsigned int pcieportal_poll(struct file *filp, poll_table *poll_table)
         if (status)
             mask |= POLLIN  | POLLRDNORM; /* readable */
         //mask |= POLLOUT | POLLWRNORM; /* writable */
-        printk(KERN_INFO "%s_%d_%d: poll return status is %x\n", DEV_NAME, this_portal->device_tile, this_portal->device_name, mask);
+        //printk(KERN_INFO "%s_%d_%d: poll return status is %x\n", DEV_NAME, this_portal->device_tile, this_portal->device_name, mask);
         return mask;
 }
 
@@ -381,6 +383,57 @@ static const struct file_operations pcieportal_fops = {
         .mmap = portal_mmap
 };
 
+static void tune_pcie_caps(struct pci_dev *dev)
+{
+	struct pci_dev *parent;
+	u16 rc_mpss, rc_mps, ep_mpss, ep_mps;
+	u16 rc_mrrs, ep_mrrs, max_mrrs;
+
+	printk("%s: %s:%d\n", DEV_NAME, __FUNCTION__, __LINE__);
+	parent = dev->bus->self;
+	// why does parent have to be root?
+	if (!pci_is_root_bus(parent->bus)) {
+		printk("%s: parent is not root\n", DEV_NAME);
+		return;
+	}
+
+	/* max payload size adjustment */
+	rc_mpss = parent->pcie_mpss;
+	rc_mps  = ffs(pcie_get_mps(parent)) - 8;
+
+	ep_mpss = dev->pcie_mpss;
+	ep_mps  = ffs(pcie_get_mps(dev))    - 8;
+
+	rc_mpss = max(rc_mpss, ep_mpss);
+	if (rc_mpss > rc_mps) {
+		rc_mps = rc_mpss;
+		pcie_set_mps(parent, 128 << rc_mps);
+	}
+	if (rc_mpss > ep_mps) {
+		ep_mps = rc_mpss;
+		pcie_set_mps(dev, 128 << ep_mps);
+	}
+
+	printk("%s: %s:%d parent.mps=%d dev.mps=%d\n", DEV_NAME, __FUNCTION__, __LINE__, pcie_get_mps(parent), pcie_get_mps(dev));
+
+	/* max read request size, limited to 4096 by PCIe spec */
+	max_mrrs = 128 << 5;
+	rc_mrrs = pcie_get_readrq(parent);
+	ep_mrrs = pcie_get_readrq(dev);
+
+	if (max_mrrs > rc_mrrs) {
+		rc_mrrs = max_mrrs;
+		pcie_set_readrq(parent, rc_mrrs);
+	}
+	if (max_mrrs > ep_mrrs) {
+		ep_mrrs = max_mrrs;
+		pcie_set_readrq(dev, ep_mrrs);
+	}
+
+	printk("%s: %s:%d parent.readrq=%d dev.readrq=%d\n", DEV_NAME, __FUNCTION__, __LINE__, pcie_get_readrq(parent), pcie_get_readrq(dev));
+
+}
+
 static int board_activate(int activate, tBoard *this_board, struct pci_dev *dev)
 {
 	int i;
@@ -559,6 +612,9 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		    printk(KERN_ERR "%s: cdev_add board failed\n", DEV_NAME);
                 }
 		device_create(pcieportal_class, &dev->dev, this_device_number, NULL, "connectal");
+
+		tune_pcie_caps(dev);
+
                 if (err == 0)
                     return err; /* if board activated correctly, return */
         } /* end of if(activate) */
@@ -657,12 +713,43 @@ static DEFINE_PCI_DEVICE_TABLE(pcieportal_id_table) = {{
 
 MODULE_DEVICE_TABLE(pci, pcieportal_id_table);
 
+static pci_ers_result_t pcieportal_error_detected(struct pci_dev *pdev, enum pci_channel_state error)
+{
+	printk(KERN_ERR "%s:%s: pcie error %d\n", DEV_NAME, __FUNCTION__, error);
+	return PCI_ERS_RESULT_CAN_RECOVER;
+}
+
+static pci_ers_result_t pcieportal_error_mmio_enabled(struct pci_dev *pdev)
+{
+	printk(KERN_ERR "%s:%s\n", DEV_NAME, __FUNCTION__);
+	return PCI_ERS_RESULT_CAN_RECOVER;
+}
+
+static pci_ers_result_t pcieportal_error_slot_reset(struct pci_dev *pdev)
+{
+	printk(KERN_ERR "%s:%s\n", DEV_NAME, __FUNCTION__);
+	return PCI_ERS_RESULT_CAN_RECOVER;
+}
+
+static void pcieportal_error_resume(struct pci_dev *pdev)
+{
+	printk(KERN_ERR "%s:%s\n", DEV_NAME, __FUNCTION__);
+}
+
+static const struct pci_error_handlers pcieportal_err_handler = {
+	.error_detected = pcieportal_error_detected,
+	.mmio_enabled   = pcieportal_error_mmio_enabled,
+	.slot_reset     = pcieportal_error_slot_reset,
+	.resume         = pcieportal_error_resume,
+};
+
 /* PCI driver operations pointers */
 static struct pci_driver pcieportal_ops = {
         .name = DEV_NAME,
         .id_table = pcieportal_id_table,
         .probe = pcieportal_probe,
-        .remove = pcieportal_remove
+        .remove = pcieportal_remove,
+	.err_handler = &pcieportal_err_handler,
 };
 
 /*

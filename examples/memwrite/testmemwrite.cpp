@@ -26,7 +26,7 @@
 #ifdef BOARD_xsim
 static int numWords = 0x5000/4;
 static int iterCnt = 1;
-#elif defined(BSIM)
+#elif defined(SIMULATION)
 static int numWords = 0x124000/4;
 static int iterCnt = 2;
 #else

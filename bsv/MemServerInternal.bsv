@@ -96,7 +96,7 @@ module mkMemReadInternal#(MemServerIndication ind,
    provisos(Log#(busWidthBytes,beatShift)
 	    ,Div#(busWidth,8,busWidthBytes)
 	    ,Add#(beatShift, a__, 8)
-	    ,Add#(b__, TLog#(numTags), 6)
+	    ,Add#(b__, TLog#(numTags), MemTagSize)
 	    ,Add#(beatShift, c__, BurstLenSize)
 	    );
    
@@ -311,7 +311,7 @@ module mkMemWriteInternal#(MemServerIndication ind,
    provisos(Log#(busWidthBytes,beatShift)
 	    ,Div#(busWidth,8,busWidthBytes)
 	    ,Add#(beatShift, a__, 8)
-	    ,Add#(b__, TLog#(numTags), 6)
+	    ,Add#(b__, TLog#(numTags), MemTagSize)
 	    ,Add#(beatShift, c__, BurstLenSize)
 	    );
    

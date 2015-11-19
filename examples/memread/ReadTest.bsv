@@ -111,6 +111,12 @@ module mkReadTest#(ReadTestIndication indication) (ReadTest);
       end
    endrule
    
+`ifdef MEMENGINE_REQUEST_CYCLES
+   rule request_cycles;
+      let reqcycles <- toGet(re.readServers[0].requestCycles).get();
+      $display("request %d took %d cycles", reqcycles.tag, reqcycles.cycles);
+   endrule
+`endif
    rule finish if (itersToFinish > 0);
       $display("Test: response.get itersToFinish %x", itersToFinish);
       let mc <- toGet(checkDoneFifo).get();

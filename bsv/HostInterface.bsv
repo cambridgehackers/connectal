@@ -58,6 +58,11 @@ interface XsimHost;
    interface Reset derivedReset;
 endinterface
 
+module  mkXsimHost#(Clock derivedClock, Reset derivedReset)(XsimHost);
+   interface derivedClock = derivedClock;
+   interface derivedReset = derivedReset;
+endmodule
+
 typedef XsimHost HostInterface;
 `endif
 
@@ -80,15 +85,15 @@ import PcieCsr           :: *;
 import PcieTracer        :: *;
 import MemTypes          :: *;
 import Pipe              :: *;
-`ifndef BSIM
+`ifndef SIMULATION
 `ifdef XILINX
 `ifdef PCIE1
 import PCIEWRAPPER       :: *;
-import PcieEndpointX7    :: *;
+import Pcie1EndpointX7   :: *;
 `endif // pcie1
 `ifdef PCIE2
 import PCIEWRAPPER2       :: *;
-import PcieEndpointX7Gen2 :: *;
+import Pcie2EndpointX7 :: *;
 `endif // pcie2
 `ifdef PCIE3
 import PCIEWRAPPER3      :: *;
@@ -112,6 +117,7 @@ interface PcieHost#(numeric type dsz, numeric type nSlaves);
    interface PipeIn#(Bit#(64)) changes;
 `else
    interface Client#(TLPData#(16), TLPData#(16)) pci;
+   interface PipeIn#(Bit#(64)) changes;
 `endif
    interface Put#(TimestampedTlpData) trace;
 `ifdef PCIE_BSCAN
@@ -162,6 +168,10 @@ interface HostInterface;
     interface Clock derivedClock;
     interface Reset derivedReset;
     interface BscanTop bscan;
+`ifdef XILINX_SYS_CLK
+   interface Clock tsys_clk_200mhz;
+   interface Clock tsys_clk_200mhz_buf;
+`endif
 endinterface
 
 //export PS7LIB::*;

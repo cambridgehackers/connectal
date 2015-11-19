@@ -33,7 +33,7 @@ interface SimLink#(numeric type dataWidth);
    interface PipeIn#(Bit#(dataWidth)) tx;
 endinterface
 
-`ifdef BSIM
+`ifdef BOARD_bluesim
 import "BDPI" function Action                 bsimLinkOpen(Bit#(32) linknumber, Bool listening);
 import "BDPI" function Bit#(1)                bsimLinkUp(Bit#(32) linknumber, Bool listening);
 import "BDPI" function Bool                   bsimLinkCanReceive(Bit#(32) linknumber, Bool listening);

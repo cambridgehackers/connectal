@@ -423,7 +423,7 @@ module mkMemPortalMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (P
    FIFOF#(Tuple2#(Bit#(TLog#(numSlaves)), MemData#(dataWidth))) write_data <- mkFIFOF;
    UnFunnelPipe#(1, numSlaves, MemData#(dataWidth), bpc) write_data_unfunnel <- mkUnFunnelPipesPipelined(cons(toPipeOut(write_data),nil));
    Vector#(numSlaves, PipeIn#(MemData#(dataWidth))) writeDataPipes <- mapM(mkPipeIn, map(getMemPortalWriteData,slaves));
-   zipWithM(mkConnection, write_data_unfunnel, writeDataPipes);
+   zipWithM_(mkConnection, write_data_unfunnel, writeDataPipes);
    let verbose = False;
  
    rule req_aw;

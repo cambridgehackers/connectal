@@ -53,6 +53,7 @@ import MemTypes::*;
 import MemServer::*;
 import IfcNames::*;
 %(generatedImport)s
+`include "ConnectalProjectConfig.bsv"
 
 `ifndef IMPORT_HOSTIF
 (* synthesize *)
@@ -110,6 +111,7 @@ import HostInterface::*;
 import IfcNames::*;
 import MemTypes::*;
 %(generatedImport)s
+`include "ConnectalProjectConfig.bsv"
 
 %(generatedTypedefs)s
 
@@ -259,20 +261,7 @@ def instMod(pmap, args, modname, modext, constructor, tparam, memFlag, inverseFl
     else:
         if not instantiateRequest.get(pmap['modname']):
             instantiateRequest[pmap['modname']] = iReq()
-            if pmap['modname'] in ['MMU', 'MemServer']:
-                pmap['hostif'] = ''
-            else:
-                pmap['hostif'] = ''
-# If needed, can't these be passed in as extra args on H2S or S2H spec line? jca 2015/7/22
-#                pmap['hostif'] = ('\n'
-#                                  '`ifdef IMPORT_HOSTIF\n'
-#                                  '                    host,\n'
-#                                  '`else\n'
-#                                  '`ifdef IMPORT_HOST_CLOCKS\n'
-#                                  '                    host.derivedClock, host.derivedReset,\n'
-#                                  '`endif\n'
-#                                  '`endif\n'
-#                                  '                    ')
+            pmap['hostif'] = ''
             instantiateRequest[pmap['modname']].inst = '   %(modname)s%(tparam)s l%(modname)s <- mk%(modname)s(%(hostif)s%%s);' % pmap
         instantiateRequest[pmap['modname']].args.append(pmap['args'])
     if pmap['modname'] not in instantiatedModules:
@@ -317,7 +306,7 @@ if __name__=='__main__':
     pipeInstantiate = []
     connectInstantiate = []
     instantiateRequest = {}
-    for item in ['IfcNames_MemServerRequestS2H', 'IfcNames_MMURequestS2H', 'IfcNames_MemServerIndicationH2S', 'IfcNames_MMUIndicationH2S']:
+    for item in ['PlatformIfcNames_MemServerRequestS2H', 'PlatformIfcNames_MMURequestS2H', 'PlatformIfcNames_MemServerIndicationH2S', 'PlatformIfcNames_MMUIndicationH2S']:
         options.portname.append(item)
     requestList = []
     indicationList = []
@@ -364,13 +353,13 @@ if __name__=='__main__':
         pmap['userIf'] = pmap['name']
         pmap['name'] = pmap['usermod']
         pmap['number'] = ''
-        pr = pmap['userIf'].split('.')
-        pmap['usermod'] = pr[0]
-        modintf_list = pr[1].split(',')
-        numbers = range(0,len(modintf_list)) if len(modintf_list) > 1 else ['']
-        for (modintf,number) in zip(modintf_list, numbers):
-            pmap['number'] = str(number)
-            pmap['userIf'] = '%s.%s' % (pmap['usermod'], modintf)
+        modintf_list = pmap['userIf'].split(',')
+        number = 0
+        for pmap['userIf'] in modintf_list:
+            if len(modintf_list) > 1:
+                pmap['number'] = str(number)
+            number += 1
+            pmap['usermod'] = pmap['userIf'].split('.')[0]
             if pmap['usermod'] not in instantiatedModules:
                 instMod(pmap, pmap['uparam'], pmap['usermod'], '', '', pmap['xparam'], False, False)
             flushModules(pmap['usermod'])

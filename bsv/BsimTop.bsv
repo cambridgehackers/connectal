@@ -133,7 +133,13 @@ module  mkBsimHost#(Clock derived_clock, Reset derived_reset)(BsimHost#(clientAd
    interface derivedReset = derived_reset;
 endmodule
 
-module  mkBsimTop(Empty);
+interface BsimTop;
+`ifndef SIMULATIONRESPONDER
+   interface `PinType pins;
+`endif
+endinterface
+
+module  mkBsimTop(BsimTop);
    let divider <- mkClockDivider(2);
    Clock derivedClock = divider.fastClock;
    Clock singleClock = divider.slowClock;
@@ -151,8 +157,8 @@ module  mkBsimTop(Empty);
 `endif
        clocked_by singleClock, reset_by singleReset));
    Platform top <- mkPlatform(ts, clocked_by singleClock, reset_by singleReset);
-   mapM(uncurry(mkConnection),zip(top.masters, host.mem_servers), clocked_by singleClock, reset_by singleReset);
-`ifndef BSIM_EXERCISE_MEM_MASTER_SLAVE
+   zipWithM_(mkConnection,top.masters, host.mem_servers, clocked_by singleClock, reset_by singleReset);
+`ifndef SIMULATION_EXERCISE_MEM_MASTER_SLAVE
    mkConnection(host.mem_client, top.slave, clocked_by singleClock, reset_by singleReset);
 `else
    PciId masterPciId = unpack(22);
@@ -170,7 +176,9 @@ module  mkBsimTop(Empty);
       interruptLevel(truncate(pack(intr_mux)));
    endrule
 
-`ifdef BSIMRESPONDER
-   `BSIMRESPONDER (top.pins);
+`ifdef SIMULATIONRESPONDER
+   `SIMULATIONRESPONDER (top.pins);
+`else
+   interface pins = top.pins;
 `endif
 endmodule

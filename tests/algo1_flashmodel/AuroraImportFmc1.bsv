@@ -37,7 +37,7 @@ module mkAuroraIntra#(Clock gtx_clk_p, Clock gtx_clk_n, Clock clk250) (AuroraIfc
 	Reset cur_rst <- exposeCurrentReset;
 	
 
-`ifndef BSIM
+`ifndef SIMULATION
 	ClockDividerIfc auroraIntraClockDiv4 <- mkDCMClockDivider(5, 4, clocked_by clk250);
 	//ClockDividerIfc auroraIntraClockDiv4 <- mkDCMClockDivider(4, 5);
 	Reset defaultReset <- exposeCurrentReset;

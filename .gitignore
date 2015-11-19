@@ -46,3 +46,5 @@ vivado_pid*
 nfsume
 .cache
 ubuntu.exe
+*signature_file.h
+.tmp_versions

@@ -339,6 +339,7 @@ static int portal_release(struct inode *inode, struct file *filep)
 		struct pmentry *pmentry = list_entry(pmlist, struct pmentry, pmlist);
 		printk("    returning id=%d fmem=%p\n", pmentry->id, pmentry->fmem);
 		MMURequest_idReturn(&devptr, pmentry->id);
+		fput(pmentry->fmem);
 		kfree(pmentry);
 	}
 	INIT_LIST_HEAD(&portal_data->pmlist);
@@ -366,10 +367,10 @@ static int remove_portal_devices(struct connectal_data *connectal_data)
   return 0;
 }
 
+// this is called with connectal_mutex locked
 static void connectal_work_handler(struct work_struct *__xxx)
 {
   int num_tiles = 0, num_portals = 0, fpn, t = 0;
-  mutex_lock(&connectal_mutex);
   remove_portal_devices(ws.connectal_data);
   do{
     fpn = 0;
@@ -406,6 +407,7 @@ static void connectal_work_handler(struct work_struct *__xxx)
 static int connectal_open(struct inode *inode, struct file *filep)
 {
   driver_devel("%s:%d\n", __func__, __LINE__);
+  mutex_lock(&connectal_mutex);
   queue_delayed_work(wq, &connectal_work, msecs_to_jiffies(0));
   return 0;
 }
@@ -539,7 +541,6 @@ static ssize_t connectal_read(struct file *filp,
       char *buffer, size_t length, loff_t *offset)
 {
   driver_devel("%s:%d\n", __func__, __LINE__);
-  msleep(50);
   mutex_lock(&connectal_mutex);
   mutex_unlock(&connectal_mutex);
   return 0;

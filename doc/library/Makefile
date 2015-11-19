@@ -7,6 +7,8 @@ SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = build
 
+include ../../Makefile.version
+
 # User-friendly check for sphinx-build
 ifeq ($(shell which $(SPHINXBUILD) >/dev/null 2>&1; echo $$?), 1)
 $(error The '$(SPHINXBUILD)' command was not found. Make sure you have Sphinx installed, then set the SPHINXBUILD environment variable to point to the full path of the '$(SPHINXBUILD)' executable. Alternatively you can add the directory with the executable to your PATH. If you don't have Sphinx installed, grab it from http://sphinx-doc.org/)
@@ -186,6 +188,9 @@ install:
 	sudo apt-get install poppler-utils
 	pip install docutils sphinx sphinxcontrib-makedomain sphinx-argparse
 
-publish: images html latexpdf
+publish:
+	sed -i "s/version = .*/version = '$(VERSION)'/" source/conf.py
+	sed -i "s/release = .*/release = '$(VERSION)'/" source/conf.py
+	make images html latexpdf
 	rsync -avz build/html/* ../../../doc/current/ref
 	rsync -av build/latex/connectal.pdf ../../../doc/current/ref
