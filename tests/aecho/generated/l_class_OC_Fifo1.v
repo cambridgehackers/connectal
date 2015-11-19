@@ -1,11 +1,11 @@
 module l_class_OC_Fifo1 (
     input CLK,
     input nRST,
+    input deq__ENA,
     output enq__RDY,
     input enq__ENA,
     input [31:0]enq_v,
     output deq__RDY,
-    input deq__ENA,
     output first__RDY,
     output [31:0]first);
 
@@ -15,6 +15,11 @@ module l_class_OC_Fifo1 (
     if (!nRST) begin
     end
     else begin
+        // Method: deq
+        if (deq__ENA) begin
+        full <= 0;
+        end; // End of deq
+
         // Method: enq__RDY
         enq__RDY = ((full) ^ 1);
 
@@ -26,11 +31,6 @@ module l_class_OC_Fifo1 (
 
         // Method: deq__RDY
         deq__RDY = (full);
-
-        // Method: deq
-        if (deq__ENA) begin
-        full <= 0;
-        end; // End of deq
 
         // Method: first__RDY
         first__RDY = (full);
