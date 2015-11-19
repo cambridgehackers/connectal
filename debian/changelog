@@ -1,3 +1,9 @@
+connectal (15.11.1-1precise1) precise; urgency=medium
+
+  * Release 15.11.1: stopped leak in pcieportal/zynqportal. dependence build of .bo files, ...
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 19 Nov 2015 15:58:37 -0500
+
 connectal (15.10.5-1precise1) precise; urgency=medium
 
   * Released 15.10.5: Added verilator support, stopped leak in portalmem.
