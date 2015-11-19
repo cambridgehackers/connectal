@@ -61,8 +61,9 @@ endinterface: MemToPcie
    `define AVALON
 `endif
 
-typedef 64 WriteDataMimoSize;
-typedef TAdd#(1,TLog#(WriteDataMimoSize)) WriteDataBurstLenSize;
+typedef 1024 WriteDataBurstLen; // max payload size is 1024 bytes
+typedef TDiv#(WriteDataBurstLen,4) WriteDataMimoSize; // number of words to hold in the MIMO
+typedef BurstLenSize WriteDataBurstLenSize;
 module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
    provisos (Div#(buswidth, 8, busWidthBytes),
 	     Div#(buswidth, 32, busWidthWords),
@@ -320,7 +321,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
       tlp.sof = True;
       tlp.eof = True;
       tlp.hit = 7'h00;
-      TLPLength tlplen = fromInteger(valueOf(busWidthWords))*extend(burstLen);
+      TLPLength tlplen = fromInteger(valueOf(busWidthWords))*truncate(burstLen);
       if (addr[39:32] != 0) begin
 	 TLPMemory4DWHeader hdr_4dw = defaultValue;
 	 hdr_4dw.format = MEM_READ_4DW_NO_DATA;
@@ -367,7 +368,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 	    awid = awid | (1 << (valueOf(MemTagSize)-1));
 	    use3dw = False;
 `endif
-	    TLPLength tlplen = fromInteger(valueOf(busWidthWords))*extend(burstLen);
+	    TLPLength tlplen = fromInteger(valueOf(busWidthWords))*truncate(burstLen);
 	    TLPData#(16) tlp = defaultValue;
 	    tlp.sof = True;
 	    tlp.eof = False;

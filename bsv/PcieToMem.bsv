@@ -224,7 +224,7 @@ module mkPcieToMem#(PciId my_id)(PcieToMem);
 	     let hdr = writeHeaderFifo.first;
 	     writeHeaderFifo.deq;
 	     writeDataFifo.enq(hdr);
-	     let burstLen = truncate(hdr.length << 2);
+	     let burstLen = extend(hdr.length << 2);
              $display("burstLen = %h", hdr.length << 2);
 	     return PhysMemRequest { addr: extend(writeHeaderFifo.first.addr) << 2, burstLen: burstLen, tag: truncate(writeHeaderFifo.first.tag)
 `ifdef BYTE_ENABLES
@@ -256,7 +256,7 @@ module mkPcieToMem#(PciId my_id)(PcieToMem);
 	     readHeaderFifo.deq;
 	     //$display("req_ar hdr.length=%d hdr.addr=%h", hdr.length, hdr.addr);
 	     readDataFifo.enq(hdr);
-	     let burstLen = truncate(hdr.length << 2);
+	     let burstLen = extend(hdr.length << 2);
 	     return PhysMemRequest { addr: extend(readHeaderFifo.first.addr) << 2, burstLen: burstLen, tag: truncate(readHeaderFifo.first.tag)
 `ifdef BYTE_ENABLES
 				    , firstbe: maxBound, lastbe: maxBound
