@@ -21,7 +21,7 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-import os, sys, re
+import os, sys, re, string
 import argparse
 
 argparser = argparse.ArgumentParser("Preprocess BSV files.")
@@ -41,7 +41,7 @@ def preprocess(sourcefilename, source, defs, bsvpath):
                 (s, val) = sym.split('=')
                 d[s] = val
             else:
-                d[sym] = True
+                d[sym] = ''
         defs = d
     stack = [(True,True)]
     def nexttok(s):
@@ -60,20 +60,21 @@ def preprocess(sourcefilename, source, defs, bsvpath):
         cond  = stack[-1][0]
         valid = stack[-1][1]
 
-        commentStart = re.match('//', line)
-        if commentStart:
-            s = line[0:commentStart.start()]
+        commentStart = line.find('//')
+        if commentStart >= 0:
+            noncomment = line[0:commentStart]
+            comment    = line[commentStart:]
         else:
-            s = line
-        i = re.search('`', s)
-        if not i:
+            noncomment = line
+            comment    = ''
+        i = noncomment.find('`')
+        if i < 0:
             if valid:
                 outlines.append(line)
             else:
                 outlines.append('//SKIPPED %s' % line)
             continue
-        pre = s[:i.end()-1]
-        s = s[i.end():]
+        s = noncomment[i+1:]
         (tok, s) = nexttok(s)
         if tok == 'ifdef':
             (sym, s) = nexttok(s)
@@ -105,7 +106,7 @@ def preprocess(sourcefilename, source, defs, bsvpath):
             if s:
                 defs[sym] = s
             else:
-                defs[sym] = True
+                defs[sym] = ''
         elif tok == 'include':
             m = re.search('"?([-_A-Za-z0-9.]+)"?', s)
             if not m:
@@ -123,10 +124,23 @@ def preprocess(sourcefilename, source, defs, bsvpath):
             lines = inc.splitlines() + lines
             continue
         elif re.match('[A-Z][A-Za-z0-9_]*', tok):
-            ## must be an undefined variable
-            sys.stderr.write('syntax.preprocess %s: preprocessor variable `%s\n' % (sourcefilename, tok))
+            while '`' in noncomment:
+                ## must be an undefined variable
+                i = noncomment.find('`')
+                (tok, s) = nexttok(noncomment[i+1:])
+                #sys.stderr.write('syntax.preprocess %s: preprocessor variable `%s\n' % (sourcefilename, tok))
+                if tok in defs:
+                    val = defs[tok]
+                else:
+                    val = ''
+                #sys.stderr.write('sym=%s val=%s\n' % (tok, val))
+                noncomment = noncomment.replace('`%s' % tok, val)
+            outlines.append('//PREPROCESSED: %s' % line)
+            outlines.append(noncomment + comment)
+            continue
         else:
             sys.stderr.write('syntax.preprocess %s: unhandled preprocessor token %s\n' % (sourcefilename, tok))
+            sys.stderr.write('line: %s\n' % line)
             assert(tok in ['ifdef', 'ifndef', 'else', 'endif', 'define'])
         outlines.append('//PREPROCESSED: %s' % line)
 
