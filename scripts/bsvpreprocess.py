@@ -120,7 +120,7 @@ def preprocess(sourcefilename, source, defs, bsvpath):
             if not inc:
                 sys.stderr.write('syntax.preprocess %s: did not find included file %s in path\n' % (sourcefilename, filename))
             outlines.append('//`include "%s"' % filename)
-            lines.extend(inc.splitlines())
+            lines = inc.splitlines() + lines
             continue
         elif re.match('[A-Z][A-Za-z0-9_]*', tok):
             ## must be an undefined variable
