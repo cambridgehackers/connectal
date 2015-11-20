@@ -32,6 +32,17 @@ argparser.add_argument('--bsvpath', default=[], help='directories to add to bsc 
 argparser.add_argument('-v', '--verbose', help='Display verbose information messages', action='store_true')
 
 def preprocess(sourcefilename, source, defs, bsvpath):
+    # convert defs to a dict
+    # defs could be a list of symbol or symbol=value
+    if type(defs) == list:
+        d = {}
+        for sym in defs:
+            if '=' in sym:
+                (s, val) = sym.split('=')
+                d[s] = val
+            else:
+                d[sym] = True
+        defs = d
     stack = [(True,True)]
     def nexttok(s):
         k = re.search('\s', s)
