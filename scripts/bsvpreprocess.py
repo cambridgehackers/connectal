@@ -45,7 +45,7 @@ def preprocess(sourcefilename, source, defs, bsvpath):
         defs = d
     stack = [(True,True)]
     def nexttok(s):
-        k = re.search('\s', s)
+        k = re.search('[^A-Za-z0-9~_]', s)
         if k:
             sym = s[:k.start()]
             s = s[k.end():]
