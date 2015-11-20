@@ -102,7 +102,10 @@ def preprocess(sourcefilename, source, defs, bsvpath):
             valid = stack[-1][1]
         elif tok == 'define':
             (sym, s) = nexttok(s)
-            defs.append(sym)
+            if s:
+                defs[sym] = s
+            else:
+                defs[sym] = True
         elif tok == 'include':
             m = re.search('"?([-_A-Za-z0-9.]+)"?', s)
             if not m:
