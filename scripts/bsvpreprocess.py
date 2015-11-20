@@ -123,7 +123,7 @@ def preprocess(sourcefilename, source, defs, bsvpath):
             outlines.append('//`include "%s"' % filename)
             lines = inc.splitlines() + lines
             continue
-        elif re.match('[A-Z][A-Za-z0-9_]*', tok):
+        elif tok:
             while '`' in noncomment:
                 ## must be an undefined variable
                 i = noncomment.find('`')
