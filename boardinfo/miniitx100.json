@@ -3,12 +3,12 @@
         "os" : "android",
         "partname" : "xc7z100ffg900-2",
         "rewireclockstring" : "tclzynqrewireclock",
-        "constraints": [],
+        "constraints": ["constraints/xilinx/xc7z100ffg900.xdc", "constraints/xilinx/miniitx100.xdc"],
         "implconstraints": ["constraints/xilinx/xc7z100ffg900.xdc", "constraints/xilinx/miniitx100.xdc"],
         "TOP" : "ZynqTop",
         "runscript" : "run.android",
-        "bsvdefines" : ["ZynqHostInterface", "PhysAddrWidth=32", "NUMBER_OF_LEDS=8"],
-	"CONNECTALFLAGS": [],
+        "bsvdefines" : ["XILINX=1", "ZynqHostInterface", "PhysAddrWidth=32", "NUMBER_OF_LEDS=8", "PcieLanes=4"],
+	"CONNECTALFLAGS": ["--mainclockperiod=5", "--derivedclockperiod=2.5"],
         "need_pcie" : "unused"
     }
 }
