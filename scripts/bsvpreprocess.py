@@ -65,7 +65,7 @@ def preprocess(sourcefilename, source, defs, bsvpath):
             s = line[0:commentStart.start()]
         else:
             s = line
-        i = re.match('`', line)
+        i = re.search('`', s)
         if not i:
             if valid:
                 outlines.append(line)
