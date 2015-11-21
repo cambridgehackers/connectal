@@ -158,16 +158,16 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       pcie_ep.pl.upstream_prefer_deemph(1);
    endrule
 
-   Vector#(22,Tuple2#(PcieCfgType,Bit#(24))) changeValues = vec(
-      tuple2(PcieCfg_initial_link_width, extend(pcie_ep.pl.initial_link_width)),
-      tuple2(PcieCfg_lane_reversal_mode, extend(pcie_ep.pl.lane_reversal_mode)),
+   Vector#(17,Tuple2#(PcieCfgType,Bit#(24))) changeValues = vec(
+      //tuple2(PcieCfg_initial_link_width, extend(pcie_ep.pl.initial_link_width)),
+      //tuple2(PcieCfg_lane_reversal_mode, extend(pcie_ep.pl.lane_reversal_mode)),
       tuple2(PcieCfg_ltssm_state, extend(pcie_ep.pl.ltssm_state)),
       tuple2(PcieCfg_phy_link_up, extend(pcie_ep.pl.phy_lnk_up)),
       tuple2(PcieCfg_received_hot_rst, extend(pcie_ep.pl.received_hot_rst)),
-      tuple2(PcieCfg_rx_pm_state, extend(pcie_ep.pl.rx_pm_state)),
+      //tuple2(PcieCfg_rx_pm_state, extend(pcie_ep.pl.rx_pm_state)),
       tuple2(PcieCfg_sel_lnk_rate, extend(pcie_ep.pl.sel_lnk_rate)),
-      tuple2(PcieCfg_negotiated_width, extend(pcie_ep.pl.sel_lnk_width)),
-      tuple2(PcieCfg_tx_pm_state, extend(pcie_ep.pl.tx_pm_state)),
+      //tuple2(PcieCfg_negotiated_width, extend(pcie_ep.pl.sel_lnk_width)),
+      //tuple2(PcieCfg_tx_pm_state, extend(pcie_ep.pl.tx_pm_state)),
       tuple2(PcieCfg_link_up, extend(pcie_ep.user.lnk_up)),
       tuple2(PcieCfg_link_gen2_cap, extend(pcie_ep.pl_link_gen2_cap)),
       tuple2(PcieCfg_link_partner_gen2_supported, extend(pcie_ep.pl_link_partner_gen2_supported)),
@@ -188,7 +188,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    endrule
    let change_pipes <- mapM(mkChangeSource(cyclesReg), changeValues, clocked_by user_clk, reset_by user_reset_n);
 
-   FunnelPipe#(1,22,RegChange,3) changePipe <- mkFunnelPipesPipelined(change_pipes, clocked_by user_clk, reset_by user_reset_n);
+   FunnelPipe#(1,17,RegChange,3) changePipe <- mkFunnelPipesPipelined(change_pipes, clocked_by user_clk, reset_by user_reset_n);
    FIFOF#(RegChange) changeFifo <- mkSizedBRAMFIFOF(128, clocked_by user_clk, reset_by user_reset_n);
    mkConnection(changePipe[0], toPipeIn(changeFifo), clocked_by user_clk, reset_by user_reset_n);
 

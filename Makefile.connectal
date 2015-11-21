@@ -69,7 +69,7 @@ PIN_TYPE_INCLUDE?=Misc
 #need to import into HostInterface, can't use HostInterface
 
 ifndef BURST_LEN_SIZE
-BURST_LEN_SIZE=8
+BURST_LEN_SIZE=10
 endif
 
 CONNECTALFLAGS += -D ConnectalVersion=$(VERSION)

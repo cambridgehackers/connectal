@@ -41,11 +41,11 @@ import BuildVector::*;
 
 `include "ConnectalProjectConfig.bsv"
 
-`ifdef PIN_TYPE_INCLUDE
-import `PIN_TYPE_INCLUDE::*;
+`ifdef PinTypeInclude
+import `PinTypeInclude::*;
 `endif
-`ifdef PIN_TYPE
-typedef `PIN_TYPE PinType;
+`ifdef PinType
+typedef `PinType PinType;
 `else
 typedef Empty PinType;
 `endif
@@ -140,7 +140,7 @@ module mkXsimTop#(Clock derivedClock, Reset derivedReset)(XsimTop);
    mapM_(mkXsimSource, append(top.indications, append(vec(lMMUIndicationOutputNoc), vec(lMemServerIndicationOutputNoc))));
    mapM_(mkXsimMemoryConnection, lMemServer.masters);
 
-`ifdef PIN_TYPE
+`ifdef PinType
    interface pins = top.pins;
 `endif
 endmodule

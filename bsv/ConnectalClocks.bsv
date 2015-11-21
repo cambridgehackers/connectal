@@ -77,6 +77,33 @@ module mkC2B#(Clock c)(C2B);
     schedule ( o) CF ( o);
 endmodule
 
+(* always_ready, always_enabled *)
+interface B2R;
+    interface Reset r;
+    method Action inputreset(Bit#(1) v);
+endinterface
+import "BVI" CONNECTNET =
+module mkB2R(B2R);
+    default_clock clk();
+    default_reset rst();
+    output_reset r(OUT);
+    method inputreset(IN) enable((*inhigh*) en_inputclock);
+    schedule ( inputreset) CF ( inputreset);
+endmodule
+
+(* always_ready, always_enabled *)
+interface R2B;
+    method Bit#(1) o();
+endinterface
+import "BVI" CONNECTNET =
+module mkR2B#(Reset r)(C2B);
+    default_clock no_clock;
+    default_reset no_reset;
+    //default_reset rst();
+    input_reset rst(IN) = r;
+    method OUT o();
+    schedule ( o) CF ( o);
+endmodule
 
 interface PositiveReset;
    interface Reset positiveReset;

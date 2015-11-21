@@ -3,47 +3,55 @@
 /* Global Variable Definitions and Initialization */
 class l_class_OC_EchoTest echoTest;
 unsigned int stop_main_program;
-class l_class_OC_Module *_ZN6Module5firstE;
-//processing _ZN4Echo7respond8respond23RDYEv
-bool _ZN4Echo7respond8respond23RDYEv(void) {
-        return 1;
-}
-//processing _ZN4Echo7respond8respond23ENAEv
-void _ZN4Echo7respond8respond23ENAEv(void) {
-}
-//processing _ZN4Echo7respond8respond13RDYEv
-bool _ZN4Echo7respond8respond13RDYEv(void) {
-    bool Vtmp__1 =     echoTest_ZZ_EchoTest_ZZ_echo_ZZ__ZZ_Echo_ZZ_fifo_ZZ__ZZ_Fifo1_int_.deq__RDY();
-    bool Vtmp__2 =     echoTest_ZZ_EchoTest_ZZ_echo_ZZ__ZZ_Echo_ZZ_fifo_ZZ__ZZ_Fifo1_int_.first__RDY();
-        return (Vtmp__1 & Vtmp__2);
-}
-//processing _ZN4Echo7respond8respond13ENAEv
-void _ZN4Echo7respond8respond13ENAEv(void) {
-        echoTest_ZZ_EchoTest_ZZ_echo_ZZ__ZZ_Echo_ZZ_fifo_ZZ__ZZ_Fifo1_int_.deq();
-    unsigned int Vcall =     echoTest_ZZ_EchoTest_ZZ_echo_ZZ__ZZ_Echo_ZZ_fifo_ZZ__ZZ_Fifo1_int_.first();
-        _ZN14EchoIndication4echoEi(Vcall);
-}
-//processing _ZN8EchoTest5drive3RDYEv
-bool _ZN8EchoTest5drive3RDYEv(void) {
-    bool Vtmp__1 =     echoTest_ZZ_EchoTest_ZZ_echo_ZZ__ZZ_Echo_ZZ_fifo_ZZ__ZZ_Fifo1_int_.enq__RDY();
-        return Vtmp__1;
-}
-//processing _ZN8EchoTest5drive3ENAEv
-void _ZN8EchoTest5drive3ENAEv(void) {
-        echoTest_ZZ_EchoTest_ZZ_echo_ZZ__ZZ_Echo_ZZ_fifo_ZZ__ZZ_Fifo1_int_.enq(22);
-}
 //processing _ZN14EchoIndication4echoEi
 void _ZN14EchoIndication4echoEi(unsigned int Vv) {
         printf((("Heard an echo: %d\n")), Vv);
         stop_main_program = 1;
 }
 //processing printf
-typedef struct {
-    bool (*RDY)(void);
-    void (*ENA)(void);
-    } RuleVTab;//Rules:
-const RuleVTab ruleList[] = {
-    {_ZN4Echo7respond8respond23RDYEv, _ZN4Echo7respond8respond23ENAEv},
-    {_ZN4Echo7respond8respond13RDYEv, _ZN4Echo7respond8respond13ENAEv},
-    {_ZN8EchoTest5drive3RDYEv, _ZN8EchoTest5drive3ENAEv},
-    {} };
+//processing _ZN14EchoIndication4echoEi
+bool l_class_OC_EchoTest::rule_drive__RDY(void) {
+    bool tmp__1 =     ((*((echo)->fifo)).enq__RDY)();
+        return tmp__1;
+}
+void l_class_OC_EchoTest::rule_drive(void) {
+        ((*((echo)->fifo)).enq)(22);
+}
+void l_class_OC_EchoTest::run()
+{
+    if (rule_drive__RDY()) rule_drive();
+    echo->run();
+}
+bool l_class_OC_Echo::rule_respond__RDY(void) {
+    bool tmp__1 =     ((*(fifo)).deq__RDY)();
+    bool tmp__2 =     ((*(fifo)).first__RDY)();
+        return (tmp__1 & tmp__2);
+}
+void l_class_OC_Echo::rule_respond(void) {
+        ((*(fifo)).deq)();
+    unsigned int call =     ((*(fifo)).first)();
+        _ZN14EchoIndication4echoEi(call);
+}
+void l_class_OC_Echo::run()
+{
+    if (rule_respond__RDY()) rule_respond();
+}
+void l_class_OC_Fifo1::deq(void) {
+        (full) = 0;
+}
+bool l_class_OC_Fifo1::enq__RDY(void) {
+        return ((full) ^ 1);
+}
+void l_class_OC_Fifo1::enq(unsigned int v) {
+        (element) = v;
+        (full) = 1;
+}
+bool l_class_OC_Fifo1::deq__RDY(void) {
+        return (full);
+}
+bool l_class_OC_Fifo1::first__RDY(void) {
+        return (full);
+}
+unsigned int l_class_OC_Fifo1::first(void) {
+        return (element);
+}

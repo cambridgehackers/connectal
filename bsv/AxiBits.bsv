@@ -78,8 +78,7 @@ interface ACPType;
     method Action      awuser(Bit#(5) v);
 endinterface
 
-interface AxiSlaveBits#(numeric type addrWidth, numeric type dataWidth, numeric type tagWidth,
-    type extraType);
+interface AxiSlaveBits#(numeric type addrWidth, numeric type dataWidth, numeric type tagWidth, type extraType);
     method Action      araddr(Bit#(addrWidth) v);
     method Action      arburst(Bit#(2) v);
     method Action      arcache(Bit#(4) v);
@@ -102,6 +101,49 @@ interface AxiSlaveBits#(numeric type addrWidth, numeric type dataWidth, numeric 
     method Action      awqos(Bit#(4) v);
     method Bit#(1)     awready();
     method Action      awsize(Bit#(2) v);
+    method Action      awvalid(Bit#(1) v);
+    method Bit#(tagWidth)     bid();
+    method Action      bready(Bit#(1) v);
+    method Bit#(2)     bresp();
+    method Bit#(1)     bvalid();
+    method Bit#(dataWidth)     rdata();
+    method Bit#(1)     rlast();
+    method Action      rready(Bit#(1) v);
+    method Bit#(2)     rresp();
+    method Bit#(1)     rvalid();
+    method Action      wdata(Bit#(dataWidth) v);
+    method Action      wid(Bit#(tagWidth) v);
+    method Action      wlast(Bit#(1) v);
+    method Bit#(1)     wready();
+    method Action      wstrb(Bit#(TDiv#(dataWidth,8)) v);
+    method Action      wvalid(Bit#(1) v);
+    method Bit#(tagWidth)     rid();
+    interface extraType   extra;
+endinterface
+
+interface Axi4SlaveBits#(numeric type addrWidth, numeric type dataWidth, numeric type tagWidth, type extraType);
+    method Action      araddr(Bit#(addrWidth) v);
+    method Action      arburst(Bit#(2) v);
+    method Action      arcache(Bit#(4) v);
+    method Bit#(1)     aresetn();
+    method Action      arid(Bit#(tagWidth) v);
+    method Action      arlen(Bit#(8) v);
+    method Action      arlock(Bit#(2) v);
+    method Action      arprot(Bit#(3) v);
+    method Action      arqos(Bit#(4) v);
+    method Bit#(1)     arready();
+    method Action      arsize(Bit#(3) v);
+    method Action      arvalid(Bit#(1) v);
+    method Action      awaddr(Bit#(addrWidth) v);
+    method Action      awburst(Bit#(2) v);
+    method Action      awcache(Bit#(4) v);
+    method Action      awid(Bit#(tagWidth) v);
+    method Action      awlen(Bit#(8) v);
+    method Action      awlock(Bit#(2) v);
+    method Action      awprot(Bit#(3) v);
+    method Action      awqos(Bit#(4) v);
+    method Bit#(1)     awready();
+    method Action      awsize(Bit#(3) v);
     method Action      awvalid(Bit#(1) v);
     method Bit#(tagWidth)     bid();
     method Action      bready(Bit#(1) v);

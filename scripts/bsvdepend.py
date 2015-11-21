@@ -24,7 +24,7 @@ import os, sys
 import glob
 import argparse
 import re
-import syntax
+import bsvpreprocess
 
 default_bluespecdir=None
 if 'BLUESPECDIR' in os.environ:
@@ -93,7 +93,7 @@ if __name__=='__main__':
         basename = os.path.basename(bsvfilename)
         (name, ext) = os.path.splitext(basename)
         source = vf.read()
-        preprocess = syntax.preprocess(bsvfilename, source, options.bsvdefine, bsvpath)
+        preprocess = bsvpreprocess.preprocess(bsvfilename, source, options.bsvdefine, bsvpath)
         packages = []
         includes = []
         synthesizedModules = []
@@ -125,10 +125,13 @@ if __name__=='__main__':
                 if m:
                     synthesizedModules.append(m.group(1))
                 else:
-                    print 'expecting module: ', line
-            find = line.find('(* synthesize *)')
-            if find >= 0:
+                    sys.stderr.write('bsvdepend: in %s expecting module: %s\n' % (bsvfilename, line))
+            synth = line.find('(* synthesize *)')
+            attr = line.find('(* ')
+            if synth >= 0:
                 synthesize = True
+            elif attr >= 0:
+                pass # no change to synthesize
             else:
                 synthesize = False
             pass

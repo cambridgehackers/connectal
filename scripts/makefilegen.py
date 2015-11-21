@@ -45,7 +45,8 @@ argparser.add_argument(      '--pinfo', default=None, help='Project description 
 argparser.add_argument(      '--protobuf', default=[], help='Interface description in protobuf', action='append')
 argparser.add_argument('-s', '--source', help='C++ source files', action='append')
 argparser.add_argument(      '--source2', help='C++ second program source files', action='append')
-argparser.add_argument(      '--cflags', help='C++ CFLAGS', action='append')
+argparser.add_argument(      '--cflags', help='CFLAGS', default=[], action='append')
+argparser.add_argument(      '--cxxflags', help='CXXFLAGS', default=[], action='append')
 argparser.add_argument(      '--pinout', help='project pinout file', default=[], action='append')
 argparser.add_argument(      '--shared', help='Make a shared library', action='store_true')
 argparser.add_argument(      '--nohardware', help='Do not generate hardware for the design', action='store_true')
@@ -199,7 +200,7 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog %(clibdirs)s %(clibs)s %(clibfiles)s
 LOCAL_CPPFLAGS := "-march=armv7-a"
 LOCAL_CFLAGS := -DZYNQ %(cflags)s %(werr)s
-LOCAL_CXXFLAGS := -DZYNQ %(cflags)s %(werr)s
+LOCAL_CXXFLAGS := -DZYNQ %(cxxflags)s %(werr)s
 LOCAL_CFLAGS2 := $(cdefines2)s
 
 include $(BUILD_EXECUTABLE)
@@ -279,8 +280,6 @@ if __name__=='__main__':
         options.xsimflags = ['-R']
     if not options.interfaces:
         options.interfaces = []
-    if not options.cflags:
-        options.cflags = []
 
     if noisyFlag:
         pprint.pprint(option_info)
@@ -330,12 +329,12 @@ if __name__=='__main__':
     # 'constraints' is a list of files
     cstr = option_info.get('constraints')
     if cstr:
-        for item in cstr:
-            options.constraint.insert(0, os.path.join(connectaldir, item))
+        ## preserve the order of items
+        options.constraint = [os.path.join(connectaldir, item) for item in cstr] + options.constraint
     cstr = option_info.get('implconstraints')
     if cstr:
-        for item in cstr:
-            options.implconstraint.insert(0, os.path.join(connectaldir, item))
+        ## preserve the order of items
+        options.implconstraint = [os.path.join(connectaldir, item) for item in cstr] + options.implconstraint
 
     bsvdefines += ['BOARD_'+boardname]
 
@@ -389,7 +388,8 @@ if __name__=='__main__':
     includelist = ['-I$(DTOP)/jni', '-I$(CONNECTALDIR)', \
                    '-I$(CONNECTALDIR)/cpp', '-I$(CONNECTALDIR)/lib/cpp', \
                    '%(sourceincludes)s', '%(cincludes)s', '%(cdefines)s']
-    substs['cflags'] = (' '.join(includelist) % substs) + ' '.join(options.cflags)
+    substs['cflags'] = util.escapequotes('%s %s' % ((' '.join(includelist) % substs), ' '.join(options.cflags)))
+    substs['cxxflags'] = util.escapequotes('%s %s' % ((' '.join(includelist) % substs), ' '.join(options.cxxflags)))
     f = util.createDirAndOpen(androidmkname, 'w')
     f.write(androidmk_template % substs)
     f.close()

@@ -22,6 +22,7 @@
 ## SOFTWARE.
 import os
 import filecmp
+import string
 
 def createDirAndOpen(f, m):
     (d, name) = os.path.split(f)
@@ -60,3 +61,7 @@ def splitBinding(s):
         return s.split('=')
     else:
         return (s,'')
+
+def escapequotes(s):
+    s = string.replace(s, '\"', '\\\"')
+    return s
