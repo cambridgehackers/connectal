@@ -185,7 +185,7 @@ char *getExecutionFilename(char *buf, int buflen)
 	    if (endptr && *endptr == '-') {
 		char *endptr2;
 		unsigned long addr2 = strtoul(endptr+1, &endptr2, 16);
-		if (addr <= (long)&initPortalHardware && (long)&initPortalHardware <= addr2) {
+		if (addr <= (unsigned long)&initPortalHardware && (unsigned long)&initPortalHardware <= addr2) {
 		    filename = strstr(endptr2, "  ");
 		    while (*filename == ' ')
 			filename++;
