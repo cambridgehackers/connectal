@@ -181,10 +181,10 @@ char *getExecutionFilename(char *buf, int buflen)
 	rc = 0;
 	while(buf[rc]) {
 	    char *endptr;
-	    long addr = strtol(&buf[rc], &endptr, 16);
+	    unsigned long addr = strtoul(&buf[rc], &endptr, 16);
 	    if (endptr && *endptr == '-') {
 		char *endptr2;
-		long addr2 = strtol(endptr+1, &endptr2, 16);
+		unsigned long addr2 = strtoul(endptr+1, &endptr2, 16);
 		if (addr <= (long)&initPortalHardware && (long)&initPortalHardware <= addr2) {
 		    filename = strstr(endptr2, "  ");
 		    while (*filename == ' ')
@@ -338,7 +338,9 @@ if (trace_portal) fprintf(stderr, "[%s:%d] LD_LIBRARY_PATH %s *******\n", __FUNC
 	  const char *fpgajtag = "fpgajtag";
 #endif // !__arm__
 	  argv[ind++] = filename;
-	  execvp (fpgajtag, argv);
+          errno = 0;
+          if (filename) // only run fpgajtag if filename was found
+	      execvp (fpgajtag, argv);
 	  fprintf(stderr, "[%s:%d] exec(%s) failed errno=%d:%s\n", __FUNCTION__, __LINE__, fpgajtag, errno, strerror(errno));
         }
 #endif // !SIMULATION
