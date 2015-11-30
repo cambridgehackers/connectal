@@ -74,7 +74,7 @@ argparser.add_argument('--xsimflags', default=[], help='Options to pass to the x
 argparser.add_argument('--ipdir', help='Directory in which to store generated IP')
 argparser.add_argument('-q', '--qtused', help='Qt used in simulator test application', action='store_true')
 argparser.add_argument('--stl', help='STL implementation to use for Android builds', default=None)
-argparser.add_argument('--android-platform', help='Android platform to use for Android builds', default=21, type=int)
+argparser.add_argument('--android-platform', help='Android platform to use for Android builds', default=None, type=int)
 argparser.add_argument('--floorplan', help='Floorplan XDC', default=None)
 argparser.add_argument('-P', '--partition-module', default=[], help='Modules to separately synthesize/place/route', action='append')
 argparser.add_argument('--cachedir', default=None, help='Cache directory for fpgamake to use')
