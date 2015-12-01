@@ -292,17 +292,13 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
 	    Bit#(32) writeOffset = writeOffsetReg;
 	    Bit#(MemTagSize) tag = req.tag;
 	    Bit#(8) handle = req.addr[39:32];
-	    Bit#(ByteEnableSize) byteEnable = maxBound;
-`ifdef BYTE_ENABLES
-	    if (writeLen == 1) byteEnable = req.lastbe;
-`endif
+	    Bit#(TDiv#(serverBusWidth,8)) byteEnable = maxBound;
+	    if (writeLen == 1) byteEnable = reqLastByteEnable(req);
 	    if (writeLenReg == 0) begin
 	       req_aw_b_ts <= cycles;
 	       writeLen = req.burstLen>>beat_shift;
 	       writeOffset = 0;
-`ifdef BYTE_ENABLES
-	       byteEnable = req.firstbe;
-`endif
+	       byteEnable = reqFirstByteEnable(req);
 	    end
 	    rw.write(extend(handle), req.addr[31:0] + writeOffset, resp.data, extend(byteEnable));
 	    writeLenReg <= writeLen - 1;
