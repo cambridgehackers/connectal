@@ -98,6 +98,7 @@ module mkMemReadInternal#(MemServerIndication ind,
 	    ,Add#(beatShift, a__, 8)
 	    ,Add#(b__, TLog#(numTags), MemTagSize)
 	    ,Add#(beatShift, c__, BurstLenSize)
+	    ,Add#(d__, TDiv#(busWidth, 8), ByteEnableSize)
 	    );
    
    // stopping/killing infra
@@ -257,7 +258,7 @@ module mkMemReadInternal#(MemServerIndication ind,
    interface servers = sv;
    interface PhysMemReadClient client;
       interface Get readReq;
-	 method ActionValue#(PhysMemRequest#(addrWidth,dataWidth)) get();
+	 method ActionValue#(PhysMemRequest#(addrWidth,busWidth)) get();
 	    let request <- toGet(serverRequest).get;
 	    let req = request.req;
 	    if (False && request.pa[31:24] != 0)
@@ -269,7 +270,7 @@ module mkMemReadInternal#(MemServerIndication ind,
 	    last_readReq <= cycle_cnt;
 	    return PhysMemRequest{addr:request.pa, burstLen:req.burstLen, tag:request.rename_tag
 `ifdef BYTE_ENABLES
-				  , firstbe: request.req.firstbe, lastbe: request.req.lastbe
+				  , firstbe: truncate(request.req.firstbe), lastbe: truncate(request.req.lastbe)
 `endif
 	       };
 	 endmethod
@@ -313,6 +314,7 @@ module mkMemWriteInternal#(MemServerIndication ind,
 	    ,Add#(beatShift, a__, 8)
 	    ,Add#(b__, TLog#(numTags), MemTagSize)
 	    ,Add#(beatShift, c__, BurstLenSize)
+            ,Add#(d__, TDiv#(busWidth, 8), ByteEnableSize)
 	    );
    
    let verbose = False;
@@ -438,7 +440,7 @@ module mkMemWriteInternal#(MemServerIndication ind,
    interface servers = sv;
    interface PhysMemWriteClient client;
       interface Get writeReq;
-	 method ActionValue#(PhysMemRequest#(addrWidth,dataWidth)) get();
+	 method ActionValue#(PhysMemRequest#(addrWidth,busWidth)) get();
 	    let request <- toGet(serverRequest).get();
 	    let req = request.req;
 	    let physAddr = request.pa;
@@ -448,7 +450,7 @@ module mkMemWriteInternal#(MemServerIndication ind,
 	    //$display("mkMemWriteInternal::writeReq: client=%d, rename_tag=%d", client,rename_tag);
 	    return PhysMemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)
 `ifdef BYTE_ENABLES
-				  , firstbe: req.firstbe, lastbe: req.lastbe
+				  , firstbe: truncate(req.firstbe), lastbe: truncate(req.lastbe)
 `endif
 };
 	 endmethod
