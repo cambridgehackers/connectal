@@ -181,7 +181,7 @@ module mkAxi4DmaMaster#(PhysMemMaster#(addrWidth,dataWidth) master) (Axi4Master#
 	    Log#(dataWidthBytes,beatShift),
 	    Add#(tagWidth,a__,MemTagSize),
 	    Add#(TDiv#(64,8),b__,dataWidthBytes),
-	    Bits#(Tuple3#(Bit#(8),Bit#(ByteEnableSize),Bit#(dataWidthBytes)),c__))
+	    Bits#(Tuple3#(Bit#(8),Bit#(ByteEnableSize),Bit#(dataWidthBytes)),c__));
 
    Reg#(Bit#(8))  burstReg <- mkReg(0);
    FIFO#(Tuple3#(Bit#(8),Bit#(ByteEnableSize),Bit#(dataWidthBytes))) reqs <- mkSizedFIFO(32);
