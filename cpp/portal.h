@@ -43,6 +43,7 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
 #include <semaphore.h>
 #include <unistd.h>
 #include <pthread.h> // pthread_mutex_t
+#include <poll.h>
 #endif
 
 extern int simulator_dump_vcd;
@@ -317,7 +318,7 @@ class PortalPoller {
 private:
     Portal **portal_wrappers;
     pthread_mutex_t mutex;
-    struct pollfd *portal_fds;
+    struct pollfd portal_fds[16];
     int pipefd[2];
     int startThread;
     int numWrappers;

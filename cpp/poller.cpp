@@ -35,8 +35,9 @@ PortalPoller *defaultPoller = new PortalPoller();
 uint64_t poll_enter_time, poll_return_time; // for performance measurement
 
 PortalPoller::PortalPoller(int autostart)
-  : portal_wrappers(0), portal_fds(0), startThread(autostart), numWrappers(0), numFds(0), stopping(0)
+  : portal_wrappers(0), startThread(autostart), numWrappers(0), numFds(0), stopping(0)
 {
+    memset(portal_fds, 0, sizeof(portal_fds));
     int rc = pipe(pipefd);
     if (rc != 0)
       fprintf(stderr, "[%s:%d] pipe error %d:%s\n", __FUNCTION__, __LINE__, errno, strerror(errno));
@@ -91,12 +92,6 @@ void PortalPoller::addFd(int fd)
      * event().
      */
     numFds++;
-    struct pollfd *new_portal_fds = (struct pollfd *)malloc(numFds*sizeof(struct pollfd));
-    if (portal_fds) {
-	memcpy((void *)new_portal_fds, (const void *)portal_fds, (numFds-1)*sizeof(struct pollfd));
-	free(portal_fds);
-    }
-    portal_fds = new_portal_fds;
     struct pollfd *pollfd = &portal_fds[numFds-1];
     memset(pollfd, 0, sizeof(struct pollfd));
     pollfd->fd = fd;
