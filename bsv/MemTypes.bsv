@@ -125,13 +125,13 @@ instance ReqByteEnables#(PhysMemRequest#(addrWidth,dataBusWidth),TDiv#(dataBusWi
    function Bit#(TDiv#(dataBusWidth,8)) reqLastByteEnable(PhysMemRequest#(addrWidth,dataBusWidth) req); return maxBound; endfunction
 `endif
 endinstance
-instance ReqByteEnables#(MemRequest,besz);
+instance ReqByteEnables#(MemRequest,ByteEnableSize);
 `ifdef BYTE_ENABLES
-   function Bit#(besz) reqFirstByteEnable(MemRequest req); return truncate(req.firstbe); endfunction
-   function Bit#(besz) reqLastByteEnable(MemRequest req); return truncate(req.lastbe); endfunction
+   function Bit#(ByteEnableSize) reqFirstByteEnable(MemRequest req); return req.firstbe; endfunction
+   function Bit#(ByteEnableSize) reqLastByteEnable(MemRequest req); return req.lastbe; endfunction
 `else
-   function Bit#(besz) reqFirstByteEnable(MemRequest req); return maxBound; endfunction
-   function Bit#(besz) reqLastByteEnable(MemRequest req); return maxBound; endfunction
+   function Bit#(ByteEnableSize) reqFirstByteEnable(MemRequest req); return maxBound; endfunction
+   function Bit#(ByteEnableSize) reqLastByteEnable(MemRequest req); return maxBound; endfunction
 `endif
 endinstance
 
