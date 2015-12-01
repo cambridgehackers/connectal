@@ -76,7 +76,7 @@ module mkAxiDmaMaster#(PhysMemMaster#(addrWidth,dataWidth) master) (Axi3Master#(
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift),
 	    Add#(tagWidth,a__,MemTagSize),
-	    Add#(TDiv#(64,8),b__,dataWidthBytes),
+	    Add#(TDiv#(dataWidth,8),b__,dataWidthBytes),
 	    Bits#(Tuple3#(Bit#(8),Bit#(TDiv#(dataWidth,8)),Bit#(TDiv#(dataWidth,8))),c__));
 
    Reg#(Bit#(8))  burstReg <- mkReg(0);
@@ -180,7 +180,7 @@ module mkAxi4DmaMaster#(PhysMemMaster#(addrWidth,dataWidth) master) (Axi4Master#
 	    Mul#(dataWidthBytes,8,dataWidth),
 	    Log#(dataWidthBytes,beatShift),
 	    Add#(tagWidth,a__,MemTagSize),
-	    Add#(TDiv#(64,8),b__,dataWidthBytes),
+	    Add#(TDiv#(dataWidth,8),b__,dataWidthBytes),
 	    Bits#(Tuple3#(Bit#(8),Bit#(TDiv#(dataWidth,8)),Bit#(TDiv#(dataWidth,8))),c__));
 
    Reg#(Bit#(8))  burstReg <- mkReg(0);
