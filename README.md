@@ -44,7 +44,7 @@ variable is set appropriately:
 
     export BLUESPECDIR=~/bluespec/Bluespec-2014.07.A/lib
 
-2. Install Vivado 2014.4 or later
+2. Install Vivado 2015.2 or 2015.4
 
 3. Install Connectal
 
@@ -80,25 +80,23 @@ Add USE_BUILDCACHE=1 to your calls to make to enable it to cache, otherwise it w
 Preparation for Zynq
 --------------------
 
-0. Get [http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2013-2.html](Vivado 2013.2)
+0. Get [http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2015-2.html](Vivado 2015.2)
 
-[Note]
-Connectal for Zynq also works with 2013.4 and 2014.1.
 
 1. Download the Android Native Development Kit (NDK) from: 
      http://developer.android.com/tools/sdk/ndk/index.html
      (actual file might be:
-         http://dl.google.com/android/ndk/android-ndk-r9d-linux-x86_64.tar.bz2
+         http://dl.google.com/android/ndk/android-ndk-r10e-linux-x86_64.tar.bz2
      )
 
    Connectal uses NDK to compile code to run on Zynq platforms.
 
    Add the NDK to your PATH.
 
-       URL=http://dl.google.com/android/ndk/android-ndk-r9d-linux-x86_64.tar.bz2
+       URL=http://dl.google.com/android/ndk/android-ndk-r10e-linux-x86_64.tar.bz2
        curl -O `basename $URL` $URL
        tar -jxvf `basename $URL`
-       PATH=$PATH:/scratch/android-ndk-r9d/
+       PATH=$PATH:/scratch/android-ndk-r10e/
 
 2. Download and install ADB from the Android Development Tools.
 
