@@ -322,6 +322,8 @@ def print_tlp(tlpdata, f=None):
         headerstr = headerstr + ' tag:' + tlpdata[28:30]
         headerstr = headerstr + ' reqid:' + tlpdata[24:28]
         headerstr = headerstr + ' length:' + str(int(tlpdata[21:24],16) & 0x3ff)
+    elif TlpPacketFormat[pktformat] == 'TLP Prefix':
+        headerstr = headerstr + tlpdata
     else:
         headerstr = headerstr + '  tlp data:' + tlpdata[40:]
         headerstr = headerstr + 'lower addr:' + tlpdata[38:40]
