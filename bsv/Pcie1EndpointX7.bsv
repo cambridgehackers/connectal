@@ -28,6 +28,8 @@ import PCIE              ::*;
 import PCIEWRAPPER       ::*;
 import Bufgctrl           ::*;
 import PcieGearbox       :: *;
+import PcieStateChanges  ::*;
+import Pipe              :: *;
 
 `include "ConnectalProjectConfig.bsv"
 
@@ -176,6 +178,7 @@ interface PcieEndpointX7#(numeric type lanes);
    interface PciewrapUser#(lanes)      user;
    interface PciewrapCfg#(lanes)       cfg;
    interface Server#(TLPData#(16), TLPData#(16)) tlp;
+   interface PipeOut#(Bit#(64)) regChanges;
    interface Clock epPcieClock;
    interface Reset epPcieReset;
    interface Clock epPortalClock;
@@ -288,6 +291,8 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
        pclk_sel <= ps;
    endrule
 
+   FIFOF#(RegChange) changeFifo <- mkFIFOF(); //mkSizedBRAMFIFOF(128, clocked_by user_clk, reset_by user_reset_n);
+
    let txready = (pcie_ep.s_axis_tx.tready != 0 && fAxiTx.notEmpty);
 
    //(* fire_when_enabled, no_implicit_conditions *)
@@ -375,6 +380,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    interface pcie    = pcie_ep.pcie;
    interface PciewrapUser user = pcie_ep.user;
    interface PciewrapCfg cfg = pcie_ep.cfg;
+   interface regChanges = mapPipe(pack, toPipeOut(changeFifo));
    interface Clock epPcieClock = clock125;
    interface Reset epPcieReset = reset125;
    interface Clock epPortalClock = portalClock;
