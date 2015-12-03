@@ -291,8 +291,6 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
        pclk_sel <= ps;
    endrule
 
-   FIFOF#(RegChange) changeFifo <- mkFIFOF(clocked_by user_clk, reset_by user_reset_n); //mkSizedBRAMFIFOF(128, clocked_by user_clk, reset_by user_reset_n);
-
    let txready = (pcie_ep.s_axis_tx.tready != 0 && fAxiTx.notEmpty);
 
    //(* fire_when_enabled, no_implicit_conditions *)
@@ -339,6 +337,8 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    Reset reset125 <- mkAsyncReset(4, user_reset_n, clock125);
    Clock derivedClock = clkgen.clkout0;
    Reset derivedReset <- mkAsyncReset(4, user_reset_n, derivedClock);
+
+   FIFOF#(RegChange) changeFifo <- mkFIFOF(clocked_by clock125, reset_by reset125); //mkSizedBRAMFIFOF(128, clocked_by clock125, reset_by reset125);
 
    Server#(TLPData#(8), TLPData#(8)) tlp8 = (interface Server;
 						interface Put request;
