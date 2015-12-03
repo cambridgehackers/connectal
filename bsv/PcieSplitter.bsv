@@ -50,18 +50,21 @@ module mkTLPDispatcher(TLPDispatcher);
 
    function Bool configMatch(TLPData#(16) tlp, TLPMemoryIO3DWHeader hdr_3dw);
       return tlp.hit == 7'h01 &&
+             pack(hdr_3dw.r1) == 0 && // not a TLP Prefix
           (hdr_3dw.format == MEM_READ_3DW_NO_DATA /* read */
         || (hdr_3dw.format == MEM_WRITE_3DW_DATA && hdr_3dw.pkttype != COMPLETION)); /* write */
    endfunction
 
    function Bool axiMatch(TLPData#(16) tlp, TLPMemoryIO3DWHeader hdr_3dw);
       return tlp.hit == 7'h04 &&
+             pack(hdr_3dw.r1) == 0 && // not a TLP Prefix
           (hdr_3dw.format == MEM_READ_3DW_NO_DATA /* read */
         || (hdr_3dw.format == MEM_WRITE_3DW_DATA && hdr_3dw.pkttype != COMPLETION)); /* write */
    endfunction
 
    function Bool axiCompletionMatch(TLPData#(16) tlp, TLPMemoryIO3DWHeader hdr_3dw);
-      return hdr_3dw.format == MEM_WRITE_3DW_DATA && hdr_3dw.pkttype == COMPLETION;
+      return (pack(hdr_3dw.r1) == 0) && // not a TLP Prefix
+              hdr_3dw.format == MEM_WRITE_3DW_DATA && hdr_3dw.pkttype == COMPLETION;
    endfunction
 
    matchFunctions[portConfig] = configMatch;
