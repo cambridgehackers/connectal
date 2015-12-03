@@ -291,7 +291,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
        pclk_sel <= ps;
    endrule
 
-   FIFOF#(RegChange) changeFifo <- mkFIFOF(); //mkSizedBRAMFIFOF(128, clocked_by user_clk, reset_by user_reset_n);
+   FIFOF#(RegChange) changeFifo <- mkFIFOF(clocked_by user_clk, reset_by user_reset_n); //mkSizedBRAMFIFOF(128, clocked_by user_clk, reset_by user_reset_n);
 
    let txready = (pcie_ep.s_axis_tx.tready != 0 && fAxiTx.notEmpty);
 
