@@ -149,7 +149,8 @@ android.exe bsim_exe ubuntu.exe exe: gentarget
 	+make -C $(PROJECTDIR) --no-print-directory $@
 
 PCIEGEN=$(shell grep PCIE $(CONNECTALDIR)/boardinfo/$(BOARD).json | sed 's/.*PCIE\([123]\).*/\1/')
-NEED_XILINX_PCIE_ac701=1
+NEED_XILINX_PCIE_ac701=$(PCIEGEN)
+NEED_XILINX_PCIE_ac701g2=$(PCIEGEN)
 NEED_XILINX_PCIE_kc160g2=$(PCIEGEN)
 NEED_XILINX_PCIE_kc705g2=$(PCIEGEN)
 NEED_XILINX_PCIE_vc707g2=$(PCIEGEN)
