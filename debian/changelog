@@ -1,4 +1,4 @@
-connectal (15.11.1-1precise1) precise; urgency=medium
+connectal (15.12.1-1precise1) precise; urgency=medium
 
   * Rewrote BSV preprocessor
   * Added scripts/bsvdepend.py to generate Makefile from BSV import dependences
