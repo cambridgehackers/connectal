@@ -92,7 +92,11 @@ TlpPacketFormat = [
     'MEM_READ__3DW     ',
     'MEM_READ__4DW     ',
     'MEM_WRITE_3DW_DATA',
-    'MEM_WRITE_4DW_DATA'
+    'MEM_WRITE_4DW_DATA',
+    'TLP Prefix',
+    'UNKNOWN_FMT_5',
+    'UNKNOWN_FMT_6',
+    'UNKNOWN_FMT_7',
 ]
 
 Pcie3ChangeSrc = [
@@ -258,7 +262,7 @@ def print_tlp(tlpdata, f=None):
     tlpeof = int(tlpdata[10:12],16) >> 7
     tlpbe  = tlpdata[12:16]
     tlphit = int(tlpdata[10:12],16) & 0x7f
-    pktformat = (int(tlpdata[16:17],16) >> 1) & 3
+    pktformat = (int(tlpdata[16:17],16) >> 1) & 7
     pkttype = (int(tlpdata[16:18],16) & 0x1f)
 
     address=0
@@ -318,8 +322,10 @@ def print_tlp(tlpdata, f=None):
         headerstr = headerstr + ' tag:' + tlpdata[28:30]
         headerstr = headerstr + ' reqid:' + tlpdata[24:28]
         headerstr = headerstr + ' length:' + str(int(tlpdata[21:24],16) & 0x3ff)
+    elif TlpPacketFormat[pktformat] == 'TLP Prefix':
+        headerstr = headerstr + tlpdata
     else:
-        headerstr = headerstr + '  tlp data:', tlpdata[40:]
+        headerstr = headerstr + '  tlp data:' + tlpdata[40:]
         headerstr = headerstr + 'lower addr:' + tlpdata[38:40]
         headerstr = headerstr + '       tag:' + tlpdata[36:38]
         headerstr = headerstr + '     reqid:' + tlpdata[34:36]

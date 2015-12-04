@@ -81,12 +81,13 @@ module mkSimDma(SimDma#(dataWidth) ifc)
       method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v, Bit#(TDiv#(dataWidth,8)) byteEnable);
 	  Vector#(TDiv#(dataWidth, 32), Bit#(32)) vs = unpack(v);
 	  Vector#(TDiv#(dataWidth, 32), Bit#(4)) byteEnables = unpack(byteEnable);
-	  function Action write32(Integer i, Bit#(32) vv, Bit#(4) byteEnable);
+	  function Action write32(Integer i);
 	     action
-		write_simDma32(handle, addr+4*fromInteger(i), vv, byteEnable);
+		write_simDma32(handle, addr+4*fromInteger(i), vs[i], byteEnables[i]);
 	     endaction
 	  endfunction
-	  let unused <- zipWith3M(write32, genVector(), vs, byteEnables);
+	 Vector#(TDiv#(dataWidth,32),Integer) indices = genVector();
+	 mapM_(write32, indices);
       endmethod
       method Action  readrequest(Bit#(32) handle, Bit#(32) addr);
 	  function ActionValue#(Bit#(32)) read32(Integer i);
@@ -142,12 +143,13 @@ module mkSimDma(SimDma#(dataWidth) ifc)
    method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v, Bit#(TDiv#(dataWidth,8)) byteEnable);
       Vector#(TDiv#(dataWidth, 32), Bit#(32)) vs = unpack(v);
       Vector#(TDiv#(dataWidth, 32), Bit#(4)) byteEnables = unpack(byteEnable);
-      function Action write32(Integer i, Bit#(32) vv, Bit#(4) be);
+      function Action write32(Integer i);
 	 action
-	    rws[i].write32(handle, addr+4*fromInteger(i), vv, be);
+	    rws[i].write32(handle, addr+4*fromInteger(i), vs[i], byteEnables[i]);
 	 endaction
       endfunction
-      let unused <- zipWith3M(write32, genVector(), vs, byteEnables);
+      Vector#(TDiv#(dataWidth,32),Integer) indices = genVector();
+      mapM_(write32, indices);
    endmethod
    method Action readrequest(Bit#(32) handle, Bit#(32) addr);
       function Action doreadrequest(Integer i);
@@ -290,17 +292,13 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
 	    Bit#(32) writeOffset = writeOffsetReg;
 	    Bit#(MemTagSize) tag = req.tag;
 	    Bit#(8) handle = req.addr[39:32];
-	    Bit#(ByteEnableSize) byteEnable = maxBound;
-`ifdef BYTE_ENABLES
-	    if (writeLen == 1) byteEnable = req.lastbe;
-`endif
+	    Bit#(TDiv#(serverBusWidth,8)) byteEnable = maxBound;
+	    if (writeLen == 1) byteEnable = reqLastByteEnable(req);
 	    if (writeLenReg == 0) begin
 	       req_aw_b_ts <= cycles;
 	       writeLen = req.burstLen>>beat_shift;
 	       writeOffset = 0;
-`ifdef BYTE_ENABLES
-	       byteEnable = req.firstbe;
-`endif
+	       byteEnable = reqFirstByteEnable(req);
 	    end
 	    rw.write(extend(handle), req.addr[31:0] + writeOffset, resp.data, extend(byteEnable));
 	    writeLenReg <= writeLen - 1;

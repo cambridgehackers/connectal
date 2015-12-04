@@ -4,7 +4,6 @@
 //  Filename      : ConnectalXilinx7PCIE.bsv
 //  Description   :
 ////////////////////////////////////////////////////////////////////////////////
-package PcieEndpointX7;
 
 import ConnectalConfig   ::*;
 import Clocks            ::*;
@@ -29,6 +28,8 @@ import PCIE              ::*;
 import PCIEWRAPPER       ::*;
 import Bufgctrl           ::*;
 import PcieGearbox       :: *;
+import PcieStateChanges  ::*;
+import Pipe              :: *;
 
 `include "ConnectalProjectConfig.bsv"
 
@@ -177,6 +178,7 @@ interface PcieEndpointX7#(numeric type lanes);
    interface PciewrapUser#(lanes)      user;
    interface PciewrapCfg#(lanes)       cfg;
    interface Server#(TLPData#(16), TLPData#(16)) tlp;
+   interface PipeOut#(Bit#(64)) regChanges;
    interface Clock epPcieClock;
    interface Reset epPcieReset;
    interface Clock epPortalClock;
@@ -336,6 +338,8 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    Clock derivedClock = clkgen.clkout0;
    Reset derivedReset <- mkAsyncReset(4, user_reset_n, derivedClock);
 
+   FIFOF#(RegChange) changeFifo <- mkFIFOF(clocked_by clock125, reset_by reset125); //mkSizedBRAMFIFOF(128, clocked_by clock125, reset_by reset125);
+
    Server#(TLPData#(8), TLPData#(8)) tlp8 = (interface Server;
 						interface Put request;
 						   method Action put(TLPData#(8) data);
@@ -376,6 +380,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    interface pcie    = pcie_ep.pcie;
    interface PciewrapUser user = pcie_ep.user;
    interface PciewrapCfg cfg = pcie_ep.cfg;
+   interface regChanges = mapPipe(pack, toPipeOut(changeFifo));
    interface Clock epPcieClock = clock125;
    interface Reset epPcieReset = reset125;
    interface Clock epPortalClock = portalClock;
@@ -384,4 +389,3 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    interface Reset epDerivedReset = derivedReset;
 endmodule: mkPcieEndpointX7
 
-endpackage: PcieEndpointX7

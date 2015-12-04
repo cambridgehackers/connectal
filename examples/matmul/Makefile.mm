@@ -5,6 +5,7 @@ CPPFILES   +=  $(CONNECTALDIR)/lib/matmul/cpp/portalmat.cpp $(TESTCPPFILES)
 CONNECTALFLAGS  +=  -D IMPORT_HOSTIF -D MATRIX_TN -D MATMUL_HACK
 CONNECTALFLAGS  +=  --bscflags="+RTS -K26777216 -RTS"
 CONNECTALFLAGS  +=  --bsvpath $(CONNECTALDIR)/lib/matmul/bsv
+CONNECTALFLAGS  += -I$(CONNECTALDIR)/lib/matmul/cpp
 
 Dma = Dma
 PINS = Std

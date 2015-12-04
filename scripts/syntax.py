@@ -24,6 +24,7 @@ import ply.lex as lex
 import AST
 import json, os, re, sys
 
+import bsvpreprocess
 import globalv
 import cppgen, bsvgen
 
@@ -1002,97 +1003,10 @@ def p_package(p):
     '''package : beginPackage exportDecls importDecls packageStmts exportDecls endPackage'''
     p[0] = p[4]
 
-def preprocess(sourcefilename, source, defs, bsvpath):
-    stack = [(True,True)]
-    def nexttok(s):
-        k = re.search('\s', s)
-        if k:
-            sym = s[:k.start()]
-            s = s[k.end():]
-            return (sym, s)
-        else:
-            return (s, '')
-    lines = source.splitlines()
-    outlines = []
-    while lines:
-        line = lines[0]
-        lines = lines[1:]
-        cond  = stack[-1][0]
-        valid = stack[-1][1]
-
-        commentStart = re.match('//', line)
-        if commentStart:
-            s = line[0:commentStart.start()]
-        else:
-            s = line
-        i = re.match('`', line)
-        if not i:
-            if valid:
-                outlines.append(line)
-            else:
-                outlines.append('//SKIPPED %s' % line)
-            continue
-        pre = s[:i.end()-1]
-        s = s[i.end():]
-        (tok, s) = nexttok(s)
-        if tok == 'ifdef':
-            (sym, s) = nexttok(s)
-            new_cond = sym in defs
-            new_valid = new_cond and valid
-            stack.append((new_cond,new_valid))
-        elif tok == 'ifndef':
-            (sym, s) = nexttok(s)
-            new_cond = not sym in defs
-            new_valid = valid and new_cond
-            stack.append((new_cond,new_valid))
-        elif tok == 'else':
-            new_cond = not cond
-            stack.pop()
-            valid = stack[-1][1]
-            stack.append((new_cond,valid))
-        elif tok == 'elsif':
-            stack.pop()
-            valid = stack[-1][1]
-            (sym, s) = nexttok(s)
-            new_cond = sym in defs
-            new_valid = new_cond and valid
-            stack.append((new_cond,new_valid))
-        elif tok == 'endif':
-            stack.pop()
-            valid = stack[-1][1]
-        elif tok == 'define':
-            (sym, s) = nexttok(s)
-            defs.append(sym)
-        elif tok == 'include':
-            m = re.search('"?([-_A-Za-z0-9.]+)"?', s)
-            if not m:
-                sys.stderr.write('syntax.preprocess %s: could not find file in line {%s}\n' % (sourcefilename, s))
-            filename = m.group(1)
-            inc = ''
-            for d in bsvpath:
-                fn = os.path.join(d, filename)
-                if os.path.exists(fn):
-                    inc = open(fn).read()
-                    break
-            if not inc:
-                sys.stderr.write('syntax.preprocess %s: did not find included file %s in path\n' % (sourcefilename, filename))
-            outlines.append('//`include "%s"' % filename)
-            lines.extend(inc.splitlines())
-            continue
-        elif re.match('[A-Z][A-Za-z0-9_]*', tok):
-            ## must be an undefined variable
-            sys.stderr.write('syntax.preprocess %s: preprocessor variable `%s\n' % (sourcefilename, tok))
-        else:
-            sys.stderr.write('syntax.preprocess %s: unhandled preprocessor token %s\n' % (sourcefilename, tok))
-            assert(tok in ['ifdef', 'ifndef', 'else', 'endif', 'define'])
-        outlines.append('//PREPROCESSED: %s' % line)
-
-    return '%s\n' % '\n'.join(outlines)
-
 def syntax_parse(argdata, inputfilename, bsvdefines, bsvpath):
     global globalfilename
     globalfilename = inputfilename
-    data = preprocess(inputfilename, argdata + '\n', bsvdefines, bsvpath)
+    data = bsvpreprocess.preprocess(inputfilename, argdata + '\n', bsvdefines, bsvpath)
     lexer = lex.lex(errorlog=lex.NullLogger())
     parserdir=scripthome+'/syntax'
     if not os.path.isdir(parserdir):

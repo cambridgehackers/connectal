@@ -1,4 +1,7 @@
 # Avnet Mini-ITX Zynq100
+set_property LOC H9  [get_ports { CLK_sys_clk_p }]
+set_property LOC G9  [get_ports { CLK_sys_clk_n }]
+set_property IOSTANDARD DIFF_SSTL15 [get_ports { CLK_sys_clk_* }]
 
 set_property iostandard "LVCMOS18" [get_ports "GPIO_leds[0]"]
 set_property PACKAGE_PIN "C6" [get_ports "GPIO_leds[0]"]
