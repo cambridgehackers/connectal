@@ -65,7 +65,7 @@ module  vmkBramFifo#(String fifo_size, Clock wrClock, Reset wrReset, Clock rdClo
    parameter DEVICE = "7SERIES";
    parameter DATA_WIDTH = valueOf(data_width);
    parameter FIFO_SIZE = fifo_size;
-   parameter FIRST_WORD_FALL_THROUGH = 1;
+   parameter FIRST_WORD_FALL_THROUGH = "TRUE";
    default_clock wrClock(WRCLK) = wrClock;
    no_reset;
    input_reset wrReset(RST) = fifoReset;

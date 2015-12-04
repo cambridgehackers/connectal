@@ -33,7 +33,7 @@ import MemTypes::*;
 import MemReadEngine::*;
 import MemWriteEngine::*;
 import Pipe::*;
-import Ddr3Controller::*;
+import AxiDdr3Controller::*;
 import GetPutWithClocks::*;
 import AxiMasterSlave::*;
 import Axi4MasterSlave::*;

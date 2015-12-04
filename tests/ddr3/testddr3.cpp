@@ -53,9 +53,11 @@ int main(int argc, const char **argv)
   //unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
   int ref_srcAlloc = dma->reference(srcAlloc);
 
-  testRequest->startWriteDram(ref_srcAlloc);
-  sem_wait(&test_sem);
-  testRequest->startWriteDram(ref_srcAlloc);
-  sem_wait(&test_sem);
+  if (0) {
+      testRequest->startWriteDram(ref_srcAlloc);
+      sem_wait(&test_sem);
+      testRequest->startWriteDram(ref_srcAlloc);
+      sem_wait(&test_sem);
+  }
   return 0;
 }
