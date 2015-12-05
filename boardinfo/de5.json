@@ -526,7 +526,7 @@
             "LOC": "PIN_P38"
         }, 
         "DDR3A_RESET_n": {
-            "IOSTANDARD": "SSTL-15 CLASS I", 
+            "IOSTANDARD": "1.5 V", 
             "LOC": "PIN_H33"
         }, 
         "DDR3A_SCL": {
