@@ -22,7 +22,7 @@
 //`timescale 1ns / 1ps
 
 import "DPI-C" function void dpi_init();
-import "DPI-C" function void dpi_poll();
+//import "DPI-C" function void dpi_poll();
 import "DPI-C" function bit dpi_finish();
 
 `ifdef BSV_POSITIVE_RESET

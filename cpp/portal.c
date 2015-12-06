@@ -297,7 +297,7 @@ static void initPortalHardwareOnce(void)
 	  argv[ind++] = (char*)simulator_vcd_name;
 	}
 #endif
-#if defined(BOARD_xsim)
+#if defined(BOARD_xsim) || defined(BOARD_vsim)
 	const char *exetype = "xsim";
 	bindir = 0; // the simulation driver is found in $PATH
         argv[ind++] = (char *)"-R";
