@@ -117,6 +117,18 @@ proc create_altera_de5_ddr3 {} {
     dict set params TIMING_BOARD_DQ_TO_DQS_SKEW         "0.0020"
     dict set params TIMING_BOARD_AC_SKEW                "0.05"
     dict set params TIMING_BOARD_AC_TO_CK_SKEW          "0.012"
+    dict set params REF_CLK_FREQ                        "50.0"
+    dict set params REF_CLK_FREQ_PARAM_VALID            "false"
+    dict set params REF_CLK_FREQ_MIN_PARAM              "0.0"
+    dict set params REF_CLK_FREQ_MAX_PARAM              "0.0"
+    dict set params PHY_ONLY                            "false"
+
+#    dict set params PLL_SHARING_MODE                    "Master"
+#    dict set params NUM_PLL_SHARING_INTERFACES          "1"
+#    dict set params DLL_SHARING_MODE                    "Master"
+#    dict set params NUM_DLL_SHARING_INTERFACES          "1"
+#    dict set params OCT_SHARING_MODE                    "Master"
+#    dict set params NUM_OCT_SHARING_INTERFACES          "1"
 
     set component_parameters {}
 	foreach item [dict keys $params] {
