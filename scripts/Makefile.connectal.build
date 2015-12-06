@@ -335,7 +335,6 @@ vsim: verilog $(VSIM_OBJECTS)
 	vlib work
 	vlog -dpiheader XsimTop.h $(VSIM_DEFINES) $(VSIM_SV) -sv verilog/*.v
 	g++ -O -g -I$(DTOP)/jni -shared -fPIC -g -o $(DTOP)/bin/xsimtop.so $(VSIM_OBJECTS)
-	#vsim -sv_lib bin/xsimtop xsimtop -do "run -all; quit -f"
 endif #MODELSIM
 
 obj/%.bvi: verilog/%.v
