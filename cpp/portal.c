@@ -88,7 +88,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
         // Use defaults for transport handling methods
 #ifdef BOARD_bluesim
         item = &transportBsim;
-#elif defined(BOARD_xsim) || defined(BOARD_verilator)
+#elif defined(BOARD_xsim) || defined(BOARD_verilator) || defined(BOARD_vsim)
         item = &transportXsim;
 #else
         item = &transportHardware;

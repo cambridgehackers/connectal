@@ -246,6 +246,7 @@ else
 	$(CONNECTALDIR)/scripts/run.android bin/android.exe $(RUN_ARGS)
     else
     ifeq ($(BOARD), vsim)
+	vsim -sv_lib ./bin/xsimtop xsimtop -do "run -all; quit -f" &
 	$(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; exit $$retcode
     else
 ifeq ($(XILINX),"1")
@@ -327,15 +328,15 @@ vsim.dir/xsc/%.lnx64.o: jni/%.cpp
 	mkdir -p vsim.dir/xsc
 	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
 
-XVLOGDEFINES = $(subst -D ,+define+,$(BSVDEFINES))
-SVLOG = $(addprefix -sv $(CONNECTALDIR)/verilog/, xsimtop.sv XsimDmaReadWrite.sv XsimLink.sv XsimSink.sv XsimSource.sv)
+VSIM_DEFINES = $(subst -D ,+define+,$(BSVDEFINES))
+VSIM_SV = $(addprefix -sv $(CONNECTALDIR)/verilog/, xsimtop.sv XsimDmaReadWrite.sv XsimLink.sv XsimSink.sv XsimSource.sv)
 
 vsim: verilog $(VSIM_OBJECTS)
 	vlib work
-	vlog -dpiheader XsimTop.h $(XVLOGDEFINES) $(SVLOG) -sv verilog/*.v
+	vlog -dpiheader XsimTop.h $(VSIM_DEFINES) $(VSIM_SV) -sv verilog/*.v
 	g++ -O -g -I$(DTOP)/jni -shared -fPIC -g -o $(DTOP)/bin/xsimtop.so $(VSIM_OBJECTS)
-	vsim -c -sv_lib bin/xsimtop xsimtop -do "run -all; quit -f"
-endif #QUARTUS
+	#vsim -sv_lib bin/xsimtop xsimtop -do "run -all; quit -f"
+endif #MODELSIM
 
 obj/%.bvi: verilog/%.v
 	$(CONNECTALDIR)/scripts/extract-bvi-schedule.py -d obj verilog/$(*).v
