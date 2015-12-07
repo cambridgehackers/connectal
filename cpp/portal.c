@@ -297,11 +297,21 @@ static void initPortalHardwareOnce(void)
 	  argv[ind++] = (char*)simulator_vcd_name;
 	}
 #endif
-#if defined(BOARD_xsim) || defined(BOARD_vsim)
+#if defined(BOARD_xsim)
 	const char *exetype = "xsim";
 	bindir = 0; // the simulation driver is found in $PATH
         argv[ind++] = (char *)"-R";
         argv[ind++] = (char *)"work.xsimtop";
+#endif
+#if defined(BOARD_vsim)
+	const char *exetype = "vsim";
+	bindir = 0; // the simulation driver is found in $PATH
+        argv[ind++] = (char *)"-c";
+        argv[ind++] = (char *)"-sv_lib";
+        argv[ind++] = (char *)"./bin/xsimtop";
+        argv[ind++] = (char *)"work.xsimtop";
+        argv[ind++] = (char *)"-do";
+        argv[ind++] = (char *)"run -all; quit -f";
 #endif
 	if (bindir)
 	    sprintf(exename, "%s/%s", bindir, exetype);
