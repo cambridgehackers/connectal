@@ -80,22 +80,7 @@ CONNECTALFLAGS += -D SlaveControlAddrWidth=$(SLAVE_CONTROL_ADDR_WIDTH)
 CONNECTALFLAGS += -D BurstLenSize=$(BURST_LEN_SIZE)
 CONNECTALFLAGS += --ipdir=$(IPDIR)
 CONNECTALFLAGS += -D ExportType=$(EXPORT_TYPE)
-ifeq ($(BOARD),xsim)
-CONNECTALFLAGS += -D CnocTop
-CNOC?=--cnoc
-endif
-ifeq ($(BOARD),vsim)
-CONNECTALFLAGS += -D CnocTop
-CNOC?=--cnoc
-endif
-ifeq ($(BOARD),verilator)
-CONNECTALFLAGS += -D CnocTop
-CNOC?=--cnoc
-endif
-ifeq ($(BOARD),asic)
-CONNECTALFLAGS += -D CnocTop
-CNOC?=--cnoc
-endif
+CNOC?=$(shell grep -q CnocTop $(CONNECTALDIR)/boardinfo/$(BOARD).json && echo --cnoc)
 ifneq ($(AUTOTOP),)
 USE_AUTOTOP = 1
 endif
