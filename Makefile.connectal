@@ -84,6 +84,10 @@ ifeq ($(BOARD),xsim)
 CONNECTALFLAGS += -D CnocTop
 CNOC?=--cnoc
 endif
+ifeq ($(BOARD),vsim)
+CONNECTALFLAGS += -D CnocTop
+CNOC?=--cnoc
+endif
 ifeq ($(BOARD),verilator)
 CONNECTALFLAGS += -D CnocTop
 CNOC?=--cnoc
@@ -141,8 +145,13 @@ endif
 #endif
 BSVFILES += $(CONNECTALDIR)/bsv/XsimIF.bsv
 endif
+ifeq ($(BOARD),vsim)
+INTERFACES += XsimMsgRequest XsimMsgIndication
+CPPFILES += $(CONNECTALDIR)/cpp/transportXsim.c
+BSVFILES += $(CONNECTALDIR)/bsv/XsimIF.bsv
+endif
 
-all bits verilog implementation bsim xsim xsimrun: gentarget prebuild
+all bits verilog implementation bsim xsim vsim xsimrun: gentarget prebuild
 	+make -C $(PROJECTDIR) --no-print-directory $@
 
 android.exe bsim_exe ubuntu.exe exe: gentarget
@@ -256,7 +265,7 @@ ifneq ($(filter $(BOARD), de5 htg4), )
 	$(CONNECTALDIR)/scripts/generate-constraints.py -f altera \
 		$(foreach f, $(PIN_BINDINGS), -b $f) \
 		-o $(PROJECTDIR)/generatedbsv/$(BOARD).qsf \
-		--boardfile $(CONNECTALDIR)/boardinfo/$(BOARD).json --pinoutfile $(shell /bin/pwd)/../boards/$(BOARD).json
+		--boardfile $(CONNECTALDIR)/boardinfo/$(BOARD).json --pinoutfile $(PINOUT_FILE)
 endif
 else
 	$(Q) if [ -e $(CONNECTALDIR)/constraints/altera/$(BOARD).qsf ]; then cp $(CONNECTALDIR)/constraints/altera/$(BOARD).qsf $(PROJECTDIR)/generatedbsv/$(BOARD).qsf; fi

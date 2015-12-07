@@ -87,6 +87,10 @@ VIVADOFLAGS= -notrace
 XVLOGFLAGS =
 endif
 
+MODELSIM=$(shell which vsim)
+ifneq ($(MODELSIM), )
+endif
+
 ifeq ($(USE_BUILDCACHE),1)
 BUILDCACHE=$(shell cd $(CONNECTALDIR)/..; /bin/pwd)/buildcache/buildcache
 ifeq ("$(BUILDCACHE_CACHEDIR)", "")
@@ -168,6 +172,9 @@ else
 ifeq ($(BOARD),xsim)
 bits: xsim
 else
+ifeq ($(BOARD),vsim)
+bits: vsim
+else
 ifeq ($(BOARD),verilator)
 bits: vlsim
 else
@@ -199,7 +206,8 @@ endif # ALTERA
 
 endif # android
 endif # verilator
-endif #xsim
+endif # xsim
+endif # vsim
 
 android.exe: prepare_bin_target
 	+ndk-build $(CONNECTAL_NDK_PARAM)
@@ -237,6 +245,10 @@ else
     ifeq ($(OS),android)
 	$(CONNECTALDIR)/scripts/run.android bin/android.exe $(RUN_ARGS)
     else
+    ifeq ($(BOARD), vsim)
+	vsim -sv_lib ./bin/xsimtop xsimtop -do "run -all; quit -f" &
+	$(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; exit $$retcode
+    else
 ifeq ($(XILINX),"1")
 	$(CONNECTALDIR)/scripts/run.pcietest bin/ubuntu.exe $(RUN_ARGS)
 endif
@@ -244,6 +256,7 @@ ifeq ($(ALTERA),"1")
 	$(CONNECTALDIR)/scripts/run.pcietest.altera bin/mk*.sof bin/ubuntu.exe $(RUN_ARGS)
 endif
 endif
+    endif # vsim
     endif # android
     endif # verilator
   endif # xsim
@@ -295,12 +308,34 @@ $(DTOP)/obj_dir/vlsim: $(DTOP)/obj_dir/vlsim.mk
 	+$(MAKE) -C obj_dir -f vlsim.mk
 	cp obj_dir/vlsim bin/vlsim
 
-bin/vsim:
-	python $(CONNECTALDIR)/scripts/sim-gen.py -o vsim/Makefile -s ~/dev/connectal/out/vsim/synthesis/ -d ~/dev/sonic-lite/vsim/modelsim -p ~/dev/sonic-lite -c $(CONNECTALDIR) -g ~/dev/connectal/out/vsim/synthesis/ -t ~/dev/connectal/out/vsim/synthesis/ -T mkSonicSimTop
+ifneq ($(MODELSIM), )
+MODELSIMDIR=$(realpath $(shell dirname $(MODELSIM))/..)
+VSIM_CFLAGS= -Wa,-W -fPIC -m64 -I"$(MODELSIMDIR)/include" -DSYSTEM_VERILOG -DBOARD_vsim -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -Ijni
+VSIM_GENERATED_CFILES = XsimMsgIndication XsimMsgRequest GeneratedCppCallbacks
+VSIM_CFILES = transportSocket transportHardware transportXsim XsimTop poller sock_utils portalPrintf portal BsimDma BsimCtrl
+VSIM_OBJECTS = $(foreach c, $(VSIM_CFILES), vsim.dir/xsc/$(c).lnx64.o ) $(foreach c, $(VSIM_GENERATED_CFILES), vsim.dir/xsc/$(c).lnx64.o)
 
-vsim: verilog bin/vsim
-	$(MAKE) -C vsim all
-	$(MAKE) -C vsim simulate
+vsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.c
+	mkdir -p vsim.dir/xsc
+	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
+vsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.cpp
+	mkdir -p vsim.dir/xsc
+	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
+vsim.dir/xsc/%.lnx64.o: jni/%.c
+	mkdir -p vsim.dir/xsc
+	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
+vsim.dir/xsc/%.lnx64.o: jni/%.cpp
+	mkdir -p vsim.dir/xsc
+	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
+
+VSIM_DEFINES = $(subst -D ,+define+,$(BSVDEFINES))
+VSIM_SV = $(addprefix -sv $(CONNECTALDIR)/verilog/, xsimtop.sv XsimDmaReadWrite.sv XsimLink.sv XsimSink.sv XsimSource.sv)
+
+vsim: verilog $(VSIM_OBJECTS)
+	vlib work
+	vlog -dpiheader XsimTop.h $(VSIM_DEFINES) $(VSIM_SV) -sv verilog/*.v
+	g++ -O -g -I$(DTOP)/jni -shared -fPIC -g -o $(DTOP)/bin/xsimtop.so $(VSIM_OBJECTS)
+endif #MODELSIM
 
 obj/%.bvi: verilog/%.v
 	$(CONNECTALDIR)/scripts/extract-bvi-schedule.py -d obj verilog/$(*).v

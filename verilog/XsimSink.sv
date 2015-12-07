@@ -43,7 +43,7 @@ module XsimSink(input CLK, input CLK_GATE, input RST, input [31:0] portal, outpu
 	 beat_reg <= 32'haaaaaaaa;
       end
       else if (EN_beat == 1 || valid_reg == 0) begin
-	 longint v = dpi_msgSink_beat(portal);
+	 automatic longint v = dpi_msgSink_beat(portal);
 	 valid_reg <= v[32];
 	 beat_reg <= v[31:0];
       end

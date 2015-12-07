@@ -128,14 +128,10 @@ module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieE
    Reset core_reset = pcie_ep.core_reset;
    Reset core_resetn <- mkResetInverter(pcie_ep.core_reset, clocked_by core_clk);
 
-   // Test Altera Application
-//   PcieS5App pcie_app <- mkPcieS5App(core_clk, reset_high);
-//   mkConnection(pcie_app, pcie_ep);
-
    Reg#(PciId) deviceReg <- mkReg(?, clocked_by core_clk, reset_by core_resetn);
 
-   FIFOF#(AvalonStTx#(16)) fAvalonStTx <- mkBypassFIFOF(clocked_by core_clk, reset_by core_resetn);
-   FIFOF#(AvalonStRx#(16)) fAvalonStRx <- mkBypassFIFOF(clocked_by core_clk, reset_by core_resetn);
+   FIFOF#(AvalonStTx#(16)) fAvalonStTx <- mkBypassFIFOF(clocked_by core_clk, reset_by noReset);
+   FIFOF#(AvalonStRx#(16)) fAvalonStRx <- mkBypassFIFOF(clocked_by core_clk, reset_by noReset);
 
    let txready = (pcie_ep.tx_st.ready != 0 && fAvalonStTx.notEmpty);
 

@@ -88,7 +88,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
         // Use defaults for transport handling methods
 #ifdef BOARD_bluesim
         item = &transportBsim;
-#elif defined(BOARD_xsim) || defined(BOARD_verilator)
+#elif defined(BOARD_xsim) || defined(BOARD_verilator) || defined(BOARD_vsim)
         item = &transportXsim;
 #else
         item = &transportHardware;
@@ -232,8 +232,10 @@ static void initPortalHardwareOnce(void)
         int status;
         waitpid(pid, &status, 0);
 	fprintf(stderr, "subprocess pid %d completed status=%x %d\n", pid, status, WEXITSTATUS(status));
+#ifndef BOARD_de5
 	if (WEXITSTATUS(status) != 0)
 	    exit(-1);
+#endif
 	{
 	  int fd = -1;
 	  ssize_t len;
@@ -295,7 +297,7 @@ static void initPortalHardwareOnce(void)
 	  argv[ind++] = (char*)simulator_vcd_name;
 	}
 #endif
-#if defined(BOARD_xsim)
+#if defined(BOARD_xsim) || defined(BOARD_vsim)
 	const char *exetype = "xsim";
 	bindir = 0; // the simulation driver is found in $PATH
         argv[ind++] = (char *)"-R";
