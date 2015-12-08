@@ -46,13 +46,11 @@ typedef struct {
 } EchoPair deriving (Bits);
 
 module mkEcho#(EchoIndication indication)(Echo);
-    Clock defaultClock <- exposeCurrentClock;
-    Reset defaultReset <- exposeCurrentReset;
     FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
     FIFO#(EchoPair) delay2 <- mkSizedFIFO(8);
 
     Empty test_program <- mkTestProgram();
-    AvalonMM dut <- mkAvalonMM(defaultClock, defaultReset);
+    AvalonMM dut <- mkAvalonMM();
 
     rule heard;
         delay.deq;

@@ -54,11 +54,11 @@ interface AvalonMM;
     interface AvalonmmSlave_0     slave_0;
 endinterface
 import "BVI" avlm_avls_1x1 =
-module mkAvalonMM#(Clock clk_clk, Reset reset_reset_n)(AvalonMM);
+module mkAvalonMM(AvalonMM);
     default_clock clk();
     default_reset rst();
-        input_clock clk_clk(clk_clk) = clk_clk;
-        input_reset reset_reset_n(reset_reset_n) = reset_reset_n;
+        input_clock (clk_clk) <- exposeCurrentClock;
+        input_reset (reset_reset_n) <- exposeCurrentReset;
     interface AvalonmmMaster_0     master_0;
         method master_0_m0_address m0_address();
         method master_0_m0_burstcount m0_burstcount();
