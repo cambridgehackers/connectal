@@ -329,10 +329,14 @@ vsim.dir/xsc/%.lnx64.o: jni/%.cpp
 
 VSIM_DEFINES = $(subst -D ,+define+,$(BSVDEFINES))
 VSIM_SV = $(addprefix -sv $(CONNECTALDIR)/verilog/, xsimtop.sv XsimDmaReadWrite.sv XsimLink.sv XsimSink.sv XsimSource.sv)
+GENERATED_SV = $(addprefix +incdir+, $(SYSTEMVERILOG_PATH))
 
 vsim: verilog $(VSIM_OBJECTS)
 	vlib work
-	vlog -dpiheader XsimTop.h $(VSIM_DEFINES) $(VSIM_SV) -sv verilog/*.v
+	for dir in $(SYSTEMVERILOG_PATH); do \
+	    python $(CONNECTALDIR)/scripts/source_msim_setup.py $$dir/mentor/msim_setup.tcl $$dir; \
+	done
+	vlog -dpiheader XsimTop.h $(VSIM_DEFINES) $(VSIM_SV) $(GENERATED_SV) -sv verilog/*.v
 	g++ -O -g -I$(DTOP)/jni -shared -fPIC -g -o $(DTOP)/bin/xsimtop.so $(VSIM_OBJECTS)
 endif #MODELSIM
 

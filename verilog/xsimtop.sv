@@ -19,10 +19,9 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-//`timescale 1ns / 1ps
+`timescale 1ns / 1ps
 
 import "DPI-C" function void dpi_init();
-//import "DPI-C" function void dpi_poll();
 import "DPI-C" function bit dpi_finish();
 
 `ifdef BSV_POSITIVE_RESET
