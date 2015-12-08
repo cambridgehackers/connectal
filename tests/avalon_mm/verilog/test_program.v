@@ -4,9 +4,9 @@
 `define NUM_MASTERS  1
 `define NUM_SLAVES   1
 
-`define TB        $root.tb.dut
-`define MASTER0   $root.tb.dut.master_0
-`define SLAVE0    $root.tb.dut.slave_0
+`define TB        $root.xsimtop.xsimtop.top.lEcho_dut
+`define MASTER0   $root.xsimtop.xsimtop.top.lEcho_dut.master_0
+`define SLAVE0    $root.xsimtop.xsimtop.top.lEcho_dut.slave_0
 
 module test_program ();
 
