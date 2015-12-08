@@ -112,7 +112,7 @@ interface PcieHost#(numeric type dsz, numeric type nSlaves);
    interface Vector#(nSlaves,PhysMemSlave#(PciePhysAddrWidth,dsz))  slave;
    interface Put#(Tuple2#(Bit#(64),Bit#(32)))    interruptRequest;
 `ifdef PCIE3
-   interface Client#(TLPData#(16), TLPData#(16)) pcir;
+   interface Client#(TLPData#(TlpDataBytes), TLPData#(TlpDataBytes)) pcir;
    interface Client#(TLPData#(16), TLPData#(16)) pcic;
    interface PipeIn#(Bit#(64)) changes;
 `else
