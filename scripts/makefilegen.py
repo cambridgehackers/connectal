@@ -37,59 +37,59 @@ supported_os = ['android', 'ubuntu']
 
 argparser = argparse.ArgumentParser("Generate C++/BSV/Xilinx stubs for an interface.")
 argparser.add_argument('bsvfile', help='BSV files to parse', nargs='+')
-argparser.add_argument('-B', '--board', default='zc702', help='Target Board for compilation')
-argparser.add_argument('-O', '--OS', default=None, choices=supported_os, help='Target operating system')
-argparser.add_argument('-interfaces', '--interfaces', help='BSV interface', action='append')
-argparser.add_argument(      '--project-dir', default='./xpsproj', help='xps project directory')
-argparser.add_argument(      '--pinfo', default=None, help='Project description file (json)')
-argparser.add_argument(      '--protobuf', default=[], help='Interface description in protobuf', action='append')
-argparser.add_argument('-s', '--source', help='C++ source files', action='append')
-argparser.add_argument(      '--source2', help='C++ second program source files', action='append')
-argparser.add_argument(      '--cflags', help='CFLAGS', default=[], action='append')
-argparser.add_argument(      '--cxxflags', help='CXXFLAGS', default=[], action='append')
-argparser.add_argument(      '--pinout', help='project pinout file', default=[], action='append')
+argparser.add_argument('-B', '--board', help='Target Board for compilation', default='zc702')
+argparser.add_argument('-O', '--OS', choices=supported_os, help='Target operating system', default=None)
+argparser.add_argument('-interfaces', '--interfaces', help='BSV interface', action='append', default=[])
+argparser.add_argument(      '--project-dir', help='xps project directory', default='./xpsproj')
+argparser.add_argument(      '--pinfo', help='Project description file (json)', default=None)
+argparser.add_argument(      '--protobuf', help='Interface description in protobuf', action='append', default=[])
+argparser.add_argument('-s', '--source', help='C++ source files', action='append', default=[])
+argparser.add_argument(      '--source2', help='C++ second program source files', action='append', default=[])
+argparser.add_argument(      '--cflags', help='CFLAGS', action='append', default=[])
+argparser.add_argument(      '--cxxflags', help='CXXFLAGS', action='append', default=[])
+argparser.add_argument(      '--pinout', help='project pinout file', action='append', default=[])
 argparser.add_argument(      '--shared', help='Make a shared library', action='store_true')
 argparser.add_argument(      '--nohardware', help='Do not generate hardware for the design', action='store_true')
 argparser.add_argument(      '--contentid', help='Specify 64-bit contentid for PCIe designs')
-argparser.add_argument('-I', '--cinclude', help='Specify C++ include directories', default=[], action='append')
-argparser.add_argument('-V', '--verilog', default=[], help='Additional verilog sources', action='append')
-argparser.add_argument('-SV', '--systemverilog', default=[], help='Additional systemverilog sources', action='append')
-argparser.add_argument(      '--xci', default=[], help='Additional IP sources', action='append')
-argparser.add_argument(      '--qip', default=[], help='Additional QIP sources', action='append')
-argparser.add_argument(      '--qsf', default=[], help='Altera Quartus settings', action='append')
-argparser.add_argument(      '--chipscope', default=[], help='Onchip scope settings', action='append')
-argparser.add_argument('-C', '--constraint', default=[], help='Additional constraint files', action='append')
-argparser.add_argument(      '--implconstraint', default=[], help='Physical constraint files', action='append')
-argparser.add_argument('-M', '--make', help='Run make on the specified targets', action='append')
-argparser.add_argument('-D', '--bsvdefine', default=[], help='BSV define', action='append')
-argparser.add_argument('-D2', '--bsvdefine2', default=[], help='BSV define2', action='append')
-argparser.add_argument(      '--pin-binding', default=[], help='pin binding translations for generate-constraints.py', action='append')
-argparser.add_argument('-l', '--clib', default=[], help='C++ libary', action='append')
-argparser.add_argument('-S', '--clibfiles', default=[], help='C++ libary file', action='append')
-argparser.add_argument('-L', '--clibdir', default=[], help='C++ libary', action='append')
-argparser.add_argument('-T', '--tcl', default=[], help='Vivado tcl script', action='append')
-argparser.add_argument('-m', '--bsimsource', help='Bsim C++ source files', action='append')
-argparser.add_argument('-b', '--bscflags', default=[], help='Options to pass to the BSV compiler', action='append')
-argparser.add_argument('--xelabflags', default=[], help='Options to pass to the xelab compiler', action='append')
-argparser.add_argument('--xsimflags', default=[], help='Options to pass to the xsim simulator', action='append')
+argparser.add_argument('-I', '--cinclude', help='Specify C++ include directories', action='append', default=[])
+argparser.add_argument('-V', '--verilog', help='Additional verilog sources', action='append', default=[])
+argparser.add_argument('-SV', '--systemverilog', help='Additional systemverilog sources', action='append', default=[])
+argparser.add_argument(      '--xci', help='Additional IP sources', action='append', default=[])
+argparser.add_argument(      '--qip', help='Additional QIP sources', action='append', default=[])
+argparser.add_argument(      '--qsf', help='Altera Quartus settings', action='append', default=[])
+argparser.add_argument(      '--chipscope', help='Onchip scope settings', action='append', default=[])
+argparser.add_argument('-C', '--constraint', help='Additional constraint files', action='append', default=[])
+argparser.add_argument(      '--implconstraint', help='Physical constraint files', action='append', default=[])
+argparser.add_argument('-M', '--make', help='Run make on the specified targets', action='append', default=[])
+argparser.add_argument('-D', '--bsvdefine', help='BSV define', action='append', default=[])
+argparser.add_argument('-D2', '--bsvdefine2', help='BSV define2', action='append', default=[])
+argparser.add_argument(      '--pin-binding', help='pin binding translations for generate-constraints.py', action='append', default=[])
+argparser.add_argument('-l', '--clib', help='C++ libary', action='append', default=[])
+argparser.add_argument('-S', '--clibfiles', help='C++ libary file', action='append', default=[])
+argparser.add_argument('-L', '--clibdir', help='C++ libary', action='append', default=[])
+argparser.add_argument('-T', '--tcl', help='Vivado tcl script', action='append', default=[])
+argparser.add_argument('-m', '--bsimsource', help='Bsim C++ source files', action='append', default=[])
+argparser.add_argument('-b', '--bscflags', help='Options to pass to the BSV compiler', action='append', default=[])
+argparser.add_argument('--xelabflags', help='Options to pass to the xelab compiler', action='append', default=[])
+argparser.add_argument('--xsimflags', help='Options to pass to the xsim simulator', action='append', default=[])
 argparser.add_argument('--ipdir', help='Directory in which to store generated IP')
 argparser.add_argument('-q', '--qtused', help='Qt used in simulator test application', action='store_true')
 argparser.add_argument('--stl', help='STL implementation to use for Android builds', default=None)
-argparser.add_argument('--android-platform', help='Android platform to use for Android builds', default=None, type=int)
+argparser.add_argument('--android-platform', help='Android platform to use for Android builds', type=int, default=None)
 argparser.add_argument('--floorplan', help='Floorplan XDC', default=None)
-argparser.add_argument('-P', '--partition-module', default=[], help='Modules to separately synthesize/place/route', action='append')
-argparser.add_argument('--cachedir', default=None, help='Cache directory for fpgamake to use')
+argparser.add_argument('-P', '--partition-module', help='Modules to separately synthesize/place/route', action='append', default=[])
+argparser.add_argument('--cachedir', help='Cache directory for fpgamake to use', default=None)
 argparser.add_argument('--nocache', help='dont use buildcache with fpgamake', action='store_true')
 argparser.add_argument('-v', '--verbose', help='Display verbose information messages', action='store_true')
 argparser.add_argument(      '--dump_map', help='List of portals passed to pcieflat for PCIe trace debug info')
 argparser.add_argument('--nonstrict', help='If nonstrict, pass -Wall to gcc, otherwise -Werror', default=False, action='store_true')
 argparser.add_argument('--prtop', help='Filename of previously synthesized top level for partial reconfiguration', default=None)
-argparser.add_argument('--prvariant', default=[], help='name of a variant for partial reconfiguration', action='append')
-argparser.add_argument('--reconfig', default=[], help='partial reconfig module names', action='append')
-argparser.add_argument('--bsvpath', default=[], help='directories to add to bsc search path', action='append')
-argparser.add_argument('--mainclockperiod', default=10, help='Clock period of default clock, in nanoseconds', type=int)
-argparser.add_argument('--derivedclockperiod', default=5, help='Clock period of derivedClock, in nanoseconds', type=float)
-argparser.add_argument('--pcieclockperiod', default=None, help='Clock period of PCIE clock, in nanoseconds', type=int)
+argparser.add_argument('--prvariant', help='name of a variant for partial reconfiguration', action='append', default=[])
+argparser.add_argument('--reconfig', help='partial reconfig module names', action='append', default=[])
+argparser.add_argument('--bsvpath', help='directories to add to bsc search path', action='append', default=[])
+argparser.add_argument('--mainclockperiod', help='Clock period of default clock, in nanoseconds', type=int, default=10)
+argparser.add_argument('--derivedclockperiod', help='Clock period of derivedClock, in nanoseconds', type=float, default=5.0)
+argparser.add_argument('--pcieclockperiod', help='Clock period of PCIE clock, in nanoseconds', type=int, default=None)
 
 noisyFlag=False
 
@@ -269,22 +269,8 @@ if __name__=='__main__':
 
     if options.verbose:
         noisyFlag = True
-    if not options.source:
-        options.source = []
-    if not options.source2:
-        options.source2 = []
-    if not options.bsimsource:
-        options.bsimsource = []
-    if not options.verilog:
-        options.verilog = []
-    if not options.systemverilog:
-        options.systemverilog = []
-    if not options.tcl:
-        options.tcl = []
     if not options.xsimflags:
         options.xsimflags = ['-R']
-    if not options.interfaces:
-        options.interfaces = []
 
     if noisyFlag:
         pprint.pprint(option_info)
