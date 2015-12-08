@@ -292,7 +292,7 @@ xsim: verilog $(XSIM_OBJECTS)
 	#xvlog $(XVLOGDEFINES) --sv $(CONNECTALDIR)/verilog/*.sv ## not needed because these all get passed to xelab because they use DPI
 	#xsc -v -cc gcc -compile $(SOURCES)
 	xsc -cc gcc -link $(XSIM_OBJECTS) -o xsimtop
-	xelab --stats $(XVLOGDEFINES) -cc gcc $(SVLOG) --dpiheader XsimTop.h --debug wave -L unisim -L unifast -L unimacro work.xsimtop -sv_lib xsimtop
+	xelab -timescale 1ns/1ps --stats $(XVLOGDEFINES) -cc gcc $(SVLOG) --dpiheader XsimTop.h --debug wave -L unisim -L unifast -L unimacro work.xsimtop -sv_lib xsimtop
 endif #VIVADO
 
 vlsim: $(DTOP)/obj_dir/vlsim
