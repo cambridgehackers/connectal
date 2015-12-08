@@ -53,6 +53,7 @@ argparser.add_argument(      '--nohardware', help='Do not generate hardware for 
 argparser.add_argument(      '--contentid', help='Specify 64-bit contentid for PCIe designs')
 argparser.add_argument('-I', '--cinclude', help='Specify C++ include directories', default=[], action='append')
 argparser.add_argument('-V', '--verilog', default=[], help='Additional verilog sources', action='append')
+argparser.add_argument('-SV', '--systemverilog', default=[], help='Additional systemverilog sources', action='append')
 argparser.add_argument(      '--xci', default=[], help='Additional IP sources', action='append')
 argparser.add_argument(      '--qip', default=[], help='Additional QIP sources', action='append')
 argparser.add_argument(      '--qsf', default=[], help='Altera Quartus settings', action='append')
@@ -121,6 +122,7 @@ foreach {pat} {CLK_GATE_hdmi_clock_if CLK_*deleteme_unused_clock* CLK_GATE_*dele
 
 fpgamakeRuleTemplate='''
 VERILOG_PATH=verilog %(verilog)s $(BLUESPEC_VERILOG)
+SYSTEMVERILOG_PATH= %(systemverilog)s
 FPGAMAKE=$(CONNECTALDIR)/../fpgamake/fpgamake
 fpgamake.mk: $(VFILE) Makefile prepare_bin_target
 	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk --board=%(boardname)s --part=%(partname)s %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s %(qsf)s %(chipscope)s -t $(MKTOP) %(FPGAMAKE_DEFINE)s %(cachedir)s -b hw/mkTop.bit %(prtop)s %(reconfig)s $(VERILOG_PATH)
@@ -275,6 +277,8 @@ if __name__=='__main__':
         options.bsimsource = []
     if not options.verilog:
         options.verilog = []
+    if not options.systemverilog:
+        options.systemverilog = []
     if not options.tcl:
         options.tcl = []
     if not options.xsimflags:
@@ -460,6 +464,7 @@ if __name__=='__main__':
 					 'chipscope': ' '.join(['--chipscope=%s' % os.path.abspath(chipscope) for chipscope in options.chipscope]),
 					 'sourceTcl': ' '.join(['--tcl=%s' % os.path.abspath(tcl) for tcl in options.tcl]),
                                          'verilog': ' '.join([os.path.abspath(f) for f in options.verilog]),
+                                         'systemverilog': ' '.join([os.path.abspath(f) for f in options.systemverilog]),
 					 'cachedir': cachearg,
                                          'pin_binding' : ' '.join(['-b %s' % s for s in options.pin_binding]),
                                          'reconfig' : ' '.join(['--reconfig=%s' % rname for rname in options.reconfig]),
