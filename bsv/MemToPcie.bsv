@@ -80,8 +80,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 	     Add#(eee, busWidthWords, 8),
 	     Add#(1, a__, busWidthWords),
 	     Add#(b__, busWidthWords, TlpDataWords),
-	     Add#(c__, busWidthWords, WriteDataMimoSize),
-	     Add#(0,16,TlpDataBytes)
+	     Add#(c__, busWidthWords, WriteDataMimoSize)
 	     );
 
     let verbose = False;
@@ -134,6 +133,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
       let dwCount = info.dwCount;
       let is3dw   = info.is3dw;
       let isHeaderOnly = info.isHeaderOnly;
+      tlp.sof = True;
 
       TLPMemory4DWHeader hdr_4dw = unpack(truncate(tlp.data));
 
@@ -142,7 +142,6 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 	 if (hdr_3dw.format != MEM_WRITE_3DW_DATA)
 	    $display("MemToPcie: expecting MEM_WRITE_3DW_DATA, got %d", hdr_3dw.format);
 	 Vector#(TlpDataWords, Bit#(32)) v = unpack(0);
-         tlp.sof = True;
 `ifdef AXI
          v = writeDataMimo.first();
 	 writeDataMimo.deq(1);
@@ -170,6 +169,15 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 `endif
 	 tlp.be = 'hffff;
 	 tlp.data = extend(pack(hdr_3dw));
+      end
+      else if (valueOf(TlpDataWords) > 4) begin
+	 let firstTlpDataWords = min(4, dwCount);
+	 writeDataCnt.decrement(unpack(truncate(firstTlpDataWords)));
+	 dwCount = dwCount - firstTlpDataWords;
+	 tlp.be = maxBound << (4 * (4 - firstTlpDataWords));
+	 Vector#(TSub#(TlpDataWords,4),Bit#(32)) data = take(writeDataMimo.first());
+	 writeDataMimo.deq(unpack(truncate(firstTlpDataWords)));
+	 tlp.data = {pack(data), pack(hdr_4dw) };
       end
       else begin
          quadAlignedTlpHandled <= isQuadWordAligned(getLowerAddr(truncate(unpack(hdr_4dw.addr)), hdr_4dw.firstbe));
