@@ -316,9 +316,9 @@ extern PortalTransportFunctions transportBsim, // Transport for bsim
 class Portal;
 class PortalPoller {
 private:
-    Portal **portal_wrappers;
+    Portal *portal_wrappers[32];
+    struct pollfd portal_fds[32]; // 16 portals + pipefd[0] + extra
     pthread_mutex_t mutex;
-    struct pollfd portal_fds[16];
     int pipefd[2];
     int startThread;
     int numWrappers;
