@@ -323,6 +323,7 @@ private:
     int startThread;
     int numWrappers;
     int numFds;
+    int inPoll;
 public:
     PortalPoller(int autostart=1);
     int registerInstance(Portal *portal);

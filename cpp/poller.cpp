@@ -35,7 +35,7 @@ PortalPoller *defaultPoller = new PortalPoller();
 uint64_t poll_enter_time, poll_return_time; // for performance measurement
 
 PortalPoller::PortalPoller(int autostart)
-  : portal_wrappers(0), startThread(autostart), numWrappers(0), numFds(0), stopping(0)
+  : portal_wrappers(0), startThread(autostart), numWrappers(0), numFds(0), inPoll(0), stopping(0)
 {
     memset(portal_fds, 0, sizeof(portal_fds));
     int rc = pipe(pipefd);
@@ -108,6 +108,8 @@ int PortalPoller::registerInstance(Portal *portal)
     numWrappers++;
     if (trace_poller)
         fprintf(stderr, "Poller: registerInstance fpga%d fd %d clients %d\n", portal->pint.fpga_number, portal->pint.fpga_fd, portal->pint.client_fd_number);
+    while(inPoll)
+        usleep(1000);
     portal_wrappers = (Portal **)realloc(portal_wrappers, numWrappers*sizeof(Portal *));
     portal_wrappers[numWrappers-1] = portal;
 
@@ -163,8 +165,10 @@ void* PortalPoller::pollFn(int timeout)
     //printf("[%s:%d] before poll %d numFds %d\n", __FUNCTION__, __LINE__, timeout, numFds);
     //for (int i = 0; i < numFds; i++)
         //printf("%s: fd %d events %x\n", __FUNCTION__, portal_fds[i].fd, portal_fds[i].events);
+    inPoll = 1;
     if (timeout != 0)
         rc = poll(portal_fds, numFds, timeout);
+    inPoll = 0;
     if(rc < 0) {
         // return only in error case
         fprintf(stderr, "Poller: poll returned rc=%ld errno=%d:%s\n", rc, errno, strerror(errno));
