@@ -109,12 +109,8 @@ int PortalPoller::registerInstance(Portal *portal)
     numWrappers++;
     if (trace_poller)
         fprintf(stderr, "Poller: registerInstance fpga%d fd %d clients %d\n", portal->pint.fpga_number, portal->pint.fpga_fd, portal->pint.client_fd_number);
-<<<<<<< HEAD
     while(inPoll)
         usleep(1000);
-    portal_wrappers = (Portal **)realloc(portal_wrappers, numWrappers*sizeof(Portal *));
-=======
->>>>>>> e63f340... allocate fix number of portal_wrappers also to avoid realloc
     portal_wrappers[numWrappers-1] = portal;
 
     if (portal->pint.fpga_fd != -1)
