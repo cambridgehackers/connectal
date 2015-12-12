@@ -321,7 +321,6 @@ private:
     struct pollfd portal_fds[16];
     int pipefd[2];
     int startThread;
-    int threadPolling;
     int numWrappers;
     int numFds;
 public:

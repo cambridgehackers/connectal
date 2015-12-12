@@ -35,7 +35,7 @@ PortalPoller *defaultPoller = new PortalPoller();
 uint64_t poll_enter_time, poll_return_time; // for performance measurement
 
 PortalPoller::PortalPoller(int autostart)
-  : portal_wrappers(0), startThread(autostart), threadPolling(0), numWrappers(0), numFds(0), stopping(0)
+  : portal_wrappers(0), startThread(autostart), numWrappers(0), numFds(0), stopping(0)
 {
     memset(portal_fds, 0, sizeof(portal_fds));
     int rc = pipe(pipefd);
@@ -102,12 +102,9 @@ int PortalPoller::registerInstance(Portal *portal)
 {
     uint8_t ch = 0;
     pthread_mutex_lock(&mutex);
-    if (threadPolling) {
-        int rc = write(pipefd[1], &ch, 1); // get poll to return, so that it is no long using portal_fds (which gets realloc'ed)
-        if (rc < 0)
-            fprintf(stderr, "[%s:%d] write error %d\n", __FUNCTION__, __LINE__, errno);
-        sem_wait(&sem_startup);
-    }
+    int rc = write(pipefd[1], &ch, 1); // get poll to return, so that it is no long using portal_fds (which gets realloc'ed)
+    if (rc < 0)
+        fprintf(stderr, "[%s:%d] write error %d\n", __FUNCTION__, __LINE__, errno);
     numWrappers++;
     if (trace_poller)
         fprintf(stderr, "Poller: registerInstance fpga%d fd %d clients %d\n", portal->pint.fpga_number, portal->pint.fpga_fd, portal->pint.client_fd_number);
@@ -166,12 +163,8 @@ void* PortalPoller::pollFn(int timeout)
     //printf("[%s:%d] before poll %d numFds %d\n", __FUNCTION__, __LINE__, timeout, numFds);
     //for (int i = 0; i < numFds; i++)
         //printf("%s: fd %d events %x\n", __FUNCTION__, portal_fds[i].fd, portal_fds[i].events);
-    if (timeout != 0) {
-        pthread_mutex_lock(&mutex);
-        threadPolling = 1;
-        pthread_mutex_unlock(&mutex);
+    if (timeout != 0)
         rc = poll(portal_fds, numFds, timeout);
-    }
     if(rc < 0) {
         // return only in error case
         fprintf(stderr, "Poller: poll returned rc=%ld errno=%d:%s\n", rc, errno, strerror(errno));
@@ -182,14 +175,10 @@ void* PortalPoller::pollFn(int timeout)
 void* PortalPoller::event(void)
 {
     uint8_t ch;
+    pthread_mutex_lock(&mutex);
     size_t rc = read(pipefd[0], &ch, 1);
     if (rc < 0)
         fprintf(stderr, "[%s:%d] read error %d\n", __FUNCTION__, __LINE__, errno);
-
-    if (rc > 0 && threadPolling) 
-        sem_post(&sem_startup);
-    pthread_mutex_lock(&mutex);
-    threadPolling=0;
     for (int i = 0; i < numWrappers; i++) {
         if (!portal_wrappers)
             fprintf(stderr, "Poller: No portal_instances revents=%d\n", portal_fds[i].revents);
