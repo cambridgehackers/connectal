@@ -20,58 +20,84 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+import Connectable::*;
 import FIFO::*;
+import GetPut::*;
 import Vector::*;
 import TestProgram::*;
-import AvalonBFM::*;
+import AvalonBfmWrapper::*;
+import AvalonMasterSlave::*;
+import AvalonBits::*;
+import AvalonDma::*;
+import AvalonGather::*;
+import MemTypes::*;
+import MemServerIndication::*;
+import MMUIndication::*;
 
 interface EchoIndication;
-    method Action heard(Bit#(32) v);
-    method Action heard2(Bit#(16) a, Bit#(16) b);
+   method Action heard(Bit#(32) v);
+   method Action heard2(Bit#(16) a, Bit#(16) b);
 endinterface
 
 interface EchoRequest;
-   method Action say(Bit#(32) v);
-   method Action say2(Bit#(16) a, Bit#(16) b);
-   method Action setLeds(Bit#(8) v);
+   method Action writeData(Bit#(16) addr, Bit#(64) data);
+   method Action readData(Bit#(16) addr, Bit#(64) data);
 endinterface
 
 interface Echo;
    interface EchoRequest request;
 endinterface
 
-typedef struct {
-	Bit#(16) a;
-	Bit#(16) b;
-} EchoPair deriving (Bits);
+typedef 12 AddressWidth;
+typedef 32 DataWidth;
+typedef TDiv#(DataWidth, 32) WordsPerBeat;
 
 module mkEcho#(EchoIndication indication)(Echo);
-    FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
-    FIFO#(EchoPair) delay2 <- mkSizedFIFO(8);
+   FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
 
-    Empty test_program <- mkTestProgram();
-    AvalonMM dut <- mkAvalonMM();
+   // read client interface
+   FIFO#(PhysMemRequest#(AddressWidth, DataWidth)) readReqFifo <- mkSizedFIFO(4);
+   FIFO#(MemData#(DataWidth)) readDataFifo <- mkSizedFIFO(32);
+   PhysMemReadClient#(AddressWidth, DataWidth) readClient = (interface PhysMemReadClient;
+      interface Get readReq = toGet(readReqFifo);
+      interface Put readData = toPut(readDataFifo);
+   endinterface);
 
-    rule heard;
-        delay.deq;
-        indication.heard(delay.first);
-    endrule
+   // write client interface
+   FIFO#(PhysMemRequest#(AddressWidth, DataWidth)) writeReqFifo <- mkSizedFIFO(4);
+   FIFO#(MemData#(DataWidth)) writeDataFifo <- mkSizedFIFO(32);
+   FIFO#(Bit#(MemTagSize)) writeDoneFifo <- mkSizedFIFO(4);
+   PhysMemWriteClient#(AddressWidth, DataWidth) writeClient = (interface PhysMemWriteClient;
+      interface Get writeReq = toGet(writeReqFifo);
+      interface Get writeData = toGet(writeDataFifo);
+      interface Put writeDone = toPut(writeDoneFifo);
+   endinterface);
 
-    rule heard2;
-        delay2.deq;
-        indication.heard2(delay2.first.b, delay2.first.a);
-    endrule
-   
+   // PhysMemMaster interface
+   PhysMemMaster#(AddressWidth, DataWidth) memMaster = (interface PhysMemMaster;
+      interface read_client = readClient;
+      interface write_client = writeClient;
+   endinterface);
+
+   Empty test_program <- mkTestProgram();
+   AvalonBfmWrapper#(AddressWidth, DataWidth) dut <- mkAvalonBfmWrapper();
+   AvalonMSlave#(AddressWidth, DataWidth) slaveGather <- mkAvalonMSlaveGather(dut.slave_0);
+   AvalonMMaster#(AddressWidth, DataWidth) master <- mkAvalonDmaMaster(memMaster);
+   mkConnection(master, slaveGather);
+
    interface EchoRequest request;
-      method Action say(Bit#(32) v);
-	 delay.enq(v);
+      method Action writeData(Bit#(16) addr, Bit#(64) data);
+         writeReqFifo.enq(PhysMemRequest{ addr: truncate(addr),
+                                          burstLen: 4,
+                                          tag: 0});
+         function Bit#(8) plusi(Integer i); return fromInteger(i); endfunction
+         Vector#(TMul#(4, WordsPerBeat), Bit#(8)) v = genWith(plusi);
+         writeDataFifo.enq(MemData {data: pack(v), tag: 0, last: True});
       endmethod
-      
-      method Action say2(Bit#(16) a, Bit#(16) b);
-	 delay2.enq(EchoPair { a: a, b: b});
-      endmethod
-      
-      method Action setLeds(Bit#(8) v);
+      method Action readData(Bit#(16) addr, Bit#(64) data);
+         readReqFifo.enq(PhysMemRequest{addr: truncate(addr),
+                                        burstLen: 16,
+                                        tag: 0});
       endmethod
    endinterface
 endmodule

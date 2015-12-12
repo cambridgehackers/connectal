@@ -332,6 +332,7 @@ VSIM_SV = $(addprefix -sv $(CONNECTALDIR)/verilog/, xsimtop.sv XsimDmaReadWrite.
 GENERATED_SV = $(addprefix +incdir+, $(SYSTEMVERILOG_PATH))
 
 vsim: verilog $(VSIM_OBJECTS)
+	rm -rf work
 	vlib work
 	for dir in $(SYSTEMVERILOG_PATH); do \
 	    python $(CONNECTALDIR)/scripts/source_msim_setup.py $$dir/mentor/msim_setup.tcl $$dir; \
