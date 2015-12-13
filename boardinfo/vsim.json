@@ -1,7 +1,7 @@
 {
     "options": {
         "os" : "ubuntu",
-        "partname" : "xc7z020clg484-1",
+        "partname" : "5SGXEA7N2F45C2",
         "rewireclockstring" : "tclzynqrewireclock",
         "TOP" : "XsimTop",
 	"bsvdefines": ["CnocTop", "XsimHostInterface", "PhysAddrWidth=40", "XSIM", "SIMULATION", "SVDPI", "PcieLanes=8"],
