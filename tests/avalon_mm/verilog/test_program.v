@@ -114,6 +114,7 @@ Response read_response_queue_slave[`NUM_SLAVES][$];
 \
       Command     actual_cmd, exp_cmd; \
       Response    rsp; \
+      string      msg; \
 \
       automatic int backpressure_cycles; \
 \
@@ -124,11 +125,11 @@ Response read_response_queue_slave[`NUM_SLAVES][$];
       end \
 \
       actual_cmd = get_command_from_slave_``SLAVE_ID(); \
-      exp_cmd = get_expected_command_for_slave(actual_cmd, ``SLAVE_ID); \
-      verify_command(actual_cmd, exp_cmd); \
 \
       // set read response \
       if (actual_cmd.trans == READ) begin \
+      $sformat(msg, "read command %x %x", actual_cmd.burstcount, actual_cmd.addr); \
+      print(VERBOSITY_INFO, msg); \
          rsp = create_response(actual_cmd.burstcount); \
          configure_and_push_response_to_slave_``SLAVE_ID(rsp); \
          read_response_queue_slave[``SLAVE_ID].push_back(rsp); \
@@ -226,9 +227,9 @@ task automatic configure_and_push_response_to_slave_``SLAVE_ID ( \
 // Macro Instantiations
 //---------------------------------------------------
 // master 0
-`MACRO_CONFIGURE_AND_PUSH_COMMAND_TO_MASTER(0)
-`MACRO_MASTER_RESPONSE_THREAD(0)
-`MACRO_GET_READ_RESPONSE_FROM_MASTER(0)
+//`MACRO_CONFIGURE_AND_PUSH_COMMAND_TO_MASTER(0)
+//`MACRO_MASTER_RESPONSE_THREAD(0)
+//`MACRO_GET_READ_RESPONSE_FROM_MASTER(0)
 
 // slave 0
 `MACRO_SLAVE_THREAD(0)
@@ -251,24 +252,23 @@ event assert_fail;
 //---------------------------------------------------
    // master test program
    initial begin
-      
       set_verbosity(VERBOSITY_INFO);
-      wait (`TB.reset_reset_n == 1);
       $display("Starting master test program");
 
-      $display("Master sending out non bursting write commands");
-      master_send_commands(10, WRITE, NOBURST);
-      
-      $display("Master sending out non bursting read commands");
-      master_send_commands(10, READ, NOBURST);
-      
-      $display("Master sending out burst write commands");
-      master_send_commands(10, WRITE, BURST);
-      
-      $display("Master sending out burst read commands");
-      master_send_commands(10, READ, BURST);
-      
-      $display("Master has sent out all commands");
+      wait (`TB.reset_reset_n == 1);
+      //$display("Master sending out non bursting write commands");
+      //master_send_commands(10, WRITE, NOBURST);
+      //
+      //$display("Master sending out non bursting read commands");
+      //master_send_commands(10, READ, NOBURST);
+      //
+      //$display("Master sending out burst write commands");
+      //master_send_commands(10, WRITE, BURST);
+      //
+      //$display("Master sending out burst read commands");
+      //master_send_commands(10, READ, BURST);
+      //
+      //$display("Master has sent out all commands");
    end
    
    task automatic master_send_commands (
@@ -324,7 +324,7 @@ event assert_fail;
          cmd.data_idles[0]       = $urandom_range(0, MAX_DATA_IDLE);
       end
       
-      return cmd;   
+      return cmd;
    endfunction
    
    function automatic Burstcount randomize_burstcount ();
@@ -352,23 +352,23 @@ event assert_fail;
       int      slave_id
    );
       
-      save_command_master(cmd, master_id);
+      //save_command_master(cmd, master_id);
       save_command_slave(cmd, slave_id);
-      configure_and_push_command_to_master(cmd, master_id);
+      //configure_and_push_command_to_master(cmd, master_id);
    endtask
    
-   task automatic save_command_master( 
-      Command  cmd,
-      int      master_id
-   );
-
-         if (cmd.trans == WRITE) begin
-            write_command_queue_master[master_id].push_back(cmd);
-         end else begin
-            read_command_queue_master[master_id].push_back(cmd);
-         end
-
-   endtask
+//   task automatic save_command_master( 
+//      Command  cmd,
+//      int      master_id
+//   );
+//
+//         if (cmd.trans == WRITE) begin
+//            write_command_queue_master[master_id].push_back(cmd);
+//         end else begin
+//            read_command_queue_master[master_id].push_back(cmd);
+//         end
+//
+//   endtask
    
    task automatic save_command_slave(
       Command  cmd,
@@ -383,15 +383,15 @@ event assert_fail;
    
    endtask
    
-   task automatic configure_and_push_command_to_master (
-      Command  cmd,
-      int      master_id
-   );
-      if (master_id == 0) begin
-         configure_and_push_command_to_master_0(cmd);
-      end
-      
-   endtask
+//   task automatic configure_and_push_command_to_master (
+//      Command  cmd,
+//      int      master_id
+//   );
+//      if (master_id == 0) begin
+//         configure_and_push_command_to_master_0(cmd);
+//      end
+//      
+//   endtask
    
    function automatic Command get_expected_command_for_slave (
       Command cmd,

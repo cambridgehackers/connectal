@@ -91,6 +91,11 @@ MODELSIM=$(shell which vsim)
 ifneq ($(MODELSIM), )
 endif
 
+QUARTUS=$(shell which quartus_sh)
+ifneq ($(QUARTUS), )
+export QUARTUSDIR=$(shell dirname $(shell dirname $(QUARTUS)))
+endif
+
 ifeq ($(USE_BUILDCACHE),1)
 BUILDCACHE=$(shell cd $(CONNECTALDIR)/..; /bin/pwd)/buildcache/buildcache
 ifeq ("$(BUILDCACHE_CACHEDIR)", "")
@@ -332,11 +337,12 @@ VSIM_SV = $(addprefix -sv $(CONNECTALDIR)/verilog/, xsimtop.sv XsimDmaReadWrite.
 GENERATED_SV = $(addprefix +incdir+, $(SYSTEMVERILOG_PATH))
 
 vsim: verilog $(VSIM_OBJECTS)
+	rm -rf work
 	vlib work
 	for dir in $(SYSTEMVERILOG_PATH); do \
-	    python $(CONNECTALDIR)/scripts/source_msim_setup.py $$dir/mentor/msim_setup.tcl $$dir; \
+	    python $(CONNECTALDIR)/scripts/source_msim_setup.py $$dir/mentor/msim_setup.tcl $$dir $(QUARTUSDIR); \
 	done
-	vlog -dpiheader XsimTop.h $(VSIM_DEFINES) $(VSIM_SV) $(GENERATED_SV) -sv verilog/*.v
+	vlog -timescale 1ns/1ps -dpiheader XsimTop.h $(VSIM_DEFINES) $(VSIM_SV) $(GENERATED_SV) -sv verilog/*.v
 	g++ -O -g -I$(DTOP)/jni -shared -fPIC -g -o $(DTOP)/bin/xsimtop.so $(VSIM_OBJECTS)
 endif #MODELSIM
 
