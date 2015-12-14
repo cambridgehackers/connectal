@@ -342,7 +342,7 @@ vsim: verilog $(VSIM_OBJECTS)
 	for dir in $(SYSTEMVERILOG_PATH); do \
 	    python $(CONNECTALDIR)/scripts/source_msim_setup.py $$dir/mentor/msim_setup.tcl $$dir $(QUARTUSDIR); \
 	done
-	vlog -dpiheader XsimTop.h $(VSIM_DEFINES) $(VSIM_SV) $(GENERATED_SV) -sv verilog/*.v
+	vlog -timescale 1ns/1ps -dpiheader XsimTop.h $(VSIM_DEFINES) $(VSIM_SV) $(GENERATED_SV) -sv verilog/*.v
 	g++ -O -g -I$(DTOP)/jni -shared -fPIC -g -o $(DTOP)/bin/xsimtop.so $(VSIM_OBJECTS)
 endif #MODELSIM
 
