@@ -295,12 +295,17 @@ module mkPcieEndpointX7#(Clock pcie_sys_clk_gt)(PcieEndpointX7#(PcieLanes));
    let probe_axi_rq_last <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    let probe_axi_rq_keep <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
 
-   let probe_rc_data <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   let probe_rc_dwcount <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   let probe_rc_be <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   let probe_rc_upper_data <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   let probe_rc_lower_data <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    let probe_rc_sop <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    let probe_rc_eop <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    let probe_rc_keep <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
 
-   let probe_rq_data <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   let probe_tlp16_upper_data <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   let probe_tlp16_lower_data <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+
    let probe_rq_last <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    let probe_rq_address <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    let probe_rq_dwcount <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
@@ -395,6 +400,11 @@ module mkPcieEndpointX7#(Clock pcie_sys_clk_gt)(PcieEndpointX7#(PcieLanes));
 			eop: unpack (pcie_ep.m_axis_rc.tlast),
 			keep:pcie_ep.m_axis_rc.tkeep,
 			be:  truncate (pcie_ep.m_axis_rc.tuser [31:0])};    // tuser.byte_en
+      probe_rc_upper_data <= (rc.data >> 128)[127:0];
+      probe_rc_lower_data <= (rc.data >>   0)[127:0];
+      probe_rc_sop <= rc.sop;
+      probe_rc_eop <= rc.eop;
+      probe_rc_keep <= rc.keep;
       fAxiRc.enq (rc);
    endrule
 
@@ -453,8 +463,13 @@ module mkPcieEndpointX7#(Clock pcie_sys_clk_gt)(PcieEndpointX7#(PcieLanes));
       Vector#(TlpDataWords,Bit#(32)) datavec = unpack(fAxiRc.first.data);
       TLPData#(TlpDataBytes) tlp16 = convertRCDescriptorToTLP16(rc_desc, takeAt(3,datavec));
       let tlpDataWords = fromInteger(valueOf(TlpDataWords));
-      let wordsConsumed = max(rc_desc.dwcount, tlpDataWords-3);
-      rc_dwcount <= (rc_desc.dwcount == 0) ? 0 : rc_desc.dwcount - wordsConsumed;
+      let wordsConsumed = min(rc_desc.dwcount, tlpDataWords-3);
+      let count = (rc_desc.dwcount == 0) ? 0 : rc_desc.dwcount - wordsConsumed;
+      rc_dwcount <= count;
+      probe_rc_dwcount <= count;
+      probe_tlp16_upper_data <= (tlp16.data >> 128)[127:0];
+      probe_tlp16_lower_data <= (tlp16.data >> 0)[127:0];
+      probe_rc_be <= tlp16.be;
       frc.enq(tlp16);
       let even = False;
       if (rc_desc.dwcount <= tlpDataWords-3 || tlpDataWords > 4) begin
@@ -467,8 +482,8 @@ module mkPcieEndpointX7#(Clock pcie_sys_clk_gt)(PcieEndpointX7#(PcieLanes));
    rule rl_rc_data ((!rc_even || !(fAxiRc.first.sop) || valueOf(TlpDataWords) > 4) && (rc_dwcount != 0));
       let tlpDataWords = fromInteger(valueOf(TlpDataWords));
       Bit#(TlpDataBytes) be16 = maxBound << (4*(tlpDataWords-min(tlpDataWords,rc_dwcount)));
-      let last = (rc_dwcount <= 4);
-      let dwcount = rc_dwcount - 4;
+      let last = (rc_dwcount <= tlpDataWords);
+      let dwcount = rc_dwcount - tlpDataWords;
       if (last) dwcount = 0;
       let data = (rc_even || tlpDataWords > 4) ? extend(fAxiRc.first.data) : extend(fAxiRc.first.data >> 128);
       TLPData#(TlpDataBytes) tlp16 = TLPData{sof: False,
@@ -476,11 +491,14 @@ module mkPcieEndpointX7#(Clock pcie_sys_clk_gt)(PcieEndpointX7#(PcieLanes));
 					     hit: 0,
 					     be: be16,
 					     data: data};
+      probe_tlp16_upper_data <= (tlp16.data >> 128)[127:0];
+      probe_tlp16_lower_data <= (tlp16.data >> 0)[127:0];
       frc.enq(tlp16);
       if (last || !rc_even || tlpDataWords > 4) begin
          fAxiRc.deq;
       end
       rc_dwcount <= dwcount;
+      probe_rc_dwcount <= dwcount;
       rc_even <= (last) ? True : (!rc_even || valueOf(TlpDataWords) > 4);
    endrule
 
@@ -587,7 +605,6 @@ module mkPcieEndpointX7#(Clock pcie_sys_clk_gt)(PcieEndpointX7#(PcieLanes));
 
       probe_rq_last <= last;
       probe_rq_keep <= keep;
-      probe_rq_data <= tlp.data;
       probe_rq_upper_data <= truncate(tlp.data >> 128);
       probe_rq_lower_data <= truncate(tlp.data >> 0);
 
