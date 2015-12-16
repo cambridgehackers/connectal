@@ -104,6 +104,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
    mimoCfg.unguarded = True;
     MIMO#(busWidthWords,TlpDataWords,WriteDataMimoSize,Bit#(32)) writeDataMimo <- MIMO::mkMIMO(mimoCfg);
     ConfigCounter#(8) writeDataCnt <- mkConfigCounter(0);
+    ConfigCounter#(TLog#(TAdd#(WriteDataMimoSize,1))) readDataCnt <- mkConfigCounter(0);
     Reg#(Bit#(WriteDataBurstLenSize)) writeBurstCount <- mkReg(0);
     FIFO#(Bit#(WriteDataBurstLenSize)) writeBurstCountFifo <- mkFIFO();
     Reg#(TLPLength)  writeDwCount <- mkReg(0); // how many 4 byte (double) words to send
@@ -115,9 +116,24 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 
     Reg#(Bool) quadAlignedTlpHandled <- mkReg(True);
 
+   let probe_wordsThisTlp <- mkProbe();
+   let probe_wordCount <- mkProbe();
+   let probe_read_upper_data <- mkProbe();
+   let probe_read_lower_data <- mkProbe();
+//   let probe_completion_upper_data <- mkProbe();
+//   let probe_completion_lower_data <- mkProbe();
+
    Wire#(Bool) writeHeaderTlpWire <- mkDWire(False);
    Wire#(Bool) writeDataMimoEnqWire <- mkDWire(False);
 
+   Reg#(Bool) readDataCntAboveThreshold[2] <- mkCReg(2, False);
+   Reg#(Bool) readDataMimoHasRoom[2] <- mkCReg(2, False);
+   rule updateReadDataCntAboveThreshold;
+      readDataCntAboveThreshold[1] <= (readDataCnt.read() >= fromInteger(valueOf(busWidthWords)));
+      readDataMimoHasRoom[1]       <= (readDataCnt.read <= fromInteger(valueOf(WriteDataMimoSize) - valueOf(busWidthWords)));
+   endrule
+
+   Reg#(Bool) writeDataCntAboveThreshold <- mkReg(False);
    Reg#(Bool) writeDataMimoHasRoom <- mkReg(False);
    rule updateWriteDataMimoHasRoom;
       writeDataMimoHasRoom <= (writeDataCnt.read <= fromInteger(valueOf(WriteDataMimoSize) - valueOf(busWidthWords)));
@@ -266,7 +282,9 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
       let quadWordAligned = isQuadWordAligned(getLowerAddr(hdr_3dw.addr, hdr_3dw.firstbe));
       let dataInSecondTlp = quadWordAligned;
 `endif
-      if (!tlp.sof) begin
+      if (!tlp.sof && readDataMimoHasRoom[0]
+	 && completionMimo.enqReady()
+	 && completionTagMimo.enqReady()) begin
 `ifdef PCIE3
 	 vec = tlpvec;
 `else
@@ -275,38 +293,46 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 	 // The MIMO implicit guard only checks for space to enqueue 1 element
 	 // so we explicitly check for the number of elements required
 	 // otherwise elements in the queue will be overwritten.
-	 if (completionMimo.enqReady()
-	    && completionTagMimo.enqReady())
-	    begin
-	       LUInt#(TlpDataWords) count = fromInteger(valueOf(TlpDataWords));
-	       if (tlp.eof) begin
-		  count = truncate(unpack(wordCountReg));
-	       end
-	       wordCount = wordCountReg - extend(pack(count));
-	       completionMimo.enq(count, vec);
-	       function Tuple2#(TLPTag,Bool) taglast(Integer i); return tuple2(lastTag, (fromInteger(i) == (count-1)) ? tlp.eof : False); endfunction
-	       Vector#(TlpDataWords, Tuple2#(TLPTag,Bool)) tagvec = genWith(taglast);
-	       completionTagMimo.enq(count, tagvec);
-	       handled = True;
-	    end
+	 LUInt#(TlpDataWords) count = fromInteger(valueOf(TlpDataWords));
+	 if (tlp.eof) begin
+	    count = truncate(unpack(wordCountReg));
+	 end
+	 wordCount = wordCountReg - extend(pack(count));
+	 completionMimo.enq(count, vec);
+	 readDataCnt.increment(extend(count));
+	 function Tuple2#(TLPTag,Bool) taglast(Integer i); return tuple2(lastTag, (fromInteger(i) == (count-1)) ? tlp.eof : False); endfunction
+	 Vector#(TlpDataWords, Tuple2#(TLPTag,Bool)) tagvec = genWith(taglast);
+	 completionTagMimo.enq(count, tagvec);
+	 probe_wordsThisTlp <= count;
+	 probe_read_upper_data <= (pack(vec) >> 128)[127:0];
+	 probe_read_lower_data <= (pack(vec) >> 0)[127:0];
+	 handled = True;
       end
       else if (hdr_3dw.format == MEM_WRITE_3DW_DATA
 	       && hdr_3dw.pkttype == COMPLETION
+	       && readDataMimoHasRoom[0]
 	       && completionMimo.enqReady()
 	       && completionTagMimo.enqReady()) begin
             TLPTag tag = hdr_completion.tag;
             lastTag <= tag;
             if (!dataInSecondTlp) begin
-               vec[0] = hdr_3dw.data;
-               wordCount = hdr_3dw.length - 1;
-               completionMimo.enq(1, vec);
-               completionTagMimo.enq(1, replicate(tuple2(tag,tlp.eof)));
+	       Vector#(3,Bit#(32)) zerovec = replicate(0);
+	       vec = cons(tlpvec[0], append(takeAt(4, tlpvec), zerovec));
+	       let wordsThisTlp = truncate(min(hdr_3dw.length, fromInteger(valueOf(TlpDataWords)-3)));
+               wordCount = hdr_3dw.length - wordsThisTlp;
+	       readDataCnt.increment(unpack(wordsThisTlp));
+               completionMimo.enq(unpack(wordsThisTlp), vec);
+               completionTagMimo.enq(unpack(wordsThisTlp), replicate(tuple2(tag,tlp.eof)));
+	       probe_wordsThisTlp <= unpack(wordsThisTlp);
+	       probe_read_upper_data <= (pack(vec) >> 128)[127:0];
+	       probe_read_lower_data <= (pack(vec) >> 0)[127:0];
             end
             else begin
                wordCount = hdr_3dw.length;
             end
 	    handled = True;
       end
+      probe_wordCount <= wordCount;
       wordCountReg <= wordCount;
       if (verbose) $display("tlpIn handled=%d tlp=%h", handled, tlp);
       if (handled) begin
@@ -455,13 +481,16 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
          endmethod
        endinterface
       interface Get     readData;
-         method ActionValue#(MemData#(buswidth)) get() if (completionMimo.deqReady()
-							   && completionTagMimo.deqReady());
+         method ActionValue#(MemData#(buswidth)) get() if (readDataCntAboveThreshold[0] && completionMimo.deqReady());
+              //(completionMimo.deqReadyN(fromInteger(valueOf(busWidthWords))) && completionTagMimo.deqReadyN(fromInteger(valueOf(busWidthWords))));
 	      let data_v = completionMimo.first;
 	      let tag_last_v = completionTagMimo.first;
+//	      probe_completion_upper_data <= (pack(data_v) >> 128)[127:0];
+//	      probe_completion_lower_data <= (pack(data_v) >> 0)[127:0];
 	      match { .tag, .last } = tag_last_v[fromInteger(valueOf(busWidthWords))-1];
 	      completionMimo.deq();
 	      completionTagMimo.deq();
+	      readDataCnt.decrement(fromInteger(valueOf(busWidthWords)));
               Bit#(buswidth) v = 0;
               for (Integer i = 0; i < valueOf(busWidthWords); i = i+1) begin
 `ifdef AXI
