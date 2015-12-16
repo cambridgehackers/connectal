@@ -651,7 +651,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    endmodule
 
 `ifndef FOO
-   Vector#(21,Tuple2#(Pcie3CfgType,Bit#(24))) changeValues = vec(
+   Vector#(20,Tuple2#(Pcie3CfgType,Bit#(24))) changeValues = vec(
       tuple2(Pcie3Cfg_rq_backpressure, extend(rqBackpressureCount)),
       tuple2(Pcie3Cfg_current_speed, extend(pcie_ep.cfg.current_speed)),
       tuple2(Pcie3Cfg_dpa_substate_change, extend(pcie_ep.cfg.dpa_substate_change)),
@@ -660,7 +660,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       tuple2(Pcie3Cfg_err_nonfatal_out, extend(pcie_ep.cfg.err_nonfatal_out)),
       tuple2(Pcie3Cfg_flr_in_process, extend(pcie_ep.cfg.flr_in_process)),
       tuple2(Pcie3Cfg_function_power_state, extend(pcie_ep.cfg.function_power_state)),
-      tuple2(Pcie3Cfg_function_status, extend(pcie_ep.cfg.function_status)),
+//      tuple2(Pcie3Cfg_function_status, extend(pcie_ep.cfg.function_status)),
       tuple2(Pcie3Cfg_hot_reset_out, extend(pcie_ep.cfg.hot_reset_out)),
       tuple2(Pcie3Cfg_link_power_state, extend(pcie_ep.cfg.link_power_state)),
       tuple2(Pcie3Cfg_ltr_enable, extend(pcie_ep.cfg.ltr_enable)),
@@ -676,7 +676,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       tuple2(Pcie3Cfg_rcb_status, extend(pcie_ep.cfg.rcb_status)));
    let change_pipes <- mapM(mkChangeSource, changeValues, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
 
-   FunnelPipe#(1,21,RegChange,3) changePipe <- mkFunnelPipesPipelined(change_pipes, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   FunnelPipe#(1,20,RegChange,3) changePipe <- mkFunnelPipesPipelined(change_pipes, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    FIFOF#(RegChange) changeFifo <- mkSizedBRAMFIFOF(128, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    mkConnection(changePipe[0], toPipeIn(changeFifo), clocked_by pcie_ep.user_clk, reset_by user_reset_n);
 `else
