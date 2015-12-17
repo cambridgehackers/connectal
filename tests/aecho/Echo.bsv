@@ -20,55 +20,32 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-import FIFO::*;
-import Vector::*;
 import L_class_OC_Fifo1::*;
 
 interface EchoIndication;
     method Action heard(Bit#(32) v);
-    method Action heard2(Bit#(16) a, Bit#(16) b);
 endinterface
 
 interface EchoRequest;
    method Action say(Bit#(32) v);
-   method Action say2(Bit#(16) a, Bit#(16) b);
-   method Action setLeds(Bit#(8) v);
 endinterface
 
 interface Echo;
    interface EchoRequest request;
 endinterface
 
-typedef struct {
-	Bit#(16) a;
-	Bit#(16) b;
-} EchoPair deriving (Bits);
-
 module mkEcho#(EchoIndication indication)(Echo);
     //FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
     L_class_OC_Fifo1 delay <- mkL_class_OC_Fifo1;
-    FIFO#(EchoPair) delay2 <- mkSizedFIFO(8);
 
     rule heard;
         delay.deq;
         indication.heard(delay.first);
     endrule
 
-    rule heard2;
-        delay2.deq;
-        indication.heard2(delay2.first.b, delay2.first.a);
-    endrule
-   
    interface EchoRequest request;
       method Action say(Bit#(32) v);
 	 delay.enq(v);
-      endmethod
-      
-      method Action say2(Bit#(16) a, Bit#(16) b);
-	 delay2.enq(EchoPair { a: a, b: b});
-      endmethod
-      
-      method Action setLeds(Bit#(8) v);
       endmethod
    endinterface
 endmodule
