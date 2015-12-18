@@ -21,61 +21,49 @@
 // SOFTWARE.
 
 module EchoVerilog( input  CLK, input  RST_N, 
+  output      RDY_request_say,
   input  [31 : 0] request_say_v,
-  input  EN_request_say,
-  output RDY_request_say,
+  input        EN_request_say,
+  output      RDY_ind_messageSize_size,
+  input  [15 : 0] ind_messageSize_size_methodNumber,
+  output [15 : 0] ind_messageSize_size,
+  output      RDY_ind_indications_0_first,
+  output [31 : 0] ind_indications_0_first,
+  output      RDY_ind_indications_0_deq,
+  input        EN_ind_indications_0_deq,
+  output      RDY_ind_indications_0_notEmpty,
+  output          ind_indications_0_notEmpty,
+  output      RDY_ind_intr_status,
+  output          ind_intr_status,
+  output      RDY_ind_intr_channel,
+  output [31 : 0] ind_intr_channel);
 
-  input  [15 : 0] lEchoIndicationOutput_messageSize_size_methodNumber,
-  output [15 : 0] lEchoIndicationOutput_messageSize_size,
-  output RDY_lEchoIndicationOutput_messageSize_size,
-
-  output [31 : 0] lEchoIndicationOutput_indications_0_first,
-  output RDY_lEchoIndicationOutput_indications_0_first,
-
-  input  EN_lEchoIndicationOutput_indications_0_deq,
-  output RDY_lEchoIndicationOutput_indications_0_deq,
-
-  output lEchoIndicationOutput_indications_0_notEmpty,
-  output RDY_lEchoIndicationOutput_indications_0_notEmpty,
-
-  output lEchoIndicationOutput_intr_status,
-  output RDY_lEchoIndicationOutput_intr_status,
-
-  output [31 : 0] lEchoIndicationOutput_intr_channel,
-  output RDY_lEchoIndicationOutput_intr_channel);
-
-  wire delay_first;
-  wire delay_deq__RDY, delay_first__RDY;
-  wire myEchoIndicationOutput_RDY_ifc_heard;
-  assign RDY_lEchoIndicationOutput_messageSize_size = 1'd1 ;
-  assign RDY_lEchoIndicationOutput_indications_0_notEmpty = 1'd1 ;
-  assign RDY_lEchoIndicationOutput_intr_status = 1'd1 ;
-  assign RDY_lEchoIndicationOutput_intr_channel = 1'd1 ;
+  wire delay_first, delay_deq__RDY, delay_first__RDY, ifc_heard;
 
   l_class_OC_Fifo1 delay(.nRST(RST_N), .CLK(CLK),
-          .enq_v(request_say_v),
-          .deq__ENA(delay_deq__RDY && delay_first__RDY && myEchoIndicationOutput_RDY_ifc_heard),
-          .enq__ENA(EN_request_say),
           .deq__RDY(delay_deq__RDY),
+          .deq__ENA(delay_deq__RDY && delay_first__RDY && ifc_heard),
           .enq__RDY(RDY_request_say),
-          .first(delay_first),
-          .first__RDY(delay_first__RDY));
+          .enq_v(request_say_v),
+          .enq__ENA(EN_request_say),
+          .first__RDY(delay_first__RDY),
+          .first(delay_first));
 
   mkEchoIndicationOutput myEchoIndicationOutput(.CLK(CLK), .RST_N(RST_N),
-    .ifc_heard_v(delay_first),
-    .portalIfc_messageSize_size_methodNumber(lEchoIndicationOutput_messageSize_size_methodNumber),
-    .EN_portalIfc_indications_0_deq(EN_lEchoIndicationOutput_indications_0_deq),
-    .EN_ifc_heard(delay_deq__RDY && delay_first__RDY && myEchoIndicationOutput_RDY_ifc_heard),
-    .portalIfc_messageSize_size(lEchoIndicationOutput_messageSize_size),
-    .RDY_portalIfc_messageSize_size(),
-    .portalIfc_indications_0_first(lEchoIndicationOutput_indications_0_first),
-    .RDY_portalIfc_indications_0_first(RDY_lEchoIndicationOutput_indications_0_first),
-    .RDY_portalIfc_indications_0_deq(RDY_lEchoIndicationOutput_indications_0_deq),
-    .portalIfc_indications_0_notEmpty(lEchoIndicationOutput_indications_0_notEmpty),
-    .RDY_portalIfc_indications_0_notEmpty(),
-    .portalIfc_intr_status(lEchoIndicationOutput_intr_status),
-    .RDY_portalIfc_intr_status(),
-    .portalIfc_intr_channel(lEchoIndicationOutput_intr_channel),
-    .RDY_portalIfc_intr_channel(),
-    .RDY_ifc_heard(myEchoIndicationOutput_RDY_ifc_heard));
+    .RDY_ifc_heard(ifc_heard),
+        .ifc_heard_v(delay_first),
+     .EN_ifc_heard(delay_deq__RDY && delay_first__RDY && ifc_heard),
+    .RDY_portalIfc_messageSize_size(RDY_ind_messageSize_size),
+        .portalIfc_messageSize_size_methodNumber(ind_messageSize_size_methodNumber),
+        .portalIfc_messageSize_size(ind_messageSize_size),
+    .RDY_portalIfc_indications_0_first(RDY_ind_indications_0_first),
+        .portalIfc_indications_0_first(ind_indications_0_first),
+    .RDY_portalIfc_indications_0_deq(RDY_ind_indications_0_deq),
+     .EN_portalIfc_indications_0_deq(EN_ind_indications_0_deq),
+    .RDY_portalIfc_indications_0_notEmpty(RDY_ind_indications_0_notEmpty),
+        .portalIfc_indications_0_notEmpty(ind_indications_0_notEmpty),
+    .RDY_portalIfc_intr_status(RDY_ind_intr_status),
+        .portalIfc_intr_status(ind_intr_status),
+    .RDY_portalIfc_intr_channel(RDY_ind_intr_channel),
+        .portalIfc_intr_channel(ind_intr_channel));
 endmodule  // mkEcho

@@ -45,18 +45,18 @@ module mkEchoBVI(EchoBVI);
     interface EchoRequest request;
         method say(request_say_v) enable(EN_request_say) ready(RDY_request_say);
     endinterface
-    interface PortalSize messageSize;
-        method lEchoIndicationOutput_messageSize_size size(lEchoIndicationOutput_messageSize_size_methodNumber) ready(RDY_lEchoIndicationOutput_messageSize_size);
-    endinterface
 
+    interface PortalSize messageSize;
+        method ind_messageSize_size size(ind_messageSize_size_methodNumber) ready(RDY_ind_messageSize_size);
+    endinterface
     interface PipeOut indications;
-        method deq() enable(EN_lEchoIndicationOutput_indications_0_deq) ready(RDY_lEchoIndicationOutput_indications_0_deq);
-        method lEchoIndicationOutput_indications_0_first first() ready(RDY_lEchoIndicationOutput_indications_0_first);
-        method lEchoIndicationOutput_indications_0_notEmpty notEmpty() ready(RDY_lEchoIndicationOutput_indications_0_notEmpty);
+        method deq() enable(EN_ind_indications_0_deq) ready(RDY_ind_indications_0_deq);
+        method ind_indications_0_first first() ready(RDY_ind_indications_0_first);
+        method ind_indications_0_notEmpty notEmpty() ready(RDY_ind_indications_0_notEmpty);
     endinterface
     interface PortalInterrupt intr;
-        method lEchoIndicationOutput_intr_status status() ready(RDY_lEchoIndicationOutput_intr_status);
-        method lEchoIndicationOutput_intr_channel channel() ready(RDY_lEchoIndicationOutput_intr_channel);
+        method ind_intr_status status() ready(RDY_ind_intr_status);
+        method ind_intr_channel channel() ready(RDY_ind_intr_channel);
     endinterface
 endmodule
 
