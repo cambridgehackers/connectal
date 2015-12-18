@@ -25,12 +25,13 @@ endinterface
 
 interface BpiFlashTest;
    interface BpiFlashTestRequest request;
-   interface BpiFlashPins pins;
+   interface BpiPins pins;
 endinterface
 
 module mkBpiFlashTest#(BpiFlashTestIndication ind)(BpiFlashTest);
 
    let defaultClock <- exposeCurrentClock();
+   let defaultReset <- exposeCurrentReset();
 
    Reg#(Bit#(1)) rst_o <- mkReg(0);
    Reg#(Bit#(1)) ce <- mkReg(1);
@@ -43,22 +44,23 @@ module mkBpiFlashTest#(BpiFlashTestIndication ind)(BpiFlashTest);
    FIFOF#(Bit#(16)) dataFifo <- mkFIFOF();
 
 `ifndef SIMULATION
-   Wire#(Bit#(1)) wait_b <- mkDWire(0);
+   Wire#(Bit#(1)) wait_in_b <- mkDWire(0);
    module mkDataIobuf#(Integer i)(IOBUF);
       (* hide *)
       let iobuf <- mkIOBUF(oe, data_o[i]);
       return iobuf;
    endmodule
    function Inout#(Bit#(1)) iobuf_io(IOBUF iobuf); return iobuf.io; endfunction
+   function Bit#(1) iobuf_o(IOBUF iobuf); return iobuf.o; endfunction
    Vector#(16, IOBUF) iobuf <- genWithM(mkDataIobuf);
-   let dataIn = map(iobuf_i, iobuf);
+   let dataIn = pack(map(iobuf_o, iobuf));
 `endif
 
 `ifdef SIMULATION
    let flash <- mkI28f512p33Load("flash.hex");
    let dataTristate <- mkTriState(oe == 1, data_o);
    mkConnection(dataTristate.io, flash.dq);
-   let wait_b = flash.waitout();
+   let wait_in_b = flash.waitout();
    let dataIn = dataTristate;
    rule rl_flash_inputs;
       flash.addr(addr_o);
@@ -82,9 +84,9 @@ module mkBpiFlashTest#(BpiFlashTestIndication ind)(BpiFlashTest);
 			   adv <= 1;
 			   oe <= 0;
       $display("addr_o=%x\n", addr_o);
-      $display("wait_b=%d dataIn=%x", wait_b, dataIn);
-			   await (wait_b == 0);
-      $display("wait_b=%d dataIn=%x", wait_b, dataIn);
+      $display("wait_in_b=%d dataIn=%x", wait_in_b, dataIn);
+			   await (wait_in_b == 0);
+      $display("wait_in_b=%d dataIn=%x", wait_in_b, dataIn);
 			   dataFifo.enq(dataIn);
 			   ce <= 1;
 			   oe <= 1;
@@ -116,13 +118,23 @@ module mkBpiFlashTest#(BpiFlashTestIndication ind)(BpiFlashTest);
 `ifndef SIMULATION
    interface BpiPins pins;
        interface BpiFlashPins flash;
-	  interface clk = defaultClock;
+	  interface deleteme_unused_clock = defaultClock;
+          interface rst = defaultReset;
 	  interface data = map(iobuf_io, iobuf);
 	  method Bit#(25) addr = addr_o;
-	  method Bit#(1) ce_b = ce;
-	  method Bit#(1) we_b = we;
-	  method Bit#(1) oe_b = oe;
 	  method Bit#(1) adv_b = adv;
+	  method Bit#(1) ce_b = ce;
+	  method Bit#(1) oe_b = oe;
+	  method Bit#(1) we_b = we;
+`ifdef BPI_HAS_WP
+	  method Bit#(1) wp_b = 1;
+`endif
+`ifdef BPI_HAS_VPP
+	  method Bit#(1) vpp = 0;
+`endif
+	  method Action wait_in(Bit#(1) b);
+	     wait_in_b <= b;
+	  endmethod
        endinterface
    endinterface
 `endif
