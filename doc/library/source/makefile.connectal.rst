@@ -35,6 +35,10 @@ Make Variables Defining the Application
 
    Which BSV package to import to get the declaration of PIN_TYPE.
 
+.. make:var:: PINOUT_FILE
+
+   Which pin usage JSON files to pass to makefilegen.py as :option::`--pinout` options.
+
 .. make:var:: BSVFILES
 
    Lists the BSV files to scan when processing INTERFACES.
