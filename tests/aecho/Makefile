@@ -8,6 +8,7 @@ GENDIR = generated
 BSVFILES = EchoReq.bsv
 CPPFILES = testecho.cpp
 CONNECTALFLAGS += --verilog $(GENDIR) --bsvpath $(GENDIR)
+CONNECTALFLAGS += --verilog .
 BSCFLAGS += -show-bvi
 AUTOTOP += --integratedIndication
 
