@@ -1,5 +1,4 @@
-// Copyright (c) 2013 Nokia, Inc.
-// Copyright (c) 2013 Quanta Research Cambridge, Inc.
+// Copyright (c) 2015 The Connectal Project
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -20,38 +19,10 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-import EchoReq::*;
-import Portal::*;
-import ConnectalConfig::*;
-import EchoIndication::*;
-import L_class_OC_Fifo1::*;
-
-interface EchoIndPipes;
-   interface PipePortal#(0, 1, SlaveDataBusWidth) portalIfc;
+interface EchoIndication;
+    method Action heard(Bit#(32) v);
 endinterface
 
-interface Echo;
-   interface EchoRequest request;
-   interface EchoIndPipes lEchoIndicationOutput;
+interface EchoRequest;
+   method Action say(Bit#(32) v);
 endinterface
-
-module mkEcho(Echo);
-    EchoIndicationOutput myEchoIndicationOutput <- mkEchoIndicationOutput;
-    EchoIndication indication = myEchoIndicationOutput.ifc;
-    //FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
-    L_class_OC_Fifo1 delay <- mkL_class_OC_Fifo1;
-    rule heard;
-        delay.deq;
-        indication.heard(delay.first);
-    endrule
-
-   interface EchoIndPipes lEchoIndicationOutput;
-       interface portalIfc = myEchoIndicationOutput.portalIfc;
-   endinterface
-
-   interface EchoRequest request;
-      method Action say(Bit#(32) v);
-	 delay.enq(v);
-      endmethod
-   endinterface
-endmodule
