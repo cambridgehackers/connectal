@@ -47,16 +47,16 @@ module mkEchoBVI(EchoBVI);
     endinterface
 
     interface PortalSize messageSize;
-        method ind_messageSize_size size(ind_messageSize_size_methodNumber) ready(RDY_ind_messageSize_size);
+        method messageSize_size size(messageSize_size_methodNumber) ready(RDY_messageSize_size);
     endinterface
     interface PipeOut indications;
-        method deq() enable(EN_ind_indications_0_deq) ready(RDY_ind_indications_0_deq);
-        method ind_indications_0_first first() ready(RDY_ind_indications_0_first);
-        method ind_indications_0_notEmpty notEmpty() ready(RDY_ind_indications_0_notEmpty);
+        method deq() enable(EN_ind_deq) ready(RDY_ind_deq);
+        method ind_first first() ready(RDY_ind_first);
+        method ind_notEmpty notEmpty() ready(RDY_ind_notEmpty);
     endinterface
     interface PortalInterrupt intr;
-        method ind_intr_status status() ready(RDY_ind_intr_status);
-        method ind_intr_channel channel() ready(RDY_ind_intr_channel);
+        method intr_status status() ready(RDY_intr_status);
+        method intr_channel channel() ready(RDY_intr_channel);
     endinterface
 endmodule
 
