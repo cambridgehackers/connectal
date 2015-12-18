@@ -159,31 +159,31 @@ topEnumTemplate='''
 typedef enum {NoInterface, %(enumList)s} IfcNames;
 '''
 
-portalTemplate = '''   PortalCtrlMemSlave#(SlaveControlAddrWidth,SlaveDataBusWidth) ctrlPort_%(count)s <- mkPortalCtrlMemSlave(extend(pack(%(enumVal)s)), l%(ifcName)s.portalIfc.intr);
-   let memslave_%(count)s <- mkMemMethodMux%(slaveType)s(ctrlPort_%(count)s.memSlave,l%(ifcName)s.portalIfc.%(itype)s);
+portalTemplate = '''   PortalCtrlMemSlave#(SlaveControlAddrWidth,SlaveDataBusWidth) ctrlPort_%(count)s <- mkPortalCtrlMemSlave(extend(pack(%(enumVal)s)), %(ifcName)s.portalIfc.intr);
+   let memslave_%(count)s <- mkMemMethodMux%(slaveType)s(ctrlPort_%(count)s.memSlave,%(ifcName)s.portalIfc.%(itype)s);
    portals[%(count)s] = (interface MemPortal;
        interface PhysMemSlave slave = memslave_%(count)s;
        interface ReadOnly interrupt = ctrlPort_%(count)s.interrupt;
        interface WriteOnly num_portals = ctrlPort_%(count)s.num_portals;
        endinterface);'''
 
-portalNocTemplate = '''   let l%(ifcName)sNoc <- mkPortalMsg%(direction)s(extend(pack(%(enumVal)s)), l%(ifcName)s.portalIfc.%(itype)s%(messageSize)s);'''
+portalNocTemplate = '''   let %(ifcName)sNoc <- mkPortalMsg%(direction)s(extend(pack(%(enumVal)s)), %(ifcName)s.portalIfc.%(itype)s%(messageSize)s);'''
 
 def addPortal(enumVal, ifcName, direction):
     global portalCount
     portParam = {'count': portalCount, 'enumVal': enumVal, 'ifcName': ifcName, 'direction': direction}
     if direction == 'Request':
-        requestList.append('l' + ifcName + 'Noc')
+        requestList.append(ifcName + 'Noc')
         portParam['itype'] = 'requests'
         portParam['slaveType'] = 'In'
         portParam['intrParam'] = ''
         portParam['messageSize'] = ''
     else:
-        indicationList.append('l' + ifcName + 'Noc')
+        indicationList.append(ifcName + 'Noc')
         portParam['itype'] = 'indications'
         portParam['slaveType'] = 'Out'
-        portParam['intrParam'] = ', l%(ifcName)s.portalIfc.intr' % portParam
-        portParam['messageSize'] = ', l%(ifcName)s.portalIfc.messageSize' % portParam
+        portParam['intrParam'] = ', %(ifcName)s.portalIfc.intr' % portParam
+        portParam['messageSize'] = ', %(ifcName)s.portalIfc.messageSize' % portParam
     p = portalNocTemplate if options.cnoc else portalTemplate
     portalList.append(p % portParam)
     portalCount = portalCount + 1
@@ -255,9 +255,9 @@ def instMod(pmap, args, modname, modext, constructor, tparam, memFlag, inverseFl
             connectInstantiate.append(connectInstantiation % pmap)
         if memFlag:
             options.portname.append('IfcNames_' + modname + memFlag + tstr + pmap['number'])
-            addPortal('IfcNames_' + pmap['argsConfig'], '%(modname)sCW' % pmap, 'Request')
+            addPortal('IfcNames_' + pmap['argsConfig'], 'l%(modname)sCW' % pmap, 'Request')
         else:
-            addPortal('IfcNames_' + pmap['args'] + pmap['number'], '%(modname)s%(number)s' % pmap, pmap['stype'])
+            addPortal('IfcNames_' + pmap['args'] + pmap['number'], 'l%(modname)s%(number)s' % pmap, pmap['stype'])
     else:
         if not instantiateRequest.get(pmap['modname']):
             instantiateRequest[pmap['modname']] = iReq()
