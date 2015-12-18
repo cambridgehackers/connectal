@@ -9,6 +9,14 @@ module l_class_OC_Echo (
     output ind$echo__ENA,
     output [31:0]ind$echo$v,
     input ind$echo__RDY);
+wire fifo$CLK, fifo$nRST;
+wire fifo$deq__ENA;
+wire fifo$deq__RDY;
+wire fifo$enq__ENA;
+wire [31:0]fifo$enq_v;
+wire fifo$enq__RDY;
+wire [31:0]fifo$first;
+wire fifo$first__RDY;
     l_class_OC_Fifo1 fifo (
         fifo$CLK,
         fifo$nRST,
@@ -22,24 +30,11 @@ module l_class_OC_Echo (
    reg[31:0] pipetemp;
     assign echoReq__RDY =         (fifo$enq__RDY);
     assign respond_rule__RDY =         (fifo$first__RDY) & (fifo$deq__RDY) & (ind$echo__RDY);
-    always @( posedge CLK) begin
-      if (!nRST) begin
-        pipetemp <= 0;
-      end
-      else begin
-        if (echoReq__ENA) begin
-        fifo$enq__ENA = 1;
-            fifo$enq_v = echoReq_v;
-        end; // End of echoReq
-
-        if (respond_rule__ENA) begin
-        fifo$deq__ENA = 1;
-        ind$echo__ENA = 1;
-            ind$echo_v = (fifo$first);
-        end; // End of respond_rule
-
-      end; // nRST
-    end; // always @ (posedge CLK)
+    assign fifo$enq__ENA = echoReq__ENA ? 1 : 0;
+    assign fifo$enq_v = echoReq__ENA ? echoReq_v : 0;
+    assign fifo$deq__ENA = respond_rule__ENA ? 1 : 0;
+    assign ind$echo__ENA = respond_rule__ENA ? 1 : 0;
+    assign ind$echo_v = respond_rule__ENA ? (fifo$first) : 0;
 endmodule 
 
 //METAGUARD; echoReq__RDY;         (fifo$enq__RDY);

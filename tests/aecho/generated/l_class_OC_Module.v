@@ -7,7 +7,7 @@ module l_class_OC_Module (
         unused_data_to_force_inheritance <= 0;
       end
       else begin
-      end; // nRST
-    end; // always @ (posedge CLK)
+      end // nRST
+    end // always @ (posedge CLK)
 endmodule 
 

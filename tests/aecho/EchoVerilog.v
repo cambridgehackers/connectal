@@ -38,21 +38,23 @@ module EchoVerilog( input  CLK, input  RST_N,
   output      RDY_ind_intr_channel,
   output [31 : 0] ind_intr_channel);
 
-  wire delay_first, delay_deq__RDY, delay_first__RDY, ifc_heard;
+  wire rule_wire, ind_ena, ind_rdy;
+  wire [31:0]ind_v;
 
-  l_class_OC_Fifo1 delay(.nRST(RST_N), .CLK(CLK),
-          .deq__RDY(delay_deq__RDY),
-          .deq__ENA(delay_deq__RDY && delay_first__RDY && ifc_heard),
-          .enq__RDY(RDY_request_say),
-          .enq_v(request_say_v),
-          .enq__ENA(EN_request_say),
-          .first__RDY(delay_first__RDY),
-          .first(delay_first));
+  l_class_OC_Echo echo(.nRST(RST_N), .CLK(CLK),
+    .echoReq__ENA(EN_request_say),
+    .echoReq_v(request_say_v),
+    .echoReq__RDY(RDY_request_say),
+    .respond_rule__ENA(rule_wire),
+    .respond_rule__RDY(rule_wire),
+    .ind$echo__ENA(ind_ena),
+    .ind$echo$v(ind_v),
+    .ind$echo__RDY(ind_rdy));
 
   mkEchoIndicationOutput myEchoIndicationOutput(.CLK(CLK), .RST_N(RST_N),
-    .RDY_ifc_heard(ifc_heard),
-        .ifc_heard_v(delay_first),
-     .EN_ifc_heard(delay_deq__RDY && delay_first__RDY && ifc_heard),
+    .RDY_ifc_heard(ind_rdy),
+        .ifc_heard_v(ind_v),
+     .EN_ifc_heard(ind_ena),
     .RDY_portalIfc_messageSize_size(RDY_ind_messageSize_size),
         .portalIfc_messageSize_size_methodNumber(ind_messageSize_size_methodNumber),
         .portalIfc_messageSize_size(ind_messageSize_size),

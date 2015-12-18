@@ -29,8 +29,8 @@ module l_class_OC_Fifo1 (
         full <= 1;
         end; // End of enq
 
-      end; // nRST
-    end; // always @ (posedge CLK)
+      end // nRST
+    end // always @ (posedge CLK)
 endmodule 
 
 //METAGUARD; deq__RDY;         (full);

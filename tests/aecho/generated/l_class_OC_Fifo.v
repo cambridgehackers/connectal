@@ -22,8 +22,8 @@ module l_class_OC_Fifo (
         if (enq__ENA) begin
         end; // End of enq
 
-      end; // nRST
-    end; // always @ (posedge CLK)
+      end // nRST
+    end // always @ (posedge CLK)
 endmodule 
 
 //METAGUARD; deq__RDY;         0;
