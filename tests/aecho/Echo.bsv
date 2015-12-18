@@ -21,18 +21,12 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 import EchoReq::*;
-import Portal::*;
-import ConnectalConfig::*;
 import EchoIndication::*;
 import L_class_OC_Fifo1::*;
 
-interface EchoIndPipes;
-   interface PipePortal#(0, 1, SlaveDataBusWidth) portalIfc;
-endinterface
-
 interface Echo;
    interface EchoRequest request;
-   interface EchoIndPipes lEchoIndicationOutput;
+   interface EchoIndicationPortalOutput lEchoIndicationOutput;
 endinterface
 
 (*synthesize*)
@@ -46,13 +40,10 @@ module mkEcho(Echo);
         indication.heard(delay.first);
     endrule
 
-   interface EchoIndPipes lEchoIndicationOutput;
-       interface portalIfc = myEchoIndicationOutput.portalIfc;
-   endinterface
-
-   interface EchoRequest request;
-      method Action say(Bit#(32) v);
-	 delay.enq(v);
-      endmethod
-   endinterface
+    interface EchoIndicationPortalOutput lEchoIndicationOutput = myEchoIndicationOutput.portalIfc;
+    interface EchoRequest request;
+       method Action say(Bit#(32) v);
+	  delay.enq(v);
+       endmethod
+    endinterface
 endmodule

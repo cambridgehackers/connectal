@@ -36,7 +36,7 @@ def newArgparser():
     argparser.add_argument('--memread', default=[], help='memory read interfaces', action='append')
     argparser.add_argument('--memwrite', default=[], help='memory read interfaces', action='append')
     argparser.add_argument('--cnoc', help='generate mkCnocTop', action='store_true')
-    argparser.add_argument('--integratedOutput', help='indication pipes instantiated in user module', action='store_true')
+    argparser.add_argument('--integratedIndication', help='indication pipes instantiated in user module', action='store_true')
     return argparser
 
 argparser = newArgparser()
@@ -160,19 +160,22 @@ topEnumTemplate='''
 typedef enum {NoInterface, %(enumList)s} IfcNames;
 '''
 
-portalTemplate = '''   PortalCtrlMemSlave#(SlaveControlAddrWidth,SlaveDataBusWidth) ctrlPort_%(count)s <- mkPortalCtrlMemSlave(extend(pack(%(enumVal)s)), %(ifcName)s.portalIfc.intr);
-   let memslave_%(count)s <- mkMemMethodMux%(slaveType)s(ctrlPort_%(count)s.memSlave,%(ifcName)s.portalIfc.%(itype)s);
+portalTemplate = '''   PortalCtrlMemSlave#(SlaveControlAddrWidth,SlaveDataBusWidth) ctrlPort_%(count)s <- mkPortalCtrlMemSlave(extend(pack(%(enumVal)s)), %(ifcName)s.intr);
+   let memslave_%(count)s <- mkMemMethodMux%(slaveType)s(ctrlPort_%(count)s.memSlave,%(ifcName)s.%(itype)s);
    portals[%(count)s] = (interface MemPortal;
        interface PhysMemSlave slave = memslave_%(count)s;
        interface ReadOnly interrupt = ctrlPort_%(count)s.interrupt;
        interface WriteOnly num_portals = ctrlPort_%(count)s.num_portals;
        endinterface);'''
 
-portalNocTemplate = '''   let %(ifcNameNoc)s <- mkPortalMsg%(direction)s(extend(pack(%(enumVal)s)), %(ifcName)s.portalIfc.%(itype)s%(messageSize)s);'''
+portalNocTemplate = '''   let %(ifcNameNoc)s <- mkPortalMsg%(direction)s(extend(pack(%(enumVal)s)), %(ifcName)s.%(itype)s%(messageSize)s);'''
 
 def addPortal(outputPrefix, enumVal, ifcName, direction):
     global portalCount
-    portParam = {'count': portalCount, 'enumVal': enumVal, 'ifcName': outputPrefix + ifcName, 'ifcNameNoc': ifcName + 'Noc', 'direction': direction}
+    iName = ifcName + '.portalIfc'
+    if outputPrefix != '':
+        iName = outputPrefix + ifcName
+    portParam = {'count': portalCount, 'enumVal': enumVal, 'ifcName': iName, 'ifcNameNoc': ifcName + 'Noc', 'direction': direction}
     if direction == 'Request':
         requestList.append('%(ifcNameNoc)s' % portParam)
         portParam['itype'] = 'requests'
@@ -183,8 +186,8 @@ def addPortal(outputPrefix, enumVal, ifcName, direction):
         indicationList.append('%(ifcNameNoc)s' % portParam)
         portParam['itype'] = 'indications'
         portParam['slaveType'] = 'Out'
-        portParam['intrParam'] = ', %(ifcName)s.portalIfc.intr' % portParam
-        portParam['messageSize'] = ', %(ifcName)s.portalIfc.messageSize' % portParam
+        portParam['intrParam'] = ', %(ifcName)s.intr' % portParam
+        portParam['messageSize'] = ', %(ifcName)s.messageSize' % portParam
     p = portalNocTemplate if options.cnoc else portalTemplate
     portalList.append(p % portParam)
     portalCount = portalCount + 1
@@ -249,9 +252,8 @@ def instMod(pmap, args, modname, modext, constructor, tparam, memFlag, inverseFl
                 connectInstantiate.append(connectUser % pmap)
             clientCount += 2
         elif modext == 'Output':
-            if options.integratedOutput:
+            if options.integratedIndication:
                 outputPrefix = 'l' + pmap['usermod'] + '.'
-                print 'JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJKKK', outputPrefix, pmap
             else:
                 pipeInstantiate.append(pipeInstantiation % pmap)
             if inverseFlag:
@@ -348,7 +350,7 @@ if __name__=='__main__':
                     pmap['number'] = str(0)
             instMod(pmap, '', pmap['name'], 'Output', '', '', pmap['memFlag'], pmap['inverse'])
             argstr = pmap['uparam']
-            if not options.integratedOutput:
+            if not options.integratedIndication:
                 argstr += ('l%(name)sOutput%(number)s.ifc' if not pmap['inverse'] else '')
             if pmap['uparam'] and pmap['uparam'][0] == '/':
                 argstr = 'l%(name)sOutput%(number)s.ifc, ' + pmap['uparam'][1:-2]

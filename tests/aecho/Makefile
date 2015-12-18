@@ -9,7 +9,7 @@ BSVFILES = EchoReq.bsv
 CPPFILES = testecho.cpp
 CONNECTALFLAGS += --verilog $(GENDIR) --bsvpath $(GENDIR)
 BSCFLAGS += -show-bvi
-AUTOTOP += --integratedOutput
+AUTOTOP += --integratedIndication
 
 prebuild::
 	$(LLVMT) --odir=$(GENDIR) $(ACCDIR)/echo.ll $(ACCDIR)/atomicc.ll
