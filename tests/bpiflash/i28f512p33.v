@@ -41,117 +41,20 @@
 //////////////////////////////////////////////////////////////////////////////
 module i28f512p33
     (
-        A25             ,
-        A24             ,
-        A23             ,
-        A22             ,
-        A21             ,
-        A20             ,
-        A19             ,
-        A18             ,
-        A17             ,
-        A16             ,
-        A15             ,
-        A14             ,
-        A13             ,
-        A12             ,
-        A11             ,
-        A10             ,
-        A9              ,
-        A8              ,
-        A7              ,
-        A6              ,
-        A5              ,
-        A4              ,
-        A3              ,
-        A2              ,
-        A1              ,
+    input [25:0]    Addr,
+    input [15:0]    DQ,
 
-        DQ15            ,
-        DQ14            ,
-        DQ13            ,
-        DQ12            ,
-        DQ11            ,
-        DQ10            ,
-        DQ9             ,
-        DQ8             ,
-        DQ7             ,
-        DQ6             ,
-        DQ5             ,
-        DQ4             ,
-        DQ3             ,
-        DQ2             ,
-        DQ1             ,
-        DQ0             ,
-
-        ADVNeg          ,
-        CENeg           ,
-        CLK             ,
-        OENeg           ,
-        RSTNeg          ,
-        WENeg           ,
-        WPNeg           ,
-        VPP             ,
-
-        WAITOut
+    input  ADVNeg,
+    input  CENeg,
+    input  CLK,
+    input  OENeg,
+    input  RSTNeg,
+    input  WENeg,
+    input  WPNeg,
+    input  VPP,
+	  
+    output WAITOut
      );
-
-////////////////////////////////////////////////////////////////////////
-// Port / Part Pin Declarations
-////////////////////////////////////////////////////////////////////////
-    input  A25             ;
-    input  A24             ;
-    input  A23             ;
-    input  A22             ;
-    input  A21             ;
-    input  A20             ;
-    input  A19             ;
-    input  A18             ;
-    input  A17             ;
-    input  A16             ;
-    input  A15             ;
-    input  A14             ;
-    input  A13             ;
-    input  A12             ;
-    input  A11             ;
-    input  A10             ;
-    input  A9              ;
-    input  A8              ;
-    input  A7              ;
-    input  A6              ;
-    input  A5              ;
-    input  A4              ;
-    input  A3              ;
-    input  A2              ;
-    input  A1              ;
-
-    inout  DQ15            ;
-    inout  DQ14            ;
-    inout  DQ13            ;
-    inout  DQ12            ;
-    inout  DQ11            ;
-    inout  DQ10            ;
-    inout  DQ9             ;
-    inout  DQ8             ;
-    inout  DQ7             ;
-    inout  DQ6             ;
-    inout  DQ5             ;
-    inout  DQ4             ;
-    inout  DQ3             ;
-    inout  DQ2             ;
-    inout  DQ1             ;
-    inout  DQ0             ;
-
-    input  ADVNeg          ;
-    input  CENeg           ;
-    input  CLK             ;
-    input  OENeg           ;
-    input  RSTNeg          ;
-    input  WENeg           ;
-    input  WPNeg           ;
-    input  VPP             ;
-
-    output WAITOut         ;
 
     // parameter declaration
     parameter mem_file_name     = "none";
@@ -167,54 +70,57 @@ module i28f512p33
     wire CENeg1;
     wire CENeg2;
 
-    assign CENeg1 = (~CENeg && A25) ? 1'b0 : 1'b1;
-    assign CENeg2 = (~CENeg && ~A25) ? 1'b0 : 1'b1;
+   wire [26:1] A;
+   assign A[26:1] = Addr[25:0];
+
+    assign CENeg1 = (~CENeg && A[25]) ? 1'b0 : 1'b1;
+    assign CENeg2 = (~CENeg && ~A[25]) ? 1'b0 : 1'b1;
 
     // Instance of flash memory, Top Parameter Block Configuration
     i28f256p33_1 #(mem_file_name, otp_blocks_file, prot_reg_file,
                  UserPreload , TimingModel, VPP_voltage) UPPER_DIE
         (
-            .A24(A24),
-            .A23(A23),
-            .A22(A22),
-            .A21(A21),
-            .A20(A20),
-            .A19(A19),
-            .A18(A18),
-            .A17(A17),
-            .A16(A16),
-            .A15(A15),
-            .A14(A14),
-            .A13(A13),
-            .A12(A12),
-            .A11(A11),
-            .A10(A10),
-            .A9(A9),
-            .A8(A8),
-            .A7(A7),
-            .A6(A6),
-            .A5(A5),
-            .A4(A4),
-            .A3(A3),
-            .A2(A2),
-            .A1(A1),
+            .A24(A[24]),
+            .A23(A[23]),
+            .A22(A[22]),
+            .A21(A[21]),
+            .A20(A[20]),
+            .A19(A[19]),
+            .A18(A[18]),
+            .A17(A[17]),
+            .A16(A[16]),
+            .A15(A[15]),
+            .A14(A[14]),
+            .A13(A[13]),
+            .A12(A[12]),
+            .A11(A[11]),
+            .A10(A[10]),
+            .A9(A[9]),
+            .A8(A[8]),
+            .A7(A[7]),
+            .A6(A[6]),
+            .A5(A[5]),
+            .A4(A[4]),
+            .A3(A[3]),
+            .A2(A[2]),
+            .A1(A[1]),
 
-            .DQ15(DQ15),
-            .DQ14(DQ14),
-            .DQ13(DQ13),
-            .DQ12(DQ12),
-            .DQ11(DQ11),
-            .DQ10(DQ10),
-            .DQ9(DQ9),
-            .DQ8(DQ8),
-            .DQ7(DQ7),
-            .DQ6(DQ6),
-            .DQ5(DQ5),
-            .DQ4(DQ4),
-            .DQ3(DQ3),
-            .DQ2(DQ2),
-            .DQ1(DQ1),
-            .DQ0(DQ0),
+            .DQ15(DQ[15]),
+            .DQ14(DQ[14]),
+            .DQ13(DQ[13]),
+            .DQ12(DQ[12]),
+            .DQ11(DQ[11]),
+            .DQ10(DQ[10]),
+            .DQ9(DQ[9]),
+            .DQ8(DQ[8]),
+            .DQ7(DQ[7]),
+            .DQ6(DQ[6]),
+            .DQ5(DQ[5]),
+            .DQ4(DQ[4]),
+            .DQ3(DQ[3]),
+            .DQ2(DQ[2]),
+            .DQ1(DQ[1]),
+            .DQ0(DQ[0]),
 
             .ADVNeg (ADVNeg),
             .CENeg  (CENeg1),
@@ -232,47 +138,47 @@ module i28f512p33
     i28f256p33_2 #(mem_file_name_1, otp_blocks_file_1, prot_reg_file_1,
                  UserPreload, TimingModel ,VPP_voltage) LOWER_DIE
         (
-            .A24(A24),
-            .A23(A23),
-            .A22(A22),
-            .A21(A21),
-            .A20(A20),
-            .A19(A19),
-            .A18(A18),
-            .A17(A17),
-            .A16(A16),
-            .A15(A15),
-            .A14(A14),
-            .A13(A13),
-            .A12(A12),
-            .A11(A11),
-            .A10(A10),
-            .A9(A9),
-            .A8(A8),
-            .A7(A7),
-            .A6(A6),
-            .A5(A5),
-            .A4(A4),
-            .A3(A3),
-            .A2(A2),
-            .A1(A1),
+            .A24(A[24]),
+            .A23(A[23]),
+            .A22(A[22]),
+            .A21(A[21]),
+            .A20(A[20]),
+            .A19(A[19]),
+            .A18(A[18]),
+            .A17(A[17]),
+            .A16(A[16]),
+            .A15(A[15]),
+            .A14(A[14]),
+            .A13(A[13]),
+            .A12(A[12]),
+            .A11(A[11]),
+            .A10(A[10]),
+            .A9(A[9]),
+            .A8(A[8]),
+            .A7(A[7]),
+            .A6(A[6]),
+            .A5(A[5]),
+            .A4(A[4]),
+            .A3(A[3]),
+            .A2(A[2]),
+            .A1(A[1]),
 
-            .DQ15(DQ15),
-            .DQ14(DQ14),
-            .DQ13(DQ13),
-            .DQ12(DQ12),
-            .DQ11(DQ11),
-            .DQ10(DQ10),
-            .DQ9(DQ9),
-            .DQ8(DQ8),
-            .DQ7(DQ7),
-            .DQ6(DQ6),
-            .DQ5(DQ5),
-            .DQ4(DQ4),
-            .DQ3(DQ3),
-            .DQ2(DQ2),
-            .DQ1(DQ1),
-            .DQ0(DQ0),
+            .DQ15(DQ[15]),
+            .DQ14(DQ[14]),
+            .DQ13(DQ[13]),
+            .DQ12(DQ[12]),
+            .DQ11(DQ[11]),
+            .DQ10(DQ[10]),
+            .DQ9(DQ[9]),
+            .DQ8(DQ[8]),
+            .DQ7(DQ[7]),
+            .DQ6(DQ[6]),
+            .DQ5(DQ[5]),
+            .DQ4(DQ[4]),
+            .DQ3(DQ[3]),
+            .DQ2(DQ[2]),
+            .DQ1(DQ[1]),
+            .DQ0(DQ[0]),
 
             .ADVNeg (ADVNeg),
             .CENeg  (CENeg2),
