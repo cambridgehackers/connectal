@@ -1,7 +1,4 @@
 {
-    "RST_N_flash_rst": {
-	"bpi_flash": "rst"
-    },
     "flash_data_0": {
 	"bpi_flash": "data[0]"
     },

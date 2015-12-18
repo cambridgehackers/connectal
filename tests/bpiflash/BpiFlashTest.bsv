@@ -119,7 +119,7 @@ module mkBpiFlashTest#(BpiFlashTestIndication ind)(BpiFlashTest);
    interface BpiPins pins;
        interface BpiFlashPins flash;
 	  interface deleteme_unused_clock = defaultClock;
-          interface rst = defaultReset;
+//          interface rst = defaultReset;
 	  interface data = map(iobuf_io, iobuf);
 	  method Bit#(25) addr = addr_o;
 	  method Bit#(1) adv_b = adv;

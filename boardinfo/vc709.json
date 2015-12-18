@@ -270,7 +270,7 @@
 			     "PIO_DIRECTION" : "INPUT"
 		 },
 		 "rst" : {
-			     "LOC" : "AG11",
+			     "LOC" : "AG11_not_usable",
 			     "IOSTANDARD" : "LVCMOS18",
 			     "PIO_DIRECTION" : "OUTPUT"
 		 },

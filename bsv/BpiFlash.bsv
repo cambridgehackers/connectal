@@ -7,7 +7,7 @@ import Clocks::*;
 (* always_ready, always_enabled *)
 interface BpiFlashPins;
    interface Clock deleteme_unused_clock;
-   interface Reset rst;
+//   interface Reset rst;
    interface Vector#(16,Inout#(Bit#(1))) data;
    method Bit#(25) addr();
    method Bit#(1) adv_b();
