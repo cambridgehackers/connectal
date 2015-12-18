@@ -12,7 +12,7 @@ CONNECTALFLAGS += --verilog .
 BSCFLAGS += -show-bvi
 AUTOTOP += --integratedIndication
 
-zzprebuild::
+prebuild::
 	$(LLVMT) --odir=$(GENDIR) $(ACCDIR)/echo.ll $(ACCDIR)/atomicc.ll
 
 include $(CONNECTALDIR)/Makefile.connectal
