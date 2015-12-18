@@ -121,7 +121,7 @@ foreach {pat} {CLK_GATE_hdmi_clock_if CLK_*deleteme_unused_clock* CLK_GATE_*dele
 '''
 
 fpgamakeRuleTemplate='''
-VERILOG_PATH=verilog %(verilog)s $(BLUESPEC_VERILOG)
+export VERILOG_PATH=verilog %(verilog)s $(BLUESPEC_VERILOG)
 SYSTEMVERILOG_PATH= %(systemverilog)s
 FPGAMAKE=$(CONNECTALDIR)/../fpgamake/fpgamake
 fpgamake.mk: $(VFILE) Makefile prepare_bin_target

@@ -73,12 +73,12 @@ SIM_CXX_COMMON = $(foreach f, TlpReplay.cpp BsimCtrl.cpp BsimDma.cpp sock_utils.
 SIM_CXX_LOCAL = $(SIM_CXX_COMMON) $(DTOP)/jni/XsimMsgRequest.c $(DTOP)/jni/XsimMsgIndication.c $(DTOP)/jni/GeneratedCppCallbacks.cpp
 
 ifneq ($(ALTERA),)
-BLUESPEC_VERILOG+=$(BLUESPECDIR)/lib/Verilog.Quartus
+BLUESPEC_VERILOG+=$(BLUESPECDIR)/Verilog.Quartus
 endif
 ifneq ($(XILINX),)
-BLUESPEC_VERILOG+=$(BLUESPECDIR)/lib/Verilog.Vivado
+BLUESPEC_VERILOG+=$(BLUESPECDIR)/Verilog.Vivado
 endif
-BLUESPEC_VERILOG+=$(BLUESPECDIR)/lib/Verilog
+BLUESPEC_VERILOG+=$(BLUESPECDIR)/Verilog
 
 VIVADO=$(shell which vivado)
 ifneq ($(VIVADO), )
@@ -293,7 +293,7 @@ XVLOGDEFINES = $(subst -D,-d,$(BSVDEFINES))
 SVLOG = $(addprefix -svlog $(CONNECTALDIR)/verilog/, xsimtop.sv XsimDmaReadWrite.sv XsimLink.sv XsimSink.sv XsimSource.sv)
 
 xsim: verilog $(XSIM_OBJECTS)
-	xvlog $(XVLOGFLAGS) $(XVLOGDEFINES) verilog/*.v
+	xvlog $(XVLOGFLAGS) $(XVLOGDEFINES) $(VERILOG_PATH:%=--sourcelibdir %) --sourcelibext .v verilog/*.v
 	#xvlog $(XVLOGDEFINES) --sv $(CONNECTALDIR)/verilog/*.sv ## not needed because these all get passed to xelab because they use DPI
 	#xsc -v -cc gcc -compile $(SOURCES)
 	xsc -cc gcc -link $(XSIM_OBJECTS) -o xsimtop
@@ -306,7 +306,7 @@ VERILATOR_ARGS?= -O3 -CFLAGS "-I$(CONNECTALDIR)/cpp -I$(DTOP)/jni -O $(PROF_FLAG
 VERILATOR_ARGS += $(VERILATOR_PROJECT_ARGS)
 
 $(DTOP)/obj_dir/vlsim.mk: $(DTOP)/bin/libconnectal-sim.so verilog
-	verilator -o vlsim --prefix vlsim $(VERILATOR_ARGS) -cc -exe $(DTOP)/verilog/mkXsimTop.v -DMainClockPeriod=4 -DDerivedClockPeriod=4 --top-module mkXsimTop -I$(DTOP)/verilog -I$(CONNECTALDIR)/verilog -Wno-fatal $(CONNECTALDIR)/cpp/verilatortop.cpp $(DTOP)/bin/libconnectal-sim.so -LDFLAGS -lpthread
+	verilator -o vlsim --prefix vlsim $(VERILATOR_ARGS) -cc -exe $(DTOP)/verilog/mkXsimTop.v -DMainClockPeriod=4 -DDerivedClockPeriod=4 --top-module mkXsimTop $(VERILOG_PATH:%=-y %) -Wno-fatal $(CONNECTALDIR)/cpp/verilatortop.cpp $(DTOP)/bin/libconnectal-sim.so -LDFLAGS -lpthread
 
 $(DTOP)/obj_dir/vlsim: $(DTOP)/obj_dir/vlsim.mk
 	+$(MAKE) -C obj_dir -f vlsim.mk
@@ -375,7 +375,7 @@ $(VFILE): $(addprefix obj/, $(patsubst %.bsv, %.bo, $(notdir $(TOPBSVFILE))))
 	$(Q)sed -i 's|// On .*|// timestamp removed|' verilog/*.v
 	$(Q)sed -i 's|  wire.*PROBE[,;]|(* mark_debug="true" *)&|' verilog/*.v 
 	$(Q)sed -i 's|  wire.*PROBE_VALID[,;]|(* mark_debug="true" *)&|' verilog/*.v 
-	$(Q)for v in verilog/*.v; do $(CONNECTALDIR)/scripts/copy_verilog.py $$v $(VERILOG_PATH); done
+	#$(Q)for v in verilog/*.v; do $(CONNECTALDIR)/scripts/copy_verilog.py $$v $(VERILOG_PATH); done
 
 obj/Makefile: $(OBJMAKEFILE_DEP) syntax.timestamp
 	@mkdir -p obj
