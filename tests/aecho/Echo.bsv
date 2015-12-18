@@ -35,6 +35,7 @@ interface Echo;
    interface EchoIndPipes lEchoIndicationOutput;
 endinterface
 
+(*synthesize*)
 module mkEcho(Echo);
     EchoIndicationOutput myEchoIndicationOutput <- mkEchoIndicationOutput;
     EchoIndication indication = myEchoIndicationOutput.ifc;
