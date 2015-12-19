@@ -20,7 +20,7 @@ module l_class_OC_Fifo1 (
       if (!nRST) begin
         element <= 0;
         full <= 0;
-      end
+      end // nRST
       else begin
         if (deq__ENA) begin
         full <= 0;
@@ -29,7 +29,7 @@ module l_class_OC_Fifo1 (
         element <= enq_v;
         full <= 1;
         end; // End of enq
-      end // nRST
+      end
     end // always @ (posedge CLK)
 endmodule 
 

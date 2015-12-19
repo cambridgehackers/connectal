@@ -40,8 +40,6 @@ wire fifo$first__RDY;
     always @( posedge CLK) begin
       if (!nRST) begin
         pipetemp <= 0;
-      end
-      else begin
       end // nRST
     end // always @ (posedge CLK)
 endmodule 
