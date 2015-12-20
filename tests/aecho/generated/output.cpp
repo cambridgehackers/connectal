@@ -33,13 +33,6 @@ unsigned int l_class_OC_Fifo1::first(void) {
 bool l_class_OC_Fifo1::first__RDY(void) {
         return (full);
 }
-void l_class_OC_Echo::echoReq(unsigned int v) {
-        fifo.enq(v);
-}
-bool l_class_OC_Echo::echoReq__RDY(void) {
-        bool tmp__1 = fifo.enq__RDY();
-        return tmp__1;
-}
 void l_class_OC_Echo::respond_rule(void) {
         unsigned int call = fifo.first();
         fifo.deq();
@@ -50,6 +43,13 @@ bool l_class_OC_Echo::respond_rule__RDY(void) {
         bool tmp__2 = fifo.deq__RDY();
         bool tmp__3 = ind->echo__RDY();
         return ((tmp__1 & tmp__2) & tmp__3);
+}
+void l_class_OC_Echo::say(unsigned int v) {
+        fifo.enq(v);
+}
+bool l_class_OC_Echo::say__RDY(void) {
+        bool tmp__1 = fifo.enq__RDY();
+        return tmp__1;
 }
 void l_class_OC_Echo::run()
 {

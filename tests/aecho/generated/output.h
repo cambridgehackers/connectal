@@ -35,10 +35,10 @@ public:
   class l_class_OC_Fifo1 fifo;
   class l_class_OC_EchoIndication *ind;
   unsigned int pipetemp;
-  void echoReq(unsigned int v);
-  bool echoReq__RDY(void);
   void respond_rule(void);
   bool respond_rule__RDY(void);
+  void say(unsigned int v);
+  bool say__RDY(void);
   void run();
 };
 
