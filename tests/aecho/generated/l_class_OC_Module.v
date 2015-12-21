@@ -1,7 +1,7 @@
 module l_class_OC_Module (
     input CLK,
     input nRST);
-  unsigned VERILOG_long long unused_data_to_force_inheritance;
+    unsigned VERILOG_long long unused_data_to_force_inheritance;
     always @( posedge CLK) begin
       if (!nRST) begin
         unused_data_to_force_inheritance <= 0;

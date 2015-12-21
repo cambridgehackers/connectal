@@ -1,3 +1,9 @@
+class l_class_OC_EchoRequest {
+public:
+  void say(unsigned int v);
+  bool say__RDY(void);
+};
+
 class l_class_OC_Module {
 public:
 };
@@ -14,8 +20,8 @@ public:
 
 class l_class_OC_EchoIndication {
 public:
-  void echo(unsigned int v);
-  bool echo__RDY(void);
+  void heard(unsigned int v);
+  bool heard__RDY(void);
 };
 
 class l_class_OC_Fifo1 {

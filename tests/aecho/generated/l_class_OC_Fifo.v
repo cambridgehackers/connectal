@@ -8,10 +8,10 @@ module l_class_OC_Fifo (
     output enq__RDY,
     output [31:0]first,
     output first__RDY);
-    assign deq__RDY =         0;
-    assign enq__RDY =         0;
-    assign first =         0;
-    assign first__RDY =         0;
+    assign deq__RDY = 0;
+    assign enq__RDY = 0;
+    assign first = 0;
+    assign first__RDY = 0;
 
 
     always @( posedge CLK) begin

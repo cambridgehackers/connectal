@@ -36,12 +36,12 @@ bool l_class_OC_Fifo1::first__RDY(void) {
 void l_class_OC_Echo::respond_rule(void) {
         unsigned int call = fifo.first();
         fifo.deq();
-        ind->echo(call);
+        ind->heard(call);
 }
 bool l_class_OC_Echo::respond_rule__RDY(void) {
         bool tmp__1 = fifo.first__RDY();
         bool tmp__2 = fifo.deq__RDY();
-        bool tmp__3 = ind->echo__RDY();
+        bool tmp__3 = ind->heard__RDY();
         return ((tmp__1 & tmp__2) & tmp__3);
 }
 void l_class_OC_Echo::say(unsigned int v) {
