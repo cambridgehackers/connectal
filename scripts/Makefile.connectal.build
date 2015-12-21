@@ -334,15 +334,13 @@ vsim.dir/xsc/%.lnx64.o: jni/%.cpp
 
 VSIM_DEFINES = $(subst -D ,+define+,$(BSVDEFINES))
 VSIM_SV = $(addprefix -sv $(CONNECTALDIR)/verilog/, xsimtop.sv XsimDmaReadWrite.sv XsimLink.sv XsimSink.sv XsimSource.sv)
-GENERATED_SV = $(addprefix +incdir+, $(SYSTEMVERILOG_PATH))
+SV_SEARCH_PATH = $(addprefix -y , $(SYSTEMVERILOG_PATH) $(SYSTEMVERILOG_PATH)/submodules $(SYSTEMVERILOG_PATH)/submodules/mentor)
+VSIM_ALTERA_LIB = $(addprefix -v $(QUARTUSDIR)/eda/sim_lib/, altera_mf.v 220model.v sgate.v altera_primitives.v)
 
 vsim: verilog $(VSIM_OBJECTS)
 	rm -rf work
 	vlib work
-	for dir in $(SYSTEMVERILOG_PATH); do \
-	    python $(CONNECTALDIR)/scripts/source_msim_setup.py $$dir/mentor/msim_setup.tcl $$dir $(QUARTUSDIR); \
-	done
-	vlog -timescale 1ns/1ps -dpiheader XsimTop.h $(VSIM_DEFINES) $(VSIM_SV) $(GENERATED_SV) -sv verilog/*.v
+	vlog -timescale 1ns/1ps -dpiheader XsimTop.h $(VSIM_DEFINES) $(VSIM_SV) $(VSIM_ALTERA_LIB) +libext+.v+.sv $(SV_SEARCH_PATH) $(VERILOG_PATH:%=-y %) -sv verilog/*.v
 	g++ -O -g -I$(DTOP)/jni -shared -fPIC -g -o $(DTOP)/bin/xsimtop.so $(VSIM_OBJECTS)
 endif #MODELSIM
 
