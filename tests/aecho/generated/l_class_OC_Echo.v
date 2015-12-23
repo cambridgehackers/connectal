@@ -7,36 +7,30 @@ module l_class_OC_Echo (
     input [31:0]say_v,
     output say__RDY,
     output ind$heard__ENA,
-    output [31:0]ind$heard$v,
+    output [31:0]ind$heard_v,
     input ind$heard__RDY);
-    wire fifo$CLK, fifo$nRST;
-    wire fifo$deq__ENA;
+    wire respond_rule__RDY_internal;
+    wire respond_rule__ENA_internal = respond_rule__ENA && respond_rule__RDY_internal;
+    assign respond_rule__RDY = respond_rule__RDY_internal;
+    wire say__RDY_internal;
+    wire say__ENA_internal = say__ENA && say__RDY_internal;
+    assign say__RDY = say__RDY_internal;
     wire fifo$deq__RDY;
-    wire fifo$enq__ENA;
-    wire [31:0]fifo$enq_v;
-    wire fifo$enq__RDY;
-    wire [31:0]fifo$first;
     wire fifo$first__RDY;
     l_class_OC_Fifo1 fifo (
-        fifo$CLK,
-        fifo$nRST,
-        fifo$deq__ENA,
+        CLK,
+        nRST,
+        respond_rule__ENA_internal,
         fifo$deq__RDY,
-        fifo$enq__ENA,
-        fifo$enq_v,
-        fifo$enq__RDY,
-        fifo$first,
+        say__ENA_internal,
+        say_v,
+        say__RDY,
+        ind$heard_v,
         fifo$first__RDY);
     reg[31:0] pipetemp;
-    assign respond_rule__RDY = (fifo$first__RDY) & (fifo$deq__RDY) & (ind$heard__RDY);
-    assign say__RDY = (fifo$enq__RDY);
+    assign ind$heard__ENA = respond_rule__ENA_internal;
+    assign respond_rule__RDY_internal = (fifo$first__RDY & fifo$deq__RDY) & ind$heard__RDY;
 
-
-    assign fifo$deq__ENA = respond_rule__ENA;
-    assign fifo$enq__ENA = say__ENA;
-    assign ind$heard__ENA = respond_rule__ENA;
-        assign fifo$enq_v = say_v;
-        assign ind$heard_v = (fifo$first);
     always @( posedge CLK) begin
       if (!nRST) begin
         pipetemp <= 0;
@@ -44,9 +38,9 @@ module l_class_OC_Echo (
     end // always @ (posedge CLK)
 endmodule 
 
-//METAGUARD; respond_rule__RDY;         (fifo$first__RDY) & (fifo$deq__RDY) & (ind$heard__RDY);
-//METAGUARD; say__RDY;         (fifo$enq__RDY);
-//METAINTERNAL; fifo; l_class_OC_Fifo1;
-//METAEXTERNAL; ind; l_class_OC_EchoIndication;
+//METAGUARD; respond_rule__RDY;         (fifo$first__RDY & fifo$deq__RDY) & ind$heard__RDY;
+//METAGUARD; say__RDY;         fifo$enq__RDY;
 //METAINVOKE; respond_rule; :fifo$deq:ind$heard:fifo$first;
 //METAINVOKE; say; :fifo$enq;
+//METAINTERNAL; fifo; l_class_OC_Fifo1;
+//METAEXTERNAL; ind; l_class_OC_EchoIndication;

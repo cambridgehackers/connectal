@@ -13,6 +13,7 @@ BSCFLAGS += -show-bvi
 AUTOTOP += --integratedIndication
 
 prebuild::
+	$(LLVMT) --odir=$(GENDIR) $(ACCDIR)/fifo.ll
 	$(LLVMT) --odir=$(GENDIR) $(ACCDIR)/echo.ll $(ACCDIR)/atomicc.ll
 	$(LTDIR)/linker.py --directory generated --output Echo l_class_OC_Echo
 
