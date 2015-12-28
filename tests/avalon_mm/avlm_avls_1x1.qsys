@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<system name="$${FILENAME}">
+ <component
+   name="$${FILENAME}"
+   displayName="$${FILENAME}"
+   version="1.0"
+   description=""
+   tags=""
+   categories="System" />
+ <parameter name="bonusData"><![CDATA[bonusData 
+{
+   element $${FILENAME}
+   {
+   }
+   element clk
+   {
+      datum _sortIndex
+      {
+         value = "0";
+         type = "int";
+      }
+   }
+   element mm_monitor_0
+   {
+      datum _sortIndex
+      {
+         value = "2";
+         type = "int";
+      }
+   }
+   element slave_0.s0
+   {
+      datum baseAddress
+      {
+         value = "0";
+         type = "String";
+      }
+   }
+   element slave_0
+   {
+      datum _sortIndex
+      {
+         value = "1";
+         type = "int";
+      }
+   }
+}
+]]></parameter>
+ <parameter name="clockCrossingAdapter" value="HANDSHAKE" />
+ <parameter name="device" value="5SGXEA7N3F45C2" />
+ <parameter name="deviceFamily" value="Stratix V" />
+ <parameter name="deviceSpeedGrade" value="2_H3" />
+ <parameter name="fabricMode" value="QSYS" />
+ <parameter name="generateLegacySim" value="false" />
+ <parameter name="generationId" value="0" />
+ <parameter name="globalResetBus" value="false" />
+ <parameter name="hdlLanguage" value="VERILOG" />
+ <parameter name="hideFromIPCatalog" value="false" />
+ <parameter name="maxAdditionalLatency" value="1" />
+ <parameter name="projectName" value="" />
+ <parameter name="sopcBorderPoints" value="false" />
+ <parameter name="systemHash" value="0" />
+ <parameter name="testBenchDutName" value="" />
+ <parameter name="timeStamp" value="0" />
+ <parameter name="useTestBenchNamingPattern" value="false" />
+ <instanceScript></instanceScript>
+ <interface name="clk" internal="clk.clk_in" type="clock" dir="end" />
+ <interface name="reset" internal="clk.clk_in_reset" type="reset" dir="end" />
+ <interface name="slave_0_s0" internal="mm_monitor_0.s0" type="avalon" dir="end" />
+ <module
+   kind="altera_avalon_mm_slave_bfm"
+   version="14.0"
+   enabled="1"
+   name="slave_0">
+  <parameter name="AV_ADDRESS_W" value="12" />
+  <parameter name="AV_SYMBOL_W" value="8" />
+  <parameter name="AV_NUMSYMBOLS" value="4" />
+  <parameter name="AV_BURSTCOUNT_W" value="4" />
+  <parameter name="AV_READRESPONSE_W" value="8" />
+  <parameter name="AV_WRITERESPONSE_W" value="8" />
+  <parameter name="USE_READ" value="1" />
+  <parameter name="USE_WRITE" value="1" />
+  <parameter name="USE_ADDRESS" value="1" />
+  <parameter name="USE_BYTE_ENABLE" value="1" />
+  <parameter name="USE_BURSTCOUNT" value="1" />
+  <parameter name="USE_READ_DATA" value="1" />
+  <parameter name="USE_READ_DATA_VALID" value="1" />
+  <parameter name="USE_WRITE_DATA" value="1" />
+  <parameter name="USE_BEGIN_TRANSFER" value="0" />
+  <parameter name="USE_BEGIN_BURST_TRANSFER" value="0" />
+  <parameter name="USE_ARBITERLOCK" value="0" />
+  <parameter name="USE_LOCK" value="0" />
+  <parameter name="USE_DEBUGACCESS" value="0" />
+  <parameter name="USE_WAIT_REQUEST" value="1" />
+  <parameter name="USE_TRANSACTIONID" value="0" />
+  <parameter name="USE_WRITERESPONSE" value="0" />
+  <parameter name="USE_READRESPONSE" value="0" />
+  <parameter name="USE_CLKEN" value="0" />
+  <parameter name="ASSERT_HIGH_RESET" value="1" />
+  <parameter name="ASSERT_HIGH_WAITREQUEST" value="1" />
+  <parameter name="ASSERT_HIGH_READ" value="1" />
+  <parameter name="ASSERT_HIGH_WRITE" value="1" />
+  <parameter name="ASSERT_HIGH_BYTEENABLE" value="1" />
+  <parameter name="ASSERT_HIGH_READDATAVALID" value="1" />
+  <parameter name="ASSERT_HIGH_ARBITERLOCK" value="1" />
+  <parameter name="ASSERT_HIGH_LOCK" value="1" />
+  <parameter name="AV_BURST_LINEWRAP" value="0" />
+  <parameter name="AV_BURST_BNDR_ONLY" value="0" />
+  <parameter name="AV_MAX_PENDING_READS" value="8" />
+  <parameter name="AV_MAX_PENDING_WRITES" value="0" />
+  <parameter name="AV_FIX_READ_LATENCY" value="0" />
+  <parameter name="AV_READ_WAIT_TIME" value="1" />
+  <parameter name="AV_WRITE_WAIT_TIME" value="0" />
+  <parameter name="REGISTER_WAITREQUEST" value="0" />
+  <parameter name="AV_REGISTERINCOMINGSIGNALS" value="0" />
+  <parameter name="ADDRESS_UNITS" value="SYMBOLS" />
+  <parameter name="VHDL_ID" value="0" />
+ </module>
+ <module kind="clock_source" version="14.0" enabled="1" name="clk">
+  <parameter name="clockFrequency" value="50000000" />
+  <parameter name="clockFrequencyKnown" value="true" />
+  <parameter name="inputClockFrequency" value="0" />
+  <parameter name="resetSynchronousEdges" value="DEASSERT" />
+ </module>
+ <module
+   kind="altera_avalon_mm_monitor"
+   version="14.0"
+   enabled="1"
+   name="mm_monitor_0">
+  <parameter name="AV_ADDRESS_W" value="12" />
+  <parameter name="AV_SYMBOL_W" value="8" />
+  <parameter name="AV_NUMSYMBOLS" value="4" />
+  <parameter name="AV_BURSTCOUNT_W" value="4" />
+  <parameter name="USE_READ" value="1" />
+  <parameter name="USE_WRITE" value="1" />
+  <parameter name="USE_ADDRESS" value="1" />
+  <parameter name="USE_BYTE_ENABLE" value="1" />
+  <parameter name="USE_BURSTCOUNT" value="1" />
+  <parameter name="USE_READ_DATA" value="1" />
+  <parameter name="USE_READ_DATA_VALID" value="1" />
+  <parameter name="USE_WRITE_DATA" value="1" />
+  <parameter name="USE_BEGIN_TRANSFER" value="0" />
+  <parameter name="USE_BEGIN_BURST_TRANSFER" value="0" />
+  <parameter name="USE_WAIT_REQUEST" value="1" />
+  <parameter name="AV_CONSTANT_BURST_BEHAVIOR" value="1" />
+  <parameter name="AV_BURST_LINEWRAP" value="0" />
+  <parameter name="AV_BURST_BNDR_ONLY" value="0" />
+  <parameter name="AV_ALWAYS_BURST_MAX_BURST" value="0" />
+  <parameter name="AV_READ_TIMEOUT" value="100" />
+  <parameter name="AV_WRITE_TIMEOUT" value="100" />
+  <parameter name="AV_WAITREQUEST_TIMEOUT" value="1024" />
+  <parameter name="AV_MAX_PENDING_READS" value="1" />
+  <parameter name="AV_MAX_PENDING_WRITES" value="0" />
+  <parameter name="AV_FIX_READ_LATENCY" value="0" />
+  <parameter name="AV_MAX_READ_LATENCY" value="100" />
+  <parameter name="AV_MAX_WAITREQUESTED_READ" value="100" />
+  <parameter name="AV_MAX_WAITREQUESTED_WRITE" value="100" />
+  <parameter name="MASTER_ADDRESS_TYPE" value="SYMBOLS" />
+  <parameter name="SLAVE_ADDRESS_TYPE" value="WORDS" />
+  <parameter name="VHDL_ID" value="0" />
+  <parameter name="AV_READRESPONSE_W" value="8" />
+  <parameter name="AV_WRITERESPONSE_W" value="8" />
+  <parameter name="USE_ARBITERLOCK" value="0" />
+  <parameter name="USE_LOCK" value="0" />
+  <parameter name="USE_DEBUGACCESS" value="0" />
+  <parameter name="USE_TRANSACTIONID" value="0" />
+  <parameter name="USE_WRITERESPONSE" value="0" />
+  <parameter name="USE_READRESPONSE" value="0" />
+  <parameter name="USE_CLKEN" value="0" />
+  <parameter name="AV_MAX_CONTINUOUS_READ" value="5" />
+  <parameter name="AV_MAX_CONTINUOUS_WRITE" value="5" />
+  <parameter name="AV_MAX_CONTINUOUS_WAITREQUEST" value="5" />
+  <parameter name="AV_MAX_CONTINUOUS_READDATAVALID" value="5" />
+  <parameter name="AV_READ_WAIT_TIME" value="1" />
+  <parameter name="AV_WRITE_WAIT_TIME" value="0" />
+  <parameter name="REGISTER_WAITREQUEST" value="0" />
+  <parameter name="AV_REGISTERINCOMINGSIGNALS" value="0" />
+ </module>
+ <connection kind="clock" version="14.0" start="clk.clk" end="slave_0.clk" />
+ <connection
+   kind="reset"
+   version="14.0"
+   start="clk.clk_reset"
+   end="slave_0.clk_reset" />
+ <connection kind="avalon" version="14.0" start="mm_monitor_0.m0" end="slave_0.s0">
+  <parameter name="arbitrationPriority" value="1" />
+  <parameter name="baseAddress" value="0x0000" />
+  <parameter name="defaultConnection" value="false" />
+ </connection>
+ <connection kind="clock" version="14.0" start="clk.clk" end="mm_monitor_0.clk" />
+ <connection
+   kind="reset"
+   version="14.0"
+   start="clk.clk_reset"
+   end="mm_monitor_0.clk_reset" />
+ <interconnectRequirement for="$system" name="qsys_mm.clockCrossingAdapter" value="HANDSHAKE" />
+ <interconnectRequirement for="$system" name="qsys_mm.maxAdditionalLatency" value="1" />
+ <interconnectRequirement for="$system" name="qsys_mm.insertDefaultSlave" value="FALSE" />
+</system>

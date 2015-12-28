@@ -80,18 +80,8 @@ CONNECTALFLAGS += -D SlaveControlAddrWidth=$(SLAVE_CONTROL_ADDR_WIDTH)
 CONNECTALFLAGS += -D BurstLenSize=$(BURST_LEN_SIZE)
 CONNECTALFLAGS += --ipdir=$(IPDIR)
 CONNECTALFLAGS += -D ExportType=$(EXPORT_TYPE)
-ifeq ($(BOARD),xsim)
-CONNECTALFLAGS += -D CnocTop
-CNOC?=--cnoc
-endif
-ifeq ($(BOARD),verilator)
-CONNECTALFLAGS += -D CnocTop
-CNOC?=--cnoc
-endif
-ifeq ($(BOARD),asic)
-CONNECTALFLAGS += -D CnocTop
-CNOC?=--cnoc
-endif
+CNOC?=$(shell grep -q CnocTop $(CONNECTALDIR)/boardinfo/$(BOARD).json && echo --cnoc)
+USE_CNOC?=$(shell grep -q SIMULATION $(CONNECTALDIR)/boardinfo/$(BOARD).json && echo cnoc)
 ifneq ($(AUTOTOP),)
 USE_AUTOTOP = 1
 endif
@@ -120,36 +110,25 @@ CPPFILES2 += $(CONNECTALDIR)/cpp/dmaManager.c $(CONNECTALDIR)/cpp/platformMemory
 endif
 endif
 
-ifeq ($(BOARD),bluesim)
-INTERFACES += XsimMsgRequest XsimMsgIndication
-CPPFILES += $(CONNECTALDIR)/cpp/transportXsim.c
-BSVFILES += $(CONNECTALDIR)/bsv/XsimIF.bsv
-endif
-ifeq ($(BOARD),verilator)
-INTERFACES += XsimMsgRequest XsimMsgIndication
-CPPFILES += $(CONNECTALDIR)/cpp/transportXsim.c
-BSVFILES += $(CONNECTALDIR)/bsv/XsimIF.bsv
-endif
-ifeq ($(BOARD),xsim)
-INTERFACES += XsimMsgRequest XsimMsgIndication
-CPPFILES += $(CONNECTALDIR)/cpp/transportXsim.c
-ifneq ($(CPPFILES2),)
-CPPFILES2 += $(CONNECTALDIR)/cpp/transportXsim.c
-endif
-#ifeq ($(NUMBER_OF_MASTERS), 0)
-#BSVFILES += $(CONNECTALDIR)/bsv/ConnectalMemory.bsv
-#endif
-BSVFILES += $(CONNECTALDIR)/bsv/XsimIF.bsv
-endif
+INTERFACES_cnoc = XsimMsgRequest XsimMsgIndication
+CPPFILES_cnoc   = $(CONNECTALDIR)/cpp/transportXsim.c
+BSVFILES_cnoc   = $(CONNECTALDIR)/bsv/XsimIF.bsv
+CPPFILES2_cnoc  = $(CONNECTALDIR)/cpp/transportXsim.c
 
-all bits verilog implementation bsim xsim xsimrun: gentarget prebuild
+INTERFACES += $(INTERFACES_$(USE_CNOC))
+CPPFILES   += $(CPPFILES_$(USE_CNOC))
+BSVFILES   += $(BSVFILES_$(USE_CNOC))
+#CPPFILES2  += $(CPPFILES2_$(USE_CNOC))
+
+all bits verilog implementation bsim xsim vsim xsimrun: gentarget prebuild
 	+make -C $(PROJECTDIR) --no-print-directory $@
 
 android.exe bsim_exe ubuntu.exe exe: gentarget
 	+make -C $(PROJECTDIR) --no-print-directory $@
 
 PCIEGEN=$(shell grep PCIE $(CONNECTALDIR)/boardinfo/$(BOARD).json | sed 's/.*PCIE\([123]\).*/\1/')
-NEED_XILINX_PCIE_ac701=1
+NEED_XILINX_PCIE_ac701=$(PCIEGEN)
+NEED_XILINX_PCIE_ac701g2=$(PCIEGEN)
 NEED_XILINX_PCIE_kc160g2=$(PCIEGEN)
 NEED_XILINX_PCIE_kc705g2=$(PCIEGEN)
 NEED_XILINX_PCIE_vc707g2=$(PCIEGEN)
@@ -255,7 +234,7 @@ ifneq ($(filter $(BOARD), de5 htg4), )
 	$(CONNECTALDIR)/scripts/generate-constraints.py -f altera \
 		$(foreach f, $(PIN_BINDINGS), -b $f) \
 		-o $(PROJECTDIR)/generatedbsv/$(BOARD).qsf \
-		--boardfile $(CONNECTALDIR)/boardinfo/$(BOARD).json --pinoutfile $(shell /bin/pwd)/../boards/$(BOARD).json
+		--boardfile $(CONNECTALDIR)/boardinfo/$(BOARD).json --pinoutfile $(PINOUT_FILE)
 endif
 else
 	$(Q) if [ -e $(CONNECTALDIR)/constraints/altera/$(BOARD).qsf ]; then cp $(CONNECTALDIR)/constraints/altera/$(BOARD).qsf $(PROJECTDIR)/generatedbsv/$(BOARD).qsf; fi

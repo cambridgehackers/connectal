@@ -4,7 +4,7 @@
 Invocation of makefilegen.py
 ============================
 
-The :program:`makefilegen.py` script generates project Makefiles. Normally, it is invoked from Makefile.connectal and passed options via :make:var:CONNECTALFLAGS.
+The :program:`makefilegen.py` script generates project Makefiles. Normally, it is invoked from Makefile.connectal and passed options via :make:var:`CONNECTALFLAGS`.
 
 Project Options
 ---------------
@@ -123,7 +123,12 @@ Hardware Options
 
 .. option:: --pinout=pinusage.json
 
-   Specifies connection of pins on the board to top level signals of the design.
+   Specifies connection of pins on the board to top level signals of
+   the design. A board-specific constraint file will be generated from
+   pinusage.json and the boardinfo json file, and will be added to
+   constraint and implconstraint.
+
+   See :make:var::`PINOUT_FILE`, whose values are passed as --pinout options to makefilegen.
 
 .. option:: --constraint=file.xdc
 

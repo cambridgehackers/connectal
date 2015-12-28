@@ -23,6 +23,7 @@
 
 from __future__ import print_function
 import argparse, json, sys
+from collections import OrderedDict
 
 bindings = {
     #'pins': 'pins',
@@ -64,7 +65,9 @@ if __name__=='__main__':
     set_instance_assignment -name IO_STANDARD "%(IOSTANDARD)s" -to "%(name)s"
     set_location_assignment "%(LOC)s" -to "%(name)s"
     '''
-        setPropertyTemplate=""
+        setPropertyTemplate='''\
+    set_instance_assignment -name %(prop)s "%(val)s" -to "%(name)s"
+    '''
 
     out = sys.stdout
     if options.output:
@@ -73,7 +76,7 @@ if __name__=='__main__':
     for filename in options.pinoutfile:
         print('generate-constraints: processing file "' + filename + '"')
         pinstr = open(filename).read()
-        pinout = json.loads(pinstr)
+        pinout = json.loads(pinstr, object_pairs_hook=OrderedDict)
         for pin in pinout:
             pinInfo = pinout[pin]
             loc = 'TBD'

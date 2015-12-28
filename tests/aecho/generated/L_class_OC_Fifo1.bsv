@@ -1,6 +1,6 @@
 interface L_class_OC_Fifo1;
     method Action deq();
-    method Action enq(Bit#(32) v);
+    method Action enq(Bit#(32) enq_v);
     method Bit#(32) first();
 endinterface
 import "BVI" l_class_OC_Fifo1 =

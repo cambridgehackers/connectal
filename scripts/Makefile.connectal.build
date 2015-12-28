@@ -73,18 +73,27 @@ SIM_CXX_COMMON = $(foreach f, TlpReplay.cpp BsimCtrl.cpp BsimDma.cpp sock_utils.
 SIM_CXX_LOCAL = $(SIM_CXX_COMMON) $(DTOP)/jni/XsimMsgRequest.c $(DTOP)/jni/XsimMsgIndication.c $(DTOP)/jni/GeneratedCppCallbacks.cpp
 
 ifneq ($(ALTERA),)
-BLUESPEC_VERILOG+=$(BLUESPECDIR)/lib/Verilog.Quartus
+BLUESPEC_VERILOG+=$(BLUESPECDIR)/Verilog.Quartus
 endif
 ifneq ($(XILINX),)
-BLUESPEC_VERILOG+=$(BLUESPECDIR)/lib/Verilog.Vivado
+BLUESPEC_VERILOG+=$(BLUESPECDIR)/Verilog.Vivado
 endif
-BLUESPEC_VERILOG+=$(BLUESPECDIR)/lib/Verilog
+BLUESPEC_VERILOG+=$(BLUESPECDIR)/Verilog
 
 VIVADO=$(shell which vivado)
 ifneq ($(VIVADO), )
 export VIVADODIR=$(shell dirname $(shell dirname $(VIVADO))))
 VIVADOFLAGS= -notrace
 XVLOGFLAGS =
+endif
+
+MODELSIM=$(shell which vsim)
+ifneq ($(MODELSIM), )
+endif
+
+QUARTUS=$(shell which quartus_sh)
+ifneq ($(QUARTUS), )
+export QUARTUSDIR=$(shell dirname $(shell dirname $(QUARTUS)))
 endif
 
 ifeq ($(USE_BUILDCACHE),1)
@@ -168,6 +177,9 @@ else
 ifeq ($(BOARD),xsim)
 bits: xsim
 else
+ifeq ($(BOARD),vsim)
+bits: vsim
+else
 ifeq ($(BOARD),verilator)
 bits: vlsim
 else
@@ -199,7 +211,8 @@ endif # ALTERA
 
 endif # android
 endif # verilator
-endif #xsim
+endif # xsim
+endif # vsim
 
 android.exe: prepare_bin_target
 	+ndk-build $(CONNECTAL_NDK_PARAM)
@@ -237,6 +250,9 @@ else
     ifeq ($(OS),android)
 	$(CONNECTALDIR)/scripts/run.android bin/android.exe $(RUN_ARGS)
     else
+    ifeq ($(BOARD), vsim)
+	$(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; exit $$retcode
+    else
 ifeq ($(XILINX),"1")
 	$(CONNECTALDIR)/scripts/run.pcietest bin/ubuntu.exe $(RUN_ARGS)
 endif
@@ -244,6 +260,7 @@ ifeq ($(ALTERA),"1")
 	$(CONNECTALDIR)/scripts/run.pcietest.altera bin/mk*.sof bin/ubuntu.exe $(RUN_ARGS)
 endif
 endif
+    endif # vsim
     endif # android
     endif # verilator
   endif # xsim
@@ -276,11 +293,11 @@ XVLOGDEFINES = $(subst -D,-d,$(BSVDEFINES))
 SVLOG = $(addprefix -svlog $(CONNECTALDIR)/verilog/, xsimtop.sv XsimDmaReadWrite.sv XsimLink.sv XsimSink.sv XsimSource.sv)
 
 xsim: verilog $(XSIM_OBJECTS)
-	xvlog $(XVLOGFLAGS) $(XVLOGDEFINES) verilog/*.v
+	xvlog $(XVLOGFLAGS) $(XVLOGDEFINES) $(VERILOG_PATH:%=--sourcelibdir %) --sourcelibext .v verilog/*.v
 	#xvlog $(XVLOGDEFINES) --sv $(CONNECTALDIR)/verilog/*.sv ## not needed because these all get passed to xelab because they use DPI
 	#xsc -v -cc gcc -compile $(SOURCES)
 	xsc -cc gcc -link $(XSIM_OBJECTS) -o xsimtop
-	xelab --stats $(XVLOGDEFINES) -cc gcc $(SVLOG) --dpiheader XsimTop.h --debug wave -L unisim -L unifast -L unimacro work.xsimtop -sv_lib xsimtop
+	xelab -timescale 1ns/1ps --stats $(XVLOGDEFINES) -cc gcc $(SVLOG) --dpiheader XsimTop.h --debug wave -L unisim -L unifast -L unimacro work.xsimtop -sv_lib xsimtop
 endif #VIVADO
 
 vlsim: $(DTOP)/obj_dir/vlsim
@@ -289,18 +306,43 @@ VERILATOR_ARGS?= -O3 -CFLAGS "-I$(CONNECTALDIR)/cpp -I$(DTOP)/jni -O $(PROF_FLAG
 VERILATOR_ARGS += $(VERILATOR_PROJECT_ARGS)
 
 $(DTOP)/obj_dir/vlsim.mk: $(DTOP)/bin/libconnectal-sim.so verilog
-	verilator -o vlsim --prefix vlsim $(VERILATOR_ARGS) -cc -exe $(DTOP)/verilog/mkXsimTop.v -DMainClockPeriod=4 -DDerivedClockPeriod=4 --top-module mkXsimTop -I$(DTOP)/verilog -I$(CONNECTALDIR)/verilog -Wno-fatal $(CONNECTALDIR)/cpp/verilatortop.cpp $(DTOP)/bin/libconnectal-sim.so -LDFLAGS -lpthread
+	verilator -o vlsim --prefix vlsim $(VERILATOR_ARGS) -cc -exe $(DTOP)/verilog/mkXsimTop.v -DMainClockPeriod=4 -DDerivedClockPeriod=4 --top-module mkXsimTop $(VERILOG_PATH:%=-y %) -Wno-fatal $(CONNECTALDIR)/cpp/verilatortop.cpp $(DTOP)/bin/libconnectal-sim.so -LDFLAGS -lpthread
 
 $(DTOP)/obj_dir/vlsim: $(DTOP)/obj_dir/vlsim.mk
 	+$(MAKE) -C obj_dir -f vlsim.mk
 	cp obj_dir/vlsim bin/vlsim
 
-bin/vsim:
-	python $(CONNECTALDIR)/scripts/sim-gen.py -o vsim/Makefile -s ~/dev/connectal/out/vsim/synthesis/ -d ~/dev/sonic-lite/vsim/modelsim -p ~/dev/sonic-lite -c $(CONNECTALDIR) -g ~/dev/connectal/out/vsim/synthesis/ -t ~/dev/connectal/out/vsim/synthesis/ -T mkSonicSimTop
+ifneq ($(MODELSIM), )
+MODELSIMDIR=$(realpath $(shell dirname $(MODELSIM))/..)
+VSIM_CFLAGS= -Wa,-W -fPIC -m64 -I"$(MODELSIMDIR)/include" -DSYSTEM_VERILOG -DBOARD_vsim -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -Ijni
+VSIM_GENERATED_CFILES = XsimMsgIndication XsimMsgRequest GeneratedCppCallbacks
+VSIM_CFILES = transportSocket transportHardware transportXsim XsimTop poller sock_utils portalPrintf portal BsimDma BsimCtrl
+VSIM_OBJECTS = $(foreach c, $(VSIM_CFILES), vsim.dir/xsc/$(c).lnx64.o ) $(foreach c, $(VSIM_GENERATED_CFILES), vsim.dir/xsc/$(c).lnx64.o)
 
-vsim: verilog bin/vsim
-	$(MAKE) -C vsim all
-	$(MAKE) -C vsim simulate
+vsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.c
+	mkdir -p vsim.dir/xsc
+	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
+vsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.cpp
+	mkdir -p vsim.dir/xsc
+	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
+vsim.dir/xsc/%.lnx64.o: jni/%.c
+	mkdir -p vsim.dir/xsc
+	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
+vsim.dir/xsc/%.lnx64.o: jni/%.cpp
+	mkdir -p vsim.dir/xsc
+	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
+
+VSIM_DEFINES = $(subst -D ,+define+,$(BSVDEFINES))
+VSIM_SV = $(addprefix -sv $(CONNECTALDIR)/verilog/, xsimtop.sv XsimDmaReadWrite.sv XsimLink.sv XsimSink.sv XsimSource.sv)
+SV_SEARCH_PATH = $(addprefix -y , $(SYSTEMVERILOG_PATH) $(SYSTEMVERILOG_PATH)/submodules $(SYSTEMVERILOG_PATH)/submodules/mentor)
+VSIM_ALTERA_LIB = $(addprefix -v $(QUARTUSDIR)/eda/sim_lib/, altera_mf.v 220model.v sgate.v altera_primitives.v)
+
+vsim: verilog $(VSIM_OBJECTS)
+	rm -rf work
+	vlib work
+	vlog -timescale 1ns/1ps -dpiheader XsimTop.h $(VSIM_DEFINES) $(VSIM_SV) $(VSIM_ALTERA_LIB) +libext+.v+.sv $(SV_SEARCH_PATH) $(VERILOG_PATH:%=-y %) -sv verilog/*.v
+	g++ -O -g -I$(DTOP)/jni -shared -fPIC -g -o $(DTOP)/bin/xsimtop.so $(VSIM_OBJECTS)
+endif #MODELSIM
 
 obj/%.bvi: verilog/%.v
 	$(CONNECTALDIR)/scripts/extract-bvi-schedule.py -d obj verilog/$(*).v
@@ -331,7 +373,6 @@ $(VFILE): $(addprefix obj/, $(patsubst %.bsv, %.bo, $(notdir $(TOPBSVFILE))))
 	$(Q)sed -i 's|// On .*|// timestamp removed|' verilog/*.v
 	$(Q)sed -i 's|  wire.*PROBE[,;]|(* mark_debug="true" *)&|' verilog/*.v 
 	$(Q)sed -i 's|  wire.*PROBE_VALID[,;]|(* mark_debug="true" *)&|' verilog/*.v 
-	$(Q)for v in verilog/*.v; do $(CONNECTALDIR)/scripts/copy_verilog.py $$v $(VERILOG_PATH); done
 
 obj/Makefile: $(OBJMAKEFILE_DEP) syntax.timestamp
 	@mkdir -p obj

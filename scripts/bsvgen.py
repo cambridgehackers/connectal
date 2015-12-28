@@ -67,8 +67,9 @@ requestOutputPipeInterfaceTemplate='''\
 
 exposedProxyInterfaceTemplate='''
 // exposed proxy interface
+typedef PipePortal#(0, %(channelCount)s, SlaveDataBusWidth) %(Ifc)sPortalOutput;
 interface %(Ifc)sOutput;
-    interface PipePortal#(0, %(channelCount)s, SlaveDataBusWidth) portalIfc;
+    interface %(Ifc)sPortalOutput portalIfc;
     interface %(Package)s%(Ifc)s ifc;
 endinterface
 interface %(Dut)s;
@@ -82,7 +83,7 @@ endinterface
 
 interface %(Ifc)sOutputPipes;
     interface %(Ifc)sOutputPipeMethods methods;
-    interface PipePortal#(0, %(channelCount)s, SlaveDataBusWidth) portalIfc;
+    interface %(Ifc)sPortalOutput portalIfc;
 endinterface
 
 function Bit#(16) get%(Ifc)sMessageSize(Bit#(16) methodNumber);
@@ -189,12 +190,13 @@ exposedWrapperInterfaceTemplate='''
 interface %(Ifc)sInputPipes;
 %(requestOutputPipeInterfaces)s
 endinterface
+typedef PipePortal#(%(channelCount)s, 0, SlaveDataBusWidth) %(Ifc)sPortalInput;
 interface %(Ifc)sInput;
-    interface PipePortal#(%(channelCount)s, 0, SlaveDataBusWidth) portalIfc;
+    interface %(Ifc)sPortalInput portalIfc;
     interface %(Ifc)sInputPipes pipes;
 endinterface
 interface %(Dut)sPortal;
-    interface PipePortal#(%(channelCount)s, 0, SlaveDataBusWidth) portalIfc;
+    interface %(Ifc)sPortalInput portalIfc;
 endinterface
 // exposed wrapper MemPortal interface
 interface %(Dut)s;

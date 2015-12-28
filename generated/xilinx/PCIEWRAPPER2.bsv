@@ -244,10 +244,10 @@ interface PciewrapM_axis_rx#(numeric type lanes);
 endinterface
 (* always_ready, always_enabled *)
 interface PciewrapPci_exp#(numeric type lanes);
-    method Action      rxn(Bit#(8) v);
-    method Action      rxp(Bit#(8) v);
-    method Bit#(8)     txn();
-    method Bit#(8)     txp();
+    method Action      rxn(Bit#(lanes) v);
+    method Action      rxp(Bit#(lanes) v);
+    method Bit#(lanes)     txn();
+    method Bit#(lanes)     txp();
 endinterface
 (* always_ready, always_enabled *)
 interface PciewrapPl#(numeric type lanes);

@@ -1,0 +1,16 @@
+{
+    "options": {
+        "bsvdefines" : ["XILINX=1", "Artix7",  "PCIE", "PCIE2", "PcieHostInterface", "PhysAddrWidth=40", "PcieLanes=4"],
+        "os" : "ubuntu",
+        "partname" : "xc7a200tfbg676-2",
+        "need_pcie" : "x7_gen2x8",
+        "TOP" : "PcieTop",
+        "constraints": ["constraints/xilinx/ac701.xdc", "constraints/xilinx/pcie-clocks.xdc"],
+        "implconstraints": ["constraints/xilinx/ac701.xdc", "constraints/xilinx/pcie-clocks.xdc"],
+        "runscript" : "run.pcietest",
+        "CONNECTALFLAGS" : ["--mainclockperiod=4", "--derivedclockperiod=4", "--pcieclockperiod=4"],
+        "rewireclockstring" : ""
+    },
+    "fmc": {
+    }
+}

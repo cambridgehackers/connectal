@@ -25,17 +25,10 @@ if {$need_pcie == "x7_gen1x8"} {
 
 if {$need_pcie == "x7_gen2x8"} {
     set pcieversion {3.0}
-    set maxlinkwidth {X8}
-    set maxinterfacewidth {128_bit}
+    set maxlinkwidth "X$PcieLanes"
+    set maxinterfacebits [expr 16 * $PcieLanes]
+    set maxinterfacewidth "${maxinterfacebits}_bit"
     set linkspeed {5.0_GT/s}
-    if {$boardname == {zc706}} {
-	set maxlinkwidth {X4}
-	set maxinterfacewidth {64_bit}
-    }
-    if {$boardname == {ac701}} {
-	set maxlinkwidth {X4}
-	set maxinterfacewidth {64_bit}
-    }
     if {[version -short] >= "2015.1"} {
 	set pcieversion {3.1}
     }

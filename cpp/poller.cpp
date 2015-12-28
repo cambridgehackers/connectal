@@ -35,9 +35,10 @@ PortalPoller *defaultPoller = new PortalPoller();
 uint64_t poll_enter_time, poll_return_time; // for performance measurement
 
 PortalPoller::PortalPoller(int autostart)
-  : portal_wrappers(0), startThread(autostart), numWrappers(0), numFds(0), stopping(0)
+  : startThread(autostart), numWrappers(0), numFds(0), inPoll(0), stopping(0)
 {
     memset(portal_fds, 0, sizeof(portal_fds));
+    memset(portal_wrappers, 0, sizeof(portal_wrappers));
     int rc = pipe(pipefd);
     if (rc != 0)
       fprintf(stderr, "[%s:%d] pipe error %d:%s\n", __FUNCTION__, __LINE__, errno, strerror(errno));
@@ -102,13 +103,14 @@ int PortalPoller::registerInstance(Portal *portal)
 {
     uint8_t ch = 0;
     pthread_mutex_lock(&mutex);
-    int rc = write(pipefd[1], &ch, 1); // get poll to return, so that it is no long using portal_fds (which gets realloc'ed)
+    int rc = write(pipefd[1], &ch, 1); // get poll to return, so that it will try again with the new file descriptor
     if (rc < 0)
         fprintf(stderr, "[%s:%d] write error %d\n", __FUNCTION__, __LINE__, errno);
     numWrappers++;
     if (trace_poller)
         fprintf(stderr, "Poller: registerInstance fpga%d fd %d clients %d\n", portal->pint.fpga_number, portal->pint.fpga_fd, portal->pint.client_fd_number);
-    portal_wrappers = (Portal **)realloc(portal_wrappers, numWrappers*sizeof(Portal *));
+    while(inPoll)
+        usleep(1000);
     portal_wrappers[numWrappers-1] = portal;
 
     if (portal->pint.fpga_fd != -1)
@@ -163,8 +165,10 @@ void* PortalPoller::pollFn(int timeout)
     //printf("[%s:%d] before poll %d numFds %d\n", __FUNCTION__, __LINE__, timeout, numFds);
     //for (int i = 0; i < numFds; i++)
         //printf("%s: fd %d events %x\n", __FUNCTION__, portal_fds[i].fd, portal_fds[i].events);
+    inPoll = 1;
     if (timeout != 0)
         rc = poll(portal_fds, numFds, timeout);
+    inPoll = 0;
     if(rc < 0) {
         // return only in error case
         fprintf(stderr, "Poller: poll returned rc=%ld errno=%d:%s\n", rc, errno, strerror(errno));

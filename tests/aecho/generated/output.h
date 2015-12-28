@@ -1,54 +1,36 @@
-void _ZN14EchoIndication4echoEi(unsigned int Vv);
-bool _ZN5Fifo1IiE8deq__RDYEv(class l_class_OC_Fifo1 *Vthis);
-bool _ZN5Fifo1IiE10first__RDYEv(class l_class_OC_Fifo1 *Vthis);
-void _ZN5Fifo1IiE3deqEv(class l_class_OC_Fifo1 *Vthis);
-unsigned int _ZN5Fifo1IiE5firstEv(class l_class_OC_Fifo1 *Vthis);
-void _ZN14EchoIndication4echoEi(unsigned int Vv);
-bool _ZN5Fifo1IiE8enq__RDYEv(class l_class_OC_Fifo1 *Vthis);
-void _ZN5Fifo1IiE3enqEi(class l_class_OC_Fifo1 *Vthis, unsigned int Vv);
-class l_class_OC_Module {
+class l_class_OC_EchoRequest {
+private:
 public:
-  unsigned long long size;
-};
-
-class l_class_OC_EchoTest {
-public:
-  unsigned long long size;
-  class l_class_OC_Echo *echo;
-  unsigned int x;
-  bool rule_drive__RDY(void);
-  void rule_drive(void);
-  void run();
+  void say(unsigned int say_v);
+  bool say__RDY(void);
 };
 
 class l_class_OC_EchoIndication {
+private:
 public:
+  void heard(unsigned int heard_v);
+  bool heard__RDY(void);
 };
 
 class l_class_OC_Echo {
-public:
-  unsigned long long size;
-  class l_class_OC_Fifo1 *fifo;
+private:
+  class l_class_OC_Fifo1 fifo;
   class l_class_OC_EchoIndication *ind;
   unsigned int pipetemp;
-  bool rule_respond__RDY(void);
-  void rule_respond(void);
+public:
+  void respond_rule(void);
+  bool respond_rule__RDY(void);
+  void say(unsigned int say_v);
+  bool say__RDY(void);
   void run();
+  void setind(class l_class_OC_EchoIndication *v) { ind = v; }
 };
 
-class l_class_OC_Fifo {
+class l_class_OC_EchoTest {
+private:
+  class l_class_OC_Echo *echo;
+  unsigned int x;
 public:
-};
-
-class l_class_OC_Fifo1 {
-public:
-  unsigned int element;
-  bool full;
-  void deq(void);
-  bool enq__RDY(void);
-  void enq(unsigned int Vv);
-  bool deq__RDY(void);
-  bool first__RDY(void);
-  unsigned int first(void);
+  void setecho(class l_class_OC_Echo *v) { echo = v; }
 };
 

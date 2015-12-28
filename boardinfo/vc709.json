@@ -53,6 +53,248 @@
 		 "PIO_DIRECTION" : "OUTPUT"
 		 }
 	},
+    "bpi_flash": {
+		 "data[0]" : {
+			     "LOC" : "AM36",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "BIDIR"
+		 },
+		 "data[1]" : {
+			     "LOC" : "AN36",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "BIDIR"
+		 },
+		 "data[2]" : {
+			     "LOC" : "AJ36",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "BIDIR"
+		 },
+		 "data[3]" : {
+			     "LOC" : "AJ37",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "BIDIR"
+		 },
+		 "data[4]" : {
+			     "LOC" : "AK37",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "BIDIR"
+		 },
+		 "data[5]" : {
+			     "LOC" : "AL37",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "BIDIR"
+		 },
+		 "data[6]" : {
+			     "LOC" : "AN35",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "BIDIR"
+		 },
+		 "data[7]" : {
+			     "LOC" : "AP35",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "BIDIR"
+		 },
+		 "data[8]" : {
+			     "LOC" : "AM37",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "BIDIR"
+		 },
+		 "data[9]" : {
+			     "LOC" : "AG33",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "BIDIR"
+		 },
+		 "data[10]" : {
+			     "LOC" : "AH33",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "BIDIR"
+		 },
+		 "data[11]" : {
+			     "LOC" : "AK35",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "BIDIR"
+		 },
+		 "data[12]" : {
+			     "LOC" : "AL35",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "BIDIR"
+		 },
+		 "data[13]" : {
+			     "LOC" : "AJ31",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "BIDIR"
+		 },
+		 "data[14]" : {
+			     "LOC" : "AH34",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "BIDIR"
+		 },
+		 "data[15]" : {
+			     "LOC" : "AJ35",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "BIDIR"
+		 },
+		 "addr[0]" : {
+			     "LOC" : "AJ28",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[1]" : {
+			     "LOC" : "AH28",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[2]" : {
+			     "LOC" : "AG31",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[3]" : {
+			     "LOC" : "AF30",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[4]" : {
+			     "LOC" : "AK29",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[5]" : {
+			     "LOC" : "AK28",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[6]" : {
+			     "LOC" : "AG29",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[7]" : {
+			     "LOC" : "AK30",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[8]" : {
+			     "LOC" : "AJ30",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[9]" : {
+			     "LOC" : "AH30",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[10]" : {
+			     "LOC" : "AH29",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[11]" : {
+			     "LOC" : "AL30",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[12]" : {
+			     "LOC" : "AL29",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[13]" : {
+			     "LOC" : "AN33",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[14]" : {
+			     "LOC" : "AM33",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[15]" : {
+			     "LOC" : "AM32",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[16]" : {
+			     "LOC" : "AV41",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[17]" : {
+			     "LOC" : "AU41",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[18]" : {
+			     "LOC" : "BA42",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[19]" : {
+			     "LOC" : "AU42",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[20]" : {
+			     "LOC" : "AT41",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[21]" : {
+			     "LOC" : "BA40",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[22]" : {
+			     "LOC" : "BA39",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[23]" : {
+			     "LOC" : "BB39",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[24]" : {
+			     "LOC" : "AW42",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "addr[25]" : {
+			     "LOC" : "AW41",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "wait_in_b" : {
+			     "LOC" : "AM34",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "rst" : {
+			     "LOC" : "AG11_not_usable",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "oe_b" : {
+			     "LOC" : "BA41",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "ce_b" : {
+			     "LOC" : "AL36",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "we_b" : {
+			     "LOC" : "BB41",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "adv_b" : {
+			     "LOC" : "AY37",
+			     "IOSTANDARD" : "LVCMOS18",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 }
+    },	
     "pins": {
 		"userClk_p": {
 			"PACKAGE_PIN": "bogus",
