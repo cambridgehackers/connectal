@@ -1,3 +1,9 @@
+connectal (15.12.2-1precise1) precise; urgency=medium
+
+  * Version 15.12.2
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 28 Dec 2015 09:59:59 -0500
+
 connectal (15.12.1-1precise1) precise; urgency=medium
 
   * Rewrote BSV preprocessor
