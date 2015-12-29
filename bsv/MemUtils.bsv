@@ -239,3 +239,35 @@ module mkUGBramFifos(UGBramFifos#(numFifos,fifoDepth,a))
 
 endmodule
 
+module mkMemServerFromPhysMemSlave#(PhysMemSlave#(addrWidth,dataWidth) ms)(MemServer#(dataWidth))
+   provisos (Add#(a__, addrWidth, MemOffsetSize));
+   interface MemReadServer readServer;
+      interface Put readReq;
+	 method Action put(MemRequest req);
+	    ms.read_server.readReq.put(PhysMemRequest { addr: truncate(req.offset), burstLen: req.burstLen,
+`ifdef BYTE_ENABLES
+	       firstbe: reqFirstByteEnable(req),
+	       lastbe: reqLastByteEnable(req),
+`endif
+	       tag: req.tag
+	       });
+	 endmethod
+      endinterface
+      interface Get readData = ms.read_server.readData;
+   endinterface
+   interface MemWriteServer writeServer;
+      interface Put writeReq;
+	 method Action put(MemRequest req);
+	    ms.write_server.writeReq.put(PhysMemRequest { addr: truncate(req.offset), burstLen: req.burstLen,
+`ifdef BYTE_ENABLES
+	       firstbe: reqFirstByteEnable(req),
+	       lastbe: reqLastByteEnable(req),
+`endif
+	       tag: req.tag
+	       });
+	 endmethod
+      endinterface
+      interface Put           writeData = ms.write_server.writeData;
+      interface Get           writeDone = ms.write_server.writeDone;
+   endinterface
+endmodule
