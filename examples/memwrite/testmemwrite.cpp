@@ -27,8 +27,8 @@
 static int numWords = 0x5000/4;
 static int iterCnt = 1;
 #elif defined(SIMULATION)
-static int numWords = 0x124000/4;
-static int iterCnt = 2;
+static int numWords = 4096;
+static int iterCnt = 1;
 #else
 static int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
 static int iterCnt = 128;
@@ -36,7 +36,13 @@ static int iterCnt = 128;
 #ifdef PCIE
 static int burstLen = 32;
 #else
-static int burstLen = 16;
+static int burstLen = 2;
+#endif
+
+#ifdef NumEngineServers
+int numEngineServers = NumEngineServers;
+#else
+int numEngineServers = 1;
 #endif
 
 static sem_t test_sem;
@@ -73,7 +79,9 @@ int main(int argc, const char **argv)
     MemwriteRequestProxy *device = new MemwriteRequestProxy(IfcNames_MemwriteRequestS2H);
     MemwriteIndication deviceIndication(IfcNames_MemwriteIndicationH2S);
 
-    fprintf(stderr, "main::allocating memory...\n");
+    alloc_sz *= numEngineServers;
+
+    fprintf(stderr, "main::allocating %lx bytes of memory...\n", alloc_sz);
     int dstAlloc = portalAlloc(alloc_sz, 0);
     unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 #ifdef FPGA0_CLOCK_FREQ
@@ -82,23 +90,30 @@ int main(int argc, const char **argv)
     fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
 #endif
     unsigned int ref_dstAlloc = dma->reference(dstAlloc);
-    for (int i = 0; i < numWords; i++)
+    for (int i = 0; i < numWords*numEngineServers; i++)
         dstBuffer[i] = 0xDEADBEEF;
     portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);
     fprintf(stderr, "testmemwrite: flush and invalidate complete\n");
     fprintf(stderr, "testmemwrite: starting write %08x\n", numWords);
-    portalTimerStart(0);
-    device->startWrite(ref_dstAlloc, 0, numWords, burstLen, iterCnt);
-    sem_wait(&test_sem);
-    for (int i = 0; i < numWords; i++) {
+
+    burstLen = 2; // words
+    while (burstLen <= 2) {
+      portalTimerStart(0);
+      device->startWrite(ref_dstAlloc, 0, numWords, burstLen, iterCnt);
+      sem_wait(&test_sem);
+      mismatch = 0;
+      for (int i = 0; i < numWords; i++) {
         if (dstBuffer[i] != sg) {
-            mismatch++;
-            if (max_error-- > 0)
-                fprintf(stderr, "testmemwrite: [%d] actual %08x expected %08x\n", i, dstBuffer[i], sg);
+	  mismatch++;
+	  if (max_error-- > 0)
+	    fprintf(stderr, "testmemwrite: [%d] actual %08x expected %08x\n", i, dstBuffer[i], sg);
         }
         sg++;
+      }
+      platformStatistics();
+      fprintf(stderr, "testmemwrite: mismatch count %d.\n", mismatch);
+      burstLen *= 2;
+      if (mismatch)
+	exit(mismatch);
     }
-    platformStatistics();
-    fprintf(stderr, "testmemwrite: mismatch count %d.\n", mismatch);
-    exit(mismatch);
 }
