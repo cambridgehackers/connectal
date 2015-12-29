@@ -209,6 +209,11 @@ interface MemWriteServer#(numeric type dsz);
    interface Get#(Bit#(MemTagSize))           writeDone;
 endinterface
 
+interface MemServer#(numeric type dataWidth);
+   interface MemReadServer#(dataWidth) readServer;
+   interface MemWriteServer#(dataWidth) writeServer;
+endinterface
+
 //
 ///////////////////////////////////////////////////////////////////////////////////
 //
