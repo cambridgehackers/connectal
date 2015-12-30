@@ -83,9 +83,4 @@ set_property LOC IBUFDS_GTE2_X0Y1  [get_cells { *pci_clk_100mhz_buf }]
 # TIMING CONSTRAINTS
 ######################################################################################################
 
-# # clocks
-create_clock -name bscan_refclk -period 20 [get_pins host_pciehost_bscan_bscan/TCK]
-create_clock -name pci_refclk -period 10 [get_pins *pci_clk_100mhz_buf/O]
-
-set_false_path -from [get_clocks bscan_refclk] -to [get_clocks -of_objects [get_pins host_ep7/pcie_ep/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT3]]
-set_false_path -from [get_clocks -of_objects [get_pins host_ep7/pcie_ep/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT3]] -to [get_clocks bscan_refclk]
+## in pcie-clocks.xdc

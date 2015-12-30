@@ -83,8 +83,7 @@ set_property LOC MMCME2_ADV_X1Y5 [get_cells -hier -filter { NAME =~ *clk_gen_pll
 # TIMING CONSTRAINTS
 ######################################################################################################
  
-create_clock -name bscan_refclk -period 20 [get_pins host_pciehost_bscan_bscan/TCK]
-create_clock -name pci_refclk -period 10 [get_pins *pci_clk_100mhz_buf/O]
+## in pcie-clocks.xdc
 
 # ignore this timing violation
 set_false_path -from [get_pins host_ep7/pclk_sel_reg/C]
