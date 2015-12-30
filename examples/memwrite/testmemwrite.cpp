@@ -81,7 +81,7 @@ int main(int argc, const char **argv)
 
     alloc_sz *= numEngineServers;
 
-    fprintf(stderr, "main::allocating %lx bytes of memory...\n", alloc_sz);
+    fprintf(stderr, "main::allocating %lx bytes of memory...\n", (long)alloc_sz);
     int dstAlloc = portalAlloc(alloc_sz, 0);
     unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
 #ifdef FPGA0_CLOCK_FREQ
