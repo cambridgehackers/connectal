@@ -239,6 +239,7 @@ module mkUGBramFifos(UGBramFifos#(numFifos,fifoDepth,a))
 
 endmodule
 
+`ifndef BYTE_ENABLES
 module mkMemServerFromPhysMemSlave#(PhysMemSlave#(addrWidth,dataWidth) ms)(MemServer#(dataWidth))
    provisos (Add#(a__, addrWidth, MemOffsetSize));
    interface MemReadServer readServer;
@@ -271,3 +272,4 @@ module mkMemServerFromPhysMemSlave#(PhysMemSlave#(addrWidth,dataWidth) ms)(MemSe
       interface Get           writeDone = ms.write_server.writeDone;
    endinterface
 endmodule
+`endif // not BYTE_ENABLES
