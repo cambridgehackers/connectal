@@ -31,7 +31,7 @@ static int numWords = 4096;
 static int iterCnt = 1;
 #else
 static int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
-static int iterCnt = 128;
+static int iterCnt = 1; // was 128
 #endif
 #ifdef PCIE
 static int burstLen = 32;
