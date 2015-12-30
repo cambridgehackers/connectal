@@ -36,7 +36,7 @@ static int iterCnt = 1; // was 128
 #ifdef PCIE
 static int burstLen = 32;
 #else
-static int burstLen = 2;
+static int burstLen = 16;
 #endif
 
 #ifdef NumEngineServers
@@ -115,5 +115,8 @@ int main(int argc, const char **argv)
       burstLen *= 2;
       if (mismatch)
 	exit(mismatch);
+
+      // now try with larger burstLen
+      burstLen *= 2;
     }
 }
