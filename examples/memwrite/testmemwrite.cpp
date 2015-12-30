@@ -31,12 +31,16 @@ static int numWords = 4096;
 static int iterCnt = 8;
 #else
 static int numWords = 0x1240000/4; // make sure to allocate at least one entry of each size
-static int iterCnt = 128;
+static int iterCnt = 8;
 #endif
 #ifdef PCIE
 static int burstLen = 32;
+static int burstLenMin = 32;
+static int burstLenMax = 32;
 #else
 static int burstLen = 16;
+static int burstLenMin = 2;
+static int burstLenMax = 32;
 #endif
 
 #ifdef NumEngineServers
@@ -94,10 +98,10 @@ int main(int argc, const char **argv)
         dstBuffer[i] = 0xDEADBEEF;
     portalCacheFlush(dstAlloc, dstBuffer, alloc_sz, 1);
     fprintf(stderr, "testmemwrite: flush and invalidate complete\n");
-    fprintf(stderr, "testmemwrite: starting write %08x\n", numWords);
 
-    burstLen = 2; // words
-    while (burstLen <= 2) {
+    burstLen = burstLenMin; // words
+    while (burstLen <= burstLenMax) {
+      fprintf(stderr, "testmemwrite: starting write %#08x words burstLen=%d words\n", numWords, burstLen);
       portalTimerStart(0);
       device->startWrite(ref_dstAlloc, 0, numWords, burstLen, iterCnt);
       sem_wait(&test_sem);
