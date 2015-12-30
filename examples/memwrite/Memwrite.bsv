@@ -97,7 +97,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 	 we.writeServers[i].data.enq(pack(v));
 	 let new_srcGen = srcGens[i]+fromInteger(valueOf(DataBusWords));
 	 srcGens[i] <= new_srcGen;
-	 if (new_srcGen[27:0] == truncate(writeOffset/4))
+	 if (new_srcGen[27:0] >= truncate(numWords))
 	    cfs[i].deq;
       endrule
    end
