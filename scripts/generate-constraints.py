@@ -78,32 +78,32 @@ if __name__=='__main__':
         pinstr = open(filename).read()
         pinout = json.loads(pinstr, object_pairs_hook=OrderedDict)
         for pin in pinout:
-            pinInfo = pinout[pin]
+            projectPinInfo = pinout[pin]
             loc = 'TBD'
             iostandard = 'TBD'
             iodir = 'TBD'
             used = []
             boardGroupInfo = {}
             pinName = ''
-            #print('PPP', pinInfo)
+            #print('PPP', projectPinInfo)
             for key in bindings:
-                if pinInfo.has_key(key):
+                if projectPinInfo.has_key(key):
                     used.append(key)
-                    pinName = pinInfo[key]
+                    pinName = projectPinInfo[key]
                     #print('LLL', key, pinName, bindings[key])
                     boardGroupInfo = boardInfo[bindings[key]]
                     break
             if pinName == '':
-                for key in pinInfo:
+                for key in projectPinInfo:
                     #print('JJJJ', key)
                     if boardInfo.get(key):
                         used.append(key)
-                        pinName = pinInfo[key]
+                        pinName = projectPinInfo[key]
                         boardGroupInfo = boardInfo[key]
                         #print('FFF', key, pinName, boardGroupInfo, boardGroupInfo.has_key(pinName), boardGroupInfo.get(pinName))
                         break
             if boardGroupInfo == {}:
-                print('Missing group description for', pinName, pinInfo, file=sys.stderr)
+                print('Missing group description for', pinName, projectPinInfo, file=sys.stderr)
                 errorDetected = True
             if boardGroupInfo.has_key(pinName):
                 if boardGroupInfo[pinName].has_key('LOC'):
@@ -114,25 +114,25 @@ if __name__=='__main__':
                 if boardGroupInfo[pinName].has_key('PIO_DIRECTION'):
                     iodir = boardGroupInfo[pinName]['PIO_DIRECTION']
             else:
-                print('Missing pin description for', pinName, pinInfo, file=sys.stderr)
+                print('Missing pin description for', pinName, projectPinInfo, file=sys.stderr)
                 loc = 'fmc.%s' % (pinName)
                 errorDetected = True
-            if pinInfo.has_key('IOSTANDARD'):
-                iostandard = pinInfo['IOSTANDARD']
-            if pinInfo.has_key('PIO_DIRECTION'):
-                iodir = pinInfo['PIO_DIRECTION']
+            if projectPinInfo.has_key('IOSTANDARD'):
+                iostandard = projectPinInfo['IOSTANDARD']
+            if projectPinInfo.has_key('PIO_DIRECTION'):
+                iodir = projectPinInfo['PIO_DIRECTION']
             out.write(template % {
                     'name': pin,
                     'LOC': loc,
                     'IOSTANDARD': iostandard,
                     'PIO_DIRECTION': iodir
                     })
-            for k in pinInfo:
+            for k in projectPinInfo:
                 if k in used+['IOSTANDARD', 'PIO_DIRECTION']: continue
                 out.write(setPropertyTemplate % {
                         'name': pin,
                         'prop': k,
-                        'val': pinInfo[k],
+                        'val': projectPinInfo[k],
                         })
     if errorDetected:
         sys.exit(-1);
