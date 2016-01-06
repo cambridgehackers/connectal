@@ -47,7 +47,7 @@ module mkBpiFlashTest#(BpiFlashTestIndication ind)(BpiFlashTest);
    Wire#(Bit#(1)) wait_in_b <- mkDWire(0);
    module mkDataIobuf#(Integer i)(IOBUF);
       (* hide *)
-      let iobuf <- mkIOBUF(oe, data_o[i]);
+      let iobuf <- mkIOBUF(we, data_o[i]);
       return iobuf;
    endmodule
    function Inout#(Bit#(1)) iobuf_io(IOBUF iobuf); return iobuf.io; endfunction
