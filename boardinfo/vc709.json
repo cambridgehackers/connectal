@@ -267,7 +267,8 @@
 		 "wait_in_b" : {
 			     "LOC" : "AM34",
 			     "IOSTANDARD" : "LVCMOS18",
-			     "PIO_DIRECTION" : "INPUT"
+			     "PIO_DIRECTION" : "INPUT",
+			     "PULLUP" : "TRUE"
 		 },
 		 "rst" : {
 			     "LOC" : "AG11_not_usable",
