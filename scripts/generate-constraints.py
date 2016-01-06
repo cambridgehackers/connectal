@@ -24,6 +24,7 @@
 from __future__ import print_function
 import argparse, json, sys
 from collections import OrderedDict
+import copy
 
 bindings = {
     #'pins': 'pins',
@@ -105,34 +106,24 @@ if __name__=='__main__':
             if boardGroupInfo == {}:
                 print('Missing group description for', pinName, projectPinInfo, file=sys.stderr)
                 errorDetected = True
+            pinInfo = {}
             if boardGroupInfo.has_key(pinName):
-                if boardGroupInfo[pinName].has_key('LOC'):
-                    loc = boardGroupInfo[pinName]['LOC']
-                else:
-                    loc = boardGroupInfo[pinName]['PACKAGE_PIN']
-                iostandard = boardGroupInfo[pinName]['IOSTANDARD']
-                if boardGroupInfo[pinName].has_key('PIO_DIRECTION'):
-                    iodir = boardGroupInfo[pinName]['PIO_DIRECTION']
+                pinInfo = copy.copy(boardGroupInfo[pinName])
             else:
                 print('Missing pin description for', pinName, projectPinInfo, file=sys.stderr)
-                loc = 'fmc.%s' % (pinName)
+                pinInfo['LOC'] = 'fmc.%s' % (pinName)
                 errorDetected = True
-            if projectPinInfo.has_key('IOSTANDARD'):
-                iostandard = projectPinInfo['IOSTANDARD']
-            if projectPinInfo.has_key('PIO_DIRECTION'):
-                iodir = projectPinInfo['PIO_DIRECTION']
-            out.write(template % {
-                    'name': pin,
-                    'LOC': loc,
-                    'IOSTANDARD': iostandard,
-                    'PIO_DIRECTION': iodir
-                    })
-            for k in projectPinInfo:
-                if k in used+['IOSTANDARD', 'PIO_DIRECTION']: continue
+            pinInfo['name'] = pin
+            for prop in projectPinInfo:
+                if projectPinInfo.has_key(prop):
+                    pinInfo[prop] = projectPinInfo[prop]
+            out.write(template % pinInfo)
+            for k in pinInfo:
+                if k in used+['name', 'IOSTANDARD', 'PIO_DIRECTION']: continue
                 out.write(setPropertyTemplate % {
                         'name': pin,
                         'prop': k,
-                        'val': projectPinInfo[k],
+                        'val': pinInfo[k],
                         })
     if errorDetected:
         sys.exit(-1);
