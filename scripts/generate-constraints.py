@@ -84,31 +84,31 @@ if __name__=='__main__':
             iostandard = 'TBD'
             iodir = 'TBD'
             used = []
-            boardGroupInfo = {}
+            boardPinInfo = {}
             pinName = ''
             #print('PPP', projectPinInfo)
-            for key in bindings:
-                if projectPinInfo.has_key(key):
-                    used.append(key)
-                    pinName = projectPinInfo[key]
-                    #print('LLL', key, pinName, bindings[key])
-                    boardGroupInfo = boardInfo[bindings[key]]
+            for groupName in bindings:
+                if projectPinInfo.has_key(groupName):
+                    used.append(groupName)
+                    pinName = projectPinInfo[groupName]
+                    #print('LLL', groupName, pinName, bindings[groupName])
+                    boardPinInfo = boardInfo[bindings[groupName]]
                     break
             if pinName == '':
-                for key in projectPinInfo:
-                    #print('JJJJ', key)
-                    if boardInfo.get(key):
-                        used.append(key)
-                        pinName = projectPinInfo[key]
-                        boardGroupInfo = boardInfo[key]
-                        #print('FFF', key, pinName, boardGroupInfo, boardGroupInfo.has_key(pinName), boardGroupInfo.get(pinName))
+                for prop in projectPinInfo:
+                    #print('JJJJ', prop)
+                    if boardInfo.get(prop):
+                        used.append(prop)
+                        pinName = projectPinInfo[prop]
+                        boardPinInfo = boardInfo[prop]
+                        #print('FFF', prop, pinName, boardPinInfo, boardPinInfo.has_key(pinName), boardPinInfo.get(pinName))
                         break
-            if boardGroupInfo == {}:
+            if boardPinInfo == {}:
                 print('Missing group description for', pinName, projectPinInfo, file=sys.stderr)
                 errorDetected = True
             pinInfo = {}
-            if boardGroupInfo.has_key(pinName):
-                pinInfo = copy.copy(boardGroupInfo[pinName])
+            if boardPinInfo.has_key(pinName):
+                pinInfo = copy.copy(boardPinInfo[pinName])
             else:
                 print('Missing pin description for', pinName, projectPinInfo, file=sys.stderr)
                 pinInfo['LOC'] = 'fmc.%s' % (pinName)
