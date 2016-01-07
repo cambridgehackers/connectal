@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 import Vector::*;
+import Clocks::*;
 
 interface AxiMasterBits#(numeric type addrWidth, numeric type dataWidth, numeric type tagWidth, type extraType);
     method Bit#(addrWidth)     araddr();
@@ -121,6 +122,136 @@ interface AxiSlaveBits#(numeric type addrWidth, numeric type dataWidth, numeric 
     interface extraType   extra;
 endinterface
 
+interface Axi4MasterBits#(numeric type addrWidth, numeric type dataWidth, numeric type tagWidth, type extraType);
+    method Bit#(addrWidth)     araddr();
+    method Bit#(2)     arburst();
+    method Bit#(4)     arcache();
+    method Bit#(1)     aresetn();
+    method Bit#(tagWidth)     arid();
+    method Bit#(8)     arlen();
+    method Bit#(2)     arlock();
+    method Bit#(3)     arprot();
+    method Bit#(4)     arqos();
+    method Action      arready(Bit#(1) v);
+    method Bit#(3)     arsize();
+    method Bit#(1)     arvalid();
+    method Bit#(addrWidth)     awaddr();
+    method Bit#(2)     awburst();
+    method Bit#(4)     awcache();
+    method Bit#(tagWidth)     awid();
+    method Bit#(8)     awlen();
+    method Bit#(2)     awlock();
+    method Bit#(3)     awprot();
+    method Bit#(4)     awqos();
+    method Action      awready(Bit#(1) v);
+    method Bit#(3)     awsize();
+    method Bit#(1)     awvalid();
+    method Action      bid(Bit#(tagWidth) v);
+    method Bit#(1)     bready();
+    method Action      bresp(Bit#(2) v);
+    method Action      bvalid(Bit#(1) v);
+    method Action      rdata(Bit#(dataWidth) v);
+    method Action      rid(Bit#(tagWidth) v);
+    method Action      rlast(Bit#(1) v);
+    method Bit#(1)     rready();
+    method Action      rresp(Bit#(2) v);
+    method Action      rvalid(Bit#(1) v);
+    method Bit#(dataWidth)     wdata();
+    method Bit#(tagWidth)     wid();
+    method Bit#(1)     wlast();
+    method Action      wready(Bit#(1) v);
+    method Bit#(TDiv#(dataWidth,8))     wstrb();
+    method Bit#(1)     wvalid();
+    interface extraType   extra;
+endinterface
+
+interface Axi4MasterUntaggedBits#(numeric type addrWidth, numeric type dataWidth);
+    method Bit#(addrWidth)     araddr();
+    method Bit#(2)     arburst();
+    method Bit#(4)     arcache();
+    method Bit#(8)     arlen();
+    //method Bit#(2)     arlock();
+    method Bit#(3)     arprot();
+    //method Bit#(4)     arqos();
+    method Action      arready(Bit#(1) v);
+    method Bit#(3)     arsize();
+    method Bit#(1)     arvalid();
+    method Bit#(addrWidth)     awaddr();
+    method Bit#(2)     awburst();
+    method Bit#(4)     awcache();
+    method Bit#(8)     awlen();
+    //method Bit#(2)     awlock();
+    method Bit#(3)     awprot();
+    //method Bit#(4)     awqos();
+    method Action      awready(Bit#(1) v);
+    method Bit#(3)     awsize();
+    method Bit#(1)     awvalid();
+    method Bit#(1)     bready();
+    method Action      bresp(Bit#(2) v);
+    method Action      bvalid(Bit#(1) v);
+    method Action      rdata(Bit#(dataWidth) v);
+    method Action      rlast(Bit#(1) v);
+    method Bit#(1)     rready();
+    method Action      rresp(Bit#(2) v);
+    method Action      rvalid(Bit#(1) v);
+    method Bit#(dataWidth)     wdata();
+    method Bit#(1)     wlast();
+    method Action      wready(Bit#(1) v);
+    method Bit#(TDiv#(dataWidth,8))     wstrb();
+    method Bit#(1)     wvalid();
+endinterface
+
+typeclass ToAxi4MasterBits#(type atype, type btype);
+   function atype toAxi4MasterBits(btype b);
+endtypeclass
+
+instance ToAxi4MasterBits#(Axi4MasterBits#(addrWidth,dataWidth,tagWidth,Empty), Axi4MasterUntaggedBits#(addrWidth,dataWidth));
+function Axi4MasterBits#(addrWidth,dataWidth,tagWidth,Empty) toAxi4MasterBits(Axi4MasterUntaggedBits#(addrWidth,dataWidth) m);
+   return (interface Axi4MasterBits#(addrWidth,dataWidth,tagWidth,Empty);
+    method araddr = m.araddr;
+      method arburst = m.arburst;
+      method arcache = m.arcache;
+      //method aresetn = no_reset;
+      method Bit#(tagWidth)     arid(); return 0; endmethod
+      method arlen = m.arlen;
+      //method arlock = m.arlock;
+      method arprot = m.arprot;
+      //method arqos = m.arqos;
+      method arready = m.arready;
+      method arsize = m.arsize;
+      method arvalid = m.arvalid;
+      method awaddr = m.awaddr;
+      method awburst = m.awburst;
+      method awcache = m.awcache;
+      method Bit#(tagWidth)     awid(); return 0; endmethod
+      method awlen = m.awlen;
+      //method awlock = m.awlock;
+      method awprot = m.awprot;
+      //method awqos = m.awqos;
+      method awready = m.awready;
+      method awsize = m.awsize;
+      method awvalid = m.awvalid;
+      method Action      bid(Bit#(tagWidth) v); endmethod
+      method bready = m.bready;
+      method bresp = m.bresp;
+      method bvalid = m.bvalid;
+      method rdata = m.rdata;
+      method Action      rid(Bit#(tagWidth) v); endmethod
+      method rlast = m.rlast;
+      method rready = m.rready;
+      method rresp = m.rresp;
+      method rvalid = m.rvalid;
+      method wdata = m.wdata;
+      method Bit#(tagWidth)     wid(); return 0; endmethod
+      method wlast = m.wlast;
+      method wready = m.wready;
+      method wstrb = m.wstrb;
+      method wvalid = m.wvalid;
+      interface extra = ?;   
+      endinterface);
+endfunction
+endinstance
+
 interface Axi4SlaveBits#(numeric type addrWidth, numeric type dataWidth, numeric type tagWidth, type extraType);
     method Action      araddr(Bit#(addrWidth) v);
     method Action      arburst(Bit#(2) v);
@@ -162,6 +293,25 @@ interface Axi4SlaveBits#(numeric type addrWidth, numeric type dataWidth, numeric
     method Action      wvalid(Bit#(1) v);
     method Bit#(tagWidth)     rid();
     interface extraType   extra;
+endinterface
+
+interface Axi4SlaveLiteBits#(numeric type addrWidth, numeric type dataWidth);
+    method Action      araddr(Bit#(addrWidth) v);
+    method Bit#(1)     arready();
+    method Action      arvalid(Bit#(1) v);
+    method Action      awaddr(Bit#(addrWidth) v);
+    method Bit#(1)     awready();
+    method Action      awvalid(Bit#(1) v);
+    method Action      bready(Bit#(1) v);
+    method Bit#(2)     bresp();
+    method Bit#(1)     bvalid();
+    method Bit#(dataWidth)     rdata();
+    method Action      rready(Bit#(1) v);
+    method Bit#(2)     rresp();
+    method Bit#(1)     rvalid();
+    method Action      wdata(Bit#(dataWidth) v);
+    method Bit#(1)     wready();
+    method Action      wvalid(Bit#(1) v);
 endinterface
 
 typedef AxiMasterBits#(32,32,12,Empty) Pps7Maxigp;
