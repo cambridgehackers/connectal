@@ -27,6 +27,7 @@ import DefaultValue::*;
 import XilinxCells::*;
 import GetPut::*;
 import AxiBits::*;
+import AxiStream::*;
 
 (* always_ready, always_enabled *)
 interface AxidmabviAxi;
@@ -104,19 +105,6 @@ interface AxidmabviM_axi_sg;
     method Bit#(1)     wvalid();
 endinterface
 (* always_ready, always_enabled *)
-interface AxidmabviM_axis_mm2s;
-    method Bit#(32)     cntrl_tdata();
-    method Bit#(4)     cntrl_tkeep();
-    method Bit#(1)     cntrl_tlast();
-    method Action      cntrl_tready(Bit#(1) v);
-    method Bit#(1)     cntrl_tvalid();
-    method Bit#(32)     tdata();
-    method Bit#(4)     tkeep();
-    method Bit#(1)     tlast();
-    method Action      tready(Bit#(1) v);
-    method Bit#(1)     tvalid();
-endinterface
-(* always_ready, always_enabled *)
 interface AxidmabviMm2s;
     method Bit#(1)     cntrl_reset_out_n();
     method Bit#(1)     introut();
@@ -149,29 +137,18 @@ interface AxidmabviS_axi_lite;
     method Action      wvalid(Bit#(1) v);
 endinterface
 (* always_ready, always_enabled *)
-interface AxidmabviS_axis_s2mm;
-    method Action      sts_tdata(Bit#(32) v);
-    method Action      sts_tkeep(Bit#(4) v);
-    method Action      sts_tlast(Bit#(1) v);
-    method Bit#(1)     sts_tready();
-    method Action      sts_tvalid(Bit#(1) v);
-    method Action      tdata(Bit#(32) v);
-    method Action      tkeep(Bit#(4) v);
-    method Action      tlast(Bit#(1) v);
-    method Bit#(1)     tready();
-    method Action      tvalid(Bit#(1) v);
-endinterface
-(* always_ready, always_enabled *)
 interface AxiDmaBvi;
     interface AxidmabviAxi     axi;
     interface AxidmabviM_axi_mm2s     m_axi_mm2s;
     interface AxidmabviM_axi_s2mm     m_axi_s2mm;
     interface AxidmabviM_axi_sg     m_axi_sg;
-    interface AxidmabviM_axis_mm2s     m_axis_mm2s;
+    interface AxiStreamMaster#(32)     m_axis_mm2s;
+    interface AxiStreamMaster#(32)     m_axis_mm2s_cntrl;
     interface AxidmabviMm2s     mm2s;
     interface AxidmabviS2mm     s2mm;
     interface AxidmabviS_axi_lite     s_axi_lite;
-    interface AxidmabviS_axis_s2mm     s_axis_s2mm;
+    interface AxiStreamSlave#(32)     s_axis_s2mm_sts;
+    interface AxiStreamSlave#(32)     s_axis_s2mm;
 endinterface
 import "BVI" axi_dma_0 =
 module mkAxiDmaBvi(AxiDmaBvi);
@@ -248,12 +225,14 @@ module mkAxiDmaBvi(AxiDmaBvi);
         method m_axi_sg_wstrb wstrb();
         method m_axi_sg_wvalid wvalid();
     endinterface
-    interface AxidmabviM_axis_mm2s     m_axis_mm2s;
-        method m_axis_mm2s_cntrl_tdata cntrl_tdata();
-        method m_axis_mm2s_cntrl_tkeep cntrl_tkeep();
-        method m_axis_mm2s_cntrl_tlast cntrl_tlast();
-        method cntrl_tready(m_axis_mm2s_cntrl_tready) enable((*inhigh*) EN_m_axis_mm2s_cntrl_tready);
-        method m_axis_mm2s_cntrl_tvalid cntrl_tvalid();
+    interface AxiStreamMaster     m_axis_mm2s_cntrl;
+        method m_axis_mm2s_cntrl_tdata tdata();
+        method m_axis_mm2s_cntrl_tkeep tkeep();
+        method m_axis_mm2s_cntrl_tlast tlast();
+        method tready(m_axis_mm2s_cntrl_tready) enable((*inhigh*) EN_m_axis_mm2s_cntrl_tready);
+        method m_axis_mm2s_cntrl_tvalid tvalid();
+   endinterface
+    interface AxiStreamMaster     m_axis_mm2s;
         method m_axis_mm2s_tdata tdata();
         method m_axis_mm2s_tkeep tkeep();
         method m_axis_mm2s_tlast tlast();
@@ -289,17 +268,19 @@ module mkAxiDmaBvi(AxiDmaBvi);
         method s_axi_lite_wready wready();
         method wvalid(s_axi_lite_wvalid) enable((*inhigh*) EN_s_axi_lite_wvalid);
     endinterface
-    interface AxidmabviS_axis_s2mm     s_axis_s2mm;
-        method sts_tdata(s_axis_s2mm_sts_tdata) enable((*inhigh*) EN_s_axis_s2mm_sts_tdata);
-        method sts_tkeep(s_axis_s2mm_sts_tkeep) enable((*inhigh*) EN_s_axis_s2mm_sts_tkeep);
-        method sts_tlast(s_axis_s2mm_sts_tlast) enable((*inhigh*) EN_s_axis_s2mm_sts_tlast);
-        method s_axis_s2mm_sts_tready sts_tready();
-        method sts_tvalid(s_axis_s2mm_sts_tvalid) enable((*inhigh*) EN_s_axis_s2mm_sts_tvalid);
+    interface AxiStreamSlave     s_axis_s2mm_sts;
+        method tdata(s_axis_s2mm_sts_tdata) enable((*inhigh*) EN_s_axis_s2mm_sts_tdata);
+        method tkeep(s_axis_s2mm_sts_tkeep) enable((*inhigh*) EN_s_axis_s2mm_sts_tkeep);
+        method tlast(s_axis_s2mm_sts_tlast) enable((*inhigh*) EN_s_axis_s2mm_sts_tlast);
+        method s_axis_s2mm_sts_tready tready();
+        method tvalid(s_axis_s2mm_sts_tvalid) enable((*inhigh*) EN_s_axis_s2mm_sts_tvalid);
+    endinterface
+    interface AxiStreamSlave     s_axis_s2mm;
         method tdata(s_axis_s2mm_tdata) enable((*inhigh*) EN_s_axis_s2mm_tdata);
         method tkeep(s_axis_s2mm_tkeep) enable((*inhigh*) EN_s_axis_s2mm_tkeep);
         method tlast(s_axis_s2mm_tlast) enable((*inhigh*) EN_s_axis_s2mm_tlast);
         method s_axis_s2mm_tready tready();
         method tvalid(s_axis_s2mm_tvalid) enable((*inhigh*) EN_s_axis_s2mm_tvalid);
     endinterface
-    schedule (axi.dma_tstvec, axi.resetn, m_axi_mm2s.aclk, m_axi_mm2s.araddr, m_axi_mm2s.arburst, m_axi_mm2s.arcache, m_axi_mm2s.arlen, m_axi_mm2s.arprot, m_axi_mm2s.arready, m_axi_mm2s.arsize, m_axi_mm2s.arvalid, m_axi_mm2s.rdata, m_axi_mm2s.rlast, m_axi_mm2s.rready, m_axi_mm2s.rresp, m_axi_mm2s.rvalid, m_axi_s2mm.aclk, m_axi_s2mm.awaddr, m_axi_s2mm.awburst, m_axi_s2mm.awcache, m_axi_s2mm.awlen, m_axi_s2mm.awprot, m_axi_s2mm.awready, m_axi_s2mm.awsize, m_axi_s2mm.awvalid, m_axi_s2mm.bready, m_axi_s2mm.bresp, m_axi_s2mm.bvalid, m_axi_s2mm.wdata, m_axi_s2mm.wlast, m_axi_s2mm.wready, m_axi_s2mm.wstrb, m_axi_s2mm.wvalid, m_axi_sg.aclk, m_axi_sg.araddr, m_axi_sg.arburst, m_axi_sg.arcache, m_axi_sg.arlen, m_axi_sg.arprot, m_axi_sg.arready, m_axi_sg.arsize, m_axi_sg.arvalid, m_axi_sg.awaddr, m_axi_sg.awburst, m_axi_sg.awcache, m_axi_sg.awlen, m_axi_sg.awprot, m_axi_sg.awready, m_axi_sg.awsize, m_axi_sg.awvalid, m_axi_sg.bready, m_axi_sg.bresp, m_axi_sg.bvalid, m_axi_sg.rdata, m_axi_sg.rlast, m_axi_sg.rready, m_axi_sg.rresp, m_axi_sg.rvalid, m_axi_sg.wdata, m_axi_sg.wlast, m_axi_sg.wready, m_axi_sg.wstrb, m_axi_sg.wvalid, m_axis_mm2s.cntrl_tdata, m_axis_mm2s.cntrl_tkeep, m_axis_mm2s.cntrl_tlast, m_axis_mm2s.cntrl_tready, m_axis_mm2s.cntrl_tvalid, m_axis_mm2s.tdata, m_axis_mm2s.tkeep, m_axis_mm2s.tlast, m_axis_mm2s.tready, m_axis_mm2s.tvalid, mm2s.cntrl_reset_out_n, mm2s.introut, mm2s.prmry_reset_out_n, s2mm.introut, s2mm.prmry_reset_out_n, s2mm.sts_reset_out_n, s_axi_lite.aclk, s_axi_lite.araddr, s_axi_lite.arready, s_axi_lite.arvalid, s_axi_lite.awaddr, s_axi_lite.awready, s_axi_lite.awvalid, s_axi_lite.bready, s_axi_lite.bresp, s_axi_lite.bvalid, s_axi_lite.rdata, s_axi_lite.rready, s_axi_lite.rresp, s_axi_lite.rvalid, s_axi_lite.wdata, s_axi_lite.wready, s_axi_lite.wvalid, s_axis_s2mm.sts_tdata, s_axis_s2mm.sts_tkeep, s_axis_s2mm.sts_tlast, s_axis_s2mm.sts_tready, s_axis_s2mm.sts_tvalid, s_axis_s2mm.tdata, s_axis_s2mm.tkeep, s_axis_s2mm.tlast, s_axis_s2mm.tready, s_axis_s2mm.tvalid) CF (axi.dma_tstvec, axi.resetn, m_axi_mm2s.aclk, m_axi_mm2s.araddr, m_axi_mm2s.arburst, m_axi_mm2s.arcache, m_axi_mm2s.arlen, m_axi_mm2s.arprot, m_axi_mm2s.arready, m_axi_mm2s.arsize, m_axi_mm2s.arvalid, m_axi_mm2s.rdata, m_axi_mm2s.rlast, m_axi_mm2s.rready, m_axi_mm2s.rresp, m_axi_mm2s.rvalid, m_axi_s2mm.aclk, m_axi_s2mm.awaddr, m_axi_s2mm.awburst, m_axi_s2mm.awcache, m_axi_s2mm.awlen, m_axi_s2mm.awprot, m_axi_s2mm.awready, m_axi_s2mm.awsize, m_axi_s2mm.awvalid, m_axi_s2mm.bready, m_axi_s2mm.bresp, m_axi_s2mm.bvalid, m_axi_s2mm.wdata, m_axi_s2mm.wlast, m_axi_s2mm.wready, m_axi_s2mm.wstrb, m_axi_s2mm.wvalid, m_axi_sg.aclk, m_axi_sg.araddr, m_axi_sg.arburst, m_axi_sg.arcache, m_axi_sg.arlen, m_axi_sg.arprot, m_axi_sg.arready, m_axi_sg.arsize, m_axi_sg.arvalid, m_axi_sg.awaddr, m_axi_sg.awburst, m_axi_sg.awcache, m_axi_sg.awlen, m_axi_sg.awprot, m_axi_sg.awready, m_axi_sg.awsize, m_axi_sg.awvalid, m_axi_sg.bready, m_axi_sg.bresp, m_axi_sg.bvalid, m_axi_sg.rdata, m_axi_sg.rlast, m_axi_sg.rready, m_axi_sg.rresp, m_axi_sg.rvalid, m_axi_sg.wdata, m_axi_sg.wlast, m_axi_sg.wready, m_axi_sg.wstrb, m_axi_sg.wvalid, m_axis_mm2s.cntrl_tdata, m_axis_mm2s.cntrl_tkeep, m_axis_mm2s.cntrl_tlast, m_axis_mm2s.cntrl_tready, m_axis_mm2s.cntrl_tvalid, m_axis_mm2s.tdata, m_axis_mm2s.tkeep, m_axis_mm2s.tlast, m_axis_mm2s.tready, m_axis_mm2s.tvalid, mm2s.cntrl_reset_out_n, mm2s.introut, mm2s.prmry_reset_out_n, s2mm.introut, s2mm.prmry_reset_out_n, s2mm.sts_reset_out_n, s_axi_lite.aclk, s_axi_lite.araddr, s_axi_lite.arready, s_axi_lite.arvalid, s_axi_lite.awaddr, s_axi_lite.awready, s_axi_lite.awvalid, s_axi_lite.bready, s_axi_lite.bresp, s_axi_lite.bvalid, s_axi_lite.rdata, s_axi_lite.rready, s_axi_lite.rresp, s_axi_lite.rvalid, s_axi_lite.wdata, s_axi_lite.wready, s_axi_lite.wvalid, s_axis_s2mm.sts_tdata, s_axis_s2mm.sts_tkeep, s_axis_s2mm.sts_tlast, s_axis_s2mm.sts_tready, s_axis_s2mm.sts_tvalid, s_axis_s2mm.tdata, s_axis_s2mm.tkeep, s_axis_s2mm.tlast, s_axis_s2mm.tready, s_axis_s2mm.tvalid);
+    schedule (axi.dma_tstvec, axi.resetn, m_axi_mm2s.aclk, m_axi_mm2s.araddr, m_axi_mm2s.arburst, m_axi_mm2s.arcache, m_axi_mm2s.arlen, m_axi_mm2s.arprot, m_axi_mm2s.arready, m_axi_mm2s.arsize, m_axi_mm2s.arvalid, m_axi_mm2s.rdata, m_axi_mm2s.rlast, m_axi_mm2s.rready, m_axi_mm2s.rresp, m_axi_mm2s.rvalid, m_axi_s2mm.aclk, m_axi_s2mm.awaddr, m_axi_s2mm.awburst, m_axi_s2mm.awcache, m_axi_s2mm.awlen, m_axi_s2mm.awprot, m_axi_s2mm.awready, m_axi_s2mm.awsize, m_axi_s2mm.awvalid, m_axi_s2mm.bready, m_axi_s2mm.bresp, m_axi_s2mm.bvalid, m_axi_s2mm.wdata, m_axi_s2mm.wlast, m_axi_s2mm.wready, m_axi_s2mm.wstrb, m_axi_s2mm.wvalid, m_axi_sg.aclk, m_axi_sg.araddr, m_axi_sg.arburst, m_axi_sg.arcache, m_axi_sg.arlen, m_axi_sg.arprot, m_axi_sg.arready, m_axi_sg.arsize, m_axi_sg.arvalid, m_axi_sg.awaddr, m_axi_sg.awburst, m_axi_sg.awcache, m_axi_sg.awlen, m_axi_sg.awprot, m_axi_sg.awready, m_axi_sg.awsize, m_axi_sg.awvalid, m_axi_sg.bready, m_axi_sg.bresp, m_axi_sg.bvalid, m_axi_sg.rdata, m_axi_sg.rlast, m_axi_sg.rready, m_axi_sg.rresp, m_axi_sg.rvalid, m_axi_sg.wdata, m_axi_sg.wlast, m_axi_sg.wready, m_axi_sg.wstrb, m_axi_sg.wvalid, m_axis_mm2s_cntrl.tdata, m_axis_mm2s_cntrl.tkeep, m_axis_mm2s_cntrl.tlast, m_axis_mm2s_cntrl.tready, m_axis_mm2s_cntrl.tvalid, m_axis_mm2s.tdata, m_axis_mm2s.tkeep, m_axis_mm2s.tlast, m_axis_mm2s.tready, m_axis_mm2s.tvalid, mm2s.cntrl_reset_out_n, mm2s.introut, mm2s.prmry_reset_out_n, s2mm.introut, s2mm.prmry_reset_out_n, s2mm.sts_reset_out_n, s_axi_lite.aclk, s_axi_lite.araddr, s_axi_lite.arready, s_axi_lite.arvalid, s_axi_lite.awaddr, s_axi_lite.awready, s_axi_lite.awvalid, s_axi_lite.bready, s_axi_lite.bresp, s_axi_lite.bvalid, s_axi_lite.rdata, s_axi_lite.rready, s_axi_lite.rresp, s_axi_lite.rvalid, s_axi_lite.wdata, s_axi_lite.wready, s_axi_lite.wvalid, s_axis_s2mm_sts.tdata, s_axis_s2mm_sts.tkeep, s_axis_s2mm_sts.tlast, s_axis_s2mm_sts.tready, s_axis_s2mm_sts.tvalid, s_axis_s2mm.tdata, s_axis_s2mm.tkeep, s_axis_s2mm.tlast, s_axis_s2mm.tready, s_axis_s2mm.tvalid) CF (axi.dma_tstvec, axi.resetn, m_axi_mm2s.aclk, m_axi_mm2s.araddr, m_axi_mm2s.arburst, m_axi_mm2s.arcache, m_axi_mm2s.arlen, m_axi_mm2s.arprot, m_axi_mm2s.arready, m_axi_mm2s.arsize, m_axi_mm2s.arvalid, m_axi_mm2s.rdata, m_axi_mm2s.rlast, m_axi_mm2s.rready, m_axi_mm2s.rresp, m_axi_mm2s.rvalid, m_axi_s2mm.aclk, m_axi_s2mm.awaddr, m_axi_s2mm.awburst, m_axi_s2mm.awcache, m_axi_s2mm.awlen, m_axi_s2mm.awprot, m_axi_s2mm.awready, m_axi_s2mm.awsize, m_axi_s2mm.awvalid, m_axi_s2mm.bready, m_axi_s2mm.bresp, m_axi_s2mm.bvalid, m_axi_s2mm.wdata, m_axi_s2mm.wlast, m_axi_s2mm.wready, m_axi_s2mm.wstrb, m_axi_s2mm.wvalid, m_axi_sg.aclk, m_axi_sg.araddr, m_axi_sg.arburst, m_axi_sg.arcache, m_axi_sg.arlen, m_axi_sg.arprot, m_axi_sg.arready, m_axi_sg.arsize, m_axi_sg.arvalid, m_axi_sg.awaddr, m_axi_sg.awburst, m_axi_sg.awcache, m_axi_sg.awlen, m_axi_sg.awprot, m_axi_sg.awready, m_axi_sg.awsize, m_axi_sg.awvalid, m_axi_sg.bready, m_axi_sg.bresp, m_axi_sg.bvalid, m_axi_sg.rdata, m_axi_sg.rlast, m_axi_sg.rready, m_axi_sg.rresp, m_axi_sg.rvalid, m_axi_sg.wdata, m_axi_sg.wlast, m_axi_sg.wready, m_axi_sg.wstrb, m_axi_sg.wvalid, m_axis_mm2s_cntrl.tdata, m_axis_mm2s_cntrl.tkeep, m_axis_mm2s_cntrl.tlast, m_axis_mm2s_cntrl.tready, m_axis_mm2s_cntrl.tvalid, m_axis_mm2s.tdata, m_axis_mm2s.tkeep, m_axis_mm2s.tlast, m_axis_mm2s.tready, m_axis_mm2s.tvalid, mm2s.cntrl_reset_out_n, mm2s.introut, mm2s.prmry_reset_out_n, s2mm.introut, s2mm.prmry_reset_out_n, s2mm.sts_reset_out_n, s_axi_lite.aclk, s_axi_lite.araddr, s_axi_lite.arready, s_axi_lite.arvalid, s_axi_lite.awaddr, s_axi_lite.awready, s_axi_lite.awvalid, s_axi_lite.bready, s_axi_lite.bresp, s_axi_lite.bvalid, s_axi_lite.rdata, s_axi_lite.rready, s_axi_lite.rresp, s_axi_lite.rvalid, s_axi_lite.wdata, s_axi_lite.wready, s_axi_lite.wvalid, s_axis_s2mm_sts.tdata, s_axis_s2mm_sts.tkeep, s_axis_s2mm_sts.tlast, s_axis_s2mm_sts.tready, s_axis_s2mm_sts.tvalid, s_axis_s2mm.tdata, s_axis_s2mm.tkeep, s_axis_s2mm.tlast, s_axis_s2mm.tready, s_axis_s2mm.tvalid);
 endmodule

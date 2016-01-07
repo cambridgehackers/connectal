@@ -14,6 +14,7 @@ import Clocks::*;
 import DefaultValue::*;
 import XilinxCells::*;
 import GetPut::*;
+import AxiStream::*;
 import AxiBits::*;
 
 (* always_ready, always_enabled *)
@@ -36,22 +37,6 @@ endinterface
 interface AxiethbviGtref;
     method Bit#(1)     clk_buf_out();
     method Bit#(1)     clk_out();
-endinterface
-(* always_ready, always_enabled *)
-interface AxiethbviM_axis_rxd;
-    method Bit#(32)     tdata();
-    method Bit#(4)     tkeep();
-    method Bit#(1)     tlast();
-    method Action      tready(Bit#(1) v);
-    method Bit#(1)     tvalid();
-endinterface
-(* always_ready, always_enabled *)
-interface AxiethbviM_axis_rxs;
-    method Bit#(32)     tdata();
-    method Bit#(4)     tkeep();
-    method Bit#(1)     tlast();
-    method Action      tready(Bit#(1) v);
-    method Bit#(1)     tvalid();
 endinterface
 (* always_ready, always_enabled *)
 interface AxiethbviMac;
@@ -115,22 +100,6 @@ interface AxiethbviS_axi_lite;
     method Action      resetn(Bit#(1) v);
 endinterface
 (* always_ready, always_enabled *)
-interface AxiethbviS_axis_txc;
-    method Action      tdata(Bit#(32) v);
-    method Action      tkeep(Bit#(4) v);
-    method Action      tlast(Bit#(1) v);
-    method Bit#(1)     tready();
-    method Action      tvalid(Bit#(1) v);
-endinterface
-(* always_ready, always_enabled *)
-interface AxiethbviS_axis_txd;
-    method Action      tdata(Bit#(32) v);
-    method Action      tkeep(Bit#(4) v);
-    method Action      tlast(Bit#(1) v);
-    method Bit#(1)     tready();
-    method Action      tvalid(Bit#(1) v);
-endinterface
-(* always_ready, always_enabled *)
 interface AxiethbviSgmii;
     method Action      rxn(Bit#(1) v);
     method Action      rxp(Bit#(1) v);
@@ -152,8 +121,8 @@ interface AxiEthBvi;
     interface AxiethbviGt     gt0;
     interface AxiethbviGtref     gtref;
     method Bit#(1)     interrupt();
-    interface AxiethbviM_axis_rxd     m_axis_rxd;
-    interface AxiethbviM_axis_rxs     m_axis_rxs;
+    interface AxiStreamMaster#(32)     m_axis_rxd;
+    interface AxiStreamMaster#(32)     m_axis_rxs;
     interface AxiethbviMac     mac;
     interface AxiethbviMdio     mdio;
     interface AxiethbviMgt     mgt;
@@ -165,8 +134,8 @@ interface AxiEthBvi;
     interface AxiethbviRxuserclk     rxuserclk;
     interface AxiethbviS_axi     s_axi;
     interface AxiethbviS_axi_lite     s_axi_lite;
-    interface AxiethbviS_axis_txc     s_axis_txc;
-    interface AxiethbviS_axis_txd     s_axis_txd;
+    interface AxiStreamSlave#(32)     s_axis_txc;
+    interface AxiStreamSlave#(32)     s_axis_txd;
     interface AxiethbviSgmii     sgmii;
     interface AxiethbviSignal     signal;
     interface AxiethbviUserclk     userclk2;
@@ -194,14 +163,14 @@ module mkAxiEthBvi(AxiEthBvi);
         method gtref_clk_out clk_out();
     endinterface
     method interrupt interrupt();
-    interface AxiethbviM_axis_rxd     m_axis_rxd;
+    interface AxiStreamMaster     m_axis_rxd;
         method m_axis_rxd_tdata tdata();
         method m_axis_rxd_tkeep tkeep();
         method m_axis_rxd_tlast tlast();
         method tready(m_axis_rxd_tready) enable((*inhigh*) EN_m_axis_rxd_tready);
         method m_axis_rxd_tvalid tvalid();
     endinterface
-    interface AxiethbviM_axis_rxs     m_axis_rxs;
+    interface AxiStreamMaster     m_axis_rxs;
         method m_axis_rxs_tdata tdata();
         method m_axis_rxs_tkeep tkeep();
         method m_axis_rxs_tlast tlast();
@@ -262,14 +231,14 @@ module mkAxiEthBvi(AxiEthBvi);
         method clk(s_axi_lite_clk) enable((*inhigh*) EN_s_axi_lite_clk);
         method resetn(s_axi_lite_resetn) enable((*inhigh*) EN_s_axi_lite_resetn);
     endinterface
-    interface AxiethbviS_axis_txc     s_axis_txc;
+    interface AxiStreamSlave     s_axis_txc;
         method tdata(s_axis_txc_tdata) enable((*inhigh*) EN_s_axis_txc_tdata);
         method tkeep(s_axis_txc_tkeep) enable((*inhigh*) EN_s_axis_txc_tkeep);
         method tlast(s_axis_txc_tlast) enable((*inhigh*) EN_s_axis_txc_tlast);
         method s_axis_txc_tready tready();
         method tvalid(s_axis_txc_tvalid) enable((*inhigh*) EN_s_axis_txc_tvalid);
     endinterface
-    interface AxiethbviS_axis_txd     s_axis_txd;
+    interface AxiStreamSlave     s_axis_txd;
         method tdata(s_axis_txd_tdata) enable((*inhigh*) EN_s_axis_txd_tdata);
         method tkeep(s_axis_txd_tkeep) enable((*inhigh*) EN_s_axis_txd_tkeep);
         method tlast(s_axis_txd_tlast) enable((*inhigh*) EN_s_axis_txd_tlast);
