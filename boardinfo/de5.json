@@ -1,6 +1,6 @@
 {
     "options": {
-        "bsvdefines" : ["ALTERA=1", "StratixV", "PCIE", "PCIE_NO_BSCAN", "PcieHostInterface", "PhysAddrWidth=40", "NUMBER_OF_LEDS=4", "NUMBER_OF_10G_PORTS=4", "PcieLanes=8"],
+        "bsvdefines" : ["ALTERA=1", "StratixV", "PCIE", "PCIE_NO_BSCAN", "PcieHostInterface", "PhysAddrWidth=40", "NUMBER_OF_LEDS=4", "NUMBER_OF_10G_PORTS=4", "SYNTHESIS", "PcieLanes=8"],
         "os" : "ubuntu",
         "partname" : "5SGXEA7N2F45C2",
         "need_pcie" : "s5_gen2x8",

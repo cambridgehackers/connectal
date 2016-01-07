@@ -334,14 +334,18 @@ vsim.dir/xsc/%.lnx64.o: jni/%.cpp
 
 VSIM_DEFINES = $(subst -D ,+define+,$(BSVDEFINES))
 VSIM_SV = $(addprefix -sv $(CONNECTALDIR)/verilog/, xsimtop.sv XsimDmaReadWrite.sv XsimLink.sv XsimSink.sv XsimSource.sv)
-SV_SEARCH_PATH = $(addprefix -y , $(SYSTEMVERILOG_PATH) $(SYSTEMVERILOG_PATH)/submodules $(SYSTEMVERILOG_PATH)/submodules/mentor)
-VSIM_ALTERA_LIB = $(addprefix -v $(QUARTUSDIR)/eda/sim_lib/, altera_mf.v 220model.v sgate.v altera_primitives.v)
+SV_SEARCH_PATH = $(addprefix -y , $(VERILOG_PATH))
+SV_SEARCH_PATH += $(addprefix -y , $(addsuffix /submodules, $(VERILOG_PATH)))
+SV_SEARCH_PATH += $(addprefix -y , $(addsuffix /submodules/mentor, $(VERILOG_PATH)))
+VSIM_LIBRARY_FILES += $(addprefix -sv $(QUARTUSDIR)/eda/sim_lib/, altera_lnsim.sv)
+VSIM_LIBRARY_FILES += $(addprefix -v $(QUARTUSDIR)/eda/sim_lib/, altera_mf.v 220model.v sgate.v altera_primitives.v mentor/stratixv_atoms_ncrypt.v stratixv_atoms.v mentor/stratixv_hssi_atoms_ncrypt.v stratixv_hssi_atoms.v)
+VSIM_MISC_FILES = $(addprefix -sv , $(MODELSIM_FILES))
 
 vsim: verilog $(VSIM_OBJECTS)
 	rm -rf work
 	vlib work
-	vlog -timescale 1ns/1ps -dpiheader XsimTop.h $(VSIM_DEFINES) $(VSIM_SV) $(VSIM_ALTERA_LIB) +libext+.v+.sv $(SV_SEARCH_PATH) $(VERILOG_PATH:%=-y %) -sv verilog/*.v
-	g++ -O -g -I$(DTOP)/jni -shared -fPIC -g -o $(DTOP)/bin/xsimtop.so $(VSIM_OBJECTS)
+	vlog -timescale 1ns/1ps -dpiheader XsimTop.h $(VSIM_DEFINES) $(VSIM_SV) $(VSIM_LIBRARY_FILES) $(VSIM_MISC_FILES) +libext+.sv+.v $(SV_SEARCH_PATH) $(VERILOG_PATH:%=-y %) -sv verilog/*.v
+	g++ -O -g -I$(DTOP)/jni -shared -fPIC -g -o xsimtop.so $(VSIM_OBJECTS)
 endif #MODELSIM
 
 obj/%.bvi: verilog/%.v
