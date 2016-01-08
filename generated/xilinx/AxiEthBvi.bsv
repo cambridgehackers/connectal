@@ -149,8 +149,8 @@ module mkAxiEthBvi#(Clock s_axi_clk, Reset s_axi_reset, Clock axis_clk,
         method mac_irq irq();
     endinterface
     interface AxiethbviMgt     mgt;
-        method clk_clk_n(mgt_clk_clk_n) enable((*inhigh*) EN_mgt_clk_clk_n);
-        method clk_clk_p(mgt_clk_clk_p) enable((*inhigh*) EN_mgt_clk_clk_p);
+        method clk_clk_n(mgt_clk_clk_n) enable((*inhigh*) EN_mgt_clk_clk_n) clocked_by (no_clock) reset_by (no_reset);
+        method clk_clk_p(mgt_clk_clk_p) enable((*inhigh*) EN_mgt_clk_clk_p) clocked_by (no_clock) reset_by (no_reset);
     endinterface
     interface AxiethbviMmcm     mmcm;
         method mmcm_locked_out locked_out();
@@ -187,24 +187,24 @@ module mkAxiEthBvi#(Clock s_axi_clk, Reset s_axi_reset, Clock axis_clk,
         method wvalid(s_axi_wvalid) enable((*inhigh*) EN_s_axi_wvalid) clocked_by (s_axi_clk) reset_by (s_axi_reset);
     endinterface
     interface AxiStreamSlave     s_axis_txc;
-        method tdata(s_axis_txc_tdata) enable((*inhigh*) EN_s_axis_txc_tdata) reset_by (s_axis_txc_reset);
-        method tkeep(s_axis_txc_tkeep) enable((*inhigh*) EN_s_axis_txc_tkeep) reset_by (s_axis_txc_reset);
-        method tlast(s_axis_txc_tlast) enable((*inhigh*) EN_s_axis_txc_tlast) reset_by (s_axis_txc_reset);
-        method s_axis_txc_tready tready() reset_by (s_axis_txc_reset);
-        method tvalid(s_axis_txc_tvalid) enable((*inhigh*) EN_s_axis_txc_tvalid) reset_by (s_axis_txc_reset);
+        method tdata(s_axis_txc_tdata) enable((*inhigh*) EN_s_axis_txc_tdata) clocked_by (axis_clk) reset_by (s_axis_txc_reset);
+        method tkeep(s_axis_txc_tkeep) enable((*inhigh*) EN_s_axis_txc_tkeep) clocked_by (axis_clk) reset_by (s_axis_txc_reset);
+        method tlast(s_axis_txc_tlast) enable((*inhigh*) EN_s_axis_txc_tlast) clocked_by (axis_clk) reset_by (s_axis_txc_reset);
+        method s_axis_txc_tready tready() clocked_by (axis_clk) reset_by (s_axis_txc_reset);
+        method tvalid(s_axis_txc_tvalid) enable((*inhigh*) EN_s_axis_txc_tvalid) clocked_by (axis_clk) reset_by (s_axis_txc_reset);
     endinterface
     interface AxiStreamSlave     s_axis_txd;
-        method tdata(s_axis_txd_tdata) enable((*inhigh*) EN_s_axis_txd_tdata) reset_by (s_axis_txd_reset);
-        method tkeep(s_axis_txd_tkeep) enable((*inhigh*) EN_s_axis_txd_tkeep) reset_by (s_axis_txd_reset);
-        method tlast(s_axis_txd_tlast) enable((*inhigh*) EN_s_axis_txd_tlast) reset_by (s_axis_txd_reset);
-        method s_axis_txd_tready tready() reset_by (s_axis_txd_reset);
-        method tvalid(s_axis_txd_tvalid) enable((*inhigh*) EN_s_axis_txd_tvalid) reset_by (s_axis_txd_reset);
+        method tdata(s_axis_txd_tdata) enable((*inhigh*) EN_s_axis_txd_tdata) clocked_by (axis_clk) reset_by (s_axis_txd_reset);
+        method tkeep(s_axis_txd_tkeep) enable((*inhigh*) EN_s_axis_txd_tkeep) clocked_by (axis_clk) reset_by (s_axis_txd_reset);
+        method tlast(s_axis_txd_tlast) enable((*inhigh*) EN_s_axis_txd_tlast) clocked_by (axis_clk) reset_by (s_axis_txd_reset);
+        method s_axis_txd_tready tready() clocked_by (axis_clk) reset_by (s_axis_txd_reset);
+        method tvalid(s_axis_txd_tvalid) enable((*inhigh*) EN_s_axis_txd_tvalid) clocked_by (axis_clk) reset_by (s_axis_txd_reset);
     endinterface
     interface AxiethbviSfp     sfp;
-        method rxn(sfp_rxn) enable((*inhigh*) EN_sfp_rxn);
-        method rxp(sfp_rxp) enable((*inhigh*) EN_sfp_rxp);
-        method sfp_txn txn();
-        method sfp_txp txp();
+        method rxn(sfp_rxn) enable((*inhigh*) EN_sfp_rxn) clocked_by (no_clock) reset_by (no_reset);
+        method rxp(sfp_rxp) enable((*inhigh*) EN_sfp_rxp) clocked_by (no_clock) reset_by (no_reset);
+        method sfp_txn txn() clocked_by (no_clock) reset_by (no_reset);
+        method sfp_txp txp() clocked_by (no_clock) reset_by (no_reset);
      endinterface
     interface AxiethbviSignal     signal;
         method detect(signal_detect) enable((*inhigh*) EN_signal_detect);
