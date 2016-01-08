@@ -103,16 +103,15 @@ endmodule
 
 module mkPhysMemToBramBE#(BRAMServerBE#(Bit#(bramAddrWidth), Bit#(busDataWidth), n) br) (PhysMemSlave#(busAddrWidth, busDataWidth))
    provisos(Add#(a__, bramAddrWidth, busAddrWidth)
-           ,Add#(n, 0, ByteEnableSize)
-           ,Div#(busDataWidth, 8, b__)
-           ,Add#(`DataBusWidth, 0, busDataWidth)
+           ,Mul#(n, 8, busDataWidth)
+           ,Div#(busDataWidth, 8, n)
            );
 
    FIFOF#(Bit#(6))  readTagFifo <- mkFIFOF();
    FIFOF#(Bit#(6)) writeTagFifo <- mkFIFOF();
    FIFO#(Bool)     readLastFifo <- mkFIFO();
-   FIFOF#(Bit#(ByteEnableSize)) readByteEnableFifo <- mkFIFOF;
-   FIFOF#(Bit#(ByteEnableSize)) writeByteEnableFifo <- mkFIFOF;
+   FIFOF#(Bit#(TDiv#(busDataWidth, 8))) readByteEnableFifo <- mkFIFOF;
+   FIFOF#(Bit#(TDiv#(busDataWidth, 8))) writeByteEnableFifo <- mkFIFOF;
 
    AddressGenerator#(busAddrWidth,busDataWidth) readAddrGenerator <- mkAddressGenerator();
    AddressGenerator#(busAddrWidth,busDataWidth) writeAddrGenerator <- mkAddressGenerator();
