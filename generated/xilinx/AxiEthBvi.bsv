@@ -32,13 +32,6 @@ interface AxiethbviMac;
     method Bit#(1)     irq();
 endinterface
 (* always_ready, always_enabled *)
-interface AxiethbviMdio;
-    method Bit#(1)     mdc();
-    method Action      mdio_i(Bit#(1) v);
-    method Bit#(1)     mdio_o();
-    method Bit#(1)     mdio_t();
-endinterface
-(* always_ready, always_enabled *)
 interface AxiethbviMgt;
     method Action      clk_clk_n(Bit#(1) v);
     method Action      clk_clk_p(Bit#(1) v);
@@ -46,10 +39,6 @@ endinterface
 (* always_ready, always_enabled *)
 interface AxiethbviMmcm;
     method Bit#(1)     locked_out();
-endinterface
-(* always_ready, always_enabled *)
-interface AxiethbviPhy;
-    method Bit#(1)     rst_n();
 endinterface
 (* always_ready, always_enabled *)
 interface AxiethbviPma;
@@ -84,11 +73,11 @@ interface AxiethbviS_axi;
     method Action      wvalid(Bit#(1) v);
 endinterface
 (* always_ready, always_enabled *)
-interface AxiethbviSgmii;
-    method Action      rxn(Bit#(1) v);
-    method Action      rxp(Bit#(1) v);
-    method Bit#(1)     txn();
-    method Bit#(1)     txp();
+interface AxiethbviSfp;
+     method Action      rxn(Bit#(1) v);
+     method Action      rxp(Bit#(1) v);
+     method Bit#(1)     txn();
+     method Bit#(1)     txp();
 endinterface
 (* always_ready, always_enabled *)
 interface AxiethbviSignal;
@@ -106,10 +95,8 @@ interface AxiEthBvi;
     interface AxiStreamMaster#(32)     m_axis_rxd;
     interface AxiStreamMaster#(32)     m_axis_rxs;
     interface AxiethbviMac     mac;
-    interface AxiethbviMdio     mdio;
     interface AxiethbviMgt     mgt;
     interface AxiethbviMmcm     mmcm;
-    interface AxiethbviPhy     phy;
     interface AxiethbviPma     pma;
     interface AxiethbviRef     reff;
     interface AxiethbviRxuserclk     rxuserclk2;
@@ -117,7 +104,7 @@ interface AxiEthBvi;
     interface AxiethbviS_axi     s_axi;
     interface AxiStreamSlave#(32)     s_axis_txc;
     interface AxiStreamSlave#(32)     s_axis_txd;
-    interface AxiethbviSgmii     sgmii;
+    interface AxiethbviSfp     sfp;
     interface AxiethbviSignal     signal;
     interface AxiethbviUserclk     userclk2;
     interface AxiethbviUserclk     userclk;
@@ -161,21 +148,12 @@ module mkAxiEthBvi#(Clock s_axi_clk, Reset s_axi_reset, Clock axis_clk,
     interface AxiethbviMac     mac;
         method mac_irq irq();
     endinterface
-    interface AxiethbviMdio     mdio;
-        method mdio_mdc mdc();
-        method mdio_i(mdio_mdio_i) enable((*inhigh*) EN_mdio_mdio_i);
-        method mdio_mdio_o mdio_o();
-        method mdio_mdio_t mdio_t();
-    endinterface
     interface AxiethbviMgt     mgt;
         method clk_clk_n(mgt_clk_clk_n) enable((*inhigh*) EN_mgt_clk_clk_n);
         method clk_clk_p(mgt_clk_clk_p) enable((*inhigh*) EN_mgt_clk_clk_p);
     endinterface
     interface AxiethbviMmcm     mmcm;
         method mmcm_locked_out locked_out();
-    endinterface
-    interface AxiethbviPhy     phy;
-        method phy_rst_n rst_n();
     endinterface
     interface AxiethbviPma     pma;
         method pma_reset_out reset_out();
@@ -222,12 +200,12 @@ module mkAxiEthBvi#(Clock s_axi_clk, Reset s_axi_reset, Clock axis_clk,
         method s_axis_txd_tready tready() reset_by (s_axis_txd_reset);
         method tvalid(s_axis_txd_tvalid) enable((*inhigh*) EN_s_axis_txd_tvalid) reset_by (s_axis_txd_reset);
     endinterface
-    interface AxiethbviSgmii     sgmii;
-        method rxn(sgmii_rxn) enable((*inhigh*) EN_sgmii_rxn);
-        method rxp(sgmii_rxp) enable((*inhigh*) EN_sgmii_rxp);
-        method sgmii_txn txn();
-        method sgmii_txp txp();
-    endinterface
+    interface AxiethbviSfp     sfp;
+        method rxn(sfp_rxn) enable((*inhigh*) EN_sfp_rxn);
+        method rxp(sfp_rxp) enable((*inhigh*) EN_sfp_rxp);
+        method sfp_txn txn();
+        method sfp_txp txp();
+     endinterface
     interface AxiethbviSignal     signal;
         method detect(signal_detect) enable((*inhigh*) EN_signal_detect);
     endinterface
@@ -237,5 +215,5 @@ module mkAxiEthBvi#(Clock s_axi_clk, Reset s_axi_reset, Clock axis_clk,
     interface AxiethbviUserclk     userclk;
         method userclk_out out();
     endinterface
-    schedule (gt0.qplloutclk_out, gt0.qplloutrefclk_out, gtref.clk_buf_out, gtref.clk_out, interrupt, m_axis_rxd.tdata, m_axis_rxd.tkeep, m_axis_rxd.tlast, m_axis_rxd.tready, m_axis_rxd.tvalid, m_axis_rxs.tdata, m_axis_rxs.tkeep, m_axis_rxs.tlast, m_axis_rxs.tready, m_axis_rxs.tvalid, mac.irq, mdio.mdc, mdio.mdio_i, mdio.mdio_o, mdio.mdio_t, mgt.clk_clk_n, mgt.clk_clk_p, mmcm.locked_out, phy.rst_n, pma.reset_out, reff.clk, rxuserclk2.out, rxuserclk.out, s_axi.araddr, s_axi.arready, s_axi.arvalid, s_axi.awaddr, s_axi.awready, s_axi.awvalid, s_axi.bready, s_axi.bresp, s_axi.bvalid, s_axi.rdata, s_axi.rready, s_axi.rresp, s_axi.rvalid, s_axi.wdata, s_axi.wready, s_axi.wstrb, s_axi.wvalid, s_axis_txc.tdata, s_axis_txc.tkeep, s_axis_txc.tlast, s_axis_txc.tready, s_axis_txc.tvalid, s_axis_txd.tdata, s_axis_txd.tkeep, s_axis_txd.tlast, s_axis_txd.tready, s_axis_txd.tvalid, sgmii.rxn, sgmii.rxp, sgmii.txn, sgmii.txp, signal.detect, userclk2.out, userclk.out) CF (gt0.qplloutclk_out, gt0.qplloutrefclk_out, gtref.clk_buf_out, gtref.clk_out, interrupt, m_axis_rxd.tdata, m_axis_rxd.tkeep, m_axis_rxd.tlast, m_axis_rxd.tready, m_axis_rxd.tvalid, m_axis_rxs.tdata, m_axis_rxs.tkeep, m_axis_rxs.tlast, m_axis_rxs.tready, m_axis_rxs.tvalid, mac.irq, mdio.mdc, mdio.mdio_i, mdio.mdio_o, mdio.mdio_t, mgt.clk_clk_n, mgt.clk_clk_p, mmcm.locked_out, phy.rst_n, pma.reset_out, reff.clk, rxuserclk2.out, rxuserclk.out, s_axi.araddr, s_axi.arready, s_axi.arvalid, s_axi.awaddr, s_axi.awready, s_axi.awvalid, s_axi.bready, s_axi.bresp, s_axi.bvalid, s_axi.rdata, s_axi.rready, s_axi.rresp, s_axi.rvalid, s_axi.wdata, s_axi.wready, s_axi.wstrb, s_axi.wvalid, s_axis_txc.tdata, s_axis_txc.tkeep, s_axis_txc.tlast, s_axis_txc.tready, s_axis_txc.tvalid, s_axis_txd.tdata, s_axis_txd.tkeep, s_axis_txd.tlast, s_axis_txd.tready, s_axis_txd.tvalid, sgmii.rxn, sgmii.rxp, sgmii.txn, sgmii.txp, signal.detect, userclk2.out, userclk.out);
+    schedule (gt0.qplloutclk_out, gt0.qplloutrefclk_out, gtref.clk_buf_out, gtref.clk_out, interrupt, m_axis_rxd.tdata, m_axis_rxd.tkeep, m_axis_rxd.tlast, m_axis_rxd.tready, m_axis_rxd.tvalid, m_axis_rxs.tdata, m_axis_rxs.tkeep, m_axis_rxs.tlast, m_axis_rxs.tready, m_axis_rxs.tvalid, mac.irq, mgt.clk_clk_n, mgt.clk_clk_p, mmcm.locked_out, pma.reset_out, reff.clk, rxuserclk2.out, rxuserclk.out, s_axi.araddr, s_axi.arready, s_axi.arvalid, s_axi.awaddr, s_axi.awready, s_axi.awvalid, s_axi.bready, s_axi.bresp, s_axi.bvalid, s_axi.rdata, s_axi.rready, s_axi.rresp, s_axi.rvalid, s_axi.wdata, s_axi.wready, s_axi.wstrb, s_axi.wvalid, s_axis_txc.tdata, s_axis_txc.tkeep, s_axis_txc.tlast, s_axis_txc.tready, s_axis_txc.tvalid, s_axis_txd.tdata, s_axis_txd.tkeep, s_axis_txd.tlast, s_axis_txd.tready, s_axis_txd.tvalid, sfp.rxn, sfp.rxp, sfp.txn, sfp.txp, signal.detect, userclk2.out, userclk.out) CF (gt0.qplloutclk_out, gt0.qplloutrefclk_out, gtref.clk_buf_out, gtref.clk_out, interrupt, m_axis_rxd.tdata, m_axis_rxd.tkeep, m_axis_rxd.tlast, m_axis_rxd.tready, m_axis_rxd.tvalid, m_axis_rxs.tdata, m_axis_rxs.tkeep, m_axis_rxs.tlast, m_axis_rxs.tready, m_axis_rxs.tvalid, mac.irq, mgt.clk_clk_n, mgt.clk_clk_p, mmcm.locked_out, pma.reset_out, reff.clk, rxuserclk2.out, rxuserclk.out, s_axi.araddr, s_axi.arready, s_axi.arvalid, s_axi.awaddr, s_axi.awready, s_axi.awvalid, s_axi.bready, s_axi.bresp, s_axi.bvalid, s_axi.rdata, s_axi.rready, s_axi.rresp, s_axi.rvalid, s_axi.wdata, s_axi.wready, s_axi.wstrb, s_axi.wvalid, s_axis_txc.tdata, s_axis_txc.tkeep, s_axis_txc.tlast, s_axis_txc.tready, s_axis_txc.tvalid, s_axis_txd.tdata, s_axis_txd.tkeep, s_axis_txd.tlast, s_axis_txd.tready, s_axis_txd.tvalid, sfp.rxn, sfp.rxp, sfp.txn, sfp.txp, signal.detect, userclk2.out, userclk.out);
 endmodule
