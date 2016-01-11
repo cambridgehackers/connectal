@@ -6,7 +6,7 @@ class AxiEthTestIndication : public AxiEthTestIndicationWrapper
 {
   sem_t sem;
 public:
-    unsigned short buf[16];
+    uint32_t buf[16];
     virtual void resetDone() {
 	fprintf(stderr, "reset done\n");
 	sem_post(&sem);
@@ -14,6 +14,16 @@ public:
     void wait() {
 	sem_wait(&sem);
     }
+
+    void readDone ( const uint32_t value ) {
+	buf[0] = value;
+	sem_post(&sem);
+    }
+
+    void writeDone (  ) {
+	sem_post(&sem);
+    }
+
     AxiEthTestIndication(unsigned int id) : AxiEthTestIndicationWrapper(id) {
       sem_init(&sem, 0, 0);
     }
