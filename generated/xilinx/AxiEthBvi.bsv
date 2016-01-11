@@ -149,8 +149,8 @@ module mkAxiEthBvi#(Clock s_axi_clk, Reset s_axi_reset, Clock axis_clk,
         method mac_irq irq();
     endinterface
     interface AxiethbviMgt     mgt;
-        method clk_clk_n(mgt_clk_clk_n) enable((*inhigh*) EN_mgt_clk_clk_n) clocked_by (no_clock) reset_by (no_reset);
-        method clk_clk_p(mgt_clk_clk_p) enable((*inhigh*) EN_mgt_clk_clk_p) clocked_by (no_clock) reset_by (no_reset);
+       method clk_clk_n(mgt_clk_clk_n) enable((*inhigh*) EN_mgt_clk_clk_n);
+       method clk_clk_p(mgt_clk_clk_p) enable((*inhigh*) EN_mgt_clk_clk_p);
     endinterface
     interface AxiethbviMmcm     mmcm;
         method mmcm_locked_out locked_out();
@@ -201,10 +201,10 @@ module mkAxiEthBvi#(Clock s_axi_clk, Reset s_axi_reset, Clock axis_clk,
         method tvalid(s_axis_txd_tvalid) enable((*inhigh*) EN_s_axis_txd_tvalid) clocked_by (axis_clk) reset_by (s_axis_txd_reset);
     endinterface
     interface AxiethbviSfp     sfp;
-        method rxn(sfp_rxn) enable((*inhigh*) EN_sfp_rxn) clocked_by (no_clock) reset_by (no_reset);
-        method rxp(sfp_rxp) enable((*inhigh*) EN_sfp_rxp) clocked_by (no_clock) reset_by (no_reset);
-        method sfp_txn txn() clocked_by (no_clock) reset_by (no_reset);
-        method sfp_txp txp() clocked_by (no_clock) reset_by (no_reset);
+       method rxn(sfp_rxn) enable((*inhigh*) EN_sfp_rxn);
+       method rxp(sfp_rxp) enable((*inhigh*) EN_sfp_rxp);
+       method sfp_txn txn();
+       method sfp_txp txp();
      endinterface
     interface AxiethbviSignal     signal;
         method detect(signal_detect) enable((*inhigh*) EN_signal_detect);
