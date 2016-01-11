@@ -101,10 +101,10 @@ module mkPhysMemToBram#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br)
    endinterface
 endmodule
 
-module mkPhysMemToBramBE#(BRAMServerBE#(Bit#(bramAddrWidth), Bit#(busDataWidth), n) br) (PhysMemSlave#(busAddrWidth, busDataWidth))
+module mkPhysMemToBramBE#(BRAMServerBE#(Bit#(bramAddrWidth), Bit#(busDataWidth), dataWidthBytes) br) (PhysMemSlave#(busAddrWidth, busDataWidth))
    provisos(Add#(a__, bramAddrWidth, busAddrWidth)
-           ,Mul#(n, 8, busDataWidth)
-           ,Div#(busDataWidth, 8, n)
+           ,Mul#(dataWidthBytes, 8, busDataWidth)
+           ,Div#(busDataWidth, 8, dataWidthBytes)
            );
 
    FIFOF#(Bit#(6))  readTagFifo <- mkFIFOF();
@@ -129,7 +129,7 @@ module mkPhysMemToBramBE#(BRAMServerBE#(Bit#(bramAddrWidth), Bit#(busDataWidth),
       let burstCount = addrBeat.bc;
       readTagFifo.enq(tag);
       readLastFifo.enq(addrBeat.last);
-      Bit#(bramAddrWidth) regFileAddr = truncate(addr/fromInteger(valueOf(TDiv#(busDataWidth,8))));
+      Bit#(bramAddrWidth) regFileAddr = truncate(addr << fromInteger(valueOf(TLog#(dataWidthBytes))));
       br.request.put(BRAMRequestBE{writeen:0, responseOnWrite:False, address:regFileAddr, datain:?});
       if (verbose) $display("%d read_server.readData (a) %h %d last=%d", cycles, addr, burstCount, addrBeat.last);
    endrule
@@ -137,7 +137,11 @@ module mkPhysMemToBramBE#(BRAMServerBE#(Bit#(bramAddrWidth), Bit#(busDataWidth),
    interface PhysMemReadServer read_server;
       interface Put readReq;
 	 method Action put(PhysMemRequest#(busAddrWidth, busDataWidth) req);
-            if (verbose) $display("%d read_server.readAddr %h bc %d fbe %x lbe %x", cycles, req.addr, req.burstLen, req.firstbe, req.lastbe);
+            if (verbose) $display("%d read_server.readAddr %h bc %d fbe %x lbe %x", cycles, req.addr, req.burstLen
+`ifdef BYTE_ENABLES
+               , req.firstbe, req.lastbe
+`endif
+               );
 	    readAddrGenerator.request.put(req);
             readByteEnableFifo.enq(reqLastByteEnable(req));
 	 endmethod
@@ -148,9 +152,13 @@ module mkPhysMemToBramBE#(BRAMServerBE#(Bit#(bramAddrWidth), Bit#(busDataWidth),
 	    readTagFifo.deq;
 	    readLastFifo.deq;
             let data <- br.response.get;
-            let byteEnable <- toGet(readByteEnableFifo).get();
+            let readBE = readByteEnableFifo.first;
+            Bit#(dataWidthBytes) byteEnable = readLastFifo.first ? readBE : maxBound;
             let newdata = updateDataWithMask(0, data, byteEnable);
             if (verbose) $display("%d read_server.readData (b) %h, %h", cycles, data, newdata);
+            if (readLastFifo.first) begin
+               readByteEnableFifo.deq;
+            end
             return MemData { data: newdata, tag: tag, last: readLastFifo.first };
 	 endmethod
       endinterface
@@ -160,18 +168,24 @@ module mkPhysMemToBramBE#(BRAMServerBE#(Bit#(bramAddrWidth), Bit#(busDataWidth),
 	 method Action put(PhysMemRequest#(busAddrWidth, busDataWidth) req);
 	    writeAddrGenerator.request.put(req);
             writeByteEnableFifo.enq(reqLastByteEnable(req));
-            if (verbose) $display("%d write_server.writeAddr %h bc %d fbe %x lbe %x", cycles, req.addr, req.burstLen, req.firstbe, req.lastbe);
+            if (verbose) $display("%d write_server.writeAddr %h bc %d fbe %x lbe %x", cycles, req.addr, req.burstLen
+`ifdef BYTE_ENABLES
+               , req.firstbe, req.lastbe
+`endif
+               );
 	 endmethod
       endinterface
       interface Put writeData;
 	 method Action put(MemData#(busDataWidth) resp);
 	    let addrBeat <- writeAddrGenerator.addrBeat.get();
 	    let addr = addrBeat.addr;
-	    Bit#(bramAddrWidth) regFileAddr = truncate(addr/fromInteger(valueOf(TDiv#(busDataWidth,8))));
-            let byteEnable <- toGet(writeByteEnableFifo).get();
+	    Bit#(bramAddrWidth) regFileAddr = truncate(addr << fromInteger(valueOf(TLog#(TDiv#(busDataWidth,8)))));
+            let writeBE = writeByteEnableFifo.first;
+            Bit#(dataWidthBytes) byteEnable = addrBeat.last ? writeBE : maxBound;
             br.request.put(BRAMRequestBE{writeen:byteEnable, responseOnWrite:False, address:regFileAddr, datain:resp.data});
             if (verbose) $display("%d write_server.writeData %h %h %d", cycles, addr, resp.data, addrBeat.bc);
             if (addrBeat.last)
+               writeByteEnableFifo.deq;
                writeTagFifo.enq(addrBeat.tag);
 	 endmethod
       endinterface
