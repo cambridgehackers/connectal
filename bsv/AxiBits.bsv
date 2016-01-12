@@ -24,6 +24,7 @@ import Clocks::*;
 import FIFOF::*;
 import GetPut::*;
 import MemTypes::*;
+import EHRM::*;
 
 interface AxiMasterBits#(numeric type addrWidth, numeric type dataWidth, numeric type tagWidth, type extraType);
     method Bit#(addrWidth)     araddr();
@@ -321,73 +322,101 @@ typeclass ToAxi4SlaveBits#(type atype, type btype);
    function atype toAxi4SlaveBits(btype b);
 endtypeclass
 
+module mkAxiFifoF(FIFOF#(t)) provisos(Bits#(t, tSz));
+  Ehr#(2, t) da <- mkEhr(?);
+  Ehr#(2, Bool) va <- mkEhr(False);
+  Ehr#(2, t) db <- mkEhr(?);
+  Ehr#(2, Bool) vb <- mkEhr(False);
+
+  rule canon if(vb[1] && !va[1]);
+    da[1] <= db[1];
+    va[1] <= True;
+    vb[1] <= False;
+  endrule
+
+  method Bool notFull = !vb[0];
+
+  method Action enq(t x) if(!vb[0]);
+    db[0] <= x;
+    vb[0] <= True;
+  endmethod
+
+  method Bool notEmpty = va[0];
+
+  method Action deq if (va[0]);
+    va[0] <= False;
+  endmethod
+
+  // no implicit guard, to simplify rule guards below
+  method t first;
+    return da[0];
+  endmethod
+
+  // conflicts with enq, deq, but we do not call it   
+  method Action clear;
+    vb[0] <= False;
+    va[0] <= False;
+  endmethod
+endmodule
+
 module mkPhysMemSlave#(Axi4SlaveLiteBits#(axiAddrWidth,dataWidth) axiSlave)(PhysMemSlave#(addrWidth,dataWidth))
    provisos (Add#(axiAddrWidth,a__,addrWidth));
-   FIFOF#(PhysMemRequest#(addrWidth,dataWidth)) arfifo <- mkFIFOF();   
-   FIFOF#(MemData#(dataWidth)) rfifo <- mkFIFOF();
-   FIFOF#(PhysMemRequest#(addrWidth,dataWidth)) awfifo <- mkFIFOF();   
-   FIFOF#(MemData#(dataWidth)) wfifo <- mkFIFOF();
-   FIFOF#(Bit#(MemTagSize)) bfifo <- mkFIFOF();   
-   FIFOF#(Bit#(MemTagSize)) rtagfifo <- mkFIFOF();   
-   FIFOF#(Bit#(MemTagSize)) wtagfifo <- mkFIFOF();   
+   FIFOF#(PhysMemRequest#(addrWidth,dataWidth)) arfifo <- mkAxiFifoF();
+   FIFOF#(MemData#(dataWidth)) rfifo <- mkAxiFifoF();
+   FIFOF#(PhysMemRequest#(addrWidth,dataWidth)) awfifo <- mkAxiFifoF();
+   FIFOF#(MemData#(dataWidth)) wfifo <- mkAxiFifoF();
+   FIFOF#(Bit#(MemTagSize)) bfifo <- mkAxiFifoF();   
+   FIFOF#(Bit#(MemTagSize)) rtagfifo <- mkAxiFifoF();   
+   FIFOF#(Bit#(MemTagSize)) wtagfifo <- mkAxiFifoF();   
 
-   rule rl_arfifo;
-      if (arfifo.notEmpty && axiSlave.arready() == 1) begin
-	 let req <- toGet(arfifo).get();
-	 rtagfifo.enq(req.tag);
-	 axiSlave.arvalid(1);
-	 axiSlave.araddr(truncate(req.addr));
-      end
-      else begin
-	 axiSlave.arvalid(0);
-	 axiSlave.araddr(0);
-      end
+   rule rl_arvalid_araddr;
+      axiSlave.arvalid(pack(arfifo.notEmpty && rtagfifo.notFull));
+      let addr = 0;
+      if (arfifo.notEmpty)
+	 addr = truncate(arfifo.first.addr);
+      axiSlave.araddr(addr);
    endrule
-   rule rl_ardata;
-      if (axiSlave.rvalid() == 1) begin
-	 let rtag <- toGet(rtagfifo).get();
-	 rfifo.enq(MemData { data: axiSlave.rdata(), tag: rtag } );
-	 axiSlave.rready(1);
-      end
-      else begin
-	 axiSlave.rready(0);
-      end
+   rule rl_arfifo if (axiSlave.arready() == 1);
+      let req <- toGet(arfifo).get();
+      rtagfifo.enq(req.tag);
+   endrule
+   rule rl_rready;
+      axiSlave.rready(pack(rfifo.notFull && rtagfifo.notEmpty));
+   endrule   
+   rule rl_ardata if (axiSlave.rvalid() == 1);
+      let rtag <- toGet(rtagfifo).get();
+      rfifo.enq(MemData { data: axiSlave.rdata(), tag: rtag } );
    endrule
 
-   rule rl_awfifo;
-      if (awfifo.notEmpty && axiSlave.awready() == 1) begin
-	 let req <- toGet(awfifo).get();
-	 rtagfifo.enq(req.tag);
-	 axiSlave.awvalid(1);
-	 axiSlave.awaddr(truncate(req.addr));
-      end
-      else begin
-	 axiSlave.awvalid(0);
-	 axiSlave.awaddr(0);
-      end
+   rule rl_awvalid_awaddr;
+      axiSlave.awvalid(pack(awfifo.notEmpty && wtagfifo.notFull));
+      let addr = 0;
+      if (awfifo.notEmpty)
+	 addr = truncate(awfifo.first.addr);
+      axiSlave.awaddr(addr);
+   endrule   
+   rule rl_awfifo if (axiSlave.awready() == 1);
+      let req <- toGet(awfifo).get();
+      wtagfifo.enq(req.tag);
    endrule
-   rule rl_wdata;
-      if (axiSlave.wready() == 1) begin
-	 let rtag <- toGet(rtagfifo).get();
-	 let md <- toGet(wfifo).get();
-	 axiSlave.wvalid(1);
-	 axiSlave.wdata(md.data);
-	 bfifo.enq(md.tag);
-      end
-      else begin
-	 axiSlave.wvalid(0);
-	 axiSlave.wdata(0);
-      end
+   rule rl_wvalid;
+      axiSlave.wvalid(pack(wfifo.notEmpty && wtagfifo.notEmpty && bfifo.notFull));
+      let wdata = 0;
+      if (wfifo.notEmpty)
+	 wdata = wfifo.first.data;
+      axiSlave.wdata(wdata);
+   endrule   
+   rule rl_wdata if (axiSlave.wready() == 1);
+      let wtag <- toGet(wtagfifo).get();
+      let md <- toGet(wfifo).get();
+      bfifo.enq(md.tag);
    endrule
-   rule rl_done;
-      if (axiSlave.bvalid() == 1) begin
-	 let tag <- toGet(wtagfifo).get();
-	 axiSlave.bready(1);
-	 bfifo.enq(tag);
-      end
-      else begin
-	 axiSlave.bready(0);
-      end
+   rule rl_bready;
+      axiSlave.bready(pack(bfifo.notFull && wtagfifo.notEmpty));
+   endrule   
+   rule rl_done if (axiSlave.bvalid() == 1);
+      let tag <- toGet(wtagfifo).get();
+      bfifo.enq(tag);
    endrule      
 
    interface PhysMemReadServer read_server;
