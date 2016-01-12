@@ -16,6 +16,7 @@ CONNECTALFLAGS+= -DDataBusWidth=32
 CONNECTALFLAGS += -D XILINX_SYS_CLK -D IMPORT_HOSTIF
 CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/axi_dma_0/axi_dma_0.xci
 CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/axi_ethernet_0/axi_ethernet_0.xci
+CONNECTALFLAGS += --constraint=axieth.xdc --implconstraint=axieth.xdc
 
 ifeq ($(BOARD),vc709)
 PINOUT_FILE += axieth.json
