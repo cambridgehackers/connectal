@@ -395,7 +395,7 @@ module mkMemMethodMuxOut#(PortalCtrl#(aw,dataWidth) ctrl, Vector#(numIndications
    endinterface
 endmodule
 
-module mkMemPortalMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (PhysMemSlave#(addrWidth,dataWidth))
+module mkPhysMemSlaveMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (PhysMemSlave#(addrWidth,dataWidth))
    provisos(Add#(selWidth,aw,addrWidth)
 	    ,Add#(a__, TLog#(numSlaves), selWidth)
 	    ,Min#(4,TLog#(numSlaves),bpc)
@@ -450,15 +450,15 @@ module mkMemPortalMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (P
 	       , firstbe: req.firstbe, lastbe: req.lastbe
 `endif
 	       });
-	    if (req.burstLen > 4) $display("**** \n\n mkMemPortalMux.writeReq len=%d \n\n ****", req.burstLen);
+	    if (req.burstLen > 4) $display("**** \n\n mkPhysMemSlaveMux.writeReq len=%d \n\n ****", req.burstLen);
 	    ws.enq(truncate(psel(req.addr)));
-	    if(verbose) $display("mkMemPortalMux.writeReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
+	    if(verbose) $display("mkPhysMemSlaveMux.writeReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
 	 endmethod
       endinterface
       interface Put writeData;
 	 method Action put(MemData#(dataWidth) wdata);
 	    write_data.enq(tuple2(ws.first,wdata));
-	    if(verbose) $display("mkMemPortalMux.writeData dst=%h wdata=%h", ws.first,wdata);
+	    if(verbose) $display("mkPhysMemSlaveMux.writeData dst=%h wdata=%h", ws.first,wdata);
 	 endmethod
       endinterface
       interface Get writeDone;
@@ -477,15 +477,15 @@ module mkMemPortalMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves) (P
 `endif
 	       });
 	    rs.enq(truncate(psel(req.addr)));
-	    if (req.burstLen > 4) $display("**** \n\n mkMemPortalMux.readReq len=%d \n\n ****", req.burstLen);
-	    if(verbose) $display("mkMemPortalMux.readReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
+	    if (req.burstLen > 4) $display("**** \n\n mkPhysMemSlaveMux.readReq len=%d \n\n ****", req.burstLen);
+	    if(verbose) $display("mkPhysMemSlaveMux.readReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
 	 endmethod
       endinterface
       interface Get readData;
 	 method ActionValue#(MemData#(dataWidth)) get();
 	    let rv <- toGet(read_data_funnel[0]).get;
 	    rs.deq();
-	    if(verbose) $display("mkMemPortalMux.readData rs=%d data=%h", rs.first, rv.data);
+	    if(verbose) $display("mkPhysMemSlaveMux.readData rs=%d data=%h", rs.first, rv.data);
 	    return rv;
 	 endmethod
       endinterface
@@ -505,6 +505,6 @@ module mkSlaveMux#(Vector#(numPortals,MemPortal#(aw,dataWidth)) portals) (PhysMe
       rule writeTop;
 	 portals[i].num_portals <= fromInteger(valueOf(numPortals));
       endrule
-   let rv <- mkMemPortalMux(slaves);
+   let rv <- mkPhysMemSlaveMux(slaves);
    return rv;
 endmodule

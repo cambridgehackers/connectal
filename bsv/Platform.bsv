@@ -142,7 +142,7 @@ module mkPlatform#(Vector#(NumberOfUserTiles, ConnectalTop) tiles)(Platform);
    /////////////////////////////////////////////////////////////
    // expose interface to top
 
-   PhysMemSlave#(32,32) ctrl_mux <- mkMemPortalMux(cons(framework_ctrl_mux,tile_slaves));
+   PhysMemSlave#(32,32) ctrl_mux <- mkPhysMemSlaveMux(cons(framework_ctrl_mux,tile_slaves));
    Vector#(MaxNumberOfPortals, ReadOnly#(Bool)) interrupts = replicate(interface ReadOnly; method Bool _read(); return False; endmethod endinterface);
    interrupts[0] = framework_intr;
    for (Integer i = 1; i < valueOf(NumberOfTiles); i = i + 1)
