@@ -55,19 +55,73 @@
 	},
     "sfp0": {
 		 "rxp" : {
-			     "LOC" : "AM36",
+			     "LOC" : "AN6",
 			     "PIO_DIRECTION" : "INPUT"
 		 },
 		 "rxn" : {
-			     "LOC" : "AN36",
+			     "LOC" : "AN5",
 			     "PIO_DIRECTION" : "INPUT"
 		 },
 		 "txp" : {
-			     "LOC" : "AJ36",
+			     "LOC" : "AP4",
 			     "PIO_DIRECTION" : "OUTPUT"
 		 },
 		 "txn" : {
-			     "LOC" : "AJ37",
+			     "LOC" : "AP3",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 }
+    },
+    "sfp1": {
+		 "rxp" : {
+			     "LOC" : "AM8",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "rxn" : {
+			     "LOC" : "AM7",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "txp" : {
+			     "LOC" : "AN2",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "txn" : {
+			     "LOC" : "AN1",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 }
+    },
+    "sfp2": {
+		 "rxp" : {
+			     "LOC" : "AL6",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "rxn" : {
+			     "LOC" : "AL5",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "txp" : {
+			     "LOC" : "AM4",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "txn" : {
+			     "LOC" : "AM3",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 }
+    },
+    "sfp3": {
+		 "rxp" : {
+			     "LOC" : "AJ6",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "rxn" : {
+			     "LOC" : "AJ5",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "txp" : {
+			     "LOC" : "AL2",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "txn" : {
+			     "LOC" : "AL1",
 			     "PIO_DIRECTION" : "OUTPUT"
 		 }
     },
