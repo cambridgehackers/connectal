@@ -11,6 +11,7 @@ import Vector::*;
 
 import ConnectalXilinxCells::*;
 import ConnectalConfig::*;
+import CtrlMux::*;
 import HostInterface::*;
 import MemTypes::*;
 import AxiBits::*;
@@ -62,27 +63,32 @@ module mkAxiEth#(HostInterface host, AxiEthTestIndication ind)(AxiEth);
    Axi4MasterBits#(32,32,MemTagSize,Empty) m_axi_s2mm = toAxi4MasterBits(axiDmaBvi.m_axi_s2mm);
    Axi4MasterBits#(32,32,MemTagSize,Empty) m_axi_sg = toAxi4MasterBits(axiDmaBvi.m_axi_sg);
 
-   PhysMemSlave#(10,32) axiDmaMemSlave <- mkPhysMemSlave(axiDmaBvi.s_axi_lite);
-   //PhysMemSlave#(18,32) axiEthMemSlave <- mkPhysMemSlave(axiEthBvi.s_axi);
+   PhysMemSlave#(18,32) axiDmaMemSlave <- mkPhysMemSlave(axiDmaBvi.s_axi_lite);
+   Axi4SlaveLiteBits#(18,32) axiEthSlaveLite = toAxi4SlaveBits(axiEthBvi.s_axi);
+   PhysMemSlave#(18,32) axiEthMemSlave <- mkPhysMemSlave(axiEthSlaveLite);
+   PhysMemSlave#(19,32) memSlaveMux    <- mkPhysMemSlaveMux(vec(axiDmaMemSlave, axiEthMemSlave));
 
+   rule rl_axieth;
+      axiEthBvi.signal.detect(1); // drive to 1 if not using optical transceiver, else use signal from transceiver
+   endrule
    rule rl_req;
       let req <- toGet(reqFifo).get();
       if (req.write) begin
-	 axiDmaMemSlave.write_server.writeReq.put(PhysMemRequest { addr: truncate(req.address), burstLen: 4, tag: 0 });
-	 axiDmaMemSlave.write_server.writeData.put(MemData {data: req.datain, tag: 0});
+	 memSlaveMux.write_server.writeReq.put(PhysMemRequest { addr: truncate(req.address), burstLen: 4, tag: 0 });
+	 memSlaveMux.write_server.writeData.put(MemData {data: req.datain, tag: 0});
       end
       else begin
-	 axiDmaMemSlave.read_server.readReq.put(PhysMemRequest { addr: truncate(req.address), burstLen: 4, tag: 0 });
+	 memSlaveMux.read_server.readReq.put(PhysMemRequest { addr: truncate(req.address), burstLen: 4, tag: 0 });
       end
    endrule
 
    rule rl_rdata;
-      let rdata <- axiDmaMemSlave.read_server.readData.get();
+      let rdata <- memSlaveMux.read_server.readData.get();
       ind.readDone(rdata.data);
    endrule
 
    rule rl_writeDone;
-      let tag <- axiDmaMemSlave.write_server.writeDone.get();
+      let tag <- memSlaveMux.write_server.writeDone.get();
       ind.writeDone();
    endrule
 
