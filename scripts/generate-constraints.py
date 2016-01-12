@@ -55,7 +55,6 @@ if __name__=='__main__':
     if options.fpga == "xilinx":
         template='''\
     set_property LOC "%(LOC)s" [get_ports "%(name)s"]
-    set_property IOSTANDARD "%(IOSTANDARD)s" [get_ports "%(name)s"]
     set_property PIO_DIRECTION "%(PIO_DIRECTION)s" [get_ports "%(name)s"]
         '''
         setPropertyTemplate='''\
@@ -63,7 +62,6 @@ if __name__=='__main__':
         '''
     elif options.fpga == "altera":
         template='''\
-    set_instance_assignment -name IO_STANDARD "%(IOSTANDARD)s" -to "%(name)s"
     set_location_assignment "%(LOC)s" -to "%(name)s"
     '''
         setPropertyTemplate='''\
@@ -81,7 +79,6 @@ if __name__=='__main__':
         for pin in pinout:
             projectPinInfo = pinout[pin]
             loc = 'TBD'
-            iostandard = 'TBD'
             iodir = 'TBD'
             used = []
             boardPinInfo = {}
@@ -119,7 +116,7 @@ if __name__=='__main__':
                     pinInfo[prop] = projectPinInfo[prop]
             out.write(template % pinInfo)
             for k in pinInfo:
-                if k in used+['name', 'IOSTANDARD', 'PIO_DIRECTION']: continue
+                if k in used+['name', 'PIO_DIRECTION']: continue
                 out.write(setPropertyTemplate % {
                         'name': pin,
                         'prop': k,
