@@ -17,6 +17,7 @@ public:
 
     void readDone ( const uint32_t value ) {
 	buf[0] = value;
+	fprintf(stderr, "readDone value=%08x\n", value);
 	sem_post(&sem);
     }
 
@@ -37,7 +38,8 @@ int main(int argc, const char **argv)
 {
     request = new AxiEthTestRequestProxy(IfcNames_AxiEthTestRequestS2H);
     indication = new AxiEthTestIndication(IfcNames_AxiEthTestIndicationH2S);
-    request->reset();
+    fprintf(stderr, "Reading ID register\n");
+    request->read((1<<18) + 0x4f8);
     indication->wait();
     return 0;
 }

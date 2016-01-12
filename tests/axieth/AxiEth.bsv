@@ -22,8 +22,8 @@ import EthPins::*;
 
 interface AxiEthTestRequest;
    method Action reset();
-   method Action read(Bit#(10) addr);
-   method Action write(Bit#(10) addr, Bit#(32) value);
+   method Action read(Bit#(32) addr);
+   method Action write(Bit#(32) addr, Bit#(32) value);
 endinterface
 
 interface AxiEthTestIndication;
@@ -44,7 +44,7 @@ module mkAxiEth#(HostInterface host, AxiEthTestIndication ind)(AxiEth);
    let clock <- exposeCurrentClock();
    let reset <- exposeCurrentReset();
 
-   let axiDmaBvi <- mkAxiDmaBvi(clock,clock,clock,clock);
+   let axiDmaBvi <- mkAxiDmaBvi(clock,clock,clock,clock,reset);
    let axiEthBvi <- mkAxiEthBvi(host.tsys_clk_200mhz_buf,
 				clock, reset, clock,
 				reset, reset, reset, reset);
@@ -71,16 +71,6 @@ module mkAxiEth#(HostInterface host, AxiEthTestIndication ind)(AxiEth);
    rule rl_axieth;
       axiEthBvi.signal.detect(1); // drive to 1 if not using optical transceiver, else use signal from transceiver
    endrule
-   rule rl_req;
-      let req <- toGet(reqFifo).get();
-      if (req.write) begin
-	 memSlaveMux.write_server.writeReq.put(PhysMemRequest { addr: truncate(req.address), burstLen: 4, tag: 0 });
-	 memSlaveMux.write_server.writeData.put(MemData {data: req.datain, tag: 0});
-      end
-      else begin
-	 memSlaveMux.read_server.readReq.put(PhysMemRequest { addr: truncate(req.address), burstLen: 4, tag: 0 });
-      end
-   endrule
 
    rule rl_rdata;
       let rdata <- memSlaveMux.read_server.readData.get();
@@ -94,6 +84,13 @@ module mkAxiEth#(HostInterface host, AxiEthTestIndication ind)(AxiEth);
 
    interface AxiEthTestRequest request;
       method Action reset();
+      endmethod
+      method Action read(Bit#(32) addr);
+	 memSlaveMux.read_server.readReq.put(PhysMemRequest { addr: truncate(addr), burstLen: 4, tag: 0 });
+      endmethod
+      method Action write(Bit#(32) addr, Bit#(32) value);
+	 memSlaveMux.write_server.writeReq.put(PhysMemRequest { addr: truncate(addr), burstLen: 4, tag: 0 });
+	 memSlaveMux.write_server.writeData.put(MemData {data: value, tag: 0});
       endmethod
    endinterface
    interface AxiEthPins pins;
