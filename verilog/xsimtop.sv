@@ -32,28 +32,41 @@ import "DPI-C" function bit dpi_finish();
   `define BSV_RESET_EDGE negedge
 `endif
 
+`ifndef MainClockPeriod
+   `define MainClockPeriod 4
+`endif
+`ifndef DerivedClockPeriod
+   `define DerivedClockPeriod 4
+`endif
+`define XSIM
+
 module xsimtop(
 `ifndef XSIM
-	       CLK, DERIVED_CLK
+	       CLK, DERIVED_CLK, sys_clk
 `endif
 );
 `ifndef XSIM
    input CLK;
    input DERIVED_CLK;
+   input sys_clk;
 `else
    reg 	 CLK;
    reg DERIVED_CLK;
+   reg sys_clk;
 `endif
    reg RST_N;
    reg DERIVED_RST_N;
    reg [31:0] count;
    reg finish;
 
-   mkXsimTop xsimtop(.CLK(CLK), .RST_N(RST_N), .CLK_derivedClock(DERIVED_CLK), .RST_N_derivedReset(DERIVED_RST_N)); 
+   mkXsimTop xsimtop(.CLK(CLK), .RST_N(RST_N),
+		     .CLK_derivedClock(DERIVED_CLK), .RST_N_derivedReset(DERIVED_RST_N),
+		     .CLK_sys_clk(sys_clk));
    initial begin
 `ifdef XSIM
       CLK = 0;
       DERIVED_CLK = 0;
+      sys_clk = 0;
 `endif
       RST_N = `BSV_RESET_VALUE;
       DERIVED_RST_N = `BSV_RESET_VALUE;
@@ -70,6 +83,10 @@ module xsimtop(
    always begin
       #(`DerivedClockPeriod/2)
 	DERIVED_CLK = !DERIVED_CLK;
+   end
+   always begin
+      #2.5
+	sys_clk = !sys_clk;
    end
 `endif
    
