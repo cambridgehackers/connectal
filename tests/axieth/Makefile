@@ -13,7 +13,7 @@ CPPFILES=testaxieth.cpp
 
 CONNECTALFLAGS+= -DDataBusWidth=32
 ## ethernet uses the 200MHz SYS clock
-CONNECTALFLAGS += -DXILINX_SYS_CLK -D IMPORT_HOSTIF
+CONNECTALFLAGS += -D XILINX_SYS_CLK -D IMPORT_HOSTIF
 CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/axi_dma_0/axi_dma_0.xci
 CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/axi_ethernet_0/axi_ethernet_0.xci
 
