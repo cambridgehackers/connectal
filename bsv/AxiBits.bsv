@@ -317,7 +317,12 @@ interface Axi4SlaveLiteBits#(numeric type addrWidth, numeric type dataWidth);
     method Action      wvalid(Bit#(1) v);
 endinterface
 
-module mkPhysMemSlave#(Axi4SlaveLiteBits#(addrWidth,dataWidth) axiSlave)(PhysMemSlave#(addrWidth,dataWidth));
+typeclass ToAxi4SlaveBits#(type atype, type btype);
+   function atype toAxi4SlaveBits(btype b);
+endtypeclass
+
+module mkPhysMemSlave#(Axi4SlaveLiteBits#(axiAddrWidth,dataWidth) axiSlave)(PhysMemSlave#(addrWidth,dataWidth))
+   provisos (Add#(axiAddrWidth,a__,addrWidth));
    FIFOF#(PhysMemRequest#(addrWidth,dataWidth)) arfifo <- mkFIFOF();   
    FIFOF#(MemData#(dataWidth)) rfifo <- mkFIFOF();
    FIFOF#(PhysMemRequest#(addrWidth,dataWidth)) awfifo <- mkFIFOF();   
@@ -331,7 +336,7 @@ module mkPhysMemSlave#(Axi4SlaveLiteBits#(addrWidth,dataWidth) axiSlave)(PhysMem
 	 let req <- toGet(arfifo).get();
 	 rtagfifo.enq(req.tag);
 	 axiSlave.arvalid(1);
-	 axiSlave.araddr(req.addr);
+	 axiSlave.araddr(truncate(req.addr));
       end
       else begin
 	 axiSlave.arvalid(0);
@@ -354,7 +359,7 @@ module mkPhysMemSlave#(Axi4SlaveLiteBits#(addrWidth,dataWidth) axiSlave)(PhysMem
 	 let req <- toGet(awfifo).get();
 	 rtagfifo.enq(req.tag);
 	 axiSlave.awvalid(1);
-	 axiSlave.awaddr(req.addr);
+	 axiSlave.awaddr(truncate(req.addr));
       end
       else begin
 	 axiSlave.awvalid(0);
