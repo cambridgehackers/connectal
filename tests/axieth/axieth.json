@@ -6,15 +6,15 @@
 	"pins": "si5324_clk_n"
     },
     "eth_sfp_rxp_v": {
-	"sfp0": "rxp"
+	"sfp1": "rxp"
     },
     "eth_sfp_rxn_v": {
-	"sfp0": "rxn"
+	"sfp1": "rxn"
     },
     "eth_sfp_txp": {
-	"sfp0": "txp"
+	"sfp1": "txp"
     },
     "eth_sfp_txn": {
-	"sfp0": "txn"
+	"sfp1": "txn"
     }
 }

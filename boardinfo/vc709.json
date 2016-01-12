@@ -53,7 +53,7 @@
 		 "PIO_DIRECTION" : "OUTPUT"
 		 }
 	},
-    "sfp0": {
+    "sfp1": {
 		 "rxp" : {
 			     "LOC" : "AN6",
 			     "PIO_DIRECTION" : "INPUT"
@@ -71,7 +71,7 @@
 			     "PIO_DIRECTION" : "OUTPUT"
 		 }
     },
-    "sfp1": {
+    "sfp2": {
 		 "rxp" : {
 			     "LOC" : "AM8",
 			     "PIO_DIRECTION" : "INPUT"
@@ -89,7 +89,7 @@
 			     "PIO_DIRECTION" : "OUTPUT"
 		 }
     },
-    "sfp2": {
+    "sfp3": {
 		 "rxp" : {
 			     "LOC" : "AL6",
 			     "PIO_DIRECTION" : "INPUT"
@@ -107,7 +107,7 @@
 			     "PIO_DIRECTION" : "OUTPUT"
 		 }
     },
-    "sfp3": {
+    "sfp4": {
 		 "rxp" : {
 			     "LOC" : "AJ6",
 			     "PIO_DIRECTION" : "INPUT"
