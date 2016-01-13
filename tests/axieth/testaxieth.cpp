@@ -41,6 +41,16 @@ int main(int argc, const char **argv)
     fprintf(stderr, "Reading ID register\n");
     request->read((1<<18) + 0x4f8);
     indication->wait();
+    for (int i = 0; i < 16; i++) {
+      fprintf(stderr, "register %04x\n", i*4);
+      request->read((1<<18) + i*4);
+      indication->wait();
+      fprintf(stderr, "now writing ...\n");
+      request->write((1<<18) + i*4, 0xbeef);
+      indication->wait();
+      request->read((1<<18) + i*4);
+      indication->wait();
+    }
     return 0;
 }
 
