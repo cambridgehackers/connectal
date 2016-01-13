@@ -68,6 +68,8 @@ module mkAxiEth#(HostInterface host, AxiEthTestIndication ind)(AxiEth);
    PhysMemSlave#(18,32) axiEthMemSlave <- mkPhysMemSlave(axiEthSlaveLite);
    PhysMemSlave#(19,32) memSlaveMux    <- mkPhysMemSlaveMux(vec(axiDmaMemSlave, axiEthMemSlave));
 
+   FIFOF#(Bit#(32)) dfifo <- mkFIFOF();
+
    rule rl_axieth;
       axiEthBvi.signal.detect(1); // drive to 1 if not using optical transceiver, else use signal from transceiver
    endrule
@@ -75,6 +77,11 @@ module mkAxiEth#(HostInterface host, AxiEthTestIndication ind)(AxiEth);
    rule rl_rdata;
       let rdata <- memSlaveMux.read_server.readData.get();
       ind.readDone(rdata.data);
+   endrule
+
+   rule rl_wdata;
+      let wdata <- toGet(dfifo).get();
+       memSlaveMux.write_server.writeData.put(MemData {data: wdata, tag: 0});
    endrule
 
    rule rl_writeDone;
@@ -90,7 +97,7 @@ module mkAxiEth#(HostInterface host, AxiEthTestIndication ind)(AxiEth);
       endmethod
       method Action write(Bit#(32) addr, Bit#(32) value);
 	 memSlaveMux.write_server.writeReq.put(PhysMemRequest { addr: truncate(addr), burstLen: 4, tag: 0 });
-	 memSlaveMux.write_server.writeData.put(MemData {data: value, tag: 0});
+	 dfifo.enq(value);
       endmethod
    endinterface
    interface AxiEthPins pins;
