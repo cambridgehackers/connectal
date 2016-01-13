@@ -56,8 +56,6 @@ import Pcie3EndpointX7   :: *;
 `endif // pcie3
 `elsif ALTERA
 import PcieEndpointS5    :: *;
-`elsif VSIM
-import PcieEndpointS5    :: *;
 `endif
 `endif
 import HostInterface     :: *;
@@ -304,8 +302,6 @@ endmodule
 `endif
 
 `ifdef ALTERA
-`define ALTERA_TOP
-`elsif VSIM
 `define ALTERA_TOP
 `endif
 

@@ -195,15 +195,6 @@ interface PciewrapLane;
     method Bit#(4)     act();
 endinterface
 (* always_ready, always_enabled *)
-interface PciewrapLmi;
-    method Bit#(1)     ack();
-    method Action      addr(Bit#(12) v);
-    method Action      din(Bit#(32) v);
-    method Bit#(32)     dout();
-    method Action      rden(Bit#(1) v);
-    method Action      wren(Bit#(1) v);
-endinterface
-(* always_ready, always_enabled *)
 interface PciewrapLtssm;
     method Bit#(5)     state();
 endinterface
@@ -342,12 +333,7 @@ endinterface
 (* always_ready, always_enabled *)
 interface PciewrapSim;
     method Bit#(5)     ltssmstate();
-    method Action      pipe_pclk_in(Bit#(1) v);
     method Bit#(2)     pipe_rate();
-endinterface
-(* always_ready, always_enabled *)
-interface PciewrapSimu;
-    method Action      mode_pipe(Bit#(1) v);
 endinterface
 (* always_ready, always_enabled *)
 interface PciewrapTest;
@@ -481,7 +467,6 @@ interface PcieS5Wrap;
     interface PciewrapKo     ko;
     interface PciewrapL2     l2;
     interface PciewrapLane     lane;
-    interface PciewrapLmi     lmi;
     interface PciewrapLtssm     ltssm;
     interface PciewrapPhy     phy;
     interface PciewrapPld     pld;
@@ -496,7 +481,6 @@ interface PcieS5Wrap;
     interface PciewrapRx_st     rx_st;
     interface PciewrapSerdes     serdes;
     interface PciewrapSim     sim;
-    interface PciewrapSimu     simu;
     interface PciewrapTest     test;
     interface PciewrapTestin     testin;
     interface PciewrapTl     tl;
@@ -577,14 +561,6 @@ module mkPPS5Wrap#(Clock refclk, Reset npor, Reset pin_perst, Reset refclk_reset
     endinterface
     interface PciewrapLane     lane;
         method lane_act act()clocked_by(coreclkout.hip) reset_by (no_reset);
-    endinterface
-    interface PciewrapLmi     lmi;
-        method lmi_ack ack() clocked_by(coreclkout_hip);
-        method addr(lmi_addr) clocked_by(coreclkout_hip) enable((*inhigh*) EN_lmi_addr);
-        method din(lmi_din) clocked_by(coreclkout_hip) enable((*inhigh*) EN_lmi_din);
-        method lmi_dout dout() clocked_by(coreclkout_hip);
-        method rden(lmi_rden) clocked_by(coreclkout_hip) enable((*inhigh*) EN_lmi_rden);
-        method wren(lmi_wren) clocked_by(coreclkout_hip) enable((*inhigh*) EN_lmi_wren);
     endinterface
     interface PciewrapLtssm     ltssm;
         method ltssmstate state() clocked_by(coreclkout.hip) reset_by(no_reset);
@@ -710,11 +686,7 @@ module mkPPS5Wrap#(Clock refclk, Reset npor, Reset pin_perst, Reset refclk_reset
     endinterface
     interface PciewrapSim     sim;
         method sim_ltssmstate ltssmstate();
-        method pipe_pclk_in(sim_pipe_pclk_in) enable((*inhigh*) EN_sim_pipe_pclk_in);
         method sim_pipe_rate pipe_rate();
-    endinterface
-    interface PciewrapSimu     simu;
-        method mode_pipe(simu_mode_pipe) enable((*inhigh*) EN_simu_mode_pipe);
     endinterface
     interface PciewrapTest     test;
         method in(test_in) enable((*inhigh*) EN_test_in);
@@ -823,5 +795,5 @@ module mkPPS5Wrap#(Clock refclk, Reset npor, Reset pin_perst, Reset refclk_reset
         method sop0(tx_st_sop)      clocked_by(coreclkout.hip) enable((*inhigh*) EN_tx_st_sop);
         method valid0(tx_st_valid)  clocked_by(coreclkout.hip) enable((*inhigh*) EN_tx_st_valid);
     endinterface
-    schedule (app.int_ack, app.int_sts, app.msi_ack, app.msi_num, app.msi_req, app.msi_tc, cfg_par.err, cpl.err, cpl.pending, current.speed, derr.cor_ext_rcv, derr.cor_ext_rpl, derr.rpl, dl.up, dl.up_exit, eidle.infersel0, eidle.infersel1, eidle.infersel2, eidle.infersel3, eidle.infersel4, eidle.infersel5, eidle.infersel6, eidle.infersel7, ev128.ns, ev1.us, hotrst.exit, hpg.ctrler, int_s.tatus, ko.cpl_spc_data, ko.cpl_spc_header, l2.exit, lane.act, lmi.ack, lmi.addr, lmi.din, lmi.dout, lmi.rden, lmi.wren, ltssm.state, phy.status0, phy.status1, phy.status2, phy.status3, phy.status4, phy.status5, phy.status6, phy.status7, pld.clk, pld.clk_inuse, pld.core_ready, pm.auxpwr, pm.data, pm_e.vent, pme.to_cr, pme.to_sr, power.down0, power.down1, power.down2, power.down3, power.down4, power.down5, power.down6, power.down7, reconfig.from_xcvr, reconfig.to_xcvr, rx.in0, rx.in1, rx.in2, rx.in3, rx.in4, rx.in5, rx.in6, rx.in7, rx_par.err, rx_st.bar0, rx_st.be0, rx_st.data0, rx_st.empty0, rx_st.eop0, rx_st.err0, rx_st.mask0, rx_st.ready0, rx_st.sop0, rx_st.valid0, rx.data0, rx.data1, rx.data2, rx.data3, rx.data4, rx.data5, rx.data6, rx.data7, rx.datak0, rx.datak1, rx.datak2, rx.datak3, rx.datak4, rx.datak5, rx.datak6, rx.datak7, rx.elecidle0, rx.elecidle1, rx.elecidle2, rx.elecidle3, rx.elecidle4, rx.elecidle5, rx.elecidle6, rx.elecidle7, rx.polarity0, rx.polarity1, rx.polarity2, rx.polarity3, rx.polarity4, rx.polarity5, rx.polarity6, rx.polarity7, rx.status0, rx.status1, rx.status2, rx.status3, rx.status4, rx.status5, rx.status6, rx.status7, rx.valid0, rx.valid1, rx.valid2, rx.valid3, rx.valid4, rx.valid5, rx.valid6, rx.valid7, serdes.pll_locked, sim.ltssmstate, sim.pipe_pclk_in, sim.pipe_rate, simu.mode_pipe, test.in, testin.zero, tl.cfg_add, tl.cfg_ctl, tl.cfg_sts, tx_cred.datafccp, tx_cred.datafcnp, tx_cred.datafcp, tx_cred.fchipcons, tx_cred.fcinfinite, tx_cred.hdrfccp, tx_cred.hdrfcnp, tx_cred.hdrfcp, tx.out0, tx.out1, tx.out2, tx.out3, tx.out4, tx.out5, tx.out6, tx.out7, tx_par.err, tx_st.data0, tx_st.empty0, tx_st.eop0, tx_st.err0, tx_st.ready0, tx_st.sop0, tx_st.valid0, tx.compl0, tx.compl1, tx.compl2, tx.compl3, tx.compl4, tx.compl5, tx.compl6, tx.compl7, tx.data0, tx.data1, tx.data2, tx.data3, tx.data4, tx.data5, tx.data6, tx.data7, tx.datak0, tx.datak1, tx.datak2, tx.datak3, tx.datak4, tx.datak5, tx.datak6, tx.datak7, tx.deemph0, tx.deemph1, tx.deemph2, tx.deemph3, tx.deemph4, tx.deemph5, tx.deemph6, tx.deemph7, tx.detectrx0, tx.detectrx1, tx.detectrx2, tx.detectrx3, tx.detectrx4, tx.detectrx5, tx.detectrx6, tx.detectrx7, tx.elecidle0, tx.elecidle1, tx.elecidle2, tx.elecidle3, tx.elecidle4, tx.elecidle5, tx.elecidle6, tx.elecidle7, tx.margin0, tx.margin1, tx.margin2, tx.margin3, tx.margin4, tx.margin5, tx.margin6, tx.margin7, tx.swing0, tx.swing1, tx.swing2, tx.swing3, tx.swing4, tx.swing5, tx.swing6, tx.swing7) CF (app.int_ack, app.int_sts, app.msi_ack, app.msi_num, app.msi_req, app.msi_tc, cfg_par.err, cpl.err, cpl.pending, current.speed, derr.cor_ext_rcv, derr.cor_ext_rpl, derr.rpl, dl.up, dl.up_exit, eidle.infersel0, eidle.infersel1, eidle.infersel2, eidle.infersel3, eidle.infersel4, eidle.infersel5, eidle.infersel6, eidle.infersel7, ev128.ns, ev1.us, hotrst.exit, hpg.ctrler, int_s.tatus, ko.cpl_spc_data, ko.cpl_spc_header, l2.exit, lane.act, lmi.ack, lmi.addr, lmi.din, lmi.dout, lmi.rden, lmi.wren, ltssm.state, phy.status0, phy.status1, phy.status2, phy.status3, phy.status4, phy.status5, phy.status6, phy.status7, pld.clk, pld.clk_inuse, pld.core_ready, pm.auxpwr, pm.data, pm_e.vent, pme.to_cr, pme.to_sr, power.down0, power.down1, power.down2, power.down3, power.down4, power.down5, power.down6, power.down7, reconfig.from_xcvr, reconfig.to_xcvr, rx.in0, rx.in1, rx.in2, rx.in3, rx.in4, rx.in5, rx.in6, rx.in7, rx_par.err, rx_st.bar0, rx_st.be0, rx_st.data0, rx_st.empty0, rx_st.eop0, rx_st.err0, rx_st.mask0, rx_st.ready0, rx_st.sop0, rx_st.valid0, rx.data0, rx.data1, rx.data2, rx.data3, rx.data4, rx.data5, rx.data6, rx.data7, rx.datak0, rx.datak1, rx.datak2, rx.datak3, rx.datak4, rx.datak5, rx.datak6, rx.datak7, rx.elecidle0, rx.elecidle1, rx.elecidle2, rx.elecidle3, rx.elecidle4, rx.elecidle5, rx.elecidle6, rx.elecidle7, rx.polarity0, rx.polarity1, rx.polarity2, rx.polarity3, rx.polarity4, rx.polarity5, rx.polarity6, rx.polarity7, rx.status0, rx.status1, rx.status2, rx.status3, rx.status4, rx.status5, rx.status6, rx.status7, rx.valid0, rx.valid1, rx.valid2, rx.valid3, rx.valid4, rx.valid5, rx.valid6, rx.valid7, serdes.pll_locked, sim.ltssmstate, sim.pipe_pclk_in, sim.pipe_rate, simu.mode_pipe, test.in, testin.zero, tl.cfg_add, tl.cfg_ctl, tl.cfg_sts, tx_cred.datafccp, tx_cred.datafcnp, tx_cred.datafcp, tx_cred.fchipcons, tx_cred.fcinfinite, tx_cred.hdrfccp, tx_cred.hdrfcnp, tx_cred.hdrfcp, tx.out0, tx.out1, tx.out2, tx.out3, tx.out4, tx.out5, tx.out6, tx.out7, tx_par.err, tx_st.data0, tx_st.empty0, tx_st.eop0, tx_st.err0, tx_st.ready0, tx_st.sop0, tx_st.valid0, tx.compl0, tx.compl1, tx.compl2, tx.compl3, tx.compl4, tx.compl5, tx.compl6, tx.compl7, tx.data0, tx.data1, tx.data2, tx.data3, tx.data4, tx.data5, tx.data6, tx.data7, tx.datak0, tx.datak1, tx.datak2, tx.datak3, tx.datak4, tx.datak5, tx.datak6, tx.datak7, tx.deemph0, tx.deemph1, tx.deemph2, tx.deemph3, tx.deemph4, tx.deemph5, tx.deemph6, tx.deemph7, tx.detectrx0, tx.detectrx1, tx.detectrx2, tx.detectrx3, tx.detectrx4, tx.detectrx5, tx.detectrx6, tx.detectrx7, tx.elecidle0, tx.elecidle1, tx.elecidle2, tx.elecidle3, tx.elecidle4, tx.elecidle5, tx.elecidle6, tx.elecidle7, tx.margin0, tx.margin1, tx.margin2, tx.margin3, tx.margin4, tx.margin5, tx.margin6, tx.margin7, tx.swing0, tx.swing1, tx.swing2, tx.swing3, tx.swing4, tx.swing5, tx.swing6, tx.swing7);
+    schedule (app.int_ack, app.int_sts, app.msi_ack, app.msi_num, app.msi_req, app.msi_tc, cfg_par.err, cpl.err, cpl.pending, current.speed, derr.cor_ext_rcv, derr.cor_ext_rpl, derr.rpl, dl.up, dl.up_exit, eidle.infersel0, eidle.infersel1, eidle.infersel2, eidle.infersel3, eidle.infersel4, eidle.infersel5, eidle.infersel6, eidle.infersel7, ev128.ns, ev1.us, hotrst.exit, hpg.ctrler, int_s.tatus, ko.cpl_spc_data, ko.cpl_spc_header, l2.exit, lane.act, ltssm.state, phy.status0, phy.status1, phy.status2, phy.status3, phy.status4, phy.status5, phy.status6, phy.status7, pld.clk, pld.clk_inuse, pld.core_ready, pm.auxpwr, pm.data, pm_e.vent, pme.to_cr, pme.to_sr, power.down0, power.down1, power.down2, power.down3, power.down4, power.down5, power.down6, power.down7, reconfig.from_xcvr, reconfig.to_xcvr, rx.in0, rx.in1, rx.in2, rx.in3, rx.in4, rx.in5, rx.in6, rx.in7, rx_par.err, rx_st.bar0, rx_st.be0, rx_st.data0, rx_st.empty0, rx_st.eop0, rx_st.err0, rx_st.mask0, rx_st.ready0, rx_st.sop0, rx_st.valid0, rx.data0, rx.data1, rx.data2, rx.data3, rx.data4, rx.data5, rx.data6, rx.data7, rx.datak0, rx.datak1, rx.datak2, rx.datak3, rx.datak4, rx.datak5, rx.datak6, rx.datak7, rx.elecidle0, rx.elecidle1, rx.elecidle2, rx.elecidle3, rx.elecidle4, rx.elecidle5, rx.elecidle6, rx.elecidle7, rx.polarity0, rx.polarity1, rx.polarity2, rx.polarity3, rx.polarity4, rx.polarity5, rx.polarity6, rx.polarity7, rx.status0, rx.status1, rx.status2, rx.status3, rx.status4, rx.status5, rx.status6, rx.status7, rx.valid0, rx.valid1, rx.valid2, rx.valid3, rx.valid4, rx.valid5, rx.valid6, rx.valid7, serdes.pll_locked, sim.ltssmstate, sim.pipe_rate, test.in, testin.zero, tl.cfg_add, tl.cfg_ctl, tl.cfg_sts, tx_cred.datafccp, tx_cred.datafcnp, tx_cred.datafcp, tx_cred.fchipcons, tx_cred.fcinfinite, tx_cred.hdrfccp, tx_cred.hdrfcnp, tx_cred.hdrfcp, tx.out0, tx.out1, tx.out2, tx.out3, tx.out4, tx.out5, tx.out6, tx.out7, tx_par.err, tx_st.data0, tx_st.empty0, tx_st.eop0, tx_st.err0, tx_st.ready0, tx_st.sop0, tx_st.valid0, tx.compl0, tx.compl1, tx.compl2, tx.compl3, tx.compl4, tx.compl5, tx.compl6, tx.compl7, tx.data0, tx.data1, tx.data2, tx.data3, tx.data4, tx.data5, tx.data6, tx.data7, tx.datak0, tx.datak1, tx.datak2, tx.datak3, tx.datak4, tx.datak5, tx.datak6, tx.datak7, tx.deemph0, tx.deemph1, tx.deemph2, tx.deemph3, tx.deemph4, tx.deemph5, tx.deemph6, tx.deemph7, tx.detectrx0, tx.detectrx1, tx.detectrx2, tx.detectrx3, tx.detectrx4, tx.detectrx5, tx.detectrx6, tx.detectrx7, tx.elecidle0, tx.elecidle1, tx.elecidle2, tx.elecidle3, tx.elecidle4, tx.elecidle5, tx.elecidle6, tx.elecidle7, tx.margin0, tx.margin1, tx.margin2, tx.margin3, tx.margin4, tx.margin5, tx.margin6, tx.margin7, tx.swing0, tx.swing1, tx.swing2, tx.swing3, tx.swing4, tx.swing5, tx.swing6, tx.swing7) CF (app.int_ack, app.int_sts, app.msi_ack, app.msi_num, app.msi_req, app.msi_tc, cfg_par.err, cpl.err, cpl.pending, current.speed, derr.cor_ext_rcv, derr.cor_ext_rpl, derr.rpl, dl.up, dl.up_exit, eidle.infersel0, eidle.infersel1, eidle.infersel2, eidle.infersel3, eidle.infersel4, eidle.infersel5, eidle.infersel6, eidle.infersel7, ev128.ns, ev1.us, hotrst.exit, hpg.ctrler, int_s.tatus, ko.cpl_spc_data, ko.cpl_spc_header, l2.exit, lane.act, ltssm.state, phy.status0, phy.status1, phy.status2, phy.status3, phy.status4, phy.status5, phy.status6, phy.status7, pld.clk, pld.clk_inuse, pld.core_ready, pm.auxpwr, pm.data, pm_e.vent, pme.to_cr, pme.to_sr, power.down0, power.down1, power.down2, power.down3, power.down4, power.down5, power.down6, power.down7, reconfig.from_xcvr, reconfig.to_xcvr, rx.in0, rx.in1, rx.in2, rx.in3, rx.in4, rx.in5, rx.in6, rx.in7, rx_par.err, rx_st.bar0, rx_st.be0, rx_st.data0, rx_st.empty0, rx_st.eop0, rx_st.err0, rx_st.mask0, rx_st.ready0, rx_st.sop0, rx_st.valid0, rx.data0, rx.data1, rx.data2, rx.data3, rx.data4, rx.data5, rx.data6, rx.data7, rx.datak0, rx.datak1, rx.datak2, rx.datak3, rx.datak4, rx.datak5, rx.datak6, rx.datak7, rx.elecidle0, rx.elecidle1, rx.elecidle2, rx.elecidle3, rx.elecidle4, rx.elecidle5, rx.elecidle6, rx.elecidle7, rx.polarity0, rx.polarity1, rx.polarity2, rx.polarity3, rx.polarity4, rx.polarity5, rx.polarity6, rx.polarity7, rx.status0, rx.status1, rx.status2, rx.status3, rx.status4, rx.status5, rx.status6, rx.status7, rx.valid0, rx.valid1, rx.valid2, rx.valid3, rx.valid4, rx.valid5, rx.valid6, rx.valid7, serdes.pll_locked, sim.ltssmstate, sim.pipe_rate, test.in, testin.zero, tl.cfg_add, tl.cfg_ctl, tl.cfg_sts, tx_cred.datafccp, tx_cred.datafcnp, tx_cred.datafcp, tx_cred.fchipcons, tx_cred.fcinfinite, tx_cred.hdrfccp, tx_cred.hdrfcnp, tx_cred.hdrfcp, tx.out0, tx.out1, tx.out2, tx.out3, tx.out4, tx.out5, tx.out6, tx.out7, tx_par.err, tx_st.data0, tx_st.empty0, tx_st.eop0, tx_st.err0, tx_st.ready0, tx_st.sop0, tx_st.valid0, tx.compl0, tx.compl1, tx.compl2, tx.compl3, tx.compl4, tx.compl5, tx.compl6, tx.compl7, tx.data0, tx.data1, tx.data2, tx.data3, tx.data4, tx.data5, tx.data6, tx.data7, tx.datak0, tx.datak1, tx.datak2, tx.datak3, tx.datak4, tx.datak5, tx.datak6, tx.datak7, tx.deemph0, tx.deemph1, tx.deemph2, tx.deemph3, tx.deemph4, tx.deemph5, tx.deemph6, tx.deemph7, tx.detectrx0, tx.detectrx1, tx.detectrx2, tx.detectrx3, tx.detectrx4, tx.detectrx5, tx.detectrx6, tx.detectrx7, tx.elecidle0, tx.elecidle1, tx.elecidle2, tx.elecidle3, tx.elecidle4, tx.elecidle5, tx.elecidle6, tx.elecidle7, tx.margin0, tx.margin1, tx.margin2, tx.margin3, tx.margin4, tx.margin5, tx.margin6, tx.margin7, tx.swing0, tx.swing1, tx.swing2, tx.swing3, tx.swing4, tx.swing5, tx.swing6, tx.swing7);
 endmodule
