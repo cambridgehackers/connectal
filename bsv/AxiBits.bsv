@@ -383,7 +383,7 @@ module mkPhysMemSlave#(Axi4SlaveLiteBits#(axiAddrWidth,dataWidth) axiSlave)(Phys
    rule rl_rready;
       axiSlave.rready(pack(rfifo.notFull && rtagfifo.notEmpty));
    endrule   
-   rule rl_ardata if (axiSlave.rvalid() == 1);
+   rule rl_rdata if (axiSlave.rvalid() == 1);
       let rtag <- toGet(rtagfifo).get();
       rfifo.enq(MemData { data: axiSlave.rdata(), tag: rtag } );
    endrule
@@ -400,24 +400,22 @@ module mkPhysMemSlave#(Axi4SlaveLiteBits#(axiAddrWidth,dataWidth) axiSlave)(Phys
       wtagfifo.enq(req.tag);
    endrule
    rule rl_wvalid;
-      axiSlave.wvalid(pack(wfifo.notEmpty && wtagfifo.notEmpty && bfifo.notFull));
+      axiSlave.wvalid(pack(wfifo.notEmpty));
       let wdata = 0;
       if (wfifo.notEmpty)
 	 wdata = wfifo.first.data;
       axiSlave.wdata(wdata);
    endrule   
    rule rl_wdata if (axiSlave.wready() == 1);
-      let wtag <- toGet(wtagfifo).get();
       let md <- toGet(wfifo).get();
-      bfifo.enq(md.tag);
    endrule
    rule rl_bready;
-      axiSlave.bready(pack(bfifo.notFull && wtagfifo.notEmpty));
+      axiSlave.bready(pack(wtagfifo.notEmpty && bfifo.notFull));
    endrule   
    rule rl_done if (axiSlave.bvalid() == 1);
       let tag <- toGet(wtagfifo).get();
       bfifo.enq(tag);
-   endrule      
+   endrule
 
    interface PhysMemReadServer read_server;
       interface Put readReq = toPut(arfifo);
