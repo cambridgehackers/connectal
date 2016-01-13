@@ -28,7 +28,7 @@
             "LOC": "PIN_AL15"
         }
     }, 
-    "CLOCK": {
+    "I2C": {
         "CLOCK_SCL": {
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_AE15"
