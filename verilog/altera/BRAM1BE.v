@@ -1,5 +1,4 @@
-
-// Copyright (c) 2000-2009 Bluespec, Inc.
+// Copyright (c) 2000-2011 Bluespec, Inc.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// $Revision: 17872 $
-// $Date: 2009-09-18 14:32:56 +0000 (Fri, 18 Sep 2009) $
+// $Revision: 31023 $
+// $Date: 2013-04-15 16:20:17 +0000 (Mon, 15 Apr 2013) $
 
 `ifdef BSV_ASSIGNMENT_DELAY
 `else
@@ -34,9 +33,8 @@ module BRAM1BE(CLK,
                ADDR,
                DI,
                DO
-               );
+              );
 
-   // synopsys template
    parameter                      PIPELINED  = 0;
    parameter                      ADDR_WIDTH = 1;
    parameter                      DATA_WIDTH = 1;
@@ -52,13 +50,9 @@ module BRAM1BE(CLK,
    output [DATA_WIDTH-1:0]        DO;
 
    reg [DATA_WIDTH-1:0]           RAM[0:MEMSIZE-1];
-   reg [ADDR_WIDTH-1:0]           ADDR_R;
    reg [DATA_WIDTH-1:0]           DO_R;
+   reg [DATA_WIDTH-1:0]           DO_R2;
 
-   reg [DATA_WIDTH-1:0]           DATA;
-   wire [DATA_WIDTH-1:0]          DATAwr;
-
-   assign DATAwr = RAM[ADDR] ;
 
 `ifdef BSV_NO_INITIAL_BLOCKS
 `else
@@ -69,15 +63,19 @@ module BRAM1BE(CLK,
       for (i = 0; i < MEMSIZE; i = i + 1) begin
          RAM[i] = { ((DATA_WIDTH+1)/2) { 2'b10 } };
       end
-      ADDR_R = { ((ADDR_WIDTH+1)/2) { 2'b10 } };
-      DO_R = { ((DATA_WIDTH+1)/2) { 2'b10 } };
+      DO_R  = { ((DATA_WIDTH+1)/2) { 2'b10 } };
+      DO_R2 = { ((DATA_WIDTH+1)/2) { 2'b10 } };
    end
    // synopsys translate_on
 `endif // !`ifdef BSV_NO_INITIAL_BLOCKS
 
    // iverilog does not support the full verilog-2001 language.  This fixes that for simulation.
 `ifdef __ICARUS__
-   reg [DATA_WIDTH-1:0] MASK, IMASK;
+   reg [DATA_WIDTH-1:0]  MASK, IMASK;
+   reg [DATA_WIDTH-1:0]  DATA;
+   wire [DATA_WIDTH-1:0] DATAwr;
+
+   assign DATAwr = RAM[ADDR] ;
 
    always @(WE or DI or DATAwr) begin : combo1
       integer j;
@@ -93,26 +91,42 @@ module BRAM1BE(CLK,
       DATA = (DATAwr & IMASK) | (DI & MASK);
    end
 
-`else
-   always @(WE or DI or DATAwr) begin : combo1
-      integer j;
-      // DATA = 0; // While this line is better coding sytle, it leads to incorrect synthsis for some tools
-      for(j = 0; j < WE_WIDTH; j = j + 1) begin
-         if (WE[j]) DATA[j*CHUNKSIZE +: CHUNKSIZE] = DI[j*CHUNKSIZE +: CHUNKSIZE];
-         else       DATA[j*CHUNKSIZE +: CHUNKSIZE] = DATAwr[j*CHUNKSIZE +: CHUNKSIZE];
-      end
-   end
-`endif // !`ifdef __ICARUS__
-
    always @(posedge CLK) begin
       if (EN) begin
-         if (|WE)
-           RAM[ADDR] <= `BSV_ASSIGNMENT_DELAY DATA;
-         ADDR_R    <= `BSV_ASSIGNMENT_DELAY ADDR;
+         if (WE) begin
+            RAM[ADDR] <= `BSV_ASSIGNMENT_DELAY DATA;
+            DO_R      <= `BSV_ASSIGNMENT_DELAY DATA;
+         end
+         else begin
+            DO_R      <= `BSV_ASSIGNMENT_DELAY RAM[ADDR];
+         end
       end
-      DO_R      <= `BSV_ASSIGNMENT_DELAY RAM[ADDR_R];
    end
+`else
+   generate
+      genvar i;
+      for(i = 0; i < WE_WIDTH; i = i + 1) begin: porta_we
+         always @(posedge CLK) begin
+            if (EN) begin
+               if (WE[i]) begin
+                  RAM[ADDR][((i+1)*CHUNKSIZE)-1 : i*CHUNKSIZE] <= `BSV_ASSIGNMENT_DELAY DI[((i+1)*CHUNKSIZE)-1 : i*CHUNKSIZE];
+                  DO_R[((i+1)*CHUNKSIZE)-1 : i*CHUNKSIZE]      <= `BSV_ASSIGNMENT_DELAY DI[((i+1)*CHUNKSIZE)-1 : i*CHUNKSIZE];
+               end
+               else begin
+                  DO_R[((i+1)*CHUNKSIZE)-1 : i*CHUNKSIZE]      <= `BSV_ASSIGNMENT_DELAY RAM[ADDR][((i+1)*CHUNKSIZE)-1 : i*CHUNKSIZE];
+               end
+            end
+         end
+      end      
+   endgenerate
 
-   assign DO = (PIPELINED) ? DO_R : RAM[ADDR_R];
+`endif // !`ifdef __ICARUS__
+
+   // Output driver
+   always @(posedge CLK) begin
+      DO_R2 <= `BSV_ASSIGNMENT_DELAY DO_R;
+   end
+   
+   assign DO = (PIPELINED) ? DO_R2 : DO_R;
 
 endmodule // BRAM1BE
