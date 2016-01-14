@@ -16,6 +16,7 @@ import HostInterface::*;
 import MemTypes::*;
 import AxiBits::*;
 
+import AxiIntcBvi::*;
 import AxiEthBvi::*;
 import AxiDmaBvi::*;
 import EthPins::*;
@@ -44,6 +45,7 @@ module mkAxiEth#(HostInterface host, AxiEthTestIndication ind)(AxiEth);
    let clock <- exposeCurrentClock();
    let reset <- exposeCurrentReset();
 
+   let axiIntcBvi <- mkAxiIntcBvi(clock, reset);
    let axiDmaBvi <- mkAxiDmaBvi(clock,clock,clock,clock,reset);
    let axiEthBvi <- mkAxiEthBvi(host.tsys_clk_200mhz_buf,
 				clock, reset, clock,
@@ -63,10 +65,12 @@ module mkAxiEth#(HostInterface host, AxiEthTestIndication ind)(AxiEth);
    Axi4MasterBits#(32,32,MemTagSize,Empty) m_axi_s2mm = toAxi4MasterBits(axiDmaBvi.m_axi_s2mm);
    Axi4MasterBits#(32,32,MemTagSize,Empty) m_axi_sg = toAxi4MasterBits(axiDmaBvi.m_axi_sg);
 
+   Axi4SlaveLiteBits#(9,32) axiIntcSlaveLite = toAxi4SlaveBits(axiIntcBvi.s_axi);
+   PhysMemSlave#(18,32) axiIntcMemSlave <- mkPhysMemSlave(axiIntcSlaveLite);
    PhysMemSlave#(18,32) axiDmaMemSlave <- mkPhysMemSlave(axiDmaBvi.s_axi_lite);
    Axi4SlaveLiteBits#(18,32) axiEthSlaveLite = toAxi4SlaveBits(axiEthBvi.s_axi);
    PhysMemSlave#(18,32) axiEthMemSlave <- mkPhysMemSlave(axiEthSlaveLite);
-   PhysMemSlave#(19,32) memSlaveMux    <- mkPhysMemSlaveMux(vec(axiDmaMemSlave, axiEthMemSlave));
+   PhysMemSlave#(20,32) memSlaveMux    <- mkPhysMemSlaveMux(vec(axiIntcMemSlave, axiDmaMemSlave, axiEthMemSlave));
 
    FIFOF#(Bit#(32)) dfifo <- mkFIFOF();
 
