@@ -137,5 +137,16 @@ vhdl axi_dma_v7_1_8 "../../.ip_user_files/ipstatic/axi_dma_v7_1_8/hdl/src/vhdl/a
 vhdl axi_dma_v7_1_8 "../../.ip_user_files/ipstatic/axi_dma_v7_1_8/hdl/src/vhdl/axi_dma_cmd_split.vhd" 
 vhdl axi_dma_v7_1_8 "../../.ip_user_files/ipstatic/axi_dma_v7_1_8/hdl/src/vhdl/axi_dma.vhd" 
 vhdl work "../../../../out/vc709/axi_dma_0/sim/axi_dma_0.vhd" 
+vhdl axi_lite_ipif_v3_0_3 "../../.ip_user_files/ipstatic/axi_lite_ipif_v3_0_3/hdl/src/vhdl/ipif_pkg.vhd" 
+vhdl axi_lite_ipif_v3_0_3 "../../.ip_user_files/ipstatic/axi_lite_ipif_v3_0_3/hdl/src/vhdl/pselect_f.vhd" 
+vhdl axi_lite_ipif_v3_0_3 "../../.ip_user_files/ipstatic/axi_lite_ipif_v3_0_3/hdl/src/vhdl/address_decoder.vhd" 
+vhdl axi_lite_ipif_v3_0_3 "../../.ip_user_files/ipstatic/axi_lite_ipif_v3_0_3/hdl/src/vhdl/slave_attachment.vhd" 
+vhdl axi_lite_ipif_v3_0_3 "../../.ip_user_files/ipstatic/axi_lite_ipif_v3_0_3/hdl/src/vhdl/axi_lite_ipif.vhd" 
+vhdl axi_intc_v4_1_5 "../../.ip_user_files/ipstatic/axi_intc_v4_1_5/hdl/src/vhdl/double_synchronizer.vhd" 
+vhdl axi_intc_v4_1_5 "../../.ip_user_files/ipstatic/axi_intc_v4_1_5/hdl/src/vhdl/shared_ram_ivar.vhd" 
+vhdl axi_intc_v4_1_5 "../../.ip_user_files/ipstatic/axi_intc_v4_1_5/hdl/src/vhdl/pulse_synchronizer.vhd" 
+vhdl axi_intc_v4_1_5 "../../.ip_user_files/ipstatic/axi_intc_v4_1_5/hdl/src/vhdl/intc_core.vhd" 
+vhdl axi_intc_v4_1_5 "../../.ip_user_files/ipstatic/axi_intc_v4_1_5/hdl/src/vhdl/axi_intc.vhd" 
+vhdl work "../../../../out/vc709/axi_intc_0/sim/axi_intc_0.vhd" 
 
 nosort
