@@ -11,8 +11,38 @@
         "CONNECTALFLAGS" : ["--mainclockperiod=4", "--derivedclockperiod=4", "--pcieclockperiod=4"],
         "rewireclockstring" : ""
     },
+    "sfp1" : {
+		 "rxp" : {
+			     "LOC" : "AL6",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "rxn" : {
+			     "LOC" : "AL5",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "txp" : {
+			     "LOC" : "AM4",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "txn" : {
+			     "LOC" : "AM3",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 }
+    },
     "fmc": {
-    }
+    },
+    "pins": {
+	        "si5324_clk_p": {
+			"LOC": "AD8",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
+	        "si5324_clk_n": {
+			"LOC": "AD7",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		}
+	}
 }
 
 
