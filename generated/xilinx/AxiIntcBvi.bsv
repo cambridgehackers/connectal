@@ -43,7 +43,7 @@ interface AxiintcbviS_axi;
 endinterface
 (* always_ready, always_enabled *)
 interface AxiIntc;
-    method Action      intr(Bit#(2) v);
+    method Action      intr(Bit#(4) v);
     method Bit#(1)     irq();
     interface AxiintcbviS_axi s_axi;
 endinterface
