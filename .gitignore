@@ -48,3 +48,10 @@ nfsume
 ubuntu.exe
 *signature_file.h
 .tmp_versions
+.Xil
+*.mcs
+verilator
+zc706
+*.png
+*.bit
+*.prm
