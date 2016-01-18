@@ -28,6 +28,7 @@ interface AxiEthTestRequest;
 endinterface
 
 interface AxiEthTestIndication;
+   method Action irqChanged(Bit#(1) newLevel);
    method Action readDone(Bit#(32) value); 
    method Action writeDone(); 
    method Action resetDone();
@@ -50,6 +51,28 @@ module mkAxiEth#(HostInterface host, AxiEthTestIndication ind)(AxiEth);
    let axiEthBvi <- mkAxiEthBvi(host.tsys_clk_200mhz_buf,
 				clock, reset, clock,
 				reset, reset, reset, reset);
+
+   let irqLevel <- mkReg(0);
+   let intrLevel <- mkReg(0);
+   rule rl_intr;
+      let irq = axiIntcBvi.irq;
+      if (irq != irqLevel) begin
+	 ind.irqChanged(irq);
+	 irqLevel <= irq;
+	 $display("irq changed %h", irq);
+      end
+      Bit#(4) intr = {
+	 0,
+	 axiDmaBvi.s2mm.introut(),
+	 axiDmaBvi.mm2s.introut(),
+	 axiEthBvi.mac.irq()
+	 };
+      if (intr != intrLevel) begin
+	 intrLevel <= intr;
+	 $display("interrupts changed %h", intr);
+      end
+      axiIntcBvi.intr(intr);
+   endrule
 
    FIFOF#(BRAMRequest#(Bit#(32),Bit#(32))) reqFifo <- mkFIFOF();
    FIFOF#(Bit#(32))                       dataFifo <- mkFIFOF();
