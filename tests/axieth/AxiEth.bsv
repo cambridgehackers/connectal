@@ -28,7 +28,7 @@ interface AxiEthTestRequest;
 endinterface
 
 interface AxiEthTestIndication;
-   method Action irqChanged(Bit#(1) newLevel);
+   method Action irqChanged(Bit#(1) newIrq, Bit#(4) intrSources);
    method Action readDone(Bit#(32) value); 
    method Action writeDone(); 
    method Action resetDone();
@@ -54,24 +54,26 @@ module mkAxiEth#(HostInterface host, AxiEthTestIndication ind)(AxiEth);
 
    let irqLevel <- mkReg(0);
    let intrLevel <- mkReg(0);
+   Bit#(4) intr = {
+      axiDmaBvi.s2mm.introut(),
+      axiDmaBvi.mm2s.introut(),
+      axiEthBvi.mac.irq(),
+      axiEthBvi.interrupt()
+      };
+
    rule rl_intr;
-      let irq = axiIntcBvi.irq;
-      if (irq != irqLevel) begin
-	 ind.irqChanged(irq);
-	 irqLevel <= irq;
-	 $display("irq changed %h", irq);
-      end
-      Bit#(4) intr = {
-	 0,
-	 axiDmaBvi.s2mm.introut(),
-	 axiDmaBvi.mm2s.introut(),
-	 axiEthBvi.mac.irq()
-	 };
-      if (intr != intrLevel) begin
-	 intrLevel <= intr;
-	 $display("interrupts changed %h", intr);
-      end
       axiIntcBvi.intr(intr);
+   endrule
+
+   rule rl_intr_indication;
+      let irq = axiIntcBvi.irq;
+      irqLevel <= irq;
+      intrLevel <= intr;
+
+      if (irq != irqLevel || intr != intrLevel) begin
+	 ind.irqChanged(irq, intr);
+	 $display("irq changed irq=%h intr sources %h", irq, intr);
+      end
    endrule
 
    FIFOF#(BRAMRequest#(Bit#(32),Bit#(32))) reqFifo <- mkFIFOF();

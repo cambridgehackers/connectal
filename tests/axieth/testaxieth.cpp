@@ -9,8 +9,8 @@ class AxiEthTestIndication : public AxiEthTestIndicationWrapper
 public:
     uint32_t buf[16];
 
-    void irqChanged( const uint8_t irqLevel ) {
-	fprintf(stderr, "irqLevel %d\n", irqLevel);
+  void irqChanged( const uint8_t irqLevel, const uint8_t intrSources ) {
+      fprintf(stderr, "irqLevel %d intr sources %x\n", irqLevel, intrSources);
     }
     virtual void resetDone() {
 	fprintf(stderr, "reset done\n");
