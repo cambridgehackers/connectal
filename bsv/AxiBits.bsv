@@ -428,13 +428,13 @@ module mkPhysMemSlave#(Axi4SlaveLiteBits#(axiAddrWidth,dataWidth) axiSlave)(Phys
    endinterface   
 endmodule   
 
-function MemReadClient#(dataWidth) toMemReadClient(Axi4MasterBits#(32,dataWidth,MemTagSize,Empty) m);
+function MemReadClient#(dataWidth) toMemReadClient(Reg#(Bit#(32)) objId, Axi4MasterBits#(32,dataWidth,MemTagSize,Empty) m);
    return (interface MemReadClient;
    interface Get readReq;
       method ActionValue#(MemRequest) get() if (m.arvalid() == 1);
 	 m.arready(1);
 	 let addr = m.araddr();   
-	 return MemRequest { sglId: extend(addr[31:28]), offset: extend(addr[27:0]), burstLen: extend(m.arlen()), tag: extend(m.arid()) };
+	 return MemRequest { sglId: objId, offset: extend(addr), burstLen: extend(m.arlen()), tag: extend(m.arid()) };
       endmethod
    endinterface
    interface Put readData;
@@ -449,13 +449,13 @@ function MemReadClient#(dataWidth) toMemReadClient(Axi4MasterBits#(32,dataWidth,
    endinterface);   
 endfunction
 
-function MemWriteClient#(dataWidth) toMemWriteClient(Axi4MasterBits#(32,dataWidth,MemTagSize,Empty) m);
+function MemWriteClient#(dataWidth) toMemWriteClient(Reg#(Bit#(32)) objId, Axi4MasterBits#(32,dataWidth,MemTagSize,Empty) m);
    return (interface MemWriteClient;
    interface Get writeReq;
       method ActionValue#(MemRequest) get() if (m.awvalid() == 1);
 	 m.awready(1);
 	 let addr = m.awaddr();
-	 return MemRequest { sglId: extend(addr[31:28]), offset: extend(addr[27:0]), burstLen: extend(m.awlen()), tag: extend(m.awid()) };
+	 return MemRequest { sglId: objId, offset: extend(addr), burstLen: extend(m.awlen()), tag: extend(m.awid()) };
       endmethod
    endinterface
    interface Get writeData;
