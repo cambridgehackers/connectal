@@ -102,6 +102,11 @@ void AxiEth::status()
     indication->wait();
 }
 
+void AxiEth::setupDma(uint32_t memref)
+{
+    request->setupDma(memref);
+}
+
 void AxiEth::read(unsigned long offset, uint8_t *buf)
 {
     maybeReset();
