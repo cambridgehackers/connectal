@@ -42,5 +42,12 @@ endinterface
 
 instance Connectable#(AxiStreamMaster#(dataWidth), AxiStreamSlave#(dataWidth));
    module mkConnection#(AxiStreamMaster#(dataWidth) from, AxiStreamSlave#(dataWidth) to)(Empty);
+      rule rl_axi_stream;
+	 to.tdata(from.tdata());
+	 to.tkeep(from.tkeep());
+	 to.tlast(from.tlast());
+	 to.tvalid(from.tvalid());
+	 from.tready(to.tready());
+      endrule
    endmodule
 endinstance
