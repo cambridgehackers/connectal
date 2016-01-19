@@ -16,6 +16,11 @@ public:
 	fprintf(stderr, "reset done\n");
 	sem_post(&sem);
     }
+    virtual void status ( const uint8_t mmcm_locked, const uint8_t irq, const uint8_t intrSources ) {
+	fprintf(stderr, "axi eth status mmcm_locked=%d irq=%d intr sources=%x\n", mmcm_locked, irq, intrSources);
+	sem_wait(&sem);
+    }
+
     void wait() {
 	sem_wait(&sem);
     }
@@ -90,6 +95,12 @@ void AxiEth::maybeReset()
 }
 
 int verbose = 0;
+
+void AxiEth::status()
+{
+    request->status();
+    indication->wait();
+}
 
 void AxiEth::read(unsigned long offset, uint8_t *buf)
 {

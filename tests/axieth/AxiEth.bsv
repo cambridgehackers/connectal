@@ -24,6 +24,7 @@ import EthPins::*;
 interface AxiEthTestRequest;
    method Action reset();
    method Action setupDma(Bit#(32) memref);
+   method Action status();
    method Action read(Bit#(32) addr);
    method Action write(Bit#(32) addr, Bit#(32) value);
 endinterface
@@ -33,6 +34,7 @@ interface AxiEthTestIndication;
    method Action readDone(Bit#(32) value); 
    method Action writeDone(); 
    method Action resetDone();
+   method Action status(Bit#(1) mmcm_locked, Bit#(1) irq, Bit#(4) intrSources);
 endinterface
 
 interface AxiEth;
@@ -76,6 +78,17 @@ module mkAxiEth#(HostInterface host, AxiEthTestIndication ind)(AxiEth);
       if (irq != irqLevel || intr != intrLevel) begin
 	 ind.irqChanged(irq, intr);
 	 $display("irq changed irq=%h intr sources %h", irq, intr);
+      end
+   endrule
+   Reg#(Bit#(32)) cycles <- mkReg(0);
+   Reg#(Bool)     mmcm_lock <- mkReg(False);
+   rule rl_cycles;
+      cycles <= cycles+1;
+   endrule
+   rule rl_mmcm_lock if (!mmcm_lock);
+      if (axiEthBvi.mmcm.locked_out() == 1) begin
+	 mmcm_lock <= True;
+	 $display("%d mmcm locked", cycles);
       end
    endrule
 
@@ -133,6 +146,9 @@ module mkAxiEth#(HostInterface host, AxiEthTestIndication ind)(AxiEth);
       method Action write(Bit#(32) addr, Bit#(32) value);
 	 memSlaveMux.write_server.writeReq.put(PhysMemRequest { addr: truncate(addr), burstLen: 4, tag: 0 });
 	 dfifo.enq(value);
+      endmethod
+      method Action status();
+	 ind.status(axiEthBvi.mmcm.locked_out(), axiIntcBvi.irq, intr);
       endmethod
    endinterface
    interface AxiEthPins pins;

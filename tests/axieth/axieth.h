@@ -9,6 +9,7 @@ class AxiEth {
   AxiEth();
   ~AxiEth();
   int irq ( const uint8_t newLevel );
+  void status();
   void read(unsigned long offset, uint8_t *buf);
   void write(unsigned long offset, const uint8_t *buf);
  private:
