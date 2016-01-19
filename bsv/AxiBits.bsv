@@ -449,6 +449,31 @@ function MemReadClient#(dataWidth) toMemReadClient(Axi4MasterBits#(32,dataWidth,
    endinterface);   
 endfunction
 
+function MemWriteClient#(dataWidth) toMemWriteClient(Axi4MasterBits#(32,dataWidth,MemTagSize,Empty) m);
+   return (interface MemWriteClient;
+   interface Get writeReq;
+      method ActionValue#(MemRequest) get() if (m.awvalid() == 1);
+	 m.awready(1);
+	 let addr = m.awaddr();
+	 return MemRequest { sglId: extend(addr[31:28]), offset: extend(addr[27:0]), burstLen: extend(m.awlen()), tag: extend(m.awid()) };
+      endmethod
+   endinterface
+   interface Get writeData;
+      method ActionValue#(MemData#(dataWidth)) get() if (m.wvalid() == 1);
+	 m.wready(1);
+      return MemData { data: m.wdata(), last: unpack(m.wlast()), tag: extend(m.wid()) };
+      endmethod
+   endinterface
+   interface Put writeDone;
+      method Action put(Bit#(MemTagSize) tag) if (m.bready() == 1);
+	 m.bvalid(1);
+	 m.bresp(0);
+	 m.bid(truncate(tag));
+      endmethod
+   endinterface
+   endinterface);
+endfunction
+
 typedef AxiMasterBits#(32,32,12,Empty) Pps7Maxigp;
 typedef AxiSlaveBits#(32,32,6,Empty) Pps7Saxigp;
 typedef AxiSlaveBits#(32,64,6,HPType) Pps7Saxihp;
