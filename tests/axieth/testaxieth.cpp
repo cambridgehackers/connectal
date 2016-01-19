@@ -1,7 +1,10 @@
 
 #include <AxiEthTestIndication.h>
 #include <AxiEthTestRequest.h>
+#include "dmaManager.h"
 #include "axieth.h"
+
+int verbose = 1;
 
 class AxiEthTestIndication : public AxiEthTestIndicationWrapper
 {
@@ -22,16 +25,19 @@ public:
     }
 
     void wait() {
+	if (verbose) fprintf(stderr, "  waiting ...");
 	sem_wait(&sem);
+	if (verbose) fprintf(stderr, "  done\n");
     }
 
     void readDone ( const uint32_t value ) {
 	buf[0] = value;
-	//fprintf(stderr, "readDone value=%08x\n", value);
+	if (verbose) fprintf(stderr, "readDone value=%08x\n", value);
 	sem_post(&sem);
     }
 
     void writeDone (  ) {
+	if (verbose) fprintf(stderr, "writeDone\n");
 	sem_post(&sem);
     }
 
@@ -67,10 +73,11 @@ int main(int argc, const char **argv)
 
 #else
 AxiEth::AxiEth()
-    : request(0), indication(0), didReset(false)
+    : request(0), indication(0), dmaManager(0), didReset(false)
 {
     request = new AxiEthTestRequestProxy(IfcNames_AxiEthTestRequestS2H);
     indication = new AxiEthTestIndication(IfcNames_AxiEthTestIndicationH2S);
+    dmaManager = platformInit();
 }
 
 AxiEth::~AxiEth()
@@ -94,16 +101,15 @@ void AxiEth::maybeReset()
     }
 }
 
-int verbose = 0;
-
 void AxiEth::status()
 {
     request->status();
     indication->wait();
 }
 
-void AxiEth::setupDma(uint32_t memref)
+void AxiEth::setupDma(uint32_t memfd)
 {
+    int memref = dmaManager->reference(memfd);
     request->setupDma(memref);
 }
 
@@ -111,7 +117,7 @@ void AxiEth::read(unsigned long offset, uint8_t *buf)
 {
     maybeReset();
 
-    //fprintf(stderr, "AxiEth::read offset=%lx\n", offset);
+    if (verbose) fprintf(stderr, "AxiEth::read offset=%lx\n", offset);
     request->read(offset);
     indication->wait();
     if (verbose) fprintf(stderr, "AxiEth::read offset=%lx value=%x\n", offset, *(short *)indication->buf);

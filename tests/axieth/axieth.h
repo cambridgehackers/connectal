@@ -3,6 +3,7 @@
 
 class AxiEthTestRequestProxy;
 class AxiEthTestIndication;
+class DmaManager;
 
 class AxiEth {
  public:
@@ -16,6 +17,7 @@ class AxiEth {
  private:
   AxiEthTestRequestProxy *request;
   AxiEthTestIndication *indication;
+  DmaManager           *dmaManager;
   bool didReset;
 
   void maybeReset();
