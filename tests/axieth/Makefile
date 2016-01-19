@@ -19,12 +19,12 @@ CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/axi_dma_0/axi_dma_0.xci
 CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/axi_ethernet_0/axi_ethernet_0.xci
 CONNECTALFLAGS += --constraint=axieth.xdc --implconstraint=axieth.xdc
 
-ifeq ($(BOARD),vc709)
+ifneq ($(BOARD),xsim)
 PINOUT_FILE += axieth.json
+endif
 PIN_TYPE = AxiEthPins
 PIN_TYPE_INCLUDE = EthPins
 AUTOTOP = --interface pins:AxiEth.pins
-endif
 
 ifeq ($(BOARD),xsim)
 AXI_ETH_DIR=/home/jamey/connectal/out/vc709/axi_ethernet_0
