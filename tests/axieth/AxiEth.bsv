@@ -23,6 +23,7 @@ import EthPins::*;
 
 interface AxiEthTestRequest;
    method Action reset();
+   method Action setupDma(Bit#(32) memref);
    method Action read(Bit#(32) addr);
    method Action write(Bit#(32) addr, Bit#(32) value);
 endinterface
@@ -51,6 +52,8 @@ module mkAxiEth#(HostInterface host, AxiEthTestIndication ind)(AxiEth);
    let axiEthBvi <- mkAxiEthBvi(host.tsys_clk_200mhz_buf,
 				clock, reset, clock,
 				reset, reset, reset, reset);
+
+   Reg#(Bit#(32)) objId <- mkReg(0);
 
    let irqLevel <- mkReg(0);
    let intrLevel <- mkReg(0);
@@ -121,6 +124,9 @@ module mkAxiEth#(HostInterface host, AxiEthTestIndication ind)(AxiEth);
    interface AxiEthTestRequest request;
       method Action reset();
       endmethod
+      method Action setupDma(Bit#(32) memref);
+	 objId <= memref;
+      endmethod
       method Action read(Bit#(32) addr);
 	 memSlaveMux.read_server.readReq.put(PhysMemRequest { addr: truncate(addr), burstLen: 4, tag: 0 });
       endmethod
@@ -137,6 +143,6 @@ module mkAxiEth#(HostInterface host, AxiEthTestIndication ind)(AxiEth);
 	 interface Reset deleteme_unused_reset = reset;
       endinterface
    endinterface
-   interface Vector dmaReadClient = map(toMemReadClient, vec(m_axi_mm2s, m_axi_sg));
-   //interface Vector dmaWriteClient = map(toMemWriteClient, vec(m_axi_s2mm, m_axi_sg));
+   interface Vector dmaReadClient = map(toMemReadClient(objId), vec(m_axi_mm2s, m_axi_sg));
+   interface Vector dmaWriteClient = map(toMemWriteClient(objId), vec(m_axi_s2mm, m_axi_sg));
 endmodule
