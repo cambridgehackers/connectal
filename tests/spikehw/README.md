@@ -20,7 +20,7 @@ To test it, assuming connectal is installed:
 
 You should see output like the following:
 
-    jamey@bdbm07:~/connectal/tests/spikehw$ ./test-spikehw
+    jamey@bdbm07:~/connectal/tests/spikehw$ ./test-spikehw.vc707g2
     buffer /home/jamey/connectal/tests/spikehw/vc707g2/bin/connectal.so
     fpgajtag: elf input file, len 1459190 class 2
     fpgajtag: unzip input file, len 1040655
@@ -50,9 +50,9 @@ You should see output like the following:
     [checkSignature:154] read status from '/dev/connectal' was only 0 bytes long
     [dmaManagerOnce:44]
     axi eth status mmcm_locked=1 irq=0 intr sources=0
+    First word of boot ROM 00000000 (expected 00001137)
     AXI Ethernet Identification 09000000 (expected 09000000)
 
-The last two lines are the actual output, showing that the MMCM locked
-on the reference clock and that it was able to read a register from
-the AXI Ethernet Subsystem.
+The last three lines are the actual test output.
 
+If the first word of the boot ROM is 0, then it is because bootromx4.hex is missing.
