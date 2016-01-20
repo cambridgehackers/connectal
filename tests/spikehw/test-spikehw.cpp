@@ -27,9 +27,9 @@ int main(int argc, const char **argv)
     spikeHw->setFlashParameters(50); // divides clock by 50
     uint32_t values[4] = { 0x98 };
     spikeHw->writeFlash(0x00aa, (uint8_t *)&values[0]);
-    spikeHw->readFlash(0x0040, (uint8_t *)&values[1]);
-    spikeHw->readFlash(0x0042, (uint8_t *)&values[2]);
-    spikeHw->readFlash(0x0044, (uint8_t *)&values[3]);
+    spikeHw->readFlash(0x0020, (uint8_t *)&values[1]);
+    spikeHw->readFlash(0x0022, (uint8_t *)&values[2]);
+    spikeHw->readFlash(0x0024, (uint8_t *)&values[3]);
     fprintf(stderr, "Query flash %02x.%02x.%02x %c%c%c (expected QRY)\n", values[1], values[2], values[3], values[1], values[2], values[3]);
 
     return 0;
