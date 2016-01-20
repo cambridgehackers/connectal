@@ -6,17 +6,17 @@ simulator.
 
 To build it:
 
-   git clone git://github.com/cambridgehackers/fpgamake
-   git clone git://github.com/cambridgehackers/buildcache
-   git clone git://github.com/cambridgehackers/connectal
+    git clone git://github.com/cambridgehackers/fpgamake
+    git clone git://github.com/cambridgehackers/buildcache
+    git clone git://github.com/cambridgehackers/connectal
 
-   cd connectal/tests/spikehw
-   make build.vc707g2 test-spikehw.vc707g2
+    cd connectal/tests/spikehw
+    make build.vc707g2 test-spikehw.vc707g2
 
 To test it, assuming connectal is installed:
 
-   cd connectal/tests/spikehw
-   ./test-spikehw.vc707g2
+    cd connectal/tests/spikehw
+    ./test-spikehw.vc707g2
 
 You should see output like the following:
 
