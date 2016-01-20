@@ -144,6 +144,11 @@ void SpikeHw::write(unsigned long offset, const uint8_t *buf)
     indication->wait();
 }
 
+void SpikeHw::setFlashParameters(unsigned long cycles)
+{
+    request->setFlashParameters(cycles);
+}
+
 void SpikeHw::readFlash(unsigned long offset, uint8_t *buf)
 {
     maybeReset();
