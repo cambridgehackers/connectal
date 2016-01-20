@@ -50,9 +50,18 @@ You should see output like the following:
     [checkSignature:154] read status from '/dev/connectal' was only 0 bytes long
     [dmaManagerOnce:44]
     axi eth status mmcm_locked=1 irq=0 intr sources=0
-    First word of boot ROM 00000000 (expected 00001137)
+    word 0000 of boot ROM 00001137 (expected 00001137)
+    word 0004 of boot ROM 010000ef (expected 010000ef)
+    word 0008 of boot ROM 20000513 (expected 20000513)
+    word 000c of boot ROM 00050067 (expected 00050067)
+    word 0010 of boot ROM 0000006f (expected 0000006f)
+    word 0014 of boot ROM 040007b7 (expected 040007b7)
+    word 0018 of boot ROM 40078793 (expected 40078793)
+    word 001c of boot ROM fc0005b7 (expected fc0005b7)
     AXI Ethernet Identification 09000000 (expected 09000000)
+    SpikeHw::writeFlash offset=55 value=98
+    Query flash 51.52.59 QRY (expected QRY)
 
-The last three lines are the actual test output.
+The last five lines are the actual test output.
 
 If the first word of the boot ROM is 0, then it is because bootromx4.hex is missing.
