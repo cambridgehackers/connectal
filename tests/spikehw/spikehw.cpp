@@ -21,7 +21,7 @@ public:
     }
     virtual void status ( const uint8_t mmcm_locked, const uint8_t irq, const uint8_t intrSources ) {
 	fprintf(stderr, "axi eth status mmcm_locked=%d irq=%d intr sources=%x\n", mmcm_locked, irq, intrSources);
-	sem_wait(&sem);
+	sem_post(&sem);
     }
 
     void wait() {
