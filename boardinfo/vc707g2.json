@@ -284,6 +284,16 @@
 			"LOC": "AD7",
 			"DIFF_TERM": "TRUE",
 			"PIO_DIRECTION": "INPUT"
+		},
+	        "sgmii_clk_p": {
+			"LOC": "AH8",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
+	        "sgmii_clk_n": {
+			"LOC": "AH7",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
 		}
 	}
 }
