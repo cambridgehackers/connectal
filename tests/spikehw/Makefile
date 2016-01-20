@@ -18,6 +18,7 @@ endif
 
 ifneq ($(BOARD),xsim)
 PINOUT_FILE += spikehw.json
+PINOUT_FILE += spikehw-$(BOARD).json
 endif
 PIN_TYPE = SpikeHwPins
 PIN_TYPE_INCLUDE = SpikeHwPins
