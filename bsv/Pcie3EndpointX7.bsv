@@ -233,19 +233,6 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
 
    FIFOF#(Tuple2#(Bit#(64),Bit#(32))) intrFifo <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
 
-   let probe_axi_rq_data <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   let probe_axi_rq_last <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   let probe_axi_rq_keep <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-
-   let probe_rq_data <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   let probe_rq_last <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   let probe_rq_keep <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-
-   let probe_rc_data <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   let probe_rc_sop <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   let probe_rc_eop <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   let probe_rc_keep <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-
    // Drive s_axis_rq
    let rq_txready = (pcie_ep.s_axis_rq.tready != 0 && fAxiRq.notEmpty);
 
@@ -257,10 +244,6 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       pcie_ep.s_axis_rq.tdata(info.data);
       pcie_ep.s_axis_rq.tkeep(info.keep);
       pcie_ep.s_axis_rq.tuser({0, info.last_be, info.first_be});
-
-      probe_axi_rq_data <= info.data;
-      probe_axi_rq_keep <= info.keep;
-      probe_axi_rq_last <= info.last;
    endrule
 
    (* fire_when_enabled, no_implicit_conditions *)
@@ -277,28 +260,14 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    Reg#(Bool)     rqBackpressure       <- mkReg(False, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    Reg#(Bit#(32)) rqBackpressureCountSum <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    Reg#(Bit#(32)) rqBackpressureEvents   <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   let probe_rqBackpressureCycles <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   let probe_rqBackpressureCount <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   let probe_rqBackpressure       <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   Probe#(Bit#(32)) probe_rqBackpressureCountSum <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   Probe#(Bit#(32)) probe_rqBackpressureEvents   <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   let probe_fAxiRqNotEmpty       <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   let probe_SAxsiRqTReady        <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   rule rltready;
-      probe_fAxiRqNotEmpty <= fAxiRq.notEmpty();
-      probe_SAxsiRqTReady <= pcie_ep.s_axis_rq.tready;
-   endrule
    rule rlBackpressureEnter if (!rqBackpressure);
       if (pcie_ep.s_axis_rq.tready == 0 && fAxiRq.notEmpty) begin
 	 rqBackpressure <= True;
 	 rqBackpressureCycles <= 0;
-	 probe_rqBackpressure <= True;
-	 probe_rqBackpressureCycles <= 0;
       end
    endrule
    rule rlBackpressureExit if (rqBackpressure);
       rqBackpressureCycles <= rqBackpressureCycles + 1;
-      probe_rqBackpressureCycles <= rqBackpressureCycles + 1;
       if (pcie_ep.s_axis_rq.tready != 0 || !fAxiRq.notEmpty) begin
 	 rqBackpressure <= False;
 	 let count = rqBackpressureCycles;
@@ -307,13 +276,6 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
 	    rqBackpressureCount <= count;
 	 rqBackpressureCountSum <= rqBackpressureCountSum + extend(count);
 	 rqBackpressureEvents <= rqBackpressureEvents + 1;
-	 probe_rqBackpressure <= False;
-	 probe_rqBackpressureCount <= count;
-	 probe_rqBackpressureCountSum <= rqBackpressureCountSum + extend(count);
-	 probe_rqBackpressureEvents <= rqBackpressureEvents + 1;
-      end
-      else begin
-	 probe_rqBackpressure <= True;
       end
    endrule
 
@@ -353,10 +315,6 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
 			eop: unpack (pcie_ep.m_axis_rc.tlast),
 			keep:pcie_ep.m_axis_rc.tkeep,
 			be:  truncate (pcie_ep.m_axis_rc.tuser [31:0])};    // tuser.byte_en
-      probe_rc_data <= rc.data;
-      probe_rc_sop <= rc.sop;
-      probe_rc_eop <= rc.eop;
-      probe_rc_keep <= rc.keep;
       fAxiRc.enq (rc);
    endrule
 
@@ -482,9 +440,6 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    Reg#(DWCount) rq_dwcount <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    Reg#(AxiStRq) rq_rq <- mkRegU(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
 
-   let probe_rq_dwcount <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   let probe_rq_even <- mkProbe(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-
    rule rl_rq_tlps;
       let tlp <- toGet(frq).get;
       frq_tlps.enq(tlp);
@@ -509,9 +464,6 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
 	 rq_rq <= rq;
       else
 	 fAxiRq.enq(rq);
-
-      probe_rq_dwcount <= dwcount;
-      probe_rq_even <= False;
    endrule
 
    // more data
@@ -546,19 +498,12 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       rq.last_be = rq_last_be;
       rq.keep = keep;
 
-      probe_rq_last <= last;
-      probe_rq_keep <= keep;
-      probe_rq_data <= tlp.data;
-
       if (!rq_even || last)
 	 fAxiRq.enq(rq);
       if (rq_even)
 	rq_rq <= rq;
       rq_dwcount <= dwcount;
       rq_even <= (last) ? False : !rq_even;
-
-      probe_rq_dwcount <= dwcount;
-      probe_rq_even <= (last) ? False : !rq_even;
    endrule
 
    FIFO#(Bool) intrMutex <- mkFIFO1(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
