@@ -102,12 +102,6 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
    rule rl_cycles;
       cycles <= cycles+1;
    endrule
-   rule rl_mmcm_lock if (!mmcm_lock);
-      if (axiEthBvi.mmcm.locked_out() == 1) begin
-	 mmcm_lock <= True;
-	 $display("%d mmcm locked", cycles);
-      end
-   endrule
 
    FIFOF#(BRAMRequest#(Bit#(32),Bit#(32))) reqFifo <- mkFIFOF();
    FIFOF#(Bit#(32))                       dataFifo <- mkFIFOF();
