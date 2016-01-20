@@ -1,4 +1,10 @@
 
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include <SpikeHwIndication.h>
 #include <SpikeHwRequest.h>
 #include "dmaManager.h"
@@ -184,4 +190,56 @@ abstract_device_t *spikehw_device_t::make_device()
     return new spikehw_device_t();
 }
 
-REGISTER_DEVICE(spikehw, 0x42000000, spikehw_device_t::make_device);
+class devicetree_device_t : public abstract_device_t {
+public:
+    devicetree_device_t();
+    bool load(reg_t addr, size_t len, uint8_t* bytes);
+    bool store(reg_t addr, size_t len, const uint8_t* bytes);
+    static abstract_device_t *make_device();
+private:
+    const char *dtb;
+    size_t dtbsz;
+};
+
+devicetree_device_t::devicetree_device_t()
+{
+    int fd = open("devicetree.dtb", O_RDONLY);
+    if (fd > 0) {
+	struct stat statbuf;
+	int status = fstat(fd, &statbuf);
+	fprintf(stderr, "fstat status %d size %ld\n", status, statbuf.st_size);
+	if (status == 0) {
+	    dtb = (const char *)mmap(0, statbuf.st_size, PROT_READ, MAP_SHARED, fd, 0);
+	    dtbsz = statbuf.st_size;
+	    fprintf(stderr, "mapped dtb at %p (%ld bytes)\n", dtb, dtbsz);
+	}
+	close(fd);
+    } else {
+	fprintf(stderr, "Could not open devicetree.dtb\n");
+    }
+}
+
+bool devicetree_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
+{
+    if (dtb && dtb != MAP_FAILED) {
+	if ((addr < dtbsz) && (bytes != 0)) {
+	    memcpy(bytes, dtb + addr, len);
+	    return true;
+	}
+    }
+    return false;
+}
+
+bool devicetree_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
+{
+    return true;
+}
+
+abstract_device_t *devicetree_device_t::make_device()
+{
+    std::cerr << "devicetree_device_t::make_device called" << std::endl;
+    return new devicetree_device_t();
+}
+
+REGISTER_DEVICE(devicetree, 0x41000000, devicetree_device_t::make_device);
+REGISTER_DEVICE(spikehw,    0x42000000, spikehw_device_t::make_device);
