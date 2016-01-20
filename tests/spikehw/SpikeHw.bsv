@@ -29,12 +29,16 @@ interface SpikeHwRequest;
    method Action status();
    method Action read(Bit#(32) addr);
    method Action write(Bit#(32) addr, Bit#(32) value);
+   method Action readFlash(Bit#(32) addr);
+   method Action writeFlash(Bit#(32) addr, Bit#(32) value);
 endinterface
 
 interface SpikeHwIndication;
    method Action irqChanged(Bit#(1) newIrq, Bit#(4) intrSources);
    method Action readDone(Bit#(32) value); 
    method Action writeDone(); 
+   method Action readFlashDone(Bit#(32) value); 
+   method Action writeFlashDone(); 
    method Action resetDone();
    method Action status(Bit#(1) mmcm_locked, Bit#(1) irq, Bit#(4) intrSources);
 endinterface
@@ -127,9 +131,10 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
    PhysMemSlave#(20,32) bootRomMemSlave      <- mkPhysMemToBram(bootRom);
    PhysMemSlave#(21,32) memSlaveMux          <- mkPhysMemSlaveMux(vec(bootRomMemSlave, deviceSlaveMux));
 
-   //PhysMemSlave#(25,16) bpiFlashSlave <- mkPhysMemToBram(bpiFlash);
+   PhysMemSlave#(25,16) bpiFlashSlave <- mkPhysMemToBram(bpiFlash.server);
 
    FIFOF#(Bit#(32)) dfifo <- mkFIFOF();
+   FIFOF#(Bit#(32)) flashdfifo <- mkFIFOF();
 
    rule rl_axieth;
       axiEthBvi.signal.detect(1); // drive to 1 if not using optical transceiver, else use signal from transceiver
@@ -150,6 +155,21 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
       ind.writeDone();
    endrule
 
+   rule rl_bpiflash_rdata;
+      let rdata <- bpiFlashSlave.read_server.readData.get();
+      ind.readFlashDone(extend(rdata.data));
+   endrule
+
+   rule rl_bpiflash_wdata;
+      let wdata <- toGet(flashdfifo).get();
+       bpiFlashSlave.write_server.writeData.put(MemData {data: truncate(wdata), tag: 0, last: True});
+   endrule
+
+   rule rl_bpiflash_writeDone;
+      let tag <- bpiFlashSlave.write_server.writeDone.get();
+      ind.writeFlashDone();
+   endrule
+
    interface SpikeHwRequest request;
       method Action reset();
       endmethod
@@ -163,6 +183,13 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
 	 memSlaveMux.write_server.writeReq.put(PhysMemRequest { addr: truncate(addr), burstLen: 4, tag: 0 });
 	 dfifo.enq(value);
       endmethod
+      method Action readFlash(Bit#(32) addr);
+	 bpiFlashSlave.read_server.readReq.put(PhysMemRequest { addr: truncate(addr), burstLen: 4, tag: 0 });
+      endmethod
+      method Action writeFlash(Bit#(32) addr, Bit#(32) value);
+	 bpiFlashSlave.write_server.writeReq.put(PhysMemRequest { addr: truncate(addr), burstLen: 4, tag: 0 });
+	 flashdfifo.enq(value);
+      endmethod
       method Action status();
 	 ind.status(axiEthBvi.mmcm.locked_out(), axiIntcBvi.irq, intr);
       endmethod
@@ -174,6 +201,7 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
 	 interface Clock deleteme_unused_clock = clock;
 	 interface Reset deleteme_unused_reset = reset;
       endinterface
+      interface flash = bpiFlash.flash;
    endinterface
    interface Vector dmaReadClient = map(toMemReadClient(objId), vec(m_axi_mm2s, m_axi_sg));
    interface Vector dmaWriteClient = map(toMemWriteClient(objId), vec(m_axi_s2mm, m_axi_sg));

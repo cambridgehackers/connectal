@@ -39,6 +39,17 @@ public:
 	sem_post(&sem);
     }
 
+    void readFlashDone ( const uint32_t value ) {
+	buf[0] = value;
+	if (verbose) fprintf(stderr, "readFlashDone value=%08x\n", value);
+	sem_post(&sem);
+    }
+
+    void writeFlashDone (  ) {
+	if (verbose) fprintf(stderr, "writeFlashDone\n");
+	sem_post(&sem);
+    }
+
     SpikeHwIndication(unsigned int id) : SpikeHwIndicationWrapper(id) {
       sem_init(&sem, 0, 0);
     }
@@ -130,6 +141,26 @@ void SpikeHw::write(unsigned long offset, const uint8_t *buf)
     request->write(offset, *(uint32_t *)buf);
     indication->wait();
     request->status();
+    indication->wait();
+}
+
+void SpikeHw::readFlash(unsigned long offset, uint8_t *buf)
+{
+    maybeReset();
+
+    if (verbose) fprintf(stderr, "SpikeHw::readFlash offset=%lx\n", offset);
+    request->readFlash(offset);
+    indication->wait();
+    if (verbose) fprintf(stderr, "SpikeHw::readFlash offset=%lx value=%x\n", offset, *(uint32_t *)indication->buf);
+    memcpy(buf, indication->buf, 4);
+}
+
+void SpikeHw::writeFlash(unsigned long offset, const uint8_t *buf)
+{
+    maybeReset();
+
+    if (1 || verbose) fprintf(stderr, "SpikeHw::writeFlash offset=%lx value=%x\n", offset, *(uint32_t *)buf);
+    request->writeFlash(offset, *(uint32_t *)buf);
     indication->wait();
 }
 #endif

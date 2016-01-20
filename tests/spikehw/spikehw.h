@@ -16,6 +16,8 @@ class SpikeHw {
   void setupDma( uint32_t memref );
   void read(unsigned long offset, uint8_t *buf);
   void write(unsigned long offset, const uint8_t *buf);
+  void readFlash(unsigned long offset, uint8_t *buf);
+  void writeFlash(unsigned long offset, const uint8_t *buf);
  private:
   SpikeHwRequestProxy *request;
   SpikeHwIndication *indication;

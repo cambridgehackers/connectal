@@ -1,5 +1,6 @@
 
 import AxiEthBvi::*;
+import BpiFlash::*;
 
 interface EthPins;
    interface AxiethbviSfp sfp;
@@ -11,4 +12,5 @@ endinterface
 (* always_ready, always_enabled *)
 interface SpikeHwPins;
    interface EthPins eth;
+   interface BpiFlashPins flash;
 endinterface
