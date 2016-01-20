@@ -4,7 +4,7 @@
 #include "dmaManager.h"
 #include "spikehw.h"
 
-int verbose = 1;
+int verbose = 0;
 
 class SpikeHwIndication : public SpikeHwIndicationWrapper
 {
@@ -25,9 +25,7 @@ public:
     }
 
     void wait() {
-	if (verbose) fprintf(stderr, "  waiting ...");
 	sem_wait(&sem);
-	if (verbose) fprintf(stderr, "  done\n");
     }
 
     void readDone ( const uint32_t value ) {
@@ -120,7 +118,7 @@ void SpikeHw::read(unsigned long offset, uint8_t *buf)
     if (verbose) fprintf(stderr, "SpikeHw::read offset=%lx\n", offset);
     request->read(offset);
     indication->wait();
-    if (verbose) fprintf(stderr, "SpikeHw::read offset=%lx value=%x\n", offset, *(short *)indication->buf);
+    if (verbose) fprintf(stderr, "SpikeHw::read offset=%lx value=%x\n", offset, *(uint32_t *)indication->buf);
     memcpy(buf, indication->buf, 4);
 }
 
@@ -128,8 +126,10 @@ void SpikeHw::write(unsigned long offset, const uint8_t *buf)
 {
     maybeReset();
 
-    if (verbose) fprintf(stderr, "SpikeHw::write offset=%lx value=%x\n", offset, *(short *)buf);
+    if (1 || verbose) fprintf(stderr, "SpikeHw::write offset=%lx value=%x\n", offset, *(uint32_t *)buf);
     request->write(offset, *(uint32_t *)buf);
+    indication->wait();
+    request->status();
     indication->wait();
 }
 #endif
