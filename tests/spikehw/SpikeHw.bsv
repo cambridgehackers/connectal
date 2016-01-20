@@ -46,7 +46,7 @@ interface SpikeHw;
    interface SpikeHwPins pins;
 endinterface
 
-typedef 1048576 BootRomBytes;
+typedef 65536 BootRomBytes;
 typedef TDiv#(BootRomBytes,4) BootRomEntries;
 
 module mkBramBootRom(Server#(BRAMRequest#(Bit#(TLog#(BootRomEntries)),Bit#(32)),Bit#(32)));
