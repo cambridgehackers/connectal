@@ -29,6 +29,7 @@ interface SpikeHwRequest;
    method Action status();
    method Action read(Bit#(32) addr);
    method Action write(Bit#(32) addr, Bit#(32) value);
+   method Action setFlashParameters(Bit#(16) cycles);
    method Action readFlash(Bit#(32) addr);
    method Action writeFlash(Bit#(32) addr, Bit#(32) value);
 endinterface
@@ -183,11 +184,14 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
 	 memSlaveMux.write_server.writeReq.put(PhysMemRequest { addr: truncate(addr), burstLen: 4, tag: 0 });
 	 dfifo.enq(value);
       endmethod
+      method Action setFlashParameters(Bit#(16) cycles);
+	 bpiFlash.setParameters(cycles, False);
+      endmethod
       method Action readFlash(Bit#(32) addr);
-	 bpiFlashSlave.read_server.readReq.put(PhysMemRequest { addr: truncate(addr), burstLen: 4, tag: 0 });
+	 bpiFlashSlave.read_server.readReq.put(PhysMemRequest { addr: truncate(addr), burstLen: 2, tag: 0 });
       endmethod
       method Action writeFlash(Bit#(32) addr, Bit#(32) value);
-	 bpiFlashSlave.write_server.writeReq.put(PhysMemRequest { addr: truncate(addr), burstLen: 4, tag: 0 });
+	 bpiFlashSlave.write_server.writeReq.put(PhysMemRequest { addr: truncate(addr), burstLen: 2, tag: 0 });
 	 flashdfifo.enq(value);
       endmethod
       method Action status();
