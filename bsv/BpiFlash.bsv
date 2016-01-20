@@ -102,7 +102,7 @@ module mkBpiFlash(BpiFlash);
 			      reqFifo.deq();
 			      let req = reqFifo.first();
 			      reqReg <= req;
-			      addr_o <= req.address >> 1;
+			      addr_o <= req.address;
 			      data_o <= req.datain;
 			      adv <= 0;
 			      ce <= 0;
