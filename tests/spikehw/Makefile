@@ -32,9 +32,16 @@ CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/axi_dma_0/axi_dma_0.xci
 CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/axi_ethernet_0/axi_ethernet_0.xci
 CONNECTALFLAGS += --constraint=spikehw.xdc --implconstraint=spikehw.xdc
 
-prebuild::
+prebuild:: ../../out/$(BOARD)/axi_dma_0/axi_dma_0.xci ../../out/$(BOARD)/axi_ethernet_0/axi_ethernet_0.xci ../../out/$(BOARD)/axi_intc_0/axi_intc_0.xci
+	ln -sf $(PWD)/bootromx4.hex $(BOARD)
+
+../../out/$(BOARD)/axi_intc_0/axi_intc_0.xci: ../../scripts/connectal-synth-axidma.tcl
 	cd $(BOARD); vivado -mode batch -source $(CONNECTALDIR)/scripts/connectal-synth-axiintc.tcl
+
+../../out/$(BOARD)/axi_ethernet_0/axi_ethernet_0.xci: ../../scripts/connectal-synth-axieth.tcl
 	cd $(BOARD); vivado -mode batch -source $(CONNECTALDIR)/scripts/connectal-synth-axieth.tcl
+
+../../out/$(BOARD)/axi_dma_0/axi_dma_0.xci: ../../scripts/connectal-synth-axidma.tcl
 	cd $(BOARD); vivado -mode batch -source $(CONNECTALDIR)/scripts/connectal-synth-axidma.tcl
 	ln -sfv $(PWD)/bootromx4.hex $(BOARD)
 
