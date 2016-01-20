@@ -1,6 +1,8 @@
 #ifndef SPIKEHW_H
 #define SPIKEHW_H
 
+#include <stdint.h>
+
 class SpikeHwRequestProxy;
 class SpikeHwIndication;
 class DmaManager;
