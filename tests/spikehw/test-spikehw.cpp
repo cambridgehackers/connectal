@@ -14,9 +14,21 @@ int main(int argc, const char **argv)
     spikeHw->status();
 
     // read boot rom
-    uint32_t firstword;
-    spikeHw->read(0x000000 + 0x000, (uint8_t *)&firstword);
-    fprintf(stderr, "First word of boot ROM %08x (expected %08x)\n", firstword, 0x00001137);
+    uint32_t word = 0;
+    uint32_t expected[] = {
+	0x00001137,
+	0x010000ef,
+	0x20000513,
+	0x00050067,
+	0x0000006f,
+	0x040007b7,
+	0x40078793,
+	0xfc0005b7
+    };
+    for (int i = 0; i < 8; i++){
+	spikeHw->read(0x000000 + i*4, (uint8_t *)&word);
+	fprintf(stderr, "word %04x of boot ROM %08x (expected %08x)\n", i*4, word, expected[i]);
+    }
 
     // read ethernet identification register
     uint32_t id;
