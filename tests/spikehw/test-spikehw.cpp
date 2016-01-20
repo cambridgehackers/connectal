@@ -2,7 +2,23 @@
 
 #include <spikehw.h>
 
+#include <riscv/decode.h>
+#include <riscv/devices.h>
+#include <map>
+#include <vector>
+#include <functional>
+
 SpikeHw *spikeHw;
+
+// spike stubs
+std::map<reg_t, std::function<abstract_device_t*()>>& devices()
+{
+    std::map<reg_t, std::function<abstract_device_t*()>> v;
+    return v;
+}
+void register_device(reg_t addr, std::function<abstract_device_t*()> f)
+{
+}
 
 int main(int argc, const char **argv)
 {

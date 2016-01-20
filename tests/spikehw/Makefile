@@ -1,4 +1,7 @@
+
+SPIKE_DIR?=../../riscv-isa-sim
 CONNECTALDIR?=../..
+
 S2H_INTERFACES = SpikeHwRequest:SpikeHw.request
 H2S_INTERFACES = SpikeHw:SpikeHwIndication:host
 
@@ -8,6 +11,8 @@ MEM_WRITE_INTERFACES = lSpikeHw.dmaWriteClient
 CONNECTALFLAGS+= -P mkConnectalTop
 CONNECTALFLAGS+= --shared
 
+RISCV_INCLUDES = -I$(SPIKE_DIR) -I$(SPIKE_DIR)/build
+CONNECTALFLAGS += $(RISCV_INCLUDES) --cxxflags=-std=c++11 --cflags=-std=c++11
 
 BSVFILES =  SpikeHw.bsv
 CPPFILES= spikehw.cpp
@@ -46,11 +51,11 @@ prebuild:: ../../out/$(BOARD)/axi_dma_0/axi_dma_0.xci ../../out/$(BOARD)/axi_eth
 	ln -sfv $(PWD)/bootromx4.hex $(BOARD)
 
 test-spikehw.o: test-spikehw.cpp spikehw.h
-	g++ -g -O -pthread -c -I. test-spikehw.cpp
+	g++ $(RISCV_INCLUDES) -std=c++11 -g -O -pthread -c -I. test-spikehw.cpp
 
 test-spikehw.%: test-spikehw.o
 	$(MAKE) build.$(*)
-	g++ -g -O -pthread -o test-spikehw.$(*) test-spikehw.o $(*)/bin/connectal.so -lc 
+	g++ $(RISCV_INCLUDES) -g -O -pthread -o test-spikehw.$(*) test-spikehw.o $(*)/bin/connectal.so -lc 
 
 include $(CONNECTALDIR)/Makefile.connectal
 

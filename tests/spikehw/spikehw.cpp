@@ -3,6 +3,9 @@
 #include <SpikeHwRequest.h>
 #include "dmaManager.h"
 #include "spikehw.h"
+#include <iostream>
+#include <functional>
+#include <riscv/devices.h>
 
 int verbose = 0;
 
@@ -65,6 +68,7 @@ SpikeHw::SpikeHw()
     request = new SpikeHwRequestProxy(IfcNames_SpikeHwRequestS2H);
     indication = new SpikeHwIndication(IfcNames_SpikeHwIndicationH2S);
     dmaManager = platformInit();
+    request->setFlashParameters(50);
 }
 
 SpikeHw::~SpikeHw()
@@ -146,3 +150,38 @@ void SpikeHw::writeFlash(unsigned long offset, const uint8_t *buf)
     request->writeFlash(offset, *(uint32_t *)buf);
     indication->wait();
 }
+
+class spikehw_device_t : public abstract_device_t {
+public:
+  spikehw_device_t();
+  bool load(reg_t addr, size_t len, uint8_t* bytes);
+  bool store(reg_t addr, size_t len, const uint8_t* bytes);
+  static abstract_device_t *make_device();
+private:
+  SpikeHw *spikeHw;
+};
+
+spikehw_device_t::spikehw_device_t()
+{
+  spikeHw = new SpikeHw();
+}
+
+bool spikehw_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
+{
+    spikeHw->read(addr, bytes); // always reads 4 bytes
+    return true;
+}
+
+bool spikehw_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
+{
+    spikeHw->write(addr, bytes);
+    return true;
+}
+
+abstract_device_t *spikehw_device_t::make_device()
+{
+    std::cerr << "make_device called" << std::endl;
+    return new spikehw_device_t();
+}
+
+REGISTER_DEVICE(spikehw, 0x42000000, spikehw_device_t::make_device);
