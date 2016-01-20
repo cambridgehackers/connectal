@@ -49,7 +49,7 @@ test-spikehw.o: test-spikehw.cpp spikehw.h
 	g++ -g -O -pthread -c -I. test-spikehw.cpp
 
 test-spikehw.%: test-spikehw.o
-	$(MAKE) $(*) build.vc707g2
+	$(MAKE) build.$(*)
 	g++ -g -O -pthread -o test-spikehw.$(*) test-spikehw.o $(*)/bin/connectal.so -lc 
 
 include $(CONNECTALDIR)/Makefile.connectal
