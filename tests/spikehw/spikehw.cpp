@@ -59,28 +59,6 @@ public:
 SpikeHwRequestProxy *request;
 SpikeHwIndication *indication;
 
-#ifdef STANDALONE
-int main(int argc, const char **argv)
-{
-    request = new SpikeHwRequestProxy(IfcNames_SpikeHwRequestS2H);
-    indication = new SpikeHwIndication(IfcNames_SpikeHwIndicationH2S);
-    fprintf(stderr, "Reading ID register\n");
-    request->read((1<<18) + 0x4f8);
-    indication->wait();
-    for (int i = 0; i < 16; i++) {
-      fprintf(stderr, "register %04x\n", i*4);
-      request->read((1<<18) + i*4);
-      indication->wait();
-      fprintf(stderr, "now writing ...\n");
-      request->write((1<<18) + i*4, 0xbeef);
-      indication->wait();
-      request->read((1<<18) + i*4);
-      indication->wait();
-    }
-    return 0;
-}
-
-#else
 SpikeHw::SpikeHw()
     : request(0), indication(0), dmaManager(0), didReset(false)
 {
@@ -168,4 +146,3 @@ void SpikeHw::writeFlash(unsigned long offset, const uint8_t *buf)
     request->writeFlash(offset, *(uint32_t *)buf);
     indication->wait();
 }
-#endif
