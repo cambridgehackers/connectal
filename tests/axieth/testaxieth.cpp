@@ -21,7 +21,7 @@ public:
     }
     virtual void status ( const uint8_t mmcm_locked, const uint8_t irq, const uint8_t intrSources ) {
 	fprintf(stderr, "axi eth status mmcm_locked=%d irq=%d intr sources=%x\n", mmcm_locked, irq, intrSources);
-	sem_wait(&sem);
+	sem_post(&sem);
     }
 
     void wait() {
@@ -130,6 +130,8 @@ void AxiEth::write(unsigned long offset, const uint8_t *buf)
 
     if (verbose) fprintf(stderr, "AxiEth::write offset=%lx value=%x\n", offset, *(short *)buf);
     request->write(offset, *(uint32_t *)buf);
+    indication->wait();
+    request->status();
     indication->wait();
 }
 #endif
