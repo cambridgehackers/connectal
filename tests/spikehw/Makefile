@@ -32,6 +32,11 @@ CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/axi_dma_0/axi_dma_0.xci
 CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/axi_ethernet_0/axi_ethernet_0.xci
 CONNECTALFLAGS += --constraint=spikehw.xdc --implconstraint=spikehw.xdc
 
+prebuild::
+	cd $(BOARD); vivado -mode batch -source $(CONNECTALDIR)/scripts/connectal-synth-axiintc.tcl
+	cd $(BOARD); vivado -mode batch -source $(CONNECTALDIR)/scripts/connectal-synth-axieth.tcl
+	cd $(BOARD); vivado -mode batch -source $(CONNECTALDIR)/scripts/connectal-synth-axidma.tcl
+
 test-spikehw.o: test-spikehw.cpp spikehw.h
 	g++ -g -O -pthread -c -I. test-spikehw.cpp
 
