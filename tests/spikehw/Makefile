@@ -32,4 +32,11 @@ CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/axi_dma_0/axi_dma_0.xci
 CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/axi_ethernet_0/axi_ethernet_0.xci
 CONNECTALFLAGS += --constraint=spikehw.xdc --implconstraint=spikehw.xdc
 
+test-spikehw.o: test-spikehw.cpp
+	g++ -g -O -pthread -c -I. test-spikehw.cpp
+
+test-spikehw.%: test-spikehw.o
+	$(MAKE) -C $(*) connectal.so
+	g++ -g -O -pthread -o test-spikehw.$(*) test-spikehw.o $(*)/bin/connectal.so -lc 
+
 include $(CONNECTALDIR)/Makefile.connectal
