@@ -4,11 +4,15 @@ Spike Hardware
 This project provides hardware peripherals to spike, the RISC-V ISA
 simulator.
 
-To build it:
+To get the sources:
 
     git clone git://github.com/cambridgehackers/fpgamake
     git clone git://github.com/cambridgehackers/buildcache
     git clone git://github.com/cambridgehackers/connectal
+
+I extended spike to enable devices to be registered from extlib's.
+
+    git clone git://github.com/cambridgehackers/cambridgehackers/riscv-isa-sim
 
     cd connectal/tests/spikehw
     make build.vc707g2 test-spikehw.vc707g2
@@ -81,3 +85,18 @@ The corresponding RISC-V Linux kernel is available here:
 
     ## build the device tree .dtb files
     make ARCH=riscv dtbs
+
+Using Spike HW with Spike
+-------------------------
+
+Spike updated with register_device() available to extlibs:
+
+    git clone git://github.com/cambridgehackers/cambridgehackers/riscv-isa-sim
+
+See also the pull request: https://github.com/riscv/riscv-isa-sim/pull/37
+
+To connect spikehw to the hardware:
+
+    spike -extlib=/path/to/vc707g2/bin/connectal.so -m64 ...
+
+
