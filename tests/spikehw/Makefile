@@ -36,12 +36,14 @@ prebuild::
 	cd $(BOARD); vivado -mode batch -source $(CONNECTALDIR)/scripts/connectal-synth-axiintc.tcl
 	cd $(BOARD); vivado -mode batch -source $(CONNECTALDIR)/scripts/connectal-synth-axieth.tcl
 	cd $(BOARD); vivado -mode batch -source $(CONNECTALDIR)/scripts/connectal-synth-axidma.tcl
+	ln -sfv $(PWD)/bootromx4.hex $(BOARD)
 
 test-spikehw.o: test-spikehw.cpp spikehw.h
 	g++ -g -O -pthread -c -I. test-spikehw.cpp
 
 test-spikehw.%: test-spikehw.o
-	$(MAKE) -C $(*) connectal.so
+	$(MAKE) $(*) build.vc707g2
 	g++ -g -O -pthread -o test-spikehw.$(*) test-spikehw.o $(*)/bin/connectal.so -lc 
 
 include $(CONNECTALDIR)/Makefile.connectal
+
