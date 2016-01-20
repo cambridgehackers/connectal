@@ -65,3 +65,19 @@ You should see output like the following:
 The last five lines are the actual test output.
 
 If the first word of the boot ROM is 0, then it is because bootromx4.hex is missing.
+
+Linux Kernel
+------------
+
+The corresponding RISC-V Linux kernel is available here:
+    git clone git://github.com/cambridgehackers/cambridgehackers/riscv-linux-4.1.y linux
+    cd linux
+
+    ## configure the kernel
+    make ARCH=riscv riscv64_spikehw_defconfig
+
+    ## build the kernel
+    make ARCH=riscv
+
+    ## build the device tree .dtb files
+    make ARCH=riscv dtbs
