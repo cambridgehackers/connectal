@@ -35,7 +35,18 @@ public:
     }
 
     void wait() {
-	sem_wait(&sem);
+	struct timespec timeout;
+	timeout.tv_sec = 1000;
+	timeout.tv_nsec = 0;
+	for (int tries = 0; tries < 10; tries++) {
+	    int status = sem_timedwait(&sem, &timeout);
+	    if (status != 0 && errno == ETIMEDOUT) {
+		if (tries > 5)
+		fprintf(stderr, "try %d timed out waiting for response status=%d errno=%d\n", tries, status, errno);
+	    } else {
+		break;
+	    }
+	}
     }
 
     void readDone ( const uint32_t value ) {
