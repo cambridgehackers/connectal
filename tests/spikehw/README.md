@@ -4,6 +4,20 @@ Spike Hardware
 This project provides hardware peripherals to spike, the RISC-V ISA
 simulator.
 
+TODO
+----
+
+ * device tree partitioning of flash
+   * vmlinux partition
+   * root partition
+ * copy vmlinux to flash
+ * pass address of vmlinux in flash to bbl
+ * modify spike to boot from boot rom if no executable passed as an argument
+ * ...
+
+Building SpikeHW
+----------------
+
 To get the sources:
 
     git clone git://github.com/cambridgehackers/fpgamake
