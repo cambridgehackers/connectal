@@ -11,6 +11,7 @@
 #include "spikehw.h"
 #include <iostream>
 #include <functional>
+#include <riscv/sim.h>
 #include <riscv/devices.h>
 
 int verbose = 0;
@@ -295,6 +296,17 @@ abstract_device_t *devicetree_device_t::make_device()
     return new devicetree_device_t();
 }
 
+char *SpikeHw::allocate_mem(size_t memsz)
+{
+    if (!spikeHw)
+	spikeHw = new SpikeHw();
+    int memfd = portalAlloc(memsz, 1);
+    char *buf = (char *)portalMmap(memfd, memsz);
+    spikeHw->setupDma(memfd);
+    return buf;
+}
+
+REGISTER_MEM_ALLOCATOR(SpikeHw::allocate_mem);
 REGISTER_DEVICE(devicetree, 0x04080000, devicetree_device_t::make_device);
 REGISTER_DEVICE(spikehw,    0x04100000, spikehw_device_t::make_device);
 REGISTER_DEVICE(spikeflash, 0x08000000, spikeflash_device_t::make_device);
