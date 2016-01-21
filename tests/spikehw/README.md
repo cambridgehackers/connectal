@@ -8,8 +8,12 @@ TODO
 ----
 
  * device tree partitioning of flash
-   * vmlinux partition
-   * root partition
+   * added to riscv_spikehw_defconfig (DONE)
+   * device tree entry for flash works (DONE)
+   * device tree entry for partitions works (registers)
+   * vmlinux partition (DONE)
+   * root partition (DONE)
+ * spikehw registering a flash device with spike (DONE)
  * copy vmlinux to flash
  * pass address of vmlinux in flash to bbl
  * modify spike to boot from boot rom if no executable passed as an argument
