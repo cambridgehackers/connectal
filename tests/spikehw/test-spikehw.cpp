@@ -19,6 +19,9 @@ std::map<reg_t, std::function<abstract_device_t*()>>& devices()
 void register_device(reg_t addr, std::function<abstract_device_t*()> f)
 {
 }
+void register_mem_allocator(std::function<char *(size_t)> f)
+{
+}
 
 int main(int argc, const char **argv)
 {
