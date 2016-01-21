@@ -207,10 +207,25 @@ spikeflash_device_t::spikeflash_device_t()
 
 bool spikeflash_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
 {
-    spikeHw->readFlash(addr, bytes); // always reads 4 bytes
-    //fprintf(stderr, "spikeflash::load addr=%08lx len=%ld bytes=%02x\n", addr, len, *(uint16_t *)bytes);
-    if (len != 2)
-      return false;
+    if (addr & 1 && len != 1) fprintf(stderr, "spikeflash::load addr=%08lx len=%ld\n", addr, len);
+    if (addr & 1) {
+	uint8_t data[2];
+	spikeHw->readFlash(addr, data); // always reads 4 bytes
+	bytes[0] = data[1];
+	if (len > 1)
+	    return false;
+	else
+	    return true;
+    }
+
+    while (len) {
+	spikeHw->readFlash(addr, bytes); // always reads 4 bytes
+	if (len < 2)
+	    break;
+	addr  += 2;
+	bytes += 2;
+	len   -= 2;
+    }
     return true;
 }
 
