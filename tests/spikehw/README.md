@@ -17,12 +17,19 @@ TODO
  * restore console input (wtf)
  * copy vmlinux to flash (via /etc/init.d/rc) (DONE?)
  * pass address of vmlinux in flash to bbl (in riscy version of riscv-pk)
- * boot vmlinux from flash to login prompt (DONE)
+ * boot vmlinux from flash to login prompt (DONE) (AGAIN)
+ * copy root fs image to flash (DONE) (AGAIN)
+ * boot linux to command prompt using flash root filesystem (DONE)
+ * change /etc/default/rcS ROOTFS_READ_ONLY=yes (DONE)
+ * boot linux to command prompt using flash for vmlinux and root filesystem (almost done)
+ * modify spike to use portalmem for dram so DMA from FPGA works (via register_mem_allocator) (DONE)
 
- * modify spike to boot from boot rom if no executable passed as an argument
+ * modify spike so devices can raise interrupts (IMPLEMENTED)
+
+ * enable boot loader to pass command line to linux
+ * modify spike to boot from boot ROM if no executable passed as an argument
+ * copy bbl from boot ROM to DRAM
  * update /etc/default/volatiles for read only root
- * change /etc/default/rcS ROOTFS_READ_ONLY=yes
- * modify spike to use portalmem for dram so DMA from FPGA works
  * fix ioremap() so that all 128MB of flash can be mapped
  * switch to coreboot instead of bbl
  * ...
