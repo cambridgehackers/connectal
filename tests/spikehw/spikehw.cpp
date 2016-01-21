@@ -108,6 +108,7 @@ void SpikeHw::status()
 void SpikeHw::setupDma(uint32_t memfd)
 {
     int memref = dmaManager->reference(memfd);
+    fprintf(stderr, "SpikeHw::setupDma memfd=%d memref=%d\n", memfd, memref);
     request->setupDma(memref);
 }
 
@@ -301,7 +302,14 @@ char *SpikeHw::allocate_mem(size_t memsz)
     if (!spikeHw)
 	spikeHw = new SpikeHw();
     int memfd = portalAlloc(memsz, 1);
+    if (memfd < 0)
+	return 0;
     char *buf = (char *)portalMmap(memfd, memsz);
+    if (buf == MAP_FAILED) {
+	close(memfd);
+	return 0;
+    }
+    fprintf(stderr, "SpikeHw::allocate_mem memsz=%lx memfd=%d buf=%p\n", memsz, memfd, buf);
     spikeHw->setupDma(memfd);
     return buf;
 }
