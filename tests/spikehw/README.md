@@ -14,9 +14,17 @@ TODO
    * vmlinux partition (DONE)
    * root partition (DONE)
  * spikehw registering a flash device with spike (DONE)
- * copy vmlinux to flash
- * pass address of vmlinux in flash to bbl
+ * restore console input (wtf)
+ * copy vmlinux to flash (via /etc/init.d/rc) (DONE?)
+ * pass address of vmlinux in flash to bbl (in riscy version of riscv-pk)
+ * boot vmlinux from flash to login prompt (DONE)
+
  * modify spike to boot from boot rom if no executable passed as an argument
+ * update /etc/default/volatiles for read only root
+ * change /etc/default/rcS ROOTFS_READ_ONLY=yes
+ * modify spike to use portalmem for dram so DMA from FPGA works
+ * fix ioremap() so that all 128MB of flash can be mapped
+ * switch to coreboot instead of bbl
  * ...
 
 Building SpikeHW
