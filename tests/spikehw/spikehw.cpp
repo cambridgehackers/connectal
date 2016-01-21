@@ -125,11 +125,11 @@ void SpikeHw::write(unsigned long offset, const uint8_t *buf)
 {
     maybeReset();
 
-    if (1 || verbose) fprintf(stderr, "SpikeHw::write offset=%lx value=%x\n", offset, *(uint32_t *)buf);
+    if (verbose) fprintf(stderr, "SpikeHw::write offset=%lx value=%x\n", offset, *(uint32_t *)buf);
     request->write(offset, *(uint32_t *)buf);
     indication->wait();
-    request->status();
-    indication->wait();
+    //request->status();
+    //indication->wait();
 }
 
 void SpikeHw::setFlashParameters(unsigned long cycles)
@@ -152,7 +152,7 @@ void SpikeHw::writeFlash(unsigned long offset, const uint8_t *buf)
 {
     maybeReset();
 
-    if (1 || verbose) fprintf(stderr, "SpikeHw::writeFlash offset=%lx value=%x\n", offset, *(uint32_t *)buf);
+    if (verbose) fprintf(stderr, "SpikeHw::writeFlash offset=%lx value=%x\n", offset, *(uint32_t *)buf);
     request->writeFlash(offset, *(uint32_t *)buf);
     indication->wait();
 }
@@ -208,7 +208,7 @@ spikeflash_device_t::spikeflash_device_t()
 bool spikeflash_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
 {
     spikeHw->readFlash(addr, bytes); // always reads 4 bytes
-    fprintf(stderr, "spikeflash::load addr=%08lx len=%ld bytes=%02x\n", addr, len, *(uint16_t *)bytes);
+    //fprintf(stderr, "spikeflash::load addr=%08lx len=%ld bytes=%02x\n", addr, len, *(uint16_t *)bytes);
     if (len != 2)
       return false;
     return true;
@@ -216,7 +216,7 @@ bool spikeflash_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
 
 bool spikeflash_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 {
-    fprintf(stderr, "spikeflash::store addr=%08lx len=%ld bytes=%02x\n", addr, len, *(uint16_t *)bytes);
+    //fprintf(stderr, "spikeflash::store addr=%08lx len=%ld bytes=%02x\n", addr, len, *(uint16_t *)bytes);
     if (len != 2)
       return false;
     spikeHw->writeFlash(addr, bytes);
