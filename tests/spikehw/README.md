@@ -112,6 +112,16 @@ The corresponding RISC-V Linux kernel is available here:
     ## build the device tree .dtb files
     make ARCH=riscv dtbs
 
+BBL (in riscv-pk)
+-----------------
+
+I modified BBL to load an ELF file from physical memory (DRAM, boot
+ROM, or NOR FLASH) when passed an address instead of a filename.
+
+   git clone git://github.com/cambridgehackers/cambridgehackers/riscv-pk
+
+
+
 Using Spike HW with Spike
 -------------------------
 
