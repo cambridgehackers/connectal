@@ -18,12 +18,14 @@ int verbose = 0;
 
 class SpikeHwIndication : public SpikeHwIndicationWrapper
 {
-  sem_t sem;
+    sem_t sem;
 public:
+    int irq;
     uint32_t buf[16];
 
-  void irqChanged( const uint8_t irqLevel, const uint8_t intrSources ) {
-      fprintf(stderr, "irqLevel %d intr sources %x\n", irqLevel, intrSources);
+  void irqChanged( const uint8_t irq, const uint8_t intrSources ) {
+      fprintf(stderr, "irq %d intr sources %x\n", irq, intrSources);
+      this->irq = irq;
     }
     virtual void resetDone() {
 	fprintf(stderr, "reset done\n");
@@ -71,7 +73,7 @@ public:
 	sem_post(&sem);
     }
 
-    SpikeHwIndication(unsigned int id) : SpikeHwIndicationWrapper(id) {
+    SpikeHwIndication(unsigned int id) : SpikeHwIndicationWrapper(id), irq(0) {
       sem_init(&sem, 0, 0);
     }
 };
@@ -170,11 +172,21 @@ void SpikeHw::writeFlash(unsigned long offset, const uint8_t *buf)
     indication->wait();
 }
 
+bool SpikeHw::hasInterrupt()
+{
+    return indication->irq; 
+}
+void SpikeHw::clearInterrupt()
+{
+    indication->irq = 0;
+}
+
 SpikeHw *spikeHw;
 
 class spikehw_device_t : public abstract_device_t {
 public:
   spikehw_device_t();
+  bool has_interrupt();
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
   static abstract_device_t *make_device();
@@ -184,6 +196,15 @@ spikehw_device_t::spikehw_device_t()
 {
   if (!spikeHw)
     spikeHw = new SpikeHw();
+}
+
+bool spikehw_device_t::has_interrupt()
+{
+    if (spikeHw->hasInterrupt()) {
+	spikeHw->clearInterrupt();
+	return true;
+    }
+    return false;
 }
 
 bool spikehw_device_t::load(reg_t addr, size_t len, uint8_t* bytes)

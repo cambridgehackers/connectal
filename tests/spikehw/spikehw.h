@@ -18,6 +18,8 @@ class SpikeHw {
   void setFlashParameters(unsigned long cycles);
   void readFlash(unsigned long offset, uint8_t *buf);
   void writeFlash(unsigned long offset, const uint8_t *buf);
+  bool hasInterrupt();
+  void clearInterrupt();
   static char *allocate_mem(size_t memsz);
  private:
   void setupDma( uint32_t memfd );
