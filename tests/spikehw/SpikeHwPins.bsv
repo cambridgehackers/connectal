@@ -11,6 +11,8 @@ endinterface
 
 (* always_ready, always_enabled *)
 interface SpikeHwPins;
+`ifdef IncludeEthernet
    interface EthPins eth;
+`endif
    interface BpiFlashPins flash;
 endinterface

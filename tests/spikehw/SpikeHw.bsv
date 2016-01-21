@@ -73,9 +73,11 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
    let bpiFlash   <- mkBpiFlash();
    let axiIntcBvi <- mkAxiIntcBvi(clock, reset);
    let axiDmaBvi <- mkAxiDmaBvi(clock,clock,clock,clock,reset);
+`ifdef IncludeEthernet
    let axiEthBvi <- mkAxiEthBvi(host.tsys_clk_200mhz_buf,
 				clock, reset, clock,
 				reset, reset, reset, reset);
+`endif
 
    Reg#(Bit#(32)) objId <- mkReg(0);
 
@@ -84,8 +86,12 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
    Bit#(4) intr = {
       axiDmaBvi.s2mm.introut(),
       axiDmaBvi.mm2s.introut(),
+`ifdef IncludeEthernet
       axiEthBvi.mac.irq(),
       axiEthBvi.interrupt()
+`else
+      0
+`endif
       };
 
    rule rl_intr;
@@ -110,6 +116,8 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
 
    FIFOF#(BRAMRequest#(Bit#(32),Bit#(32))) reqFifo <- mkFIFOF();
    FIFOF#(Bit#(32))                       dataFifo <- mkFIFOF();
+
+`ifdef IncludeEthernet
    // packet data and status from the ethernet
    mkConnection(axiEthBvi.m_axis_rxd, axiDmaBvi.s_axis_s2mm);
    mkConnection(axiEthBvi.m_axis_rxs, axiDmaBvi.s_axis_s2mm_sts);
@@ -117,6 +125,7 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
    // packet data and control to the ethernet
    mkConnection(axiDmaBvi.m_axis_mm2s,       axiEthBvi.s_axis_txd);
    mkConnection(axiDmaBvi.m_axis_mm2s_cntrl, axiEthBvi.s_axis_txc);
+`endif
 
    Axi4MasterBits#(32,32,MemTagSize,Empty) m_axi_mm2s = toAxi4MasterBits(axiDmaBvi.m_axi_mm2s);
    Axi4MasterBits#(32,32,MemTagSize,Empty) m_axi_s2mm = toAxi4MasterBits(axiDmaBvi.m_axi_s2mm);
@@ -125,9 +134,13 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
    Axi4SlaveLiteBits#(9,32) axiIntcSlaveLite = toAxi4SlaveBits(axiIntcBvi.s_axi);
    PhysMemSlave#(18,32) axiIntcMemSlave      <- mkPhysMemSlave(axiIntcSlaveLite);
    PhysMemSlave#(18,32) axiDmaMemSlave       <- mkPhysMemSlave(axiDmaBvi.s_axi_lite);
+`ifdef IncludeEthernet
    Axi4SlaveLiteBits#(18,32) axiEthSlaveLite = toAxi4SlaveBits(axiEthBvi.s_axi);
    PhysMemSlave#(18,32) axiEthMemSlave       <- mkPhysMemSlave(axiEthSlaveLite);
    PhysMemSlave#(20,32) deviceSlaveMux       <- mkPhysMemSlaveMux(vec(axiIntcMemSlave, axiDmaMemSlave, axiEthMemSlave));
+`else
+   PhysMemSlave#(20,32) deviceSlaveMux       <- mkPhysMemSlaveMux(vec(axiIntcMemSlave, axiDmaMemSlave));
+`endif
 
    PhysMemSlave#(20,32) bootRomMemSlave      <- mkPhysMemToBram(bootRom);
    PhysMemSlave#(21,32) memSlaveMux          <- mkPhysMemSlaveMux(vec(bootRomMemSlave, deviceSlaveMux));
@@ -137,9 +150,11 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
    FIFOF#(Bit#(32)) dfifo <- mkFIFOF();
    FIFOF#(Bit#(32)) flashdfifo <- mkFIFOF();
 
+`ifdef IncludeEthernet
    rule rl_axieth;
       axiEthBvi.signal.detect(1); // drive to 1 if not using optical transceiver, else use signal from transceiver
    endrule
+`endif
 
    rule rl_rdata;
       let rdata <- memSlaveMux.read_server.readData.get();
@@ -195,16 +210,25 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
 	 flashdfifo.enq(value);
       endmethod
       method Action status();
-	 ind.status(axiEthBvi.mmcm.locked_out(), axiIntcBvi.irq, intr);
+	 ind.status(
+`ifdef IncludeEthernet
+	    axiEthBvi.mmcm.locked_out(),
+`else
+		    0,
+`endif
+
+	    axiIntcBvi.irq, intr);
       endmethod
    endinterface
    interface SpikeHwPins pins;
+`ifdef IncludeEthernet
       interface EthPins eth;
 	 interface AxiethbviMgt mgt   = axiEthBvi.mgt;
 	 interface AxiethbviMdio sfp = axiEthBvi.sfp;
 	 interface Clock deleteme_unused_clock = clock;
 	 interface Reset deleteme_unused_reset = reset;
       endinterface
+`endif
       interface flash = bpiFlash.flash;
    endinterface
    interface Vector dmaReadClient = map(toMemReadClient(objId), vec(m_axi_mm2s, m_axi_sg));
