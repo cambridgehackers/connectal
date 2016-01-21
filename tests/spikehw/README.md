@@ -28,8 +28,7 @@ TODO
 
  * enable boot loader to pass command line to linux
  * modify spike to boot from boot ROM if no executable passed as an argument
- * copy bbl from boot ROM to DRAM
- * update /etc/default/volatiles for read only root
+ * copy bbl from boot ROM to DRAM (see code in tests/spikehw/boot/ )
  * fix ioremap() so that all 128MB of flash can be mapped
  * switch to coreboot instead of bbl
  * ...
