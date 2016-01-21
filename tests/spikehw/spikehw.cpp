@@ -86,7 +86,7 @@ SpikeHw::SpikeHw()
     request = new SpikeHwRequestProxy(IfcNames_SpikeHwRequestS2H);
     indication = new SpikeHwIndication(IfcNames_SpikeHwIndicationH2S);
     dmaManager = platformInit();
-    request->setFlashParameters(50);
+    request->setFlashParameters(100);
 }
 
 SpikeHw::~SpikeHw()
