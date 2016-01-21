@@ -157,19 +157,20 @@ void SpikeHw::writeFlash(unsigned long offset, const uint8_t *buf)
     indication->wait();
 }
 
+SpikeHw *spikeHw;
+
 class spikehw_device_t : public abstract_device_t {
 public:
   spikehw_device_t();
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
   static abstract_device_t *make_device();
-private:
-  SpikeHw *spikeHw;
 };
 
 spikehw_device_t::spikehw_device_t()
 {
-  spikeHw = new SpikeHw();
+  if (!spikeHw)
+    spikeHw = new SpikeHw();
 }
 
 bool spikehw_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
@@ -188,6 +189,44 @@ abstract_device_t *spikehw_device_t::make_device()
 {
     std::cerr << "make_device called" << std::endl;
     return new spikehw_device_t();
+}
+
+class spikeflash_device_t : public abstract_device_t {
+public:
+  spikeflash_device_t();
+  bool load(reg_t addr, size_t len, uint8_t* bytes);
+  bool store(reg_t addr, size_t len, const uint8_t* bytes);
+  static abstract_device_t *make_device();
+};
+
+spikeflash_device_t::spikeflash_device_t()
+{
+  if (!spikeHw)
+    spikeHw = new SpikeHw();
+}
+
+bool spikeflash_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
+{
+    spikeHw->readFlash(addr, bytes); // always reads 4 bytes
+    fprintf(stderr, "spikeflash::load addr=%08lx len=%ld bytes=%02x\n", addr, len, *(uint16_t *)bytes);
+    if (len != 2)
+      return false;
+    return true;
+}
+
+bool spikeflash_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
+{
+    fprintf(stderr, "spikeflash::store addr=%08lx len=%ld bytes=%02x\n", addr, len, *(uint16_t *)bytes);
+    if (len != 2)
+      return false;
+    spikeHw->writeFlash(addr, bytes);
+    return true;
+}
+
+abstract_device_t *spikeflash_device_t::make_device()
+{
+    std::cerr << "spikeflash_device_t::make_device called" << std::endl;
+    return new spikeflash_device_t();
 }
 
 class devicetree_device_t : public abstract_device_t {
@@ -243,3 +282,4 @@ abstract_device_t *devicetree_device_t::make_device()
 
 REGISTER_DEVICE(devicetree, 0x04080000, devicetree_device_t::make_device);
 REGISTER_DEVICE(spikehw,    0x04100000, spikehw_device_t::make_device);
+REGISTER_DEVICE(spikeflash, 0x08000000, spikeflash_device_t::make_device);
