@@ -241,5 +241,5 @@ abstract_device_t *devicetree_device_t::make_device()
     return new devicetree_device_t();
 }
 
-REGISTER_DEVICE(devicetree, 0x41000000, devicetree_device_t::make_device);
-REGISTER_DEVICE(spikehw,    0x42000000, spikehw_device_t::make_device);
+REGISTER_DEVICE(devicetree, 0x04080000, devicetree_device_t::make_device);
+REGISTER_DEVICE(spikehw,    0x04100000, spikehw_device_t::make_device);
