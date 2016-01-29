@@ -1,7 +1,7 @@
 source "board.tcl"
 source "$connectaldir/scripts/connectal-synth-ip.tcl"
 
-proc create_custom_pll {name refclk args} {
+proc create_custom_pll {core_version name mode refclk args} {
     global ipdir boardname partname
     set num [llength $args]
 
@@ -44,27 +44,24 @@ proc create_custom_pll {name refclk args} {
 	}
 
     set core_name {altera_pll}
-    set core_version {14.0}
     set ip_name $name
 
-    exec -ignorestderr -- ip-generate \
-            --project-directory=$ipdir/$boardname                            \
-            --output-directory=$ipdir/$boardname/synthesis/$ip_name                   \
-            --file-set=QUARTUS_SYNTH                                         \
-            --report-file=html:$ipdir/$boardname/$ip_name.html               \
-            --report-file=sopcinfo:$ipdir/$boardname/$ip_name.sopcinfo       \
-            --report-file=cmp:$ipdir/$boardname/$ip_name.cmp                 \
-            --report-file=svd:$ipdir/$boardname/synthesis/$ip_name/$ip_name.svd       \
-            --report-file=qip:$ipdir/$boardname/synthesis/$ip_name/altera_$ip_name.qip     \
-            --report-file=regmap:$ipdir/$boardname/synthesis/$ip_name/$ip_name.regmap \
-            --report-file=xml:$ipdir/$boardname/$ip_name.xml                 \
-            --system-info=DEVICE_FAMILY=StratixV                             \
-            --system-info=DEVICE=$partname                                   \
-            --system-info=DEVICE_SPEEDGRADE=2_H2                             \
-            --language=VERILOG                                               \
-            {*}$component_parameters\
-            --component-name=$core_name                                      \
-            --output-name=$ip_name
+    if { $mode == "synthesis" } {
+        set fileset "QUARTUS_SYNTH"
+    } else {
+        set fileset "SIM_VERILOG"
+    }
+
+    fpgamake_altera_ipcore $core_name $core_version $ip_name $fileset component_parameters
 }
 
-create_custom_pll pll_156 644.53125 156.25
+regexp {[\.0-9]+} $quartus(version) core_version
+puts $core_version
+
+if {[info exists SYNTHESIS]} {
+    create_custom_pll $core_version pll_156 synthesis 644.53125 156.25
+}
+
+if {[info exists SIMULATION]} {
+    create_custom_pll $core_version pll_156 simulation 644.53125 156.25
+}
