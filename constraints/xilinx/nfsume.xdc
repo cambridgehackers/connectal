@@ -90,9 +90,4 @@ set_property PULLUP     true        [get_ports { RST_N_pci_sys_reset_n }]
 # TIMING CONSTRAINTS
 ######################################################################################################
 
-create_clock -name bscan_refclk -period 20 [get_pins host_pciehost_bscan_bscan/TCK]
-create_clock -name pci_refclk -period 10 [get_pins *pci_clk_100mhz_buf/O]
-
-## no longer needed?
-create_clock -name pci_extclk -period 10 [get_pins *ep7/pcie_ep/inst/inst/gt_top_i/pipe_wrapper_i/pipe_lane[0].gt_wrapper_i/gtx_channel.gtxe2_channel_i/TXOUTCLK]
-set_clock_groups -name ___clk_groups_generated_0_1_0_0_0 -physically_exclusive -group [get_clocks clk_125mhz] -group [get_clocks clk_250mhz]
+## in pcie-clocks.xdc

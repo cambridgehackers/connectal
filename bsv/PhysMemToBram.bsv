@@ -106,6 +106,7 @@ module mkPhysMemToBramBE#(BRAMServerBE#(Bit#(bramAddrWidth), Bit#(busDataWidth),
            ,Add#(n, 0, ByteEnableSize)
            ,Div#(busDataWidth, 8, b__)
            ,Add#(`DataBusWidth, 0, busDataWidth)
+	   ,ReqByteEnables#(PhysMemRequest#(busAddrWidth, busDataWidth), TDiv#(busDataWidth,8))
            );
 
    FIFOF#(Bit#(6))  readTagFifo <- mkFIFOF();
@@ -138,7 +139,7 @@ module mkPhysMemToBramBE#(BRAMServerBE#(Bit#(bramAddrWidth), Bit#(busDataWidth),
    interface PhysMemReadServer read_server;
       interface Put readReq;
 	 method Action put(PhysMemRequest#(busAddrWidth, busDataWidth) req);
-            if (verbose) $display("%d read_server.readAddr %h bc %d fbe %x lbe %x", cycles, req.addr, req.burstLen, req.firstbe, req.lastbe);
+            if (verbose) $display("%d read_server.readAddr %h bc %d", cycles, req.addr, req.burstLen);
 	    readAddrGenerator.request.put(req);
             readByteEnableFifo.enq(reqLastByteEnable(req));
 	 endmethod
@@ -161,7 +162,7 @@ module mkPhysMemToBramBE#(BRAMServerBE#(Bit#(bramAddrWidth), Bit#(busDataWidth),
 	 method Action put(PhysMemRequest#(busAddrWidth, busDataWidth) req);
 	    writeAddrGenerator.request.put(req);
             writeByteEnableFifo.enq(reqLastByteEnable(req));
-            if (verbose) $display("%d write_server.writeAddr %h bc %d fbe %x lbe %x", cycles, req.addr, req.burstLen, req.firstbe, req.lastbe);
+            if (verbose) $display("%d write_server.writeAddr %h bc %d", cycles, req.addr, req.burstLen);
 	 endmethod
       endinterface
       interface Put writeData;

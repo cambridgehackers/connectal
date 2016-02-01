@@ -36,8 +36,16 @@ typedef `NumberOfMasters NumberOfMasters;
 typedef `SlaveControlAddrWidth SlaveControlAddrWidth;
 typedef `NumberOfUserTiles NumberOfUserTiles;
 typedef TAdd#(`NumberOfUserTiles,1) NumberOfTiles;
+`ifndef NumReadClients
 typedef 2 NumReadClients;
+`else
+typedef `NumReadClients NumReadClients;
+`endif
+`ifndef NumWriteClients
 typedef 2 NumWriteClients;
+`else
+typedef `NumWriteClients NumWriteClients;
+`endif
 //typedef `PinType TileExtType;
 //typedef `PinType PinType;
 typedef 16 MaxNumberOfPortals;

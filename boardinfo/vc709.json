@@ -53,6 +53,78 @@
 		 "PIO_DIRECTION" : "OUTPUT"
 		 }
 	},
+    "sfp1": {
+		 "rxp" : {
+			     "LOC" : "AN6",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "rxn" : {
+			     "LOC" : "AN5",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "txp" : {
+			     "LOC" : "AP4",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "txn" : {
+			     "LOC" : "AP3",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 }
+    },
+    "sfp2": {
+		 "rxp" : {
+			     "LOC" : "AM8",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "rxn" : {
+			     "LOC" : "AM7",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "txp" : {
+			     "LOC" : "AN2",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "txn" : {
+			     "LOC" : "AN1",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 }
+    },
+    "sfp3": {
+		 "rxp" : {
+			     "LOC" : "AL6",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "rxn" : {
+			     "LOC" : "AL5",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "txp" : {
+			     "LOC" : "AM4",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "txn" : {
+			     "LOC" : "AM3",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 }
+    },
+    "sfp4": {
+		 "rxp" : {
+			     "LOC" : "AJ6",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "rxn" : {
+			     "LOC" : "AJ5",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "txp" : {
+			     "LOC" : "AL2",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "txn" : {
+			     "LOC" : "AL1",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 }
+    },
     "bpi_flash": {
 		 "data[0]" : {
 			     "LOC" : "AM36",
@@ -267,7 +339,8 @@
 		 "wait_in_b" : {
 			     "LOC" : "AM34",
 			     "IOSTANDARD" : "LVCMOS18",
-			     "PIO_DIRECTION" : "INPUT"
+			     "PIO_DIRECTION" : "INPUT",
+			     "PULLUP" : "TRUE"
 		 },
 		 "rst" : {
 			     "LOC" : "AG11_not_usable",
@@ -297,68 +370,90 @@
     },	
     "pins": {
 		"userClk_p": {
-			"PACKAGE_PIN": "bogus",
+			"LOC": "bogus",
 			"IOSTANDARD": "LVDS_25",
 			"DIFF_TERM": "TRUE",
 			"PIO_DIRECTION": "INPUT"
 		},
 		"userClk_n": {
-			"PACKAGE_PIN": "bogus",
+			"LOC": "bogus",
 			"IOSTANDARD": "LVDS_25",
 			"DIFF_TERM": "TRUE",
 			"PIO_DIRECTION": "INPUT"
 		},
 		"smaUserClk_p": {
-			"PACKAGE_PIN": "bogus",
+			"LOC": "bogus",
 			"IOSTANDARD": "LVDS_25",
 			"DIFF_TERM": "TRUE",
 			"PIO_DIRECTION": "OUTPUT"
 		},
 		"smaUserClk_n": {
-			"PACKAGE_PIN": "bogus",
+			"LOC": "bogus",
 			"IOSTANDARD": "LVDS_25",
 			"DIFF_TERM": "TRUE",
 			"PIO_DIRECTION": "OUTPUT"
 		},
+	        "sys_clk_p": {
+			"LOC": "H19",
+			"IOSTANDARD": "LVDS_25",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
+	        "sys_clk_n": {
+			"LOC": "G18",
+			"IOSTANDARD": "LVDS_25",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
+	        "si5324_clk_p": {
+			"LOC": "AH8",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
+	        "si5324_clk_n": {
+			"LOC": "AH7",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
 		"mgtRefClk_p": {
-			"PACKAGE_PIN": "bogus",
+			"LOC": "bogus",
 			"IOSTANDARD": "LVDS_25",
 			"DIFF_TERM": "TRUE",
 			"PIO_DIRECTION": "INPUT"
 		},
 		"mgtRefClk_n": {
-			"PACKAGE_PIN": "bogus",
+			"LOC": "bogus",
 			"IOSTANDARD": "LVDS_25",
 			"DIFF_TERM": "TRUE",
 			"PIO_DIRECTION": "INPUT"
 		},
 		"mgtRx_p": {
-			"PACKAGE_PIN": "bogus",
+			"LOC": "bogus",
 			"DIFF_TERM": "TRUE",
 			"PIO_DIRECTION": "INPUT"
 		},
 		"mgtRx_n": {
-			"PACKAGE_PIN": "bogus",
+			"LOC": "bogus",
 			"DIFF_TERM": "TRUE",
 			"PIO_DIRECTION": "INPUT"
 		},
 		"mgtTx_p": {
-			"PACKAGE_PIN": "bogus",
+			"LOC": "bogus",
 			"DIFF_TERM": "TRUE",
 			"PIO_DIRECTION": "OUTPUT"
 		},
 		"mgtTx_n": {
-			"PACKAGE_PIN": "bogus",
+			"LOC": "bogus",
 			"DIFF_TERM": "TRUE",
 			"PIO_DIRECTION": "OUTPUT"
 		},
 		"uart_d_in": {
-			"PACKAGE_PIN": "bogus",
+			"LOC": "bogus",
 			"IOSTANDARD": "LVCMOS25",
 			"PIO_DIRECTION": "INPUT"
 		},
 		"uart_d_out": {
-			"PACKAGE_PIN": "bogus",
+			"LOC": "bogus",
 			"IOSTANDARD": "LVCMOS25",
 			"PIO_DIRECTION": "OUTPUT"
 		}

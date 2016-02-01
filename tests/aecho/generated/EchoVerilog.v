@@ -18,7 +18,7 @@ output RDY_intr_channel, output [31:0]intr_channel,
 .nRST(RST_N),
 .say__RDY(RDY_request_say), .say__ENA(EN_request_say),
  .say_v(request_say_v),
- .ind$heard_v(ifc_heard_v), .respond_rule__ENA(1));
+ .ind$heard_heard_v(ifc_heard_v), .respond_rule__ENA(1));
  mkEchoIndicationOutput myEchoIndicationOutput(.CLK(CLK),
    .RST_N(RST_N),
    .RDY_portalIfc_indications_0_deq(RDY_indications_0_deq), .EN_portalIfc_indications_0_deq(EN_indications_0_deq),

@@ -56,11 +56,13 @@ import MemTypes          :: *;
 interface XsimHost;
    interface Clock derivedClock;
    interface Reset derivedReset;
+   interface Clock tsys_clk_200mhz_buf;
 endinterface
 
-module  mkXsimHost#(Clock derivedClock, Reset derivedReset)(XsimHost);
+module  mkXsimHost#(Clock derivedClock, Reset derivedReset, Clock sys_clk)(XsimHost);
    interface derivedClock = derivedClock;
    interface derivedReset = derivedReset;
+   interface tsys_clk_200mhz_buf = sys_clk;
 endmodule
 
 typedef XsimHost HostInterface;

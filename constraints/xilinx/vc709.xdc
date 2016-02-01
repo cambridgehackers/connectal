@@ -33,4 +33,5 @@ set_property PULLUP     true        [get_ports { RST_N_pci_sys_reset_n }]
 # TIMING CONSTRAINTS
 ######################################################################################################
 
-create_clock -name pci_refclk -period 10 [get_ports CLK_pci_sys_clk_p]
+## in pcie-clocks.xdc
+

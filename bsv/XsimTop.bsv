@@ -99,7 +99,7 @@ module mkXsimMemoryConnection#(PhysMemMaster#(addrWidth, dataWidth) master)(Empt
    mkConnection(master, slave);
 endmodule
 
-module mkXsimTop#(Clock derivedClock, Reset derivedReset)(XsimTop);
+module mkXsimTop#(Clock derivedClock, Reset derivedReset, Clock sys_clk)(XsimTop);
 
    Reg#(Bool) dumpstarted <- mkReg(False);
    rule startdump if (!dumpstarted);
@@ -108,7 +108,7 @@ module mkXsimTop#(Clock derivedClock, Reset derivedReset)(XsimTop);
       $display("XsimTop starting");
       dumpstarted <= True;
    endrule
-   XsimHost host <- mkXsimHost(derivedClock, derivedReset);
+   XsimHost host <- mkXsimHost(derivedClock, derivedReset, sys_clk);
    let top <- mkCnocTop(
 `ifdef IMPORT_HOSTIF
        host

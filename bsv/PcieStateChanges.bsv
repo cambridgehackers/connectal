@@ -71,12 +71,10 @@ module mkChangeSource#(Reg#(Bit#(32)) cyclesReg, Tuple2#(PcieCfgType,Bit#(24)) t
    match { .src, .v } = tpl;
    Reg#(Bit#(24))    snapshot <- mkReg(0);
    FIFOF#(RegChange) changeFifo <- mkFIFOF1();
-   Probe#(Bit#(24))  probe_snapshot <- mkProbe();
    rule rl_update if (v != snapshot);
       if (changeFifo.notFull) begin
 	 changeFifo.enq(RegChange { timestamp: cyclesReg, src: extend(pack(src)), value: extend(v) });
 	 snapshot <= v;
-	 probe_snapshot <= v;
       end
    endrule
    return toPipeOut(changeFifo);

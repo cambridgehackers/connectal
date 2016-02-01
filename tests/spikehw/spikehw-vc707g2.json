@@ -1,0 +1,8 @@
+{
+    "eth_mgt_clk_clk_p_v": {
+	"pins": "sgmii_clk_p"
+    },
+    "eth_mgt_clk_clk_n_v": {
+	"pins": "sgmii_clk_n"
+    }
+}
