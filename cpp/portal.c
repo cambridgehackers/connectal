@@ -257,8 +257,10 @@ static void initPortalHardwareOnce(void)
 	    close(fd);
 	    break;
 	  }
-	  if (fd == -1)
+	  if (fd == -1) {
+	      PORTAL_PRINTF("Error: %s: failed to open /dev/connectal, exiting\n", __FUNCTION__);
 	      exit(-1);
+	  }
 	}
         checkSignature("/dev/connectal", DEV_CONNECTAL_SIGNATURE);
 #endif // !defined(SIMULATION)
