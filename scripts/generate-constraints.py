@@ -24,6 +24,7 @@
 from __future__ import print_function
 import argparse, json, sys
 from collections import OrderedDict
+import copy
 
 bindings = {
     #'pins': 'pins',
@@ -54,7 +55,6 @@ if __name__=='__main__':
     if options.fpga == "xilinx":
         template='''\
     set_property LOC "%(LOC)s" [get_ports "%(name)s"]
-    set_property IOSTANDARD "%(IOSTANDARD)s" [get_ports "%(name)s"]
     set_property PIO_DIRECTION "%(PIO_DIRECTION)s" [get_ports "%(name)s"]
         '''
         setPropertyTemplate='''\
@@ -62,7 +62,6 @@ if __name__=='__main__':
         '''
     elif options.fpga == "altera":
         template='''\
-    set_instance_assignment -name IO_STANDARD "%(IOSTANDARD)s" -to "%(name)s"
     set_location_assignment "%(LOC)s" -to "%(name)s"
     '''
         setPropertyTemplate='''\
@@ -78,57 +77,46 @@ if __name__=='__main__':
         pinstr = open(filename).read()
         pinout = json.loads(pinstr, object_pairs_hook=OrderedDict)
         for pin in pinout:
-            pinInfo = pinout[pin]
+            projectPinInfo = pinout[pin]
             loc = 'TBD'
-            iostandard = 'TBD'
             iodir = 'TBD'
             used = []
-            boardGroupInfo = {}
+            boardPinInfo = {}
             pinName = ''
-            #print('PPP', pinInfo)
-            for key in bindings:
-                if pinInfo.has_key(key):
-                    used.append(key)
-                    pinName = pinInfo[key]
-                    #print('LLL', key, pinName, bindings[key])
-                    boardGroupInfo = boardInfo[bindings[key]]
+            #print('PPP', projectPinInfo)
+            for groupName in bindings:
+                if projectPinInfo.has_key(groupName):
+                    used.append(groupName)
+                    pinName = projectPinInfo[groupName]
+                    #print('LLL', groupName, pinName, bindings[groupName])
+                    boardPinInfo = boardInfo[bindings[groupName]]
                     break
             if pinName == '':
-                for key in pinInfo:
-                    #print('JJJJ', key)
-                    if boardInfo.get(key):
-                        used.append(key)
-                        pinName = pinInfo[key]
-                        boardGroupInfo = boardInfo[key]
-                        #print('FFF', key, pinName, boardGroupInfo, boardGroupInfo.has_key(pinName), boardGroupInfo.get(pinName))
+                for prop in projectPinInfo:
+                    #print('JJJJ', prop)
+                    if boardInfo.get(prop):
+                        used.append(prop)
+                        pinName = projectPinInfo[prop]
+                        boardPinInfo = boardInfo[prop]
+                        #print('FFF', prop, pinName, boardPinInfo, boardPinInfo.has_key(pinName), boardPinInfo.get(pinName))
                         break
-            if boardGroupInfo == {}:
-                print('Missing group description for', pinName, pinInfo, file=sys.stderr)
+            if boardPinInfo == {}:
+                print('Missing group description for', pinName, projectPinInfo, file=sys.stderr)
                 errorDetected = True
-            if boardGroupInfo.has_key(pinName):
-                if boardGroupInfo[pinName].has_key('LOC'):
-                    loc = boardGroupInfo[pinName]['LOC']
-                else:
-                    loc = boardGroupInfo[pinName]['PACKAGE_PIN']
-                iostandard = boardGroupInfo[pinName]['IOSTANDARD']
-                if boardGroupInfo[pinName].has_key('PIO_DIRECTION'):
-                    iodir = boardGroupInfo[pinName]['PIO_DIRECTION']
+            pinInfo = {}
+            if boardPinInfo.has_key(pinName):
+                pinInfo = copy.copy(boardPinInfo[pinName])
             else:
-                print('Missing pin description for', pinName, pinInfo, file=sys.stderr)
-                loc = 'fmc.%s' % (pinName)
+                print('Missing pin description for', pinName, projectPinInfo, file=sys.stderr)
+                pinInfo['LOC'] = 'fmc.%s' % (pinName)
                 errorDetected = True
-            if pinInfo.has_key('IOSTANDARD'):
-                iostandard = pinInfo['IOSTANDARD']
-            if pinInfo.has_key('PIO_DIRECTION'):
-                iodir = pinInfo['PIO_DIRECTION']
-            out.write(template % {
-                    'name': pin,
-                    'LOC': loc,
-                    'IOSTANDARD': iostandard,
-                    'PIO_DIRECTION': iodir
-                    })
+            pinInfo['name'] = pin
+            for prop in projectPinInfo:
+                if projectPinInfo.has_key(prop):
+                    pinInfo[prop] = projectPinInfo[prop]
+            out.write(template % pinInfo)
             for k in pinInfo:
-                if k in used+['IOSTANDARD', 'PIO_DIRECTION']: continue
+                if k in used+['name', 'PIO_DIRECTION']: continue
                 out.write(setPropertyTemplate % {
                         'name': pin,
                         'prop': k,

@@ -21,6 +21,7 @@
 // SOFTWARE.
 import ConnectalConfig::*;
 import Vector::*;
+import BuildVector::*;
 import Portal::*;
 import HostInterface::*;
 import MMU::*;
@@ -107,6 +108,8 @@ module mkPlatform#(Vector#(NumberOfUserTiles, ConnectalTop) tiles)(Platform);
    Vector#(NumberOfUserTiles, ReadOnly#(Bool)) tile_interrupts;
    Vector#(NumberOfUserTiles, Vector#(NumReadClients, MemReadClient#(DataBusWidth))) tile_read_clients;
    Vector#(NumberOfUserTiles, Vector#(NumWriteClients, MemWriteClient#(DataBusWidth))) tile_write_clients;
+   Vector#(NumberOfUserTiles, Vector#(NumReadClients, Integer)) read_client_tile_numbers;
+   Vector#(NumberOfUserTiles, Vector#(NumWriteClients, Integer)) write_client_tile_numbers;
    for(Integer i = 0; i < valueOf(NumberOfUserTiles); i=i+1) begin
       tile_slaves[i] = tiles[i].slave;
       let imux <- mkInterruptMux(tiles[i].interrupt);
@@ -114,6 +117,8 @@ module mkPlatform#(Vector#(NumberOfUserTiles, ConnectalTop) tiles)(Platform);
       tile_interrupts[i] = imux;
       tile_read_clients[i] = tiles[i].readers;
       tile_write_clients[i] = tiles[i].writers;
+      read_client_tile_numbers[i] = replicate(i);
+      write_client_tile_numbers[i] = replicate(i);
    end
 
    /////////////////////////////////////////////////////////////
@@ -123,9 +128,9 @@ module mkPlatform#(Vector#(NumberOfUserTiles, ConnectalTop) tiles)(Platform);
    MemServerIndicationProxy lMemServerIndicationProxy <- mkMemServerIndicationProxy(PlatformIfcNames_MemServerIndicationH2S);
 
    MMU#(PhysAddrWidth) lMMU <- mkMMU(0,True, lMMUIndicationProxy.ifc);
-   Vector#(TMul#(NumberOfUserTiles,NumReadClients), MemReadClient#(DataBusWidth)) tile_read_clients_renamed <- zipWith3M(renameReads, genVector, concat(tile_read_clients), replicate(lMemServerIndicationProxy.ifc));
-   Vector#(TMul#(NumberOfUserTiles,NumWriteClients), MemWriteClient#(DataBusWidth)) tile_write_clients_renamed <- zipWith3M(renameWrites, genVector, concat(tile_write_clients), replicate(lMemServerIndicationProxy.ifc));
-   MemServer#(PhysAddrWidth,DataBusWidth,NumberOfMasters) lMemServer <- mkMemServer(tile_read_clients_renamed, tile_write_clients_renamed, cons(lMMU,nil), lMemServerIndicationProxy.ifc);
+   Vector#(TMul#(NumberOfUserTiles,NumReadClients), MemReadClient#(DataBusWidth)) tile_read_clients_renamed <- zipWith3M(renameReads, concat(read_client_tile_numbers), concat(tile_read_clients), replicate(lMemServerIndicationProxy.ifc));
+   Vector#(TMul#(NumberOfUserTiles,NumWriteClients), MemWriteClient#(DataBusWidth)) tile_write_clients_renamed <- zipWith3M(renameWrites, concat(write_client_tile_numbers), concat(tile_write_clients), replicate(lMemServerIndicationProxy.ifc));
+   MemServer#(PhysAddrWidth,DataBusWidth,NumberOfMasters) lMemServer <- mkMemServer(tile_read_clients_renamed, tile_write_clients_renamed, vec(lMMU), lMemServerIndicationProxy.ifc);
 
    MMURequestWrapper lMMURequestWrapper <- mkMMURequestWrapper(PlatformIfcNames_MMURequestS2H, lMMU.request);
    MemServerRequestWrapper lMemServerRequestWrapper <- mkMemServerRequestWrapper(PlatformIfcNames_MemServerRequestS2H, lMemServer.request);
@@ -141,7 +146,7 @@ module mkPlatform#(Vector#(NumberOfUserTiles, ConnectalTop) tiles)(Platform);
    /////////////////////////////////////////////////////////////
    // expose interface to top
 
-   PhysMemSlave#(32,32) ctrl_mux <- mkMemPortalMux(cons(framework_ctrl_mux,tile_slaves));
+   PhysMemSlave#(32,32) ctrl_mux <- mkPhysMemSlaveMux(cons(framework_ctrl_mux,tile_slaves));
    Vector#(MaxNumberOfPortals, ReadOnly#(Bool)) interrupts = replicate(interface ReadOnly; method Bool _read(); return False; endmethod endinterface);
    interrupts[0] = framework_intr;
    for (Integer i = 1; i < valueOf(NumberOfTiles); i = i + 1)

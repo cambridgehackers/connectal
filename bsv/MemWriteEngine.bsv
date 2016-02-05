@@ -142,13 +142,13 @@ module mkMemWriteChannel#(Integer bufferSizeBytes, Integer channelNumber,
 
    rule rlWriteData;
       match {.rc, .client_tag, .last} = inProgress.first;
-      let gnt = writeGntPipe.first;
+      //let gnt = writeGntPipe.first;
       let new_respCnt = respCnt+1;
       let lastBeat = False;
       if (new_respCnt == rc) begin
 	 respCnt <= 0;
 	 inProgress.deq();
-	 writeGntPipe.deq();
+	 //writeGntPipe.deq();
 	 serverDone.enq(tuple3(0,client_tag,last));
 	 lastBeat = True;
       end
@@ -258,35 +258,33 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
    endfunction
 
    Reg#(Bool)         reqInFlight <- mkReg(False);
+   Reg#(Bool)         reqNotDone  <- mkReg(False);
+   Reg#(Bit#(TLog#(numServers))) currentChannel <- mkReg(0);
    FIFOF#(MemRequest)          writeReqFifo <- mkFIFOF();
    FIFOF#(MemData#(userWidth)) writeDataFifo <- mkSizedFIFOF(16);
    FunnelPipe#(1,numServers,MemRequest,2) reqFunnel <- mkFunnelPipesPipelined(genWith(writeChannelDmaWriteReq));
-   FunnelPipe#(1,numServers,MemData#(userWidth),2) dataFunnel <- mkFunnelPipesPipelined(genWith(writeChannelDmaWriteData));
+//   FunnelPipe#(1,numServers,MemData#(userWidth),2) dataFunnel <- mkFunnelPipesPipelined(genWith(writeChannelDmaWriteData));
 
-   rule rl_arbitration if (!reqInFlight);
+   rule rl_arbitration if (!reqInFlight && !reqNotDone);
       let req <- toGet(reqFunnel[0]).get();
       // tag is channel number
-`ifdef ARB_FUNNEL
-      arbFifo.enq(req.tag);
-`else
-      arbFifos[req.tag].enq(req.tag);
-`endif
+      currentChannel <= truncate(req.tag);
+      reqNotDone  <= True;
       writeReqFifo.enq(req);
       reqInFlight <= True;
    endrule
    rule rl_writeData if (reqInFlight);
-      MemData#(userWidth) md <- toGet(dataFunnel[0]).get();
+      MemData#(userWidth) md <- toGet(writeChannels[currentChannel].writeData).get();
       if (md.last)
 	 reqInFlight <= False;
       writeDataFifo.enq(md);
    endrule
 
-`ifndef ARB_FUNNEL
    rule rl_writeDone;
       let tag <- toGet(writeDoneFifo).get();
       doneFifos[tag].enq(tag);
+      reqNotDone  <= False;
    endrule
-`endif
 
    interface writeServers = genWith(writeChannelServer);
    interface MemWriteClient dmaClient;

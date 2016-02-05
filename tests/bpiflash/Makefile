@@ -2,6 +2,8 @@ CONNECTALDIR?=../..
 S2H_INTERFACES = BpiFlashTestRequest:BpiFlashTest.request
 H2S_INTERFACES = BpiFlashTest:BpiFlashTestIndication
 
+CONNECTALFLAGS+= -P mkConnectalTop
+CONNECTALFLAGS+= --shared
 
 
 BSVFILES = BpiFlashTest.bsv

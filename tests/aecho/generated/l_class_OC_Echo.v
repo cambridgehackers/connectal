@@ -1,54 +1,46 @@
 module l_class_OC_Echo (
     input CLK,
     input nRST,
-    input echoReq__ENA,
-    input [31:0]echoReq_v,
-    output echoReq__RDY,
     input respond_rule__ENA,
     output respond_rule__RDY,
-    output ind$echo__ENA,
-    output [31:0]ind$echo$v,
-    input ind$echo__RDY);
-wire fifo$CLK, fifo$nRST;
-wire fifo$deq__ENA;
-wire fifo$deq__RDY;
-wire fifo$enq__ENA;
-wire [31:0]fifo$enq_v;
-wire fifo$enq__RDY;
-wire [31:0]fifo$first;
-wire fifo$first__RDY;
+    input say__ENA,
+    input [31:0]say_v,
+    output say__RDY,
+    output ind$heard__ENA,
+    output [31:0]ind$heard_heard_v,
+    input ind$heard__RDY);
+    wire respond_rule__RDY_internal;
+    wire respond_rule__ENA_internal = respond_rule__ENA && respond_rule__RDY_internal;
+    assign respond_rule__RDY = respond_rule__RDY_internal;
+    wire say__RDY_internal;
+    wire say__ENA_internal = say__ENA && say__RDY_internal;
+    assign say__RDY = say__RDY_internal;
+    wire fifo$out_deq__RDY;
+    wire fifo$out_first__RDY;
     l_class_OC_Fifo1 fifo (
-        fifo$CLK,
-        fifo$nRST,
-        fifo$deq__ENA,
-        fifo$deq__RDY,
-        fifo$enq__ENA,
-        fifo$enq_v,
-        fifo$enq__RDY,
-        fifo$first,
-        fifo$first__RDY);
-   reg[31:0] pipetemp;
-    assign echoReq__RDY =         (fifo$enq__RDY);
-    assign respond_rule__RDY =         (fifo$first__RDY) & (fifo$deq__RDY) & (ind$echo__RDY);
-        assign fifo$enq__ENA = echoReq__ENA ? 1 : 0;
-            assign fifo$enq_v = echoReq__ENA ? echoReq_v : 0;
-
-        assign fifo$deq__ENA = respond_rule__ENA ? 1 : 0;
-        assign ind$echo__ENA = respond_rule__ENA ? 1 : 0;
-            assign ind$echo_v = respond_rule__ENA ? (fifo$first) : 0;
+        CLK,
+        nRST,
+        say__ENA_internal,
+        say_v,
+        say__RDY,
+        respond_rule__ENA_internal,
+        fifo$out_deq__RDY,
+        ind$heard_heard_v,
+        fifo$out_first__RDY);
+    reg[31:0] pipetemp;
+    assign ind$heard__ENA = respond_rule__ENA_internal;
+    assign respond_rule__RDY_internal = (fifo$out_first__RDY & fifo$out_deq__RDY) & ind$heard__RDY;
 
     always @( posedge CLK) begin
       if (!nRST) begin
         pipetemp <= 0;
-      end
-      else begin
       end // nRST
     end // always @ (posedge CLK)
 endmodule 
 
-//METAGUARD; echoReq__RDY;         (fifo$enq__RDY);
-//METAGUARD; respond_rule__RDY;         (fifo$first__RDY) & (fifo$deq__RDY) & (ind$echo__RDY);
+//METAGUARD; respond_rule__RDY;         (fifo$out_first__RDY & fifo$out_deq__RDY) & ind$heard__RDY;
+//METAGUARD; say__RDY;         fifo$in_enq__RDY;
+//METAINVOKE; respond_rule; :;fifo$out_deq:;ind$heard:;fifo$out_first;
+//METAINVOKE; say; :;fifo$in_enq;
 //METAINTERNAL; fifo; l_class_OC_Fifo1;
 //METAEXTERNAL; ind; l_class_OC_EchoIndication;
-//METAINVOKE; echoReq; :fifo$enq;
-//METAINVOKE; respond_rule; :fifo$deq:ind$echo:fifo$first;

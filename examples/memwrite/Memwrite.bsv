@@ -68,14 +68,14 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    Vector#(NumEngineServers, FIFOF#(void))               cfs <- replicateM(mkSizedFIFOF(1));
    Vector#(NumEngineServers, FIFOF#(Bool))       finishFifos <- replicateM(mkFIFOF);
    MemWriteEngine#(DataBusWidth,DataBusWidth,2,NumEngineServers)                we <- mkMemWriteEngine;
-   Bit#(32) chunk = (extend(numWords)/fromInteger(valueOf(NumEngineServers)))*4;
+   Bit#(32) chunk = extend(numWords)*4;
 
    for(Integer i = 0; i < valueOf(NumEngineServers); i=i+1) begin
       rule start (iterCnts[i] > 0);
 	 we.writeServers[i].request.put(MemengineCmd{tag:0, sglId:pointer, base:extend(writeOffset)+(fromInteger(i)*chunk), len:truncate(chunk), burstLen:truncate(burstLen*4)});
-	 Bit#(32) srcGen = (writeOffset/4)+(fromInteger(i)*truncate(chunk/4));
+	 Bit#(32) srcGen = (fromInteger(i) << 28);
 	 srcGens[i] <= srcGen;
-	 $display("start %d/%d, %h 0x%x %h", i, valueOf(NumEngineServers), srcGen, iterCnts[i], writeOffset);
+	 $display("start %d/%d, %h 0x%x %h chunk=%h", i, valueOf(NumEngineServers), srcGen, iterCnts[i], writeOffset, chunk);
 	 cfs[i].enq(?);
 	 iterCnts[i] <= iterCnts[i]-1;
       endrule
@@ -97,7 +97,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 	 we.writeServers[i].data.enq(pack(v));
 	 let new_srcGen = srcGens[i]+fromInteger(valueOf(DataBusWords));
 	 srcGens[i] <= new_srcGen;
-	 if(new_srcGen == (writeOffset/4)+(fromInteger(i+1)*truncate(chunk/4)))
+	 if (new_srcGen[27:0] >= truncate(numWords))
 	    cfs[i].deq;
       endrule
    end
@@ -107,6 +107,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
 
    rule indicate_finish;
       let rv <- toGet(finishReducePipe).get();
+      $display("indicate_finish rv=%d iterCnt=%d", rv, iterCnt);
       if (iterCnt == 1) begin
 	 cf.deq;
 	 indication.writeDone(0);

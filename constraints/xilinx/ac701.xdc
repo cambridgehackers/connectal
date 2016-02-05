@@ -102,20 +102,4 @@ set_property LOC RAMB36_X1Y39 [get_cells {*\/pcie_7x_i/pcie_top_i/pcie_7x_i/pcie
 # TIMING CONSTRAINTS
 ######################################################################################################
 
-# # clocks
-create_clock -name bscan_refclk -period 20 [get_pins *pcieBscanBram_bscan/TCK]
-create_clock -name pci_refclk -period 10 [get_pins *pci_clk_100mhz_buf/O]
-
-## no longer needed?
-create_clock -name pci_extclk -period 10 [get_pins *_ep/pcie_7x_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_lane[0].gt_wrapper_i/gtx_channel.gtxe2_channel_i/TXOUTCLK]
-#set_false_path -through [get_nets {*/pcie_7x_v2_1_i/gt_top_i/pipe_wrapper_i/user_resetdone*}]
-
-set_clock_groups -name ___clk_groups_generated_0_1_0_0_0 -physically_exclusive -group [get_clocks clk_125mhz] -group [get_clocks clk_250mhz]
-
-#set_max_delay -from [get_clocks noc_clk] -to [get_clocks clk_userclk2] 8.000 -datapath_only
-#set_max_delay -from [get_clocks clk_userclk2] -to [get_clocks noc_clk] 8.000 -datapath_only
-#set_max_delay -from [get_clocks cclock] -to [get_clocks core_clock] 20.000 -datapath_only
-#set_max_delay -from [get_clocks uclock] -to [get_clocks core_clock] 20.000 -datapath_only
-#set_max_delay -from [get_clocks core_clock] -to [get_clocks cclock] 20.000 -datapath_only
-#set_max_delay -from [get_clocks core_clock] -to [get_clocks uclock] 20.000 -datapath_only
-
+## in pcie-clocks.xdc

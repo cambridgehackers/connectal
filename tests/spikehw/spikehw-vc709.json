@@ -1,0 +1,8 @@
+{
+    "eth_mgt_clk_clk_p_v": {
+	"pins": "si5324_clk_p"
+    },
+    "eth_mgt_clk_clk_n_v": {
+	"pins": "si5324_clk_n"
+    }
+}
