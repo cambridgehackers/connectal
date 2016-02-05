@@ -14,7 +14,7 @@ BSVFILES = Ddr3Test.bsv
 CPPFILES=testddr3.cpp
 
 PIN_TYPE = Ddr3Pins
-PIN_TYPE_INCLUDE = Ddr3Controller
+PIN_TYPE_INCLUDE = AxiDdr3Controller
 AUTOTOP = --interface pins:Ddr3Test.ddr3
 
 $(IPDIR)/$(BOARD)/axiddr3/axiddr3.xci: $(CONNECTALDIR)/scripts/connectal-synth-axiddr3.tcl
@@ -22,6 +22,6 @@ $(IPDIR)/$(BOARD)/axiddr3/axiddr3.xci: $(CONNECTALDIR)/scripts/connectal-synth-a
 
 ip.%:
 	make gen.$(*)
-	BOARD=$(*) make $(IPDIR)/$(*)/axiddr3/axiddr3.xci
+	BOARD=$(*) make IPDIR=$(IPDIR) $(IPDIR)/$(*)/axiddr3/axiddr3.xci
 
 include $(CONNECTALDIR)/Makefile.connectal
