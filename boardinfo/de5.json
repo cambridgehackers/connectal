@@ -12,28 +12,34 @@
     },
     "BUTTON": {
         "BUTTON[0]": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_AK15"
         }, 
         "BUTTON[1]": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_AK14"
         }, 
         "BUTTON[2]": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_AL14"
         }, 
         "BUTTON[3]": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_AL15"
         }
     }, 
     "I2C": {
         "CLOCK_SCL": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_AE15"
         }, 
         "CLOCK_SDA": {
+            "PIO_DIRECTION": "BIDIR",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_AE16"
         }
@@ -1392,34 +1398,42 @@
     }, 
     "LED": {
         "LED[0]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_AW37"
         }, 
         "LED[1]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_AV37"
         }, 
         "LED[2]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_BB36"
         }, 
         "LED[3]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_BB39"
         }, 
         "LED_BRACKET[0]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_AH15"
         }, 
         "LED_BRACKET[1]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_AH13"
         }, 
         "LED_BRACKET[2]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_AJ13"
         }, 
         "LED_BRACKET[3]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_AJ14"
         }, 
@@ -1434,44 +1448,54 @@
     }, 
     "OSC": {
         "OSC_50_B3B": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_AW35"
         }, 
         "OSC_50_B3D": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.8 V", 
             "LOC": "PIN_BC28"
         }, 
         "OSC_50_B4A": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.8 V", 
             "LOC": "PIN_AP10"
         }, 
         "OSC_50_B4D": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.8 V", 
             "LOC": "PIN_AY18"
         }, 
         "OSC_50_B7A": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.5 V", 
             "LOC": "PIN_M8"
         }, 
         "OSC_50_B7D": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.5 V", 
             "LOC": "PIN_J18"
         }, 
         "OSC_50_B8A": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.5 V", 
             "LOC": "PIN_R36"
         }, 
         "OSC_50_B8D": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.8 V", 
             "LOC": "PIN_R25"
         }
     }, 
     "PCIE": {
         "PCIE_PERST_n": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_AU33"
         }, 
         "PCIE_REFCLK_p": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "HCSL", 
             "LOC": "PIN_AK38"
         }, 
@@ -1516,34 +1540,42 @@
             "LOC": "PIN_AT33"
         }, 
         "PCIE_TX_p[0]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AY39"
         }, 
         "PCIE_TX_p[1]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AV39"
         }, 
         "PCIE_TX_p[2]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AT39"
         }, 
         "PCIE_TX_p[3]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AU41"
         }, 
         "PCIE_TX_p[4]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AN41"
         }, 
         "PCIE_TX_p[5]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AL41"
         }, 
         "PCIE_TX_p[6]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AJ41"
         }, 
         "PCIE_TX_p[7]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AG41"
         }, 
@@ -1556,34 +1588,42 @@
             "LOC": "PIN_AK39"
         }, 
         "PCIE_RX_p[0](n)": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_BB44"
         }, 
         "PCIE_RX_p[1](n)": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_BA42"
         }, 
         "PCIE_RX_p[2](n)": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AW42"
         }, 
         "PCIE_RX_p[3](n)": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AY44"
         }, 
         "PCIE_RX_p[4](n)": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AT44"
         }, 
         "PCIE_RX_p[5](n)": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AP44"
         }, 
         "PCIE_RX_p[6](n)": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AM44"
         }, 
         "PCIE_RX_p[7](n)": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AK44"
         }, 
@@ -1664,18 +1704,22 @@
     }, 
     "SFP": {
         "SFP1G_REFCLK_p": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "HCSL", 
             "LOC": "PIN_AH6"
         },
         "SFP1G_REFCLK_p(n)": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "HCSL", 
             "LOC": "PIN_AH5"
         }, 
         "SFP_REFCLK_p(n)": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "HCSL", 
             "LOC": "PIN_AK6"
         },
         "SFP_REFCLK_p": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "HCSL", 
             "LOC": "PIN_AK7"
         }
@@ -2810,18 +2854,22 @@
     }, 
     "RZQ": {
         "RZQ_0": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_BA36"
         }, 
         "RZQ_1": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.8 V", 
             "LOC": "PIN_AR8"
         }, 
         "RZQ_4": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.5 V", 
             "LOC": "PIN_H9"
         }, 
         "RZQ_5": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.5 V", 
             "LOC": "PIN_P35"
         }
@@ -2870,10 +2918,12 @@
     }, 
     "SFPA": {
         "SFPA_LOS": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_F22"
         }, 
         "SFPA_MOD0_PRSNT_n": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_E21"
         }, 
@@ -2886,26 +2936,32 @@
             "LOC": "PIN_A20"
         }, 
         "SFPA_RATESEL[0]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_E20"
         }, 
         "SFPA_RATESEL[1]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_G22"
         }, 
         "SFPA_RX_p": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AK2"
         }, 
         "SFPA_TXDISABLE": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_B22"
         }, 
         "SFPA_TXFAULT": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_A22"
         }, 
         "SFPA_TX_p": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AG4"
         },
@@ -2920,10 +2976,12 @@
     }, 
     "SFPB": {
         "SFPB_LOS": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_R22"
         }, 
         "SFPB_MOD0_PRSNT_n": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_K22"
         }, 
@@ -2936,44 +2994,54 @@
             "LOC": "PIN_K20"
         }, 
         "SFPB_RATESEL[0]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_R21"
         }, 
         "SFPB_RATESEL[1]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_T22"
         }, 
         "SFPB_RX_p": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AP2"
         }, 
         "SFPB_TXDISABLE": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_H22"
         }, 
         "SFPB_TXFAULT": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_H20"
         }, 
         "SFPB_TX_p": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AL4"
         },
         "SFPB_RX_p(n)": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AP1"
         }, 
         "SFPB_TX_p(n)": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AL3"
         } 
     }, 
     "SFPC": {
         "SFPC_LOS": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_L21"
         }, 
         "SFPC_MOD0_PRSNT_n": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_J21"
         }, 
@@ -2986,44 +3054,54 @@
             "LOC": "PIN_G20"
         }, 
         "SFPC_RATESEL[0]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_J22"
         }, 
         "SFPC_RATESEL[1]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_P21"
         }, 
         "SFPC_RX_p": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AW4"
         }, 
         "SFPC_TXDISABLE": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_F21"
         }, 
         "SFPC_TXFAULT": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_F20"
         }, 
         "SFPC_TX_p": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AT6"
         },
         "SFPC_RX_p(n)": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AW3"
         }, 
         "SFPC_TX_p(n)": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AT5"
         }
     }, 
     "SFPD": {
         "SFPD_LOS": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_N22"
         }, 
         "SFPD_MOD0_PRSNT_n": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_V20"
         }, 
@@ -3036,34 +3114,42 @@
             "LOC": "PIN_V19"
         }, 
         "SFPD_RATESEL[0]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_V21"
         }, 
         "SFPD_RATESEL[1]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_M22"
         }, 
         "SFPD_RX_p": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_BB2"
         }, 
         "SFPD_TXDISABLE": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_U20"
         }, 
         "SFPD_TXFAULT": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "2.5 V", 
             "LOC": "PIN_T21"
         }, 
         "SFPD_TX_p": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AY6"
         }, 
         "SFPD_RX_p(n)": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_BB1"
         }, 
         "SFPD_TX_p(n)": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "1.4-V PCML", 
             "LOC": "PIN_AY5"
         }
@@ -3080,18 +3166,22 @@
     }, 
     "SW": {
         "SW[0]": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.8 V", 
             "LOC": "PIN_B25"
         }, 
         "SW[1]": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.8 V", 
             "LOC": "PIN_A25"
         }, 
         "SW[2]": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.8 V", 
             "LOC": "PIN_B23"
         }, 
         "SW[3]": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "1.8 V", 
             "LOC": "PIN_A23"
         }
