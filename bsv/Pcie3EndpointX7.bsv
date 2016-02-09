@@ -596,7 +596,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       pcie_ep.cfg.link_training_enable(1);
       pcie_ep.cfg.per_function_number(0);
       pcie_ep.cfg.per_function_output_request(0);
-      pcie_ep.cfg.power_state_change_ack(0);
+      pcie_ep.cfg.power_state_change_ack(1);
       pcie_ep.cfg.subsys_vend_id(16'h1be8);
       pcie_ep.cfg.vf_flr_done(0);
 
