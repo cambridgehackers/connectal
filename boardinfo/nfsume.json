@@ -5,8 +5,8 @@
         "partname" : "xc7vx690tffg1761-3",
         "need_pcie" : "x7_gen3x8",
         "TOP" : "PcieTop",
-        "constraints": [],
-        "implconstraints": ["constraints/xilinx/nfsume.xdc"],
+        "constraints": ["constraints/xilinx/nfsume.xdc"],
+        "implconstraints": ["constraints/xilinx/nfsume.xdc", "constraints/xilinx/pcie-clocks.xdc"],
         "runscript" : "run.pcietest",
         "CONNECTALFLAGS" : ["--mainclockperiod=4", "--derivedclockperiod=4", "--pcieclockperiod=4"],
         "rewireclockstring" : ""
@@ -23,11 +23,15 @@
     },
     "CLK": {
         "FPGA_SYSCLK_N": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
             "LOC": "G18"
         },
         "FPGA_SYSCLK_P": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
             "LOC": "H19"
         }
     },
@@ -52,28 +56,34 @@
     "DDR": {
         "DDR3_SYSCLK_N": {
             "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
             "LOC": "E35"
         },
         "DDR3_SYSCLK_P": {
             "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
             "LOC": "E34"
         }
     },
     "FMC": {
         "FMC_CLK0_M2C_N": {
             "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
             "LOC": "AT27"
         },
         "FMC_CLK0_M2C_P": {
             "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
             "LOC": "AR27"
         },
         "FMC_CLK1_M2C_N": {
             "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
             "LOC": "AV35"
         },
         "FMC_CLK1_M2C_P": {
             "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
             "LOC": "AV34"
         },
         "FMC_LA_N[00]": {
@@ -363,12 +373,14 @@
             "LOC": "AP32"
         }
     },
-    "IIC": {
+    "I2C": {
         "I2C_FPGA_SCL": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS18",
             "LOC": "AK24"
         },
         "I2C_FPGA_SDA": {
+            "PIO_DIRECTION": "BIDIR",
             "IOSTANDARD": "LVCMOS18",
             "LOC": "AK25"
         },
@@ -379,26 +391,36 @@
     },
     "LED": {
         "LED[0]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "AR22"
         },
         "LED[1]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "AR23"
         }
     },
     "PCIE": {
-        "PCIE-PERST_B_LS": {
+        "PCIE_SYS_RESETN": {
             "IOSTANDARD": "LVCMOS18",
             "LOC": "AY35"
         },
-        "PCIE-PRSNT_B_LS": {
+        "PCIE_PRSNT_B_LS": {
             "IOSTANDARD": "LVCMOS18",
             "LOC": "AR35"
         },
-        "PCIE-WAKE": {
+        "PCIE_WAKE": {
             "IOSTANDARD": "LVCMOS18",
             "LOC": "AT31"
+        },
+        "PCIE_SYSCLK_N": {
+            "IOSTANDARD": "LVDS",
+            "LOC": "AB8"
+        },
+        "PCIE_SYSCLK_P": {
+            "IOSTANDARD": "LVDS",
+            "LOC": "AB7"
         }
     },
     "PMODCTRL": {
@@ -473,7 +495,7 @@
             "LOC": "AW16"
         }
     },
-    "Power": {
+    "POWER": {
         "PCON_ALERT_B": {
             "IOSTANDARD": "LVCMOS15",
             "LOC": "J41"
@@ -494,24 +516,28 @@
     "QDRIIA": {
         "QDRII_SYSCLK_N": {
             "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
             "LOC": "AD33"
         },
         "QDRII_SYSCLK_P": {
             "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
             "LOC": "AD32"
         }
     },
     "QDRIIC": {
         "QDRIIC_SYSCLK_N": {
             "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
             "LOC": "AU13"
         },
         "QDRIIC_SYSCLK_P": {
             "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
             "LOC": "AU14"
         }
     },
-    "SD": {
+    "MICRO_SD": {
         "SD_CCLK": {
             "IOSTANDARD": "LVCMOS18",
             "LOC": "AJ25"
@@ -541,30 +567,36 @@
             "LOC": "AL26"
         }
     },
-    "SFP": {
+    "SFPCLK": {
         "SFP_CLK_ALARM_B": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS18",
             "LOC": "AM29"
         },
         "SFP_CLK_RST": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS18",
             "LOC": "BA29"
+        }
+    },
+    "SFP": {
+        "SFP_REFCLK_N": {
+            "PIO_DIRECTION": "INPUT",
+            "LOC": "E9"
         },
-        "SFP_REC_CLK_N": {
-            "IOSTANDARD": "LVDS",
-            "LOC": "AW33"
-        },
-        "SFP_REC_CLK_P": {
-            "IOSTANDARD": "LVDS",
-            "LOC": "AW32"
+        "SFP_REFCLK_P": {
+            "PIO_DIRECTION": "INPUT",
+            "LOC": "E10"
         }
     },
     "SFPA": {
         "ETH1_LED[0]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "G13"
         },
         "ETH1_LED[1]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "L15"
         },
@@ -573,32 +605,39 @@
             "LOC": "N18"
         },
         "ETH1_RS[0]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "N19"
         },
         "ETH1_RS[1]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "P18"
         },
         "ETH1_RX_LOS": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "L17"
         },
         "ETH1_TX_DISABLE": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "M18"
         },
         "ETH1_TX_FAULT": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "M19"
         }
     },
     "SFPB": {
         "ETH2_LED[0]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "AL22"
         },
         "ETH2_LED[1]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "BA20"
         },
@@ -607,32 +646,39 @@
             "LOC": "L19"
         },
         "ETH2_RS[0]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "P20"
         },
         "ETH2_RS[1]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "N20"
         },
         "ETH2_RX_LOS": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "L20"
         },
         "ETH2_TX_DISABLE": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "B31"
         },
         "ETH2_TX_FAULT": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "C26"
         }
     },
     "SFPC": {
         "ETH3_LED[0]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "AY18"
         },
         "ETH3_LED[1]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "AY17"
         },
@@ -641,32 +687,39 @@
             "LOC": "J37"
         },
         "ETH3_RS[0]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "F39"
         },
         "ETH3_RS[1]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "G36"
         },
         "ETH3_RX_LOS": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "G37"
         },
         "ETH3_TX_DISABLE": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "J38"
         },
         "ETH3_TX_FAULT": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "E39"
         }
     },
     "SFPD": {
         "ETH4_LED[0]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "P31"
         },
         "ETH4_LED[1]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "K32"
         },
@@ -675,33 +728,42 @@
             "LOC": "H36"
         },
         "ETH4_RS[0]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "H38"
         },
         "ETH4_RS[1]": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "G38"
         },
         "ETH4_RX_LOS": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "J36"
         },
         "ETH4_TX_DISABLE": {
+            "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "L21"
         },
         "ETH4_TX_FAULT": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "J26"
         }
     },
     "SI570": {
         "USERCLK_N": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
             "LOC": "AU27"
         },
         "USERCLK_P": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
             "LOC": "AU26"
         }
     },
