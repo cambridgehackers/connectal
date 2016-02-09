@@ -15,8 +15,8 @@ set_property CONFIG_VOLTAGE 1.8 [current_design]
 ######################################################################################################
 # PIN ASSIGNMENTS
 ######################################################################################################
-set_property LOC AR22 [get_ports { leds_leds[0] }]
-set_property LOC AR23 [get_ports { leds_leds[1] }]
+set_property LOC AR22 [get_ports { leds[0] }]
+set_property LOC AR23 [get_ports { leds[1] }]
 set_property LOC AB7  [get_ports { CLK_pci_sys_clk_n }]
 set_property LOC AB8  [get_ports { CLK_pci_sys_clk_p }]
 set_property LOC AY35 [get_ports { RST_N_pci_sys_reset_n }]
@@ -62,9 +62,9 @@ set_property LOC G18  [get_ports { CLK_sys_clk_n }]
 ######################################################################################################
 # I/O STANDARDS
 ######################################################################################################
-set_property IOSTANDARD LVCMOS15    [get_ports { leds_leds[*] }]
+set_property IOSTANDARD LVCMOS15    [get_ports { leds[*] }]
 set_property IOSTANDARD DIFF_SSTL15 [get_ports { CLK_sys_clk_* }]
-set_property IOSTANDARD LVCMOS15    [get_ports { RST_N_pci_sys_reset_n }]
+set_property IOSTANDARD LVCMOS18    [get_ports { RST_N_pci_sys_reset_n }]
 set_property PULLUP     true        [get_ports { RST_N_pci_sys_reset_n }]
 
 ######################################################################################################
