@@ -237,22 +237,26 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    let rq_txready = (pcie_ep.s_axis_rq.tready != 0 && fAxiRq.notEmpty);
 
    //(* fire_when_enabled, no_implicit_conditions *)
-   rule drive_axi_rq if (rq_txready);
-      let info = fAxiRq.first; fAxiRq.deq;
-      pcie_ep.s_axis_rq.tvalid(1);
-      pcie_ep.s_axis_rq.tlast(pack(info.last));
-      pcie_ep.s_axis_rq.tdata(info.data);
-      pcie_ep.s_axis_rq.tkeep(info.keep);
-      pcie_ep.s_axis_rq.tuser({0, info.last_be, info.first_be});
-   endrule
+   rule drive_axi_rq;
+      let tvalid = 0;
+      let tlast = 0;
+      let tdata = 0;
+      let tkeep = 0;
+      let tuser = 0;
+      if (rq_txready) begin
+	 let info = fAxiRq.first; fAxiRq.deq;
+	 tvalid = 1;
+	 tlast = pack(info.last);
+	 tdata = info.data;
+	 tkeep = info.keep;
+	 tuser = {0, info.last_be, info.first_be};
+      end
 
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule drive_axi_rq2 if (!rq_txready);
-      pcie_ep.s_axis_rq.tvalid(0);
-      pcie_ep.s_axis_rq.tlast(0);
-      pcie_ep.s_axis_rq.tdata(0);
-      pcie_ep.s_axis_rq.tkeep(0);
-      pcie_ep.s_axis_rq.tuser(0);
+      pcie_ep.s_axis_rq.tvalid(tvalid);
+      pcie_ep.s_axis_rq.tlast(tlast);
+      pcie_ep.s_axis_rq.tdata(tdata);
+      pcie_ep.s_axis_rq.tkeep(tkeep);
+      pcie_ep.s_axis_rq.tuser(tuser);
    endrule
 
    Reg#(Bit#(16)) rqBackpressureCycles <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
