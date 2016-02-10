@@ -208,9 +208,9 @@ endif # XILINX
 ifneq ($(ALTERA),)
 	gzip -c $(MKTOP).sof > bin/$(MKTOP).sof.gz
 	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --remove-section fpgadata bin/ubuntu.exe
-	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --add-section fpgadata=bin/mkTop.sof.gz bin/ubuntu.exe
+	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --add-section fpgadata=bin/$(MKTOP).sof.gz bin/ubuntu.exe
 	$(Q)[ ! -f bin/connectal.so ] || objcopy --remove-section fpgadata bin/connectal.so
-	$(Q)[ ! -f bin/connectal.so ] || objcopy --add-section fpgadata=bin/mkTop.sof.gz bin/connectal.so
+	$(Q)[ ! -f bin/connectal.so ] || objcopy --add-section fpgadata=bin/$(MKTOP).sof.gz bin/connectal.so
 endif # ALTERA
 
 endif # android
