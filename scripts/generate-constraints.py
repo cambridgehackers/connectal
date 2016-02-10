@@ -51,7 +51,7 @@ if __name__=='__main__':
         bindings[split[0]] = split[1]
 
     boardInfo = json.loads(open(options.boardfile).read())
-
+    print(options.fpga)
     if options.fpga == "xilinx":
         template='''\
     set_property LOC "%(LOC)s" [get_ports "%(name)s"]
@@ -116,7 +116,7 @@ if __name__=='__main__':
                     pinInfo[prop] = projectPinInfo[prop]
             out.write(template % pinInfo)
             for k in pinInfo:
-                if k in used+['name', 'PIO_DIRECTION']: continue
+                if k in used+['name', 'LOC', 'PIO_DIRECTION']: continue
                 out.write(setPropertyTemplate % {
                         'name': pin,
                         'prop': k,
