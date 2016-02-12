@@ -22,7 +22,7 @@ interface BpiFlashPins;
    interface Clock deleteme_unused_clock;
 //   interface Reset rst;
    interface Vector#(16,Inout#(Bit#(1))) data;
-   method Bit#(25) addr();
+   method Bit#(26) addr();
    method Bit#(1) adv_b();
    method Bit#(1) ce_b();
    method Bit#(1) oe_b();
@@ -43,7 +43,7 @@ endinterface
 interface BpiFlash;
    interface BpiFlashPins flash;
    method Action setParameters(Bit#(16) cycles, Bool stallOnWaitIn);
-   interface Server#(BRAMRequest#(Bit#(25),Bit#(16)),Bit#(16)) server;
+   interface Server#(BRAMRequest#(Bit#(26),Bit#(16)),Bit#(16)) server;
 endinterface
 
 module mkBpiFlash(BpiFlash);
@@ -56,11 +56,11 @@ module mkBpiFlash(BpiFlash);
    Reg#(Bit#(1)) oe <- mkReg(1);
    Reg#(Bit#(1)) adv <- mkReg(1);
    Reg#(Bit#(16)) data_o <- mkReg(0);
-   Reg#(Bit#(25)) addr_o <- mkReg(0);
+   Reg#(Bit#(26)) addr_o <- mkReg(0);
    Reg#(Bit#(16)) delayReg <- mkReg(10);
    Reg#(Bool)     stallOnWaitReg  <- mkReg(False);
-   Reg#(BRAMRequest#(Bit#(25),Bit#(16))) reqReg <- mkReg(unpack(0));
-   FIFOF#(BRAMRequest#(Bit#(25),Bit#(16))) reqFifo <- mkFIFOF();
+   Reg#(BRAMRequest#(Bit#(26),Bit#(16))) reqReg <- mkReg(unpack(0));
+   FIFOF#(BRAMRequest#(Bit#(26),Bit#(16))) reqFifo <- mkFIFOF();
    FIFOF#(Bit#(16)) dataFifo <- mkFIFOF();
 
 `ifndef SIMULATION
@@ -145,7 +145,7 @@ module mkBpiFlash(BpiFlash);
       interface deleteme_unused_clock = clock;
 //          interface rst = defaultReset;
       interface data = map(iobuf_io, iobuf);
-      method Bit#(25) addr = addr_o;
+      method Bit#(26) addr = addr_o;
       method Bit#(1) adv_b = adv;
       method Bit#(1) ce_b = ce;
       method Bit#(1) oe_b = oe;
