@@ -601,6 +601,7 @@
             "LOC": "L15"
         },
         "ETH1_MOD_DETECT": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "N18"
         },
@@ -628,6 +629,22 @@
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "M19"
+        },
+        "ETH1_RX_p": {
+            "PIO_DIRECTION": "INPUT",
+            "LOC": "A6"
+        },
+        "ETH1_RX_n": {
+            "PIO_DIRECTION": "INPUT",
+            "LOC": "A5"
+        },
+        "ETH1_TX_p": {
+            "PIO_DIRECTION": "OUTPUT",
+            "LOC": "B4"
+        },
+        "ETH1_TX_n": {
+            "PIO_DIRECTION": "OUTPUT",
+            "LOC": "B3"
         }
     },
     "SFPB": {
@@ -642,6 +659,7 @@
             "LOC": "BA20"
         },
         "ETH2_MOD_DETECT": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "L19"
         },
@@ -669,6 +687,22 @@
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "C26"
+        },
+        "ETH2_RX_p": {
+            "PIO_DIRECTION": "INPUT",
+            "LOC": "B8"
+        },
+        "ETH2_RX_n": {
+            "PIO_DIRECTION": "INPUT",
+            "LOC": "B7"
+        },
+        "ETH2_TX_p": {
+            "PIO_DIRECTION": "OUTPUT",
+            "LOC": "C2"
+        },
+        "ETH2_TX_n": {
+            "PIO_DIRECTION": "OUTPUT",
+            "LOC": "C1"
         }
     },
     "SFPC": {
@@ -683,6 +717,7 @@
             "LOC": "AY17"
         },
         "ETH3_MOD_DETECT": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "J37"
         },
@@ -710,6 +745,22 @@
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "E39"
+        },
+        "ETH3_RX_p": {
+            "PIO_DIRECTION": "INPUT",
+            "LOC": "C6"
+        },
+        "ETH3_RX_n": {
+            "PIO_DIRECTION": "INPUT",
+            "LOC": "C5"
+        },
+        "ETH3_TX_p": {
+            "PIO_DIRECTION": "OUTPUT",
+            "LOC": "D4"
+        },
+        "ETH3_TX_n": {
+            "PIO_DIRECTION": "OUTPUT",
+            "LOC": "D3"
         }
     },
     "SFPD": {
@@ -724,6 +775,7 @@
             "LOC": "K32"
         },
         "ETH4_MOD_DETECT": {
+            "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "H36"
         },
@@ -751,6 +803,22 @@
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
             "LOC": "J26"
+        },
+        "ETH4_RX_p": {
+            "PIO_DIRECTION": "INPUT",
+            "LOC": "D8"
+        },
+        "ETH4_RX_n": {
+            "PIO_DIRECTION": "INPUT",
+            "LOC": "D7"
+        },
+        "ETH4_TX_p": {
+            "PIO_DIRECTION": "OUTPUT",
+            "LOC": "E2"
+        },
+        "ETH4_TX_n": {
+            "PIO_DIRECTION": "OUTPUT",
+            "LOC": "E1"
         }
     },
     "SI570": {
