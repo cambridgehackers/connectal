@@ -310,7 +310,7 @@ static void initPortalHardwareOnce(void)
 	bindir = 0; // the simulation driver is found in $PATH
         argv[ind++] = (char *)"-c";
         argv[ind++] = (char *)"-sv_lib";
-        argv[ind++] = (char *)"./bin/xsimtop";
+        argv[ind++] = (char *)"xsimtop";
         argv[ind++] = (char *)"work.xsimtop";
         argv[ind++] = (char *)"-do";
         argv[ind++] = (char *)"run -all; quit -f";

@@ -6,7 +6,6 @@
 `define SlaveDataBusWidth 32
 `define SlaveControlAddrWidth 5
 `define BurstLenSize 8
-`define ExportType 
 `define project_dir $(DTOP)
 `define MainClockPeriod 20
 `define DerivedClockPeriod 10.000000
