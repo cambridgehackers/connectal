@@ -230,7 +230,7 @@ generate_altera_custom::
 ifneq ($(PIN_BINDINGS), )
 ifneq ($(filter $(BOARD), de5 htg4), )
 	$(Q)[ -e $(PROJECTDIR)/generatedbsv ] || mkdir -p $(PROJECTDIR)/generatedbsv
-	$(Q) python $(CONNECTALDIR)/scripts/generate-constraints.py -f altera \
+	$(CONNECTALDIR)/scripts/generate-constraints.py -f altera \
 		$(foreach f, $(PIN_BINDINGS), -b $f) \
 		-o $(PROJECTDIR)/generatedbsv/$(BOARD).qsf \
 		--boardfile $(CONNECTALDIR)/boardinfo/$(BOARD).json --pinoutfile $(PINOUT_FILE)
