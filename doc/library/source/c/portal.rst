@@ -15,6 +15,25 @@ Connecting to Xsim and Verilator
 
    Controls the name of the socket used for connecting software and hardware simulated by xsim/verilator.
 
+Automatically Programming the FPGA
+----------------------------------
+
+Connectal application executables or shared objects contain the FPGA
+bitstream in the "fpgadata" section of the ELF file. When the
+application (or library) first tries to access the hardware, the
+Connectal library automatically programs the FGPA with the associated
+bitstream, unless :c:data:`noprogram` is set to a non-zero value or
+environment variable :envvar:`NOPROGRAM` is nonzero.
+
+In the case of simulation hardware, the simulator is launched when the
+application first tries to access the hardware. This behavior is also
+suppressed by a nonzero value for either :c:data:`noprogram` or
+:envvar:`NOPROGRAM`.
+
+.. c:var:: int noprogram
+
+   If :c:data:`noprogram` is set to a non-zero value, then the FPGA is not programmed automatically.
+   
 Tracing Simulation
 ------------------
 
