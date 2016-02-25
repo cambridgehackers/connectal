@@ -115,10 +115,8 @@ ifeq ($(shell uname), Darwin)
 	port install asciidoc
 	easy_install ply
 else
-	apt-get install asciidoc python-dev python-setuptools python-ply
-	if [ ! -f /usr/lib/x86_64-linux-gnu/libgmp.so.3 ]; then \
-	    ln -s /usr/lib/x86_64-linux-gnu/libgmp.so /usr/lib/x86_64-linux-gnu/libgmp.so.3; \
-	fi
+	apt-get install asciidoc python-dev python-setuptools python-ply libgmp10
+	ln -sf /usr/lib/x86_64-linux-gnu/libgmp.so /usr/lib/x86_64-linux-gnu/libgmp.so.3
 endif
 	easy_install blockdiag seqdiag actdiag nwdiag libusb1
         wget https://asciidoc-diag-filter.googlecode.com/files/diag_filter.zip
