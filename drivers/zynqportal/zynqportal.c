@@ -139,10 +139,16 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
 
                 if (copy_from_user(&request, (void __user *)arg, sizeof(request)))
                         return -EFAULT;
+
+                #if LINUX_VERSION_CODE < KERNEL_VERSION(3,17,0)
                 snprintf(clkname, sizeof(clkname), "FPGA%d", request.clknum);
                 fclk = clk_get_sys(clkname, NULL);
+                #else
+                snprintf(clkname, sizeof(clkname), "fclk%d", request.clknum);
+                fclk = clk_get(portal_data->misc.this_device, clkname);
+                #endif
                 printk(KERN_INFO "[%s:%d] fclk %s %p\n", __FUNCTION__, __LINE__, clkname, fclk);
-                if (!fclk)
+                if (IS_ERR_OR_NULL(fclk))
                         return -ENODEV;
                 request.actual_rate = clk_round_rate(fclk, request.requested_rate);
                 printk(KERN_INFO "%s requested rate %ld actual rate %ld\n",
