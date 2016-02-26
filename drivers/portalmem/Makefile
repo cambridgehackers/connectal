@@ -5,6 +5,7 @@ Q=@
 else
 Q=
 endif
+DEFCONFIG ?= xilinx_zynq_portal_atheros_sdio_defconfig
 CONNECTALDIR ?= $(PWD)/../..
 include $(CONNECTALDIR)/Makefile.version
 
@@ -25,7 +26,7 @@ endif
 
 portalmem.ko: portalmem.h portalmem.c portalmem_signature_file.h
 ifneq ("$(PARAM)","")
-	$(Q)$(MAKE) $(PARAM) -C $(KROOT) xilinx_zynq_portal_atheros_sdio_defconfig
+	$(Q)$(MAKE) $(PARAM) -C $(KROOT) $(DEFCONFIG)
 	$(Q)$(MAKE) $(PARAM) -C $(KROOT) -j8 zImage
 endif
 	$(Q)$(MAKE) $(PARAM) -C $(KROOT) M=$(PWD) modules
