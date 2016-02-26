@@ -371,6 +371,7 @@ static int remove_portal_devices(struct connectal_data *connectal_data)
 static void connectal_work_handler(struct work_struct *__xxx)
 {
   int num_tiles = 0, num_portals = 0, fpn, t = 0;
+  struct device_node *of_node = ws.connectal_data->misc.this_device->of_node;
   remove_portal_devices(ws.connectal_data);
   do{
     fpn = 0;
@@ -391,6 +392,7 @@ static void connectal_work_handler(struct work_struct *__xxx)
       driver_devel("%s: t=%d fpn=%08x top=%d name=%s\n", __func__, t, fpn, fpn==num_portals, portal_data->misc.name);
       portal_data->misc.minor = MISC_DYNAMIC_MINOR;
       rc = misc_register( &portal_data->misc);
+      portal_data->misc.this_device->of_node = of_node;
       driver_devel("%s: rc=%d minor=%d\n", __func__, rc, portal_data->misc.minor);
       if (fpn+1==num_portals)
 	break;
@@ -577,6 +579,7 @@ static int connectal_of_probe(struct platform_device *pdev)
   connectal_data->misc.fops = &connectal_fops;
   connectal_data->portal_irq = irq_res->start;
   rc = misc_register(&connectal_data->misc);
+  connectal_data->misc.this_device->of_node = pdev->dev.of_node;
   driver_devel("%s: name=%s rc=%d minor=%d\n", __func__, connectal_data->misc.name, rc, connectal_data->misc.minor);
   dev_set_drvdata(&pdev->dev, connectal_data);
   ws.connectal_data = connectal_data;
