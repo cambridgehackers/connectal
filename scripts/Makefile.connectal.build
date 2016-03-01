@@ -301,7 +301,7 @@ xsim: verilog $(XSIM_OBJECTS)
 	#xvlog $(XVLOGDEFINES) --sv $(CONNECTALDIR)/verilog/*.sv ## not needed because these all get passed to xelab because they use DPI
 	#xsc -v -cc gcc -compile $(SOURCES)
 	xsc -cc gcc -link $(XSIM_OBJECTS) -o xsimtop
-	xelab -timescale 1ns/1ps --stats $(XVLOGDEFINES) -cc gcc $(SVLOG) --dpiheader XsimTop.h --debug wave -L unisim -L unifast -L unimacro work.xsimtop -sv_lib xsimtop
+	xelab -timescale 1ns/1ps --stats $(XVLOGDEFINES) -cc gcc $(SVLOG) --dpiheader XsimTop.h --debug wave -L unisim -L unifast -L unimacro -L xil_defaultlib -L ten_gig_eth_mac_v15_0_3 --include ../export_sim/xsim/xsim.dir/ work.xsimtop -sv_lib xsimtop
 endif #VIVADO
 
 vlsim: $(DTOP)/obj_dir/vlsim
@@ -325,16 +325,16 @@ VSIM_OBJECTS = $(foreach c, $(VSIM_CFILES), vsim.dir/xsc/$(c).lnx64.o ) $(foreac
 
 vsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.c
 	mkdir -p vsim.dir/xsc
-	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
+	g++ -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
 vsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.cpp
 	mkdir -p vsim.dir/xsc
-	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
+	g++ -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
 vsim.dir/xsc/%.lnx64.o: jni/%.c
 	mkdir -p vsim.dir/xsc
-	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
+	g++ -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
 vsim.dir/xsc/%.lnx64.o: jni/%.cpp
 	mkdir -p vsim.dir/xsc
-	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
+	g++ -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
 
 VSIM_DEFINES = $(subst -D ,+define+,$(BSVDEFINES))
 VSIM_SV = $(addprefix -sv $(CONNECTALDIR)/verilog/, xsimtop.sv XsimDmaReadWrite.sv XsimLink.sv XsimSink.sv XsimSource.sv)
@@ -388,7 +388,7 @@ obj/Makefile: $(OBJMAKEFILE_DEP) syntax.timestamp
 
 $(DTOP)/bin/libconnectal-sim.so: $(SIM_CXX_COMMON) $(SIM_CXX_PROJECT) prepare_bin_target
 	$(Q)mkdir -p $(DTOP)/bin
-	g++ -O -g -I$(DTOP)/jni -shared -fpic $(SIM_CXXFLAGS) -g -o $(DTOP)/bin/libconnectal-sim.so $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)
+	g++ -O -g -I$(DTOP)/jni -shared -fpic -std=c++11 $(SIM_CXXFLAGS) -g -o $(DTOP)/bin/libconnectal-sim.so $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)
 
 bsim: prepare_bin_target $(DTOP)/bin/libconnectal-sim.so
 	$(Q)mkdir -p $(DTOP)/obj verilog
