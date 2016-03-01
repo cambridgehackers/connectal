@@ -4,7 +4,7 @@
     <ModuleName>nfsume_ddr3a</ModuleName>
     <dci_inouts_inputs>1</dci_inouts_inputs>
     <dci_inputs>1</dci_inputs>
-    <Debug_En>ON</Debug_En>
+    <Debug_En>OFF</Debug_En>
     <DataDepth_En>1024</DataDepth_En>
     <LowPower_En>ON</LowPower_En>
     <XADC_En>Enabled</XADC_En>
@@ -192,7 +192,7 @@
         <AXIParameters>
             <C0_C_RD_WR_ARB_ALGORITHM>RD_PRI_REG</C0_C_RD_WR_ARB_ALGORITHM>
             <C0_S_AXI_ADDR_WIDTH>32</C0_S_AXI_ADDR_WIDTH>
-            <C0_S_AXI_DATA_WIDTH>64</C0_S_AXI_DATA_WIDTH>
+            <C0_S_AXI_DATA_WIDTH>512</C0_S_AXI_DATA_WIDTH>
             <C0_S_AXI_ID_WIDTH>4</C0_S_AXI_ID_WIDTH>
             <C0_S_AXI_SUPPORTS_NARROW_BURST>0</C0_S_AXI_SUPPORTS_NARROW_BURST>
         </AXIParameters>
