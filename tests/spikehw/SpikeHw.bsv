@@ -8,6 +8,7 @@ import Probe::*;
 import StmtFSM::*;
 import TriState::*;
 import Vector::*;
+import XilinxCells::*;
 
 import ConnectalXilinxCells::*;
 import ConnectalConfig::*;
@@ -19,6 +20,8 @@ import PhysMemToBram::*;
 
 import BpiFlash::*;
 import AxiIntcBvi::*;
+import AxiIic::*;
+import AxiUart::*;
 import AxiEthBvi::*;
 import AxiDmaBvi::*;
 import SpikeHwPins::*;
@@ -35,13 +38,13 @@ interface SpikeHwRequest;
 endinterface
 
 interface SpikeHwIndication;
-   method Action irqChanged(Bit#(1) newIrq, Bit#(4) intrSources);
+   method Action irqChanged(Bit#(1) newIrq, Bit#(16) intrSources);
    method Action readDone(Bit#(32) value); 
    method Action writeDone(); 
    method Action readFlashDone(Bit#(32) value); 
    method Action writeFlashDone(); 
    method Action resetDone();
-   method Action status(Bit#(1) mmcm_locked, Bit#(1) irq, Bit#(4) intrSources);
+   method Action status(Bit#(1) mmcm_locked, Bit#(1) irq, Bit#(16) intrSources);
 endinterface
 
 interface SpikeHw;
@@ -69,9 +72,15 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
    let clock <- exposeCurrentClock();
    let reset <- exposeCurrentReset();
 
+   BUFRParams bufrParams = defaultValue;
+   bufrParams.bufr_divide = "4";
+   Clock uartClk <- mkClockBUFR(bufrParams, clocked_by host.derivedClock);
+
    let bootRom    <- mkBramBootRom();
    let bpiFlash   <- mkBpiFlash();
    let axiIntcBvi <- mkAxiIntcBvi(clock, reset);
+   let axiIicBvi  <- mkAxiIicBvi(clock, reset);
+   let axiUartBvi <- mkAxiUartBvi(clock, reset, uartClk);
    let axiDmaBvi <- mkAxiDmaBvi(clock,clock,clock,clock,reset);
 `ifdef IncludeEthernet
    let axiEthBvi <- mkAxiEthBvi(host.tsys_clk_200mhz_buf,
@@ -79,35 +88,47 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
 				reset, reset, reset, reset);
 `endif
 
+   
+
    Reg#(Bit#(32)) objId <- mkReg(0);
 
    let irqLevel <- mkReg(0);
    let intrLevel <- mkReg(0);
-   Bit#(4) intr = {
-      axiDmaBvi.s2mm.introut(),
-      axiDmaBvi.mm2s.introut(),
-`ifdef IncludeEthernet
-      axiEthBvi.mac.irq(),
-      axiEthBvi.interrupt()
-`else
-      0
-`endif
-      };
+
+   function Bit#(16) intr();
+      Bit#(16) _intr = 0;
+      _intr[0] = axiUartBvi.ip2intc_irpt();
+      //_intr[1] = axiDma tx
+      //_intr[2] = axiDma rx
+      //_intr[3] = axiEth rx
+      //_intr[4] = Phy 
+      _intr[5] = axiIicBvi.iic2intc_irpt();
+      return _intr;
+   endfunction
 
    rule rl_intr;
-      axiIntcBvi.intr(intr);
+
+      axiIntcBvi.intr(intr());
+   endrule
+
+   FIFOF#(Tuple2#(Bit#(1),Bit#(16))) irqChangeFifo <- mkSizedFIFOF(8);
+   rule rl_irq_levels_changed;
+      let irq = axiIntcBvi.irq;
+      let levels = intr();
+      irqLevel <= irq;
+      intrLevel <= levels;
+
+      if (irq != irqLevel) begin
+	 $display("irq changed irq=%h intr sources %h", irq, levels);
+	 irqChangeFifo.enq(tuple2(irq, levels));
+      end
    endrule
 
    rule rl_intr_indication;
-      let irq = axiIntcBvi.irq;
-      irqLevel <= irq;
-      intrLevel <= intr;
-
-      if (irq != irqLevel || intr != intrLevel) begin
-	 ind.irqChanged(irq, intr);
-	 $display("irq changed irq=%h intr sources %h", irq, intr);
-      end
+      match { .irq, .levels } <- toGet(irqChangeFifo).get();
+      ind.irqChanged(irq, levels);
    endrule
+
    Reg#(Bit#(32)) cycles <- mkReg(0);
    Reg#(Bool)     mmcm_lock <- mkReg(False);
    rule rl_cycles;
@@ -131,15 +152,23 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
    Axi4MasterBits#(32,32,MemTagSize,Empty) m_axi_s2mm = toAxi4MasterBits(axiDmaBvi.m_axi_s2mm);
    Axi4MasterBits#(32,32,MemTagSize,Empty) m_axi_sg = toAxi4MasterBits(axiDmaBvi.m_axi_sg);
 
+   Axi4SlaveLiteBits#(12,32) axiUartSlaveLite = toAxi4SlaveBits(axiUartBvi.s_axi);
+   PhysMemSlave#(12,32) axiUartMemSlave      <- mkPhysMemSlave(axiUartSlaveLite);
+
    Axi4SlaveLiteBits#(9,32) axiIntcSlaveLite = toAxi4SlaveBits(axiIntcBvi.s_axi);
-   PhysMemSlave#(18,32) axiIntcMemSlave      <- mkPhysMemSlave(axiIntcSlaveLite);
-   PhysMemSlave#(18,32) axiDmaMemSlave       <- mkPhysMemSlave(axiDmaBvi.s_axi_lite);
+   PhysMemSlave#(12,32) axiIntcMemSlave      <- mkPhysMemSlave(axiIntcSlaveLite);
+
+   Axi4SlaveLiteBits#(9,32) axiIicSlaveLite  = toAxi4SlaveBits(axiIicBvi.s_axi);
+   PhysMemSlave#(12,32) axiIicMemSlave       <- mkPhysMemSlave(axiIicSlaveLite);
+
+   PhysMemSlave#(12,32) axiDmaMemSlave       <- mkPhysMemSlave(axiDmaBvi.s_axi_lite);
+
 `ifdef IncludeEthernet
    Axi4SlaveLiteBits#(18,32) axiEthSlaveLite = toAxi4SlaveBits(axiEthBvi.s_axi);
    PhysMemSlave#(18,32) axiEthMemSlave       <- mkPhysMemSlave(axiEthSlaveLite);
    PhysMemSlave#(20,32) deviceSlaveMux       <- mkPhysMemSlaveMux(vec(axiIntcMemSlave, axiDmaMemSlave, axiEthMemSlave));
 `else
-   PhysMemSlave#(20,32) deviceSlaveMux       <- mkPhysMemSlaveMux(vec(axiIntcMemSlave, axiDmaMemSlave));
+   PhysMemSlave#(20,32) deviceSlaveMux       <- mkPhysMemSlaveMux(vec(axiUartMemSlave, axiIntcMemSlave, axiDmaMemSlave, axiIicMemSlave));
 `endif
 
    PhysMemSlave#(20,32) bootRomMemSlave      <- mkPhysMemToBram(bootRom);
@@ -186,6 +215,13 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
       ind.writeFlashDone();
    endrule
 
+   IOBUF sdaIOBuf <- mkIOBUF(axiIicBvi.sda.t, axiIicBvi.sda.o);
+   IOBUF sclIOBuf <- mkIOBUF(axiIicBvi.scl.t, axiIicBvi.scl.o);
+   rule iic_o;
+      axiIicBvi.sda.i(sdaIOBuf.o);
+      axiIicBvi.scl.i(sclIOBuf.o);
+   endrule
+
    interface SpikeHwRequest request;
       method Action reset();
       endmethod
@@ -217,7 +253,7 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
 		    0,
 `endif
 
-	    axiIntcBvi.irq, intr);
+	    axiIntcBvi.irq, intr());
       endmethod
    endinterface
    interface SpikeHwPins pins;
@@ -230,7 +266,19 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
       endinterface
 `endif
       interface flash = bpiFlash.flash;
+      interface SpikeUartPins uart;
+	 method tx  = axiUartBvi.sout;
+	 method rts = axiUartBvi.rtsn;
+	 method rx  = axiUartBvi.sin;
+	 method cts = axiUartBvi.ctsn;
+      endinterface   
+      interface SpikeIicPins iic;
+         interface scl = sclIOBuf.io;
+         interface sda = sdaIOBuf.io;
+	 method gpo = axiIicBvi.gpo()[0];
+      endinterface
    endinterface
+
    interface Vector dmaReadClient = map(toMemReadClient(objId), vec(m_axi_mm2s, m_axi_sg));
    interface Vector dmaWriteClient = map(toMemWriteClient(objId), vec(m_axi_s2mm, m_axi_sg));
 endmodule

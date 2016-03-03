@@ -135,6 +135,9 @@
     "flash_addr[24]": {
 	"bpi_flash": "addr[24]"
     },
+    "flash_addr[25]": {
+	"bpi_flash": "addr[25]"
+    },
     "flash_oe_b": {
 	"bpi_flash": "oe_b"
     },
@@ -149,5 +152,26 @@
     },
     "flash_wait_in_b": {
 	"bpi_flash": "wait_in_b"
+    },
+    "uart_tx": {
+	"uart": "d_out"
+    },
+    "uart_rx_x": {
+	"uart": "d_in"
+    },
+    "uart_rts": {
+	"uart": "rts"
+    },
+    "uart_cts_x": {
+	"uart": "cts"
+    },
+    "iic_gpo": {
+	"pins": "si5324_rst_n"
+    },
+    "iic_sda": {
+	"iic_main": "sda"
+    },
+    "iic_scl": {
+	"iic_main": "scl"
     }
 }

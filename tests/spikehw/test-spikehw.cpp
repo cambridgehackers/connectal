@@ -32,6 +32,14 @@ int main(int argc, const char **argv)
     // query mmcm and interrupt status
     spikeHw->status();
 
+    fprintf(stderr, "scratch register %x\n", spikeHw->read(0x10001c));
+    spikeHw->write(0x10001c, 0x22);
+    fprintf(stderr, "scratch register %x\n", spikeHw->read(0x10001c));
+
+    spikeHw->read(0x100000);
+    spikeHw->write(0x100000, 'h');
+    return 0;
+
     // read boot rom
     uint32_t word = 0;
     uint32_t expected[] = {
