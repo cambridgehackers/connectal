@@ -28,6 +28,7 @@ public:
     IrqCallback irqCallback;
 
   void irqChanged( const uint8_t irq, const uint16_t intrSources ) {
+    if (intrSources & (1 << 5)) fprintf(stderr, "iic intr=%d %04x\n", irq, intrSources);
       if (verbose) fprintf(stderr, "SpikeHw::irqChanged %d intr sources %x\n", irq, intrSources);
       this->irq = irq;
       if (irqCallback)
@@ -161,10 +162,10 @@ uint32_t SpikeHw::read(unsigned long offset)
 {
     maybeReset();
 
-    if (verbose || (offset > 0x101000)) fprintf(stderr, "SpikeHw::read offset=%08lx\n", offset);
+    //if (verbose || (offset > 0x101000)) fprintf(stderr, "SpikeHw::read offset=%08lx\n", offset);
     request->read(offset);
     indication->wait();
-    if (verbose || (offset > 0x101000)) fprintf(stderr, "SpikeHw::read done value=%x\n", *(uint32_t *)indication->buf);
+    //if (verbose || (offset > 0x101000)) fprintf(stderr, "SpikeHw::read done value=%x\n", *(uint32_t *)indication->buf);
     return *(uint32_t *)indication->buf;
 }
 
@@ -172,12 +173,10 @@ void SpikeHw::write(unsigned long offset, const uint32_t value)
 {
     maybeReset();
 
-    if (verbose || (offset > 0x101000)) fprintf(stderr, "SpikeHw::write offset=%08lx value=%x\n", offset, value);
+    //if (verbose || (offset > 0x101000)) fprintf(stderr, "SpikeHw::write offset=%08lx value=%x\n", offset, value);
     request->write(offset, value);
     indication->wait();
-    if (verbose || (offset > 0x101000)) fprintf(stderr, "SpikeHw::write done\n");
-    //request->status();
-    //indication->wait();
+    //if (verbose || (offset > 0x101000)) fprintf(stderr, "SpikeHw::write done\n");
 }
 
 void SpikeHw::setFlashParameters(unsigned long cycles)
@@ -397,7 +396,10 @@ extern "C" {
 
     uint64_t fpga_read(uint64_t addr)
     {
-	return spikeHw->read(0x100000 + addr);
+      uint64_t val = spikeHw->read(0x100000 + addr);
+      //      if (addr == 0x1018)
+      //	fprintf(stderr, "next interrupt %lx\n", val);
+      return val;
     }
 
     void fpga_write(uint64_t addr, uint64_t value)
