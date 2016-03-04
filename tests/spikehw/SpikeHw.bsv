@@ -218,7 +218,7 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
 
    IOBUF sdaIOBuf <- mkIOBUF(axiIicBvi.sda.t, axiIicBvi.sda.o);
    IOBUF sclIOBuf <- mkIOBUF(axiIicBvi.scl.t, axiIicBvi.scl.o);
-   # No probe for .o because they are tied to ground -- I2C operates open collector
+   // No probe for .o because they are tied to ground -- I2C operates open collector
    Probe#(Bit#(1)) sda_i_probe <- mkProbe();
    Probe#(Bit#(1)) sda_t_probe <- mkProbe();
    Probe#(Bit#(1)) scl_i_probe <- mkProbe();
