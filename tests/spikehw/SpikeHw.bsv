@@ -9,6 +9,7 @@ import StmtFSM::*;
 import TriState::*;
 import Vector::*;
 import XilinxCells::*;
+import Probe::*;
 
 import ConnectalXilinxCells::*;
 import ConnectalConfig::*;
@@ -115,11 +116,11 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
    rule rl_irq_levels_changed;
       let irq = axiIntcBvi.irq;
       let levels = intr();
-      irqLevel <= irq;
-      intrLevel <= levels;
 
       if (irq != irqLevel) begin
 	 $display("irq changed irq=%h intr sources %h", irq, levels);
+	 irqLevel <= irq;
+	 intrLevel <= levels;
 	 irqChangeFifo.enq(tuple2(irq, levels));
       end
    endrule
@@ -217,7 +218,18 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
 
    IOBUF sdaIOBuf <- mkIOBUF(axiIicBvi.sda.t, axiIicBvi.sda.o);
    IOBUF sclIOBuf <- mkIOBUF(axiIicBvi.scl.t, axiIicBvi.scl.o);
+   # No probe for .o because they are tied to ground -- I2C operates open collector
+   Probe#(Bit#(1)) sda_i_probe <- mkProbe();
+   Probe#(Bit#(1)) sda_t_probe <- mkProbe();
+   Probe#(Bit#(1)) scl_i_probe <- mkProbe();
+   Probe#(Bit#(1)) scl_t_probe <- mkProbe();
+
    rule iic_o;
+      sda_i_probe <= sdaIOBuf.o;
+      sda_t_probe <= axiIicBvi.sda.t;
+      scl_i_probe <= sclIOBuf.o;
+      scl_t_probe <= axiIicBvi.scl.t;
+
       axiIicBvi.sda.i(sdaIOBuf.o);
       axiIicBvi.scl.i(sclIOBuf.o);
    endrule
