@@ -1,0 +1,23 @@
+{
+    "uart_tx": {
+	"uart": "d_out"
+    },
+    "uart_rx_x": {
+	"uart": "d_in"
+    },
+    "uart_rts": {
+	"uart": "rts"
+    },
+    "uart_cts_x": {
+	"uart": "cts"
+    },
+    "iic_sda": {
+	"i2c_main": "sda"
+    },
+    "iic_scl": {
+	"i2c_main": "scl"
+    },
+    "iic_mux_reset": {
+	"i2c_main": "mux_reset"
+    }
+}

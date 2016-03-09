@@ -5,15 +5,17 @@ import BpiFlash::*;
 interface EthPins;
    interface AxiethbviSfp sfp;
    interface AxiethbviMgt mgt;
-   interface Clock deleteme_unused_clock;
-   interface Reset deleteme_unused_reset;
 endinterface
 
 (* always_ready, always_enabled *)
 interface SpikeIicPins;
    interface Inout#(Bit#(1)) scl;
    interface Inout#(Bit#(1)) sda;
+`ifndef BOARD_nfsume
    method Bit#(1) gpo();
+`else
+   method Bit#(1) mux_reset();
+`endif
 endinterface
 
 (* always_ready, always_enabled *)
@@ -31,5 +33,9 @@ interface SpikeHwPins;
 `endif
    interface SpikeUartPins uart;
    interface SpikeIicPins iic;
+`ifndef BOARD_nfsume
    interface BpiFlashPins flash;
+`endif
+   interface Clock deleteme_unused_clock;
+   interface Reset deleteme_unused_reset;
 endinterface
