@@ -100,6 +100,7 @@ SpikeHw::SpikeHw(IrqCallback callback)
     indication = new SpikeHwIndication(IfcNames_SpikeHwIndicationH2S, callback);
     dmaManager = platformInit();
     request->setFlashParameters(100);
+    request->iicReset(0); // de-assert reset
 }
 
 SpikeHw::~SpikeHw()
@@ -397,8 +398,6 @@ extern "C" {
     uint64_t fpga_read(uint64_t addr)
     {
       uint64_t val = spikeHw->read(0x100000 + addr);
-      //      if (addr == 0x1018)
-      //	fprintf(stderr, "next interrupt %lx\n", val);
       return val;
     }
 
