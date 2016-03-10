@@ -195,13 +195,13 @@ module mkAxiEthBvi#(Clock ref_clk, Clock s_axi_clk, Reset s_axi_reset, Clock axi
     schedule (gt0.qplloutclk_out, gt0.qplloutrefclk_out, gtref.clk_buf_out, gtref.clk_out, interrupt, m_axis_rxd.tdata, m_axis_rxd.tkeep, m_axis_rxd.tlast, m_axis_rxd.tready, m_axis_rxd.tvalid, m_axis_rxs.tdata, m_axis_rxs.tkeep, m_axis_rxs.tlast, m_axis_rxs.tready, m_axis_rxs.tvalid, mac.irq, mgt.clk_clk_n, mgt.clk_clk_p, mmcm.locked_out, s_axi.araddr, s_axi.arready, s_axi.arvalid, s_axi.awaddr, s_axi.awready, s_axi.awvalid, s_axi.bready, s_axi.bresp, s_axi.bvalid, s_axi.rdata, s_axi.rready, s_axi.rresp, s_axi.rvalid, s_axi.wdata, s_axi.wready, s_axi.wstrb, s_axi.wvalid, s_axis_txc.tdata, s_axis_txc.tkeep, s_axis_txc.tlast, s_axis_txc.tready, s_axis_txc.tvalid, s_axis_txd.tdata, s_axis_txd.tkeep, s_axis_txd.tlast, s_axis_txd.tready, s_axis_txd.tvalid, sfp.rxn, sfp.rxp, sfp.txn, sfp.txp, signal.detect) CF (gt0.qplloutclk_out, gt0.qplloutrefclk_out, gtref.clk_buf_out, gtref.clk_out, interrupt, m_axis_rxd.tdata, m_axis_rxd.tkeep, m_axis_rxd.tlast, m_axis_rxd.tready, m_axis_rxd.tvalid, m_axis_rxs.tdata, m_axis_rxs.tkeep, m_axis_rxs.tlast, m_axis_rxs.tready, m_axis_rxs.tvalid, mac.irq, mgt.clk_clk_n, mgt.clk_clk_p, mmcm.locked_out, s_axi.araddr, s_axi.arready, s_axi.arvalid, s_axi.awaddr, s_axi.awready, s_axi.awvalid, s_axi.bready, s_axi.bresp, s_axi.bvalid, s_axi.rdata, s_axi.rready, s_axi.rresp, s_axi.rvalid, s_axi.wdata, s_axi.wready, s_axi.wstrb, s_axi.wvalid, s_axis_txc.tdata, s_axis_txc.tkeep, s_axis_txc.tlast, s_axis_txc.tready, s_axis_txc.tvalid, s_axis_txd.tdata, s_axis_txd.tkeep, s_axis_txd.tlast, s_axis_txd.tready, s_axis_txd.tvalid, sfp.rxn, sfp.rxp, sfp.txn, sfp.txp, signal.detect);
 endmodule
 
-instance ToAxi4SlaveBits#(Axi4SlaveLiteBits#(18,32), AxiethbviS_axi);
-   function Axi4SlaveLiteBits#(18,32) toAxi4SlaveBits(AxiethbviS_axi s);
-      return (interface Axi4SlaveLiteBits#(18,32);
-	 method araddr = s.araddr;
+instance ToAxi4SlaveBits#(Axi4SlaveLiteBits#(12,32), AxiethbviS_axi);
+   function Axi4SlaveLiteBits#(12,32) toAxi4SlaveBits(AxiethbviS_axi s);
+      return (interface Axi4SlaveLiteBits#(12,32);
+	 method araddr = compose(s.araddr, extend);
 	 method arready = s.arready;
 	 method arvalid = s.arvalid;
-	 method awaddr = s.awaddr;
+	 method awaddr = compose(s.awaddr, extend);
 	 method awready = s.awready;
 	 method awvalid = s.awvalid;
 	 method bready = s.bready;
