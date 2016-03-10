@@ -39,7 +39,7 @@ static int burstLenMin = 32;
 static int burstLenMax = 32;
 #else
 static int burstLen = 16;
-static int burstLenMin = 2;
+static int burstLenMin = 4;
 static int burstLenMax = 32;
 #endif
 
