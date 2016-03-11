@@ -62,13 +62,13 @@ module mkMPEngine#(MemReadEngineServer#(haystackBusWidth) haystackReader,
 		   MemReadEngineServer#(configBusWidth) configReader) (MPEngine#(haystackBusWidth,configBusWidth))
 
    provisos(Add#(a__, 8, haystackBusWidth),
-	    Div#(haystackBusWidth,8,nc),
-	    Mul#(nc,8,haystackBusWidth),
-	    Add#(1, b__, nc),
+	    Div#(haystackBusWidth,8,haystackBusBytes),
+	    Mul#(haystackBusBytes,8,haystackBusWidth),
+	    Add#(1, b__, haystackBusBytes),
 	    Add#(c__, 32, haystackBusWidth),
 	    Add#(1, d__, TDiv#(haystackBusWidth, 32)),
 	    Mul#(TDiv#(haystackBusWidth, 32), 32, haystackBusWidth),
-	    Add#(e__, TLog#(nc), 32),
+	    Add#(e__, TLog#(haystackBusBytes), 32),
 	    Add#(f__, TLog#(TDiv#(haystackBusWidth, 32)), 32)
 	    ,Mul#(TDiv#(configBusWidth, 8), 8, configBusWidth)
 	    ,Add#(1, g__, TDiv#(configBusWidth, 8))
@@ -91,7 +91,7 @@ module mkMPEngine#(MemReadEngineServer#(haystackBusWidth) haystackReader,
    Reset rst <- exposeCurrentReset;
    BRAM2Port#(NeedleIdx, Char) needle  <- mkBRAM2Server(defaultValue);
    BRAM2Port#(NeedleIdx, Bit#(32)) mpNext <- mkBRAM2Server(defaultValue);
-   Gearbox#(nc,1,Char) haystack <- mkNto1Gearbox(clk,rst,clk,rst);
+   Gearbox#(haystackBusBytes,1,Char) haystack <- mkNto1Gearbox(clk,rst,clk,rst);
 
    Reg#(Bit#(32)) cycleCnt <- mkReg(0);
    Reg#(Bit#(32)) lastHD <- mkReg(0);
@@ -311,10 +311,11 @@ module mkMPEngine#(MemReadEngineServer#(haystackBusWidth) haystackReader,
       iReg <= 1;
       jReg <= 1;
       epochReg <= 0;
-      Bit#(32) haystack_len_ds = haystack_len+fromInteger(valueOf(nc)-1);
-      Bit#(TLog#(nc)) zeros = 0;
-      Bit#(32) haystack_len_bytes = {zeros,haystack_len_ds[31:valueOf(TLog#(nc))]} * fromInteger(valueOf(nc));
-      haystackReader.request.put(MemengineCmd{sglId:haystack_sglId, base:extend(haystack_base), len:haystack_len_bytes, burstLen:fromInteger(8*valueOf(nc)), tag: 0});
+      Bit#(32) haystack_len_ds = haystack_len+fromInteger(valueOf(haystackBusBytes)-1);
+      Bit#(TLog#(haystackBusBytes)) zeros = 0;
+      Bit#(32) haystack_len_bytes = {zeros,haystack_len_ds[31:valueOf(TLog#(haystackBusBytes))]} * fromInteger(valueOf(haystackBusBytes));
+      $display("haystack read offset=%d burstLen=%d", haystack_base, fromInteger(8*valueOf(haystackBusBytes)));
+      haystackReader.request.put(MemengineCmd{sglId:haystack_sglId, base:extend(haystack_base), len:haystack_len_bytes, burstLen:fromInteger(8*valueOf(haystackBusBytes)), tag: 0});
       if (verbose) $display("mkMPEngine::search %d %d %d",  haystack_sglId, haystack_base, haystack_len_bytes);
    endrule
    
