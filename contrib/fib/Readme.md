@@ -1,3 +1,4 @@
+Larry Stewart <stewart@serissa.com>
 Fib is an example of a stylized way to construct recursive algorithms
 in hardware.
 
@@ -101,7 +102,7 @@ Call and return are a bit more complicated
 Because it is a multicycle process to push the current state onto the
 stack and start the recursive call, the callfib function saves its
 arguments in registers, changes the FSM state to FIBCALLING and launches
-the callFigFSM.
+the callFibFSM.
 
 
    Stmt callfibstmt =
