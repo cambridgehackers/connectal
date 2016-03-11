@@ -55,7 +55,7 @@ void connectalJsonEncode(char *datap, void *binarydata, ConnectalMethodJsonInfo 
             break;
 	case ITYPE_int64_t:
             stmp64 = *(int64_t *)((unsigned long)binarydata + iparam->offset);
-            data += sprintf(data, "%ld", stmp64);
+            data += sprintf(data, "%lld", (long long)stmp64);
             break;
         case ITYPE_uint8_t:
             tmp8 = *(uint8_t *)((unsigned long)binarydata + iparam->offset);
@@ -71,7 +71,7 @@ void connectalJsonEncode(char *datap, void *binarydata, ConnectalMethodJsonInfo 
             break;
         case ITYPE_uint64_t:
             tmp64 = *(uint64_t *)((unsigned long)binarydata + iparam->offset);
-            data += sprintf(data, "%ld", (unsigned long)tmp64);
+            data += sprintf(data, "%lld", (unsigned long long)tmp64);
             break;
         case ITYPE_SpecialTypeForSendingFd:
             tmpint = *(int *)((unsigned long)binarydata + iparam->offset);
