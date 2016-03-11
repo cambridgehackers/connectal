@@ -36,7 +36,7 @@ interface Serialconfig;
     interface SerialconfigRequest request;
 endinterface
 
-module mkSerialconfigRequest#(SerialconfigIndication indication)(Serialconfig);
+module mkSerialconfig#(SerialconfigIndication indication)(Serialconfig);
 
    
    SpiReg#(Bit#(32)) tap1 <- mkSpiReg('h11110000);
