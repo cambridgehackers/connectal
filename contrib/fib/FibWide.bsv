@@ -97,7 +97,7 @@ module mkFib#(FibIndication indication)(Fib);
       frame.nextpc(FIBSTATEIDLE);
    endrule
 
-   interface Fib request;
+   interface FibRequest request;
 
       method Action fib(Bit#(32) v);
          //$display("request fib %d", v);
