@@ -31,12 +31,16 @@ interface FibRequest;
    method Action fib(Bit#(32) v);
 endinterface
 
+interface Fib;
+   interface FibRequest request;
+endinterface
+
 typedef enum {FIBSTATEIDLE, FIBSTATE1, FIBSTATE2, 
    FIBSTATE3, FIBSTATECOMPLETE} FSState
 deriving (Bits,Eq);
 
 
-module mkFibRequest#(FibIndication indication)(FibRequest);
+module mkFib#(FibIndication indication)(Fib);
 
    /* pc, args, vars */
    StackReg#(128, FSState, Bit#(16), Bit#(16)) frame <- mkStackReg(128, FIBSTATEIDLE);
@@ -92,13 +96,17 @@ module mkFibRequest#(FibIndication indication)(FibRequest);
       // our work here is done
       frame.nextpc(FIBSTATEIDLE);
    endrule
-   
-   method Action fib(Bit#(32) v);
-      //$display("request fib %d", v);
-      // call FIBSTATE1 and return to FIBSTATECOMPLETE
-      // with argument v
-      frame.docall(FIBSTATE1, FIBSTATECOMPLETE, truncate(v), 0);
-   endmethod
+
+   interface Fib request;
+
+      method Action fib(Bit#(32) v);
+         //$display("request fib %d", v);
+         // call FIBSTATE1 and return to FIBSTATECOMPLETE
+         // with argument v
+         frame.docall(FIBSTATE1, FIBSTATECOMPLETE, truncate(v), 0);
+      endmethod
+
+   endinterface
       
 endmodule
 
