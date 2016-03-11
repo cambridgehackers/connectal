@@ -260,6 +260,8 @@ def p_typeParams(p):
         p[0] = [p[1]]
     elif len(p) == 4:
         p[0] = p[1] + [p[3]]
+    else:
+        p[0] = []
 
 def p_type(p):
     '''type : VAR
