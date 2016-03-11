@@ -101,13 +101,13 @@ if __name__=='__main__':
                         #print('FFF', prop, pinName, boardPinInfo, boardPinInfo.has_key(pinName), boardPinInfo.get(pinName))
                         break
             if boardPinInfo == {}:
-                print('Missing group description for', pinName, projectPinInfo, file=sys.stderr)
+                print('Missing group description for', pin, pinName, projectPinInfo, file=sys.stderr)
                 errorDetected = True
             pinInfo = {}
             if boardPinInfo.has_key(pinName):
                 pinInfo = copy.copy(boardPinInfo[pinName])
             else:
-                print('Missing pin description for', pinName, projectPinInfo, file=sys.stderr)
+                print('Missing pin description for', pin, pinName, projectPinInfo, file=sys.stderr)
                 pinInfo['LOC'] = 'fmc.%s' % (pinName)
                 errorDetected = True
             pinInfo['name'] = pin
