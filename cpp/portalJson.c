@@ -24,42 +24,61 @@
 #include "portal.h"
 
 static int trace_json;// = 1;
-void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJsonInfo *info)
+void connectalJsonEncode(char *datap, void *binarydata, ConnectalMethodJsonInfo *info)
 {
     ConnectalParamJsonInfo *iparam = info->param;
-    char *datap = (char *)pint->item->mapchannelInd(pint, 0);
     char *data = (char *)datap;
     data += sprintf(data, "{\"name\":\"%s\"", info->name);
     while(iparam->name) {
+        uint8_t  tmp8;
+        uint16_t tmp16;
         uint32_t tmp32;
         uint64_t tmp64;
-	uint16_t tmp16;
+	int8_t  stmp8;
 	int16_t stmp16;
+	int32_t stmp32;
+	int64_t stmp64;
         int      tmpint;
         data += sprintf(data, ",\"%s\":", iparam->name);
         switch(iparam->itype) {
+	case ITYPE_int8_t:
+            stmp8 = *(int8_t *)((unsigned long)binarydata + iparam->offset);
+            data += sprintf(data, "%d", stmp8);
+            break;
 	case ITYPE_int16_t:
-            stmp16 = *(int16_t *)((unsigned long)tempdata + iparam->offset);
+            stmp16 = *(int16_t *)((unsigned long)binarydata + iparam->offset);
             data += sprintf(data, "%d", stmp16);
             break;
+	case ITYPE_int32_t:
+            stmp32 = *(int32_t *)((unsigned long)binarydata + iparam->offset);
+            data += sprintf(data, "%d", stmp32);
+            break;
+	case ITYPE_int64_t:
+            stmp64 = *(int64_t *)((unsigned long)binarydata + iparam->offset);
+            data += sprintf(data, "%ld", stmp64);
+            break;
+        case ITYPE_uint8_t:
+            tmp8 = *(uint8_t *)((unsigned long)binarydata + iparam->offset);
+            data += sprintf(data, "%d", tmp8);
+            break;
         case ITYPE_uint16_t:
-            tmp16 = *(uint16_t *)((unsigned long)tempdata + iparam->offset);
+            tmp16 = *(uint16_t *)((unsigned long)binarydata + iparam->offset);
             data += sprintf(data, "%d", tmp16);
             break;
         case ITYPE_uint32_t:
-            tmp32 = *(uint32_t *)((unsigned long)tempdata + iparam->offset);
+            tmp32 = *(uint32_t *)((unsigned long)binarydata + iparam->offset);
             data += sprintf(data, "%d", tmp32);
             break;
         case ITYPE_uint64_t:
-            tmp64 = *(uint64_t *)((unsigned long)tempdata + iparam->offset);
+            tmp64 = *(uint64_t *)((unsigned long)binarydata + iparam->offset);
             data += sprintf(data, "%ld", (unsigned long)tmp64);
             break;
         case ITYPE_SpecialTypeForSendingFd:
-            tmpint = *(int *)((unsigned long)tempdata + iparam->offset);
+            tmpint = *(int *)((unsigned long)binarydata + iparam->offset);
             data += sprintf(data, "%d", tmpint);
             break;
         default:
-            fprintf(stderr, "%x type %d\n", *(uint32_t *)((unsigned long)tempdata + iparam->offset), iparam->itype);
+            fprintf(stderr, "%x type %d\n", *(uint32_t *)((unsigned long)binarydata + iparam->offset), iparam->itype);
         }
         iparam++;
     }
@@ -71,10 +90,18 @@ void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJs
     while (slength++ < (int)(rounded_size*sizeof(uint32_t)))
         *data++ = ' ';
     *data++ = 0;
-    pint->item->send(pint, (volatile unsigned int*)datap, (iparam->offset << 16) | (1 + rounded_size), -1);
 }
 
-int connnectalJsonDecode(PortalInternal *pint, int _unused_channel, void *tempdata, ConnectalMethodJsonInfo *infoa)
+void connectalJsonEncodeAndSend(PortalInternal *pint, void *binarydata, ConnectalMethodJsonInfo *info)
+{
+    ConnectalParamJsonInfo *iparam = info->param;
+    char *jsonp = (char *)pint->item->mapchannelInd(pint, 0);
+    connectalJsonEncode(jsonp, binarydata, info); 
+    int rounded_size = strlen(jsonp);
+    pint->item->send(pint, (volatile unsigned int*)jsonp, (iparam->offset << 16) | (1 + rounded_size), -1);
+}
+
+int connnectalJsonDecode(PortalInternal *pint, int _unused_channel, void *binarydata, ConnectalMethodJsonInfo *infoa)
 {
     int channel = 0;
     ConnectalMethodJsonInfo *info = NULL;
@@ -127,22 +154,22 @@ int connnectalJsonDecode(PortalInternal *pint, int _unused_channel, void *tempda
                         fprintf(stderr, "[%s:%d] strtol didn't use all characters %p != %p\n", __FUNCTION__, __LINE__, endptr, val+strlen(val));
                     switch(iparam->itype) {
                     case ITYPE_int16_t:
-                        *(int16_t *)((unsigned long)tempdata + iparam->offset) = tmp64;
+                        *(int16_t *)((unsigned long)binarydata + iparam->offset) = tmp64;
                         break;
                     case ITYPE_uint16_t:
-                        *(uint16_t *)((unsigned long)tempdata + iparam->offset) = tmp64;
+                        *(uint16_t *)((unsigned long)binarydata + iparam->offset) = tmp64;
                         break;
                     case ITYPE_uint32_t:
-                        *(uint32_t *)((unsigned long)tempdata + iparam->offset) = tmp64;
+                        *(uint32_t *)((unsigned long)binarydata + iparam->offset) = tmp64;
                         break;
                     case ITYPE_uint64_t:
-                        *(uint64_t *)((unsigned long)tempdata + iparam->offset) = tmp64;
+                        *(uint64_t *)((unsigned long)binarydata + iparam->offset) = tmp64;
                         break;
                     case ITYPE_SpecialTypeForSendingFd:
-                        *(int *)((unsigned long)tempdata + iparam->offset) = tmp64;
+                        *(int *)((unsigned long)binarydata + iparam->offset) = tmp64;
                         break;
                     default:
-                        fprintf(stderr, "%x type %d\n", *(uint32_t *)((unsigned long)tempdata + iparam->offset), iparam->itype);
+                        fprintf(stderr, "%x type %d\n", *(uint32_t *)((unsigned long)binarydata + iparam->offset), iparam->itype);
                     }
                     break;
                 }

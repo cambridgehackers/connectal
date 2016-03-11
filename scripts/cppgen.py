@@ -27,7 +27,7 @@ import functools, math, os, re, sys, util
 verbose = False
 sizeofUint32_t = 4
 generatedVectors = []
-itypeNames = ['int16_t', 'uint16_t', 'uint32_t', 'uint64_t', 'SpecialTypeForSendingFd', 'ChannelType', 'DmaDbgRec']
+itypeNames = ['int8_t', 'uint8_t', 'int16_t', 'uint16_t', 'int32_t', 'uint32_t', 'uint64_t', 'SpecialTypeForSendingFd', 'ChannelType', 'DmaDbgRec']
 
 proxyClassPrefixTemplate='''
 class %(className)sProxy : public Portal {
@@ -139,7 +139,7 @@ proxyJMethodTemplate='''
 {
     %(channelName)sData tempdata;
     %(paramStructMarshall)s
-    connectalJsonEncode(p, &tempdata, &%(classNameOrig)sInfo[%(channelNumber)s]);
+    connectalJsonEncodeAndSend(p, &tempdata, &%(classNameOrig)sInfo[%(channelNumber)s]);
     return 0;
 };
 '''
@@ -307,6 +307,7 @@ def signCName(item):
 def typeJson(item):
     tname = typeCName(item)
     if tname not in itypeNames:
+        print 'typeJson.other', tname, tname in itypeNames
         return 'other'
     return tname
 

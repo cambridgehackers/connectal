@@ -181,8 +181,18 @@ typedef struct {
     const char *name;
     ConnectalParamJsonInfo *param;
 } ConnectalMethodJsonInfo;
-enum {ITYPE_other, ITYPE_int16_t, ITYPE_uint16_t, ITYPE_uint32_t, ITYPE_uint64_t, ITYPE_SpecialTypeForSendingFd,
-      ITYPE_ChannelType, ITYPE_DmaDbgRec};
+enum {ITYPE_other,
+      ITYPE_uint8_t,
+      ITYPE_uint16_t,
+      ITYPE_uint32_t,
+      ITYPE_uint64_t,
+      ITYPE_int8_t,
+      ITYPE_int16_t,
+      ITYPE_int32_t,
+      ITYPE_int64_t,
+      ITYPE_SpecialTypeForSendingFd,
+      ITYPE_ChannelType,
+      ITYPE_DmaDbgRec};
 
 typedef int Bool;   /* for GeneratedTypes.h */
 typedef uint32_t fixed32; /* for GeneratedTypes.h from protobuf */
@@ -273,8 +283,9 @@ volatile unsigned int *mapchannel_socket(struct PortalInternal *pint, unsigned i
 int portal_mux_handler(struct PortalInternal *p, unsigned int channel, int messageFd);
 
 // Json encode/decode functions called from generated code
-void connectalJsonEncode(PortalInternal *pint, void *tempdata, ConnectalMethodJsonInfo *info);
-int connnectalJsonDecode(PortalInternal *pint, int channel, void *tempdata, ConnectalMethodJsonInfo *info);
+void connectalJsonEncode(char *json, void *data, ConnectalMethodJsonInfo *info);
+void connectalJsonEncodeAndSend(PortalInternal *pint, void *data, ConnectalMethodJsonInfo *info);
+int connnectalJsonDecode(PortalInternal *pint, int channel, void *data, ConnectalMethodJsonInfo *info);
 
 // Primitive used to send/recv data across a socket.
 void portalSendFd(int fd, void *data, int len, int sendFd);
