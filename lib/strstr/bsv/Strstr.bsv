@@ -23,6 +23,7 @@ import FIFO::*;
 import FIFOF::*;
 import SpecialFIFOs::*;
 import Vector::*;
+import BuildVector::*;
 import BRAM::*;
 import Gearbox::*;
 import Connectable::*;
@@ -94,7 +95,7 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(haystackBusWidth, configBu
    Vector#(DegPar, PipeOut#(Int#(32))) locdonePipes;
 
    FIFOF#(Tripple#(Bit#(32))) setsearchFIFO <- mkFIFOF;
-   UnFunnelPipe#(1,DegPar,Tripple#(Bit#(32)),1) setsearchPipeUnFunnel <- mkUnFunnelPipesPipelinedRR(cons(toPipeOut(setsearchFIFO),nil), 1);
+   UnFunnelPipe#(1,DegPar,Tripple#(Bit#(32)),1) setsearchPipeUnFunnel <- mkUnFunnelPipesPipelinedRR(vec(toPipeOut(setsearchFIFO)), 1);
 
    for(Integer i = 0; i < valueOf(DegPar); i=i+1) begin
       locdonePipes[i] = engines[i].locdone;
@@ -180,6 +181,6 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(haystackBusWidth, configBu
 	 startFSM.start();
       endmethod
    endinterface
-   interface config_read_client = cons(config_re.dmaClient, nil);
-   interface haystack_read_client = cons(haystack_re.dmaClient, nil);
+   interface config_read_client = vec(config_re.dmaClient);
+   interface haystack_read_client = vec(haystack_re.dmaClient);
 endmodule
