@@ -1,7 +1,7 @@
 
 set partname {xc7vx690tffg1761-2}
 set ipdir {cores}
-set boardname {vc709}
+set boardname {nfsume}
 
 file mkdir $ipdir/$boardname
 
@@ -81,7 +81,9 @@ fpgamake_ipcore axi_dma 7.1 axi_dma_0 [list CONFIG.c_sg_include_stscntrl_strm {1
 fpgamake_ipcore axi_iic 2.0 axi_iic_0 [list CONFIG.AXI_ACLK_FREQ_MHZ {250} CONFIG.C_GPO_WIDTH {8}]
 
 ## does not exist with vivado 2014.2
-##fpgamake_ipcore axi_ethernet 7.0 axi_ethernet_0 [list CONFIG.ETHERNET_BOARD_INTERFACE {sfp_sfp1} CONFIG.DIFFCLK_BOARD_INTERFACE {sfp_mgt_clk} CONFIG.axiliteclkrate {250.0} CONFIG.axisclkrate {250.0} CONFIG.PHY_TYPE {1000BaseX}]
+fpgamake_ipcore axi_ethernet 7.0 axi_ethernet_0 [list CONFIG.ETHERNET_BOARD_INTERFACE {sfp1} CONFIG.DIFFCLK_BOARD_INTERFACE {sfp_mgt_clk} CONFIG.axiliteclkrate {250.0} CONFIG.axisclkrate {250.0} CONFIG.PHY_TYPE {1000BaseX}]
+
+fpgamake_ipcore axi_ethernet 7.0 axi_ethernet_sgmii [list CONFIG.ETHERNET_BOARD_INTERFACE {sfp_sgmii1} CONFIG.processor_mode {true} CONFIG.DIFFCLK_BOARD_INTERFACE {sfp_mgt_clk} CONFIG.axiliteclkrate {250.0} CONFIG.PHY_TYPE {SGMII}]
 
 ## 2014.2: 8.2
 ## 2015.4: 9.0
