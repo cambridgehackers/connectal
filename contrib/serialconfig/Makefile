@@ -1,6 +1,6 @@
 CONNECTALDIR?=../..
-S2H_INTERFACES = SerialconfigIndication
-H2S_INTERFACES = SerialconfigRequest
+S2H_INTERFACES = SerialconfigRequest:Serialconfig.request
+H2S_INTERFACES = Serialconfig:SerialconfigIndication
 
 BSVFILES = Serialconfig.bsv
 CPPFILES=testserialconfig.cpp
