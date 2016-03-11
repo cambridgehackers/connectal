@@ -40,7 +40,7 @@ public:
     FibIndication(unsigned int id) : FibIndicationWrapper(id) {}
 };
 
-FibRequestProxy *fibRequestProxy = 0;
+static FibRequestProxy *fibRequestProxy = 0;
 FibIndication *fibIndication;
 
 
@@ -48,8 +48,9 @@ int main(int argc, const char **argv)
 {
   int i;
   // these use the default poller
-  fibRequestProxy = new FibRequestProxy(IfcNames_FibRequest);
-  fibIndication = new FibIndication(IfcNames_FibIndication);
+
+  fibIndication = new FibIndication(IfcNames_FibIndicationH2S);
+  fibRequestProxy = new FibRequestProxy(IfcNames_FibRequestS2H);
   
   if(sem_init(&test_sem, 1, 0)){
     fprintf(stderr, "failed to init test_sem\n");
