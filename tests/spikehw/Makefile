@@ -20,13 +20,17 @@ CONNECTALFLAGS += $(RISCV_INCLUDES) --cxxflags=-std=c++11 --cflags=-std=c++11
 BSVFILES =  SpikeHw.bsv
 CPPFILES= spikehw.cpp
 
-ifneq ($(BOARD),vc709)
-CONNECTALFLAGS+= --verilog=i28f512p33.v
-endif
+# ifneq ($(BOARD),vc709)
+# CONNECTALFLAGS+= --verilog=i28f512p33.v
+# endif
 
 ifneq ($(BOARD),xsim)
+ifeq ($(BOARD),nfsume)
+PINOUT_FILE += nfsume.json
+else
 PINOUT_FILE += spikehw.json
 PINOUT_FILE += spikehw-$(BOARD).json
+endif
 endif
 PIN_TYPE = SpikeHwPins
 PIN_TYPE_INCLUDE = SpikeHwPins

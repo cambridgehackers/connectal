@@ -274,6 +274,40 @@
 			     "PIO_DIRECTION" : "OUTPUT"
 		 }
     },	
+    "uart": {
+		"d_in": {
+			"LOC": "AU33",
+			"IOSTANDARD": "LVCMOS18",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"d_out": {
+			"LOC": "AU36",
+			"IOSTANDARD": "LVCMOS18",
+			"PIO_DIRECTION": "OUTPUT"
+		},
+		"rts": {
+			"LOC": "AR34",
+			"IOSTANDARD": "LVCMOS18",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"cts": {
+			"LOC": "AT32",
+			"IOSTANDARD": "LVCMOS18",
+			"PIO_DIRECTION": "OUTPUT"
+		}
+    },
+    "iic_main": {
+		"sda": {
+			"LOC": "AU32",
+			"IOSTANDARD": "LVCMOS18",
+			"PIO_DIRECTION": "BIDIR"
+		},
+		"scl": {
+			"LOC": "AT35",
+			"IOSTANDARD": "LVCMOS18",
+			"PIO_DIRECTION": "BIDIR"
+		}
+    },
     "pins": {
 	        "si5324_clk_p": {
 			"LOC": "AD8",
@@ -284,6 +318,11 @@
 			"LOC": "AD7",
 			"DIFF_TERM": "TRUE",
 			"PIO_DIRECTION": "INPUT"
+		},
+		"si5324_rst_n": {
+			"LOC": "AT36",
+			"IOSTANDARD": "LVCMOS18",
+			"PIO_DIRECTION": "OUTPUT"
 		},
 	        "sgmii_clk_p": {
 			"LOC": "AH8",
