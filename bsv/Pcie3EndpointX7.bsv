@@ -236,22 +236,29 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    // Drive s_axis_rq
    let rq_txready = (pcie_ep.s_axis_rq.tready != 0 && fAxiRq.notEmpty);
 
-   //(* fire_when_enabled, no_implicit_conditions *)
-   rule drive_axi_rq;
-      let tvalid = 0;
-      let tlast = 0;
-      let tdata = 0;
-      let tkeep = 0;
-      let tuser = 0;
+   Wire#(Maybe#(AxiStRq)) fAxiRqWire <- mkDWire(tagged Invalid, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+
+   rule rl_axi_rq;
       if (rq_txready) begin
 	 let info = fAxiRq.first; fAxiRq.deq;
-	 tvalid = 1;
-	 tlast = pack(info.last);
-	 tdata = info.data;
-	 tkeep = info.keep;
-	 tuser = {0, info.last_be, info.first_be};
+	 fAxiRqWire <= tagged Valid info;
       end
+   endrule
 
+   (* fire_when_enabled, no_implicit_conditions *)
+   rule drive_axi_rq;
+      Bit#(1) tvalid = 0;
+      Bit#(1) tlast = 0;
+      Bit#(256) tdata = 0;
+      Bit#(8) tkeep = 0;
+      Bit#(60) tuser = 0;
+      if (fAxiRqWire matches tagged Valid .x) begin
+	     tvalid = 1;
+	     tlast = pack(x.last);
+	     tdata = x.data;
+	     tkeep = x.keep;
+	     tuser = {0, x.last_be, x.first_be};
+      end
       pcie_ep.s_axis_rq.tvalid(tvalid);
       pcie_ep.s_axis_rq.tlast(tlast);
       pcie_ep.s_axis_rq.tdata(tdata);
@@ -512,19 +519,36 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
 
    FIFO#(Bool) intrMutex <- mkFIFO1(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    Wire#(Bool) msix_int_enable <- mkDWire(False, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   Wire#(Maybe#(Tuple2#(Bit#(64),Bit#(32)))) intrWire <- mkDWire(tagged Invalid, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
 
    rule rl_intr;
       if (pcie_ep.cfg.interrupt_msix_enable[0] == 1) begin
-	 match { .addr, .data } <- toGet(intrFifo).get();
-	 pcie_ep.cfg.interrupt_msix_address(addr);
-	 pcie_ep.cfg.interrupt_msix_data(data);
-	 msix_int_enable <= True;
+	 let info <- toGet(intrFifo).get();
+	 intrWire <= tagged Valid info;
 	 intrMutex.enq(True);
       end
-   endrule: rl_intr
-   rule rl_intr_enable;
-      pcie_ep.cfg.interrupt_msix_int(pack(msix_int_enable));
    endrule
+
+   (* fire_when_enabled, no_implicit_conditions *)
+   rule rl_drive_intr;
+      let intr_addr = 0;
+      let intr_data = 0;
+      let intr_enable = False;
+
+      if (intrWire matches tagged Valid .tpl) begin
+	 match { .addr, .data } = tpl;
+	 intr_addr = addr;
+	 intr_data = data;
+	 intr_enable = True;
+      end
+
+      pcie_ep.cfg.interrupt_msix_address(intr_addr);
+      pcie_ep.cfg.interrupt_msix_data(intr_data);
+      pcie_ep.cfg.interrupt_msix_int(pack(intr_enable));
+
+      pcie_ep.cfg.interrupt_int(0);
+      pcie_ep.cfg.interrupt_pending(0);
+   endrule: rl_drive_intr
 
    rule rl_intr_sent if (pcie_ep.cfg.interrupt_msix_sent() == 1|| pcie_ep.cfg.interrupt_msix_fail() == 1);
       intrMutex.deq();
@@ -588,6 +612,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       pcie_ep.cfg.dsn(64'hf001ba7700000000);
       pcie_ep.cfg.ds_bus_number(0);
       pcie_ep.cfg.ds_device_number(0);
+      pcie_ep.cfg.ds_function_number(0);
       pcie_ep.cfg.ds_port_number(0);
       pcie_ep.cfg.err_cor_in(0);
       pcie_ep.cfg.err_uncor_in(0);
@@ -603,6 +628,22 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       pcie_ep.pcie.cq_np_req(1);
 
       pcie_ep.cfg_req_pm_transition.l23_ready(0);
+
+      pcie_ep.int_pclk_sel.slave(0);
+      
+//      pcie_ep.common.commands_in(0);
+   endrule
+
+   rule rl_drive_pipe_simulation_inputs;
+      // pipe simulation inputs
+      // pcie_ep.pipe.rx_0_sigs(0);
+      // pcie_ep.pipe.rx_1_sigs(0);
+      // pcie_ep.pipe.rx_2_sigs(0);
+      // pcie_ep.pipe.rx_3_sigs(0);
+      // pcie_ep.pipe.rx_4_sigs(0);
+      // pcie_ep.pipe.rx_5_sigs(0);
+      // pcie_ep.pipe.rx_6_sigs(0);
+      // pcie_ep.pipe.rx_7_sigs(0);
    endrule
 
    // The PCIE endpoint is processing Gen3 descriptors at 250MHz. The
