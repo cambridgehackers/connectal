@@ -167,7 +167,7 @@ module mkBRAMWriter#(Integer id,
       Bit#(32) req_len_bytes = {zeros,req_len_ds[31:valueOf(TLog#(nd))]} * fromInteger(valueOf(bwbytes));
 
       readServer.request.put(MemengineCmd{sglId:h, base:truncate(b), len:req_len_bytes, burstLen:burst_len_bytes, tag: 0});
-      if(verbose) $display("mkBRAMWriter::start (%d) %d, %d", id, req_len_bytes, burst_len_bytes);
+      if(verbose) $display("mkBRAMWriter::start id=%d offset=%d len=%d burstLen=%d", id, b, req_len_bytes, burst_len_bytes);
       j <= extend(start_idx);
       n <= extend(finish_idx);
       running <= True;
