@@ -1,0 +1,11 @@
+{
+    "iic_gpo": {
+	"pins": "si5324_rst_n"
+    },
+    "iic_sda": {
+	"iic_main": "sda"
+    },
+    "iic_scl": {
+	"iic_main": "scl"
+    }
+}    
