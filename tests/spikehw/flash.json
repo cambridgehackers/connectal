@@ -1,0 +1,143 @@
+{
+    "flash_data_0": {
+	"bpi_flash": "data[0]"
+    },
+    "flash_data_1": {
+	"bpi_flash": "data[1]"
+    },
+    "flash_data_2": {
+	"bpi_flash": "data[2]"
+    },
+    "flash_data_3": {
+	"bpi_flash": "data[3]"
+    },
+    "flash_data_4": {
+	"bpi_flash": "data[4]"
+    },
+    "flash_data_5": {
+	"bpi_flash": "data[5]"
+    },
+    "flash_data_6": {
+	"bpi_flash": "data[6]"
+    },
+    "flash_data_7": {
+	"bpi_flash": "data[7]"
+    },
+    "flash_data_8": {
+	"bpi_flash": "data[8]"
+    },
+    "flash_data_9": {
+	"bpi_flash": "data[9]"
+    },
+    "flash_data_10": {
+	"bpi_flash": "data[10]"
+    },
+    "flash_data_11": {
+	"bpi_flash": "data[11]"
+    },
+    "flash_data_12": {
+	"bpi_flash": "data[12]"
+    },
+    "flash_data_13": {
+	"bpi_flash": "data[13]"
+    },
+    "flash_data_14": {
+	"bpi_flash": "data[14]"
+    },
+    "flash_data_15": {
+	"bpi_flash": "data[15]"
+    },
+    "flash_addr[0]": {
+	"bpi_flash": "addr[0]"
+    },
+    "flash_addr[1]": {
+	"bpi_flash": "addr[1]"
+    },
+    "flash_addr[2]": {
+	"bpi_flash": "addr[2]"
+    },
+    "flash_addr[3]": {
+	"bpi_flash": "addr[3]"
+    },
+    "flash_addr[4]": {
+	"bpi_flash": "addr[4]"
+    },
+    "flash_addr[5]": {
+	"bpi_flash": "addr[5]"
+    },
+    "flash_addr[6]": {
+	"bpi_flash": "addr[6]"
+    },
+    "flash_addr[7]": {
+	"bpi_flash": "addr[7]"
+    },
+    "flash_addr[8]": {
+	"bpi_flash": "addr[8]"
+    },
+    "flash_addr[9]": {
+	"bpi_flash": "addr[9]"
+    },
+    "flash_addr[10]": {
+	"bpi_flash": "addr[10]"
+    },
+    "flash_addr[11]": {
+	"bpi_flash": "addr[11]"
+    },
+    "flash_addr[12]": {
+	"bpi_flash": "addr[12]"
+    },
+    "flash_addr[13]": {
+	"bpi_flash": "addr[13]"
+    },
+    "flash_addr[14]": {
+	"bpi_flash": "addr[14]"
+    },
+    "flash_addr[15]": {
+	"bpi_flash": "addr[15]"
+    },
+    "flash_addr[16]": {
+	"bpi_flash": "addr[16]"
+    },
+    "flash_addr[17]": {
+	"bpi_flash": "addr[17]"
+    },
+    "flash_addr[18]": {
+	"bpi_flash": "addr[18]"
+    },
+    "flash_addr[19]": {
+	"bpi_flash": "addr[19]"
+    },
+    "flash_addr[20]": {
+	"bpi_flash": "addr[20]"
+    },
+    "flash_addr[21]": {
+	"bpi_flash": "addr[21]"
+    },
+    "flash_addr[22]": {
+	"bpi_flash": "addr[22]"
+    },
+    "flash_addr[23]": {
+	"bpi_flash": "addr[23]"
+    },
+    "flash_addr[24]": {
+	"bpi_flash": "addr[24]"
+    },
+    "flash_addr[25]": {
+	"bpi_flash": "addr[25]"
+    },
+    "flash_oe_b": {
+	"bpi_flash": "oe_b"
+    },
+    "flash_ce_b": {
+	"bpi_flash": "ce_b"
+    },
+    "flash_adv_b": {
+	"bpi_flash": "adv_b"
+    },
+    "flash_we_b": {
+	"bpi_flash": "we_b"
+    },
+    "flash_wait_in_b": {
+	"bpi_flash": "wait_in_b"
+    }
+}

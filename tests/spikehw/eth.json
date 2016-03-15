@@ -1,0 +1,14 @@
+{
+    "eth_sfp_rxp_v": {
+	"sfp1": "rxp"
+    },
+    "eth_sfp_rxn_v": {
+	"sfp1": "rxn"
+    },
+    "eth_sfp_txp": {
+	"sfp1": "txp"
+    },
+    "eth_sfp_txn": {
+	"sfp1": "txn"
+    }
+}
