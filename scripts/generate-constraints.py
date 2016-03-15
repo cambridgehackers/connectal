@@ -114,7 +114,12 @@ if __name__=='__main__':
             for prop in projectPinInfo:
                 if projectPinInfo.has_key(prop):
                     pinInfo[prop] = projectPinInfo[prop]
-            out.write(template % pinInfo)
+            try:
+                out.write(template % pinInfo)
+            except:
+                print('missing bindings for pin ', pinName)
+                print(template)
+                print(pinInfo)
             for k in pinInfo:
                 if k in used+['name', 'LOC', 'PIO_DIRECTION']: continue
                 out.write(setPropertyTemplate % {
