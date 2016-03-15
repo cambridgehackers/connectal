@@ -182,6 +182,7 @@ typedef struct {
     ConnectalParamJsonInfo *param;
 } ConnectalMethodJsonInfo;
 enum {ITYPE_other,
+      ITYPE_int,
       ITYPE_uint8_t,
       ITYPE_uint16_t,
       ITYPE_uint32_t,

@@ -49,6 +49,7 @@ void connectalJsonEncode(char *datap, void *binarydata, ConnectalMethodJsonInfo 
             stmp16 = *(int16_t *)((unsigned long)binarydata + iparam->offset);
             data += sprintf(data, "%d", stmp16);
             break;
+	case ITYPE_int:
 	case ITYPE_int32_t:
             stmp32 = *(int32_t *)((unsigned long)binarydata + iparam->offset);
             data += sprintf(data, "%d", stmp32);
