@@ -1,5 +1,6 @@
 
 import BuildVector::*;
+import Clocks::*;
 import Connectable::*;
 import GetPut::*;
 import FIFOF::*;
@@ -23,13 +24,15 @@ import BpiFlash::*;
 import AxiIntcBvi::*;
 import AxiIic::*;
 import AxiUart::*;
+`ifdef EthernetSgmii
 import AxiEthBvi::*;
+`else
+import AxiEth1000BaseX::*;
+`endif
 import AxiDmaBvi::*;
 import SpikeHwPins::*;
 
-`ifndef BOARD_nfsume
-`define IncludeFlash
-`endif
+`include "ConnectalProjectConfig.bsv"
 
 interface SpikeHwRequest;
    method Action reset();
@@ -50,7 +53,7 @@ interface SpikeHwIndication;
    method Action readFlashDone(Bit#(32) value); 
    method Action writeFlashDone(); 
    method Action resetDone();
-   method Action status(Bit#(1) mmcm_locked, Bit#(1) irq, Bit#(16) intrSources);
+   method Action status(Bit#(1) reset_asserted, Bit#(1) mmcm_locked, Bit#(1) rx_los, Bit#(1) irq, Bit#(16) intrSources);
 endinterface
 
 interface SpikeHw;
@@ -78,7 +81,13 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
    let clock <- exposeCurrentClock();
    let reset <- exposeCurrentReset();
 
+   let newReset <- mkReset(10, True, clock);
+
    BUFRParams bufrParams = defaultValue;
+`ifndef BOARD_miniitx100
+   bufrParams.bufr_divide = "2";
+   Clock clk_125mhz <- mkClockBUFR(bufrParams, clocked_by clock);
+`endif
    bufrParams.bufr_divide = "4";
    Clock uartClk <- mkClockBUFR(bufrParams, clocked_by host.derivedClock);
 
@@ -86,20 +95,20 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
 `ifdef IncludeFlash
    let bpiFlash   <- mkBpiFlash();
 `endif
-   let axiIntcBvi <- mkAxiIntcBvi(clock, reset);
-   let axiIicBvi  <- mkAxiIicBvi(clock, reset);
-   let axiUartBvi <- mkAxiUartBvi(clock, reset, uartClk);
-   let axiDmaBvi <- mkAxiDmaBvi(clock,clock,clock,clock,reset);
+   let axiIntcBvi <- mkAxiIntcBvi(clock, newReset.new_rst);
+   let axiIicBvi  <- mkAxiIicBvi(clock, newReset.new_rst);
+   let axiUartBvi <- mkAxiUartBvi(clock, newReset.new_rst, uartClk);
+   let axiDmaBvi <- mkAxiDmaBvi(clock,clock,clock,clock,newReset.new_rst);
 `ifdef IncludeEthernet
-   let axiEthBvi <- mkAxiEthBvi(host.tsys_clk_200mhz_buf,
-				clock, reset, clock,
-				reset, reset, reset, reset);
+   let axiEthBvi <- mkAxiEthBvi(clock, host.tsys_clk_200mhz_buf, clock,
+				newReset.new_rst, newReset.new_rst, newReset.new_rst, newReset.new_rst, newReset.new_rst);
 `endif
 
    
 
    Reg#(Bit#(32)) objId <- mkReg(0);
    Reg#(Bit#(1))  iicResetReg <- mkReg(0);
+   Reg#(Bit#(1))  eth_los <- mkReg(0);
 
    let irqLevel <- mkReg(0);
    let intrLevel <- mkReg(0);
@@ -107,10 +116,12 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
    function Bit#(16) intr();
       Bit#(16) _intr = 0;
       _intr[0] = axiUartBvi.ip2intc_irpt();
-      //_intr[1] = axiDma tx
-      //_intr[2] = axiDma rx
-      //_intr[3] = axiEth rx
-      //_intr[4] = Phy 
+      _intr[1] = axiDmaBvi.s2mm.introut(); // tx
+      _intr[2] = axiDmaBvi.mm2s.introut(); // rx
+`ifdef IncludeEthernet
+      _intr[3] = axiEthBvi.mac.irq();
+      _intr[4] = axiEthBvi.interrupt();
+`endif
       _intr[5] = axiIicBvi.iic2intc_irpt();
       return _intr;
    endfunction
@@ -157,9 +168,9 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
    mkConnection(axiDmaBvi.m_axis_mm2s_cntrl, axiEthBvi.s_axis_txc);
 `endif
 
-   Axi4MasterBits#(32,32,MemTagSize,Empty) m_axi_mm2s = toAxi4MasterBits(axiDmaBvi.m_axi_mm2s);
-   Axi4MasterBits#(32,32,MemTagSize,Empty) m_axi_s2mm = toAxi4MasterBits(axiDmaBvi.m_axi_s2mm);
-   Axi4MasterBits#(32,32,MemTagSize,Empty) m_axi_sg = toAxi4MasterBits(axiDmaBvi.m_axi_sg);
+   Axi4MasterBits#(32,DataBusWidth,MemTagSize,Empty) m_axi_mm2s = toAxi4MasterBits(axiDmaBvi.m_axi_mm2s);
+   Axi4MasterBits#(32,DataBusWidth,MemTagSize,Empty) m_axi_s2mm = toAxi4MasterBits(axiDmaBvi.m_axi_s2mm);
+   Axi4MasterBits#(32,DataBusWidth,MemTagSize,Empty) m_axi_sg = toAxi4MasterBits(axiDmaBvi.m_axi_sg);
 
    Axi4SlaveLiteBits#(12,32) axiUartSlaveLite = toAxi4SlaveBits(axiUartBvi.s_axi);
    PhysMemSlave#(12,32) axiUartMemSlave      <- mkPhysMemSlave(axiUartSlaveLite);
@@ -173,9 +184,9 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
    PhysMemSlave#(12,32) axiDmaMemSlave       <- mkPhysMemSlave(axiDmaBvi.s_axi_lite);
 
 `ifdef IncludeEthernet
-   Axi4SlaveLiteBits#(18,32) axiEthSlaveLite = toAxi4SlaveBits(axiEthBvi.s_axi);
-   PhysMemSlave#(18,32) axiEthMemSlave       <- mkPhysMemSlave(axiEthSlaveLite);
-   PhysMemSlave#(20,32) deviceSlaveMux       <- mkPhysMemSlaveMux(vec(axiIntcMemSlave, axiDmaMemSlave, axiEthMemSlave));
+   Axi4SlaveLiteBits#(12,32) axiEthSlaveLite = toAxi4SlaveBits(axiEthBvi.s_axi);
+   PhysMemSlave#(12,32) axiEthMemSlave       <- mkPhysMemSlave(axiEthSlaveLite);
+   PhysMemSlave#(20,32) deviceSlaveMux       <- mkPhysMemSlaveMux(vec(axiUartMemSlave, axiIntcMemSlave, axiDmaMemSlave, axiIicMemSlave, axiEthMemSlave));
 `else
    PhysMemSlave#(20,32) deviceSlaveMux       <- mkPhysMemSlaveMux(vec(axiUartMemSlave, axiIntcMemSlave, axiDmaMemSlave, axiIicMemSlave));
 `endif
@@ -232,6 +243,9 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
 `endif
    endrule
 
+`ifndef BOARD_miniitx100
+   DiffClock sfp_rec_clk_buf <- mkClockOBUFDS(defaultValue, clocked_by clk_125mhz);
+`endif
    IOBUF sdaIOBuf <- mkIOBUF(axiIicBvi.sda.t, axiIicBvi.sda.o);
    IOBUF sclIOBuf <- mkIOBUF(axiIicBvi.scl.t, axiIicBvi.scl.o);
    // No probe for .o because they are tied to ground -- I2C operates open collector
@@ -252,6 +266,7 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
 
    interface SpikeHwRequest request;
       method Action reset();
+	 newReset.assertReset();
       endmethod
       method Action setupDma(Bit#(32) memref);
 	 objId <= memref;
@@ -281,10 +296,11 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
       endmethod
       method Action status();
 	 ind.status(
+		    pack(newReset.isAsserted),
 `ifdef IncludeEthernet
-	    axiEthBvi.mmcm.locked_out(),
+		    axiEthBvi.mmcm.locked_out(), eth_los,
 `else
-		    0,
+		    0, eth_los,
 `endif
 
 	    axiIntcBvi.irq, intr());
@@ -297,29 +313,52 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
 `ifdef IncludeEthernet
       interface EthPins eth;
 	 interface AxiethbviMgt mgt   = axiEthBvi.mgt;
-	 interface AxiethbviMdio sfp = axiEthBvi.sfp;
+`ifdef EthernetSgmii
+	 interface AxiethbviSgmii sgmii = axiEthBvi.sgmii;
+`else
+	 interface AxiethbviSfp sfp = axiEthBvi.sfp;
+`endif
+         method Bit#(1) tx_disable();
+	    return 0;
+	 endmethod
+         method Action rx_los(Bit#(1) v);
+            eth_los <= v;
+	 endmethod
+      endinterface
+`else
+      interface EthPins eth;
+         method Bit#(1) tx_disable();
+	    return 0;
+	 endmethod
+         method Action rx_los(Bit#(1) v);
+            eth_los <= v;
+	 endmethod
       endinterface
 `endif
 `ifdef IncludeFlash
       interface flash = bpiFlash.flash;
 `endif
       interface SpikeUartPins uart;
+`ifndef BOARD_miniitx100
 	 method tx  = axiUartBvi.sout;
-	 method rts = axiUartBvi.rtsn;
 	 method rx  = axiUartBvi.sin;
+`endif
+`ifdef UART_HAX_RTS_CTS
+	 method rts = axiUartBvi.rtsn;
 	 method cts = axiUartBvi.ctsn;
+`endif
       endinterface   
       interface SpikeIicPins iic;
          interface scl = sclIOBuf.io;
          interface sda = sdaIOBuf.io;
-`ifndef BOARD_nfsume
-	 method gpo = axiIicBvi.gpo()[0];
-`else
 	 method mux_reset = iicResetReg;
-`endif
       endinterface
       interface Clock deleteme_unused_clock = clock;
       interface Reset deleteme_unused_reset = reset;
+`ifndef BOARD_miniitx100
+      interface Clock sfp_rec_clk_p = sfp_rec_clk_buf.p;
+      interface Clock sfp_rec_clk_n = sfp_rec_clk_buf.n;
+`endif
    endinterface
 
    interface Vector dmaReadClient = map(toMemReadClient(objId), vec(m_axi_mm2s, m_axi_sg));
