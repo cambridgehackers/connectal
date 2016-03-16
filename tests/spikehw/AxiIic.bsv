@@ -68,7 +68,6 @@ module mkAxiIicBvi#(Clock s_axi_aclk, Reset s_axi_aresetn)(AxiIic);
     default_clock clk();
     default_reset rst();
         input_clock s_axi_aclk(s_axi_aclk) = s_axi_aclk;
-        input_reset s_axi_aclk_reset() = s_axi_aresetn; /* from clock*/
         input_reset s_axi_aresetn(s_axi_aresetn) = s_axi_aresetn;
     method gpo gpo();
     method iic2intc_irpt iic2intc_irpt();
