@@ -4,14 +4,14 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include <SpikeHwIndication.h>
 #include <SpikeHwRequest.h>
 #include "dmaManager.h"
 #include "spikehw.h"
-#include <iostream>
-#include <functional>
 #ifdef REGISTER_SPIKE_DEVICES
+#include <functional>
 #include <riscv/sim.h>
 #include <riscv/devices.h>
 #endif
@@ -28,7 +28,7 @@ public:
     IrqCallback irqCallback;
 
   void irqChanged( const uint8_t irq, const uint16_t intrSources ) {
-    if (intrSources & (1 << 5)) fprintf(stderr, "iic intr=%d %04x\n", irq, intrSources);
+    if (intrSources & ~1) fprintf(stderr, "iic intr=%d %04x\n", irq, intrSources);
       if (verbose) fprintf(stderr, "SpikeHw::irqChanged %d intr sources %x\n", irq, intrSources);
       this->irq = irq;
       if (irqCallback)
@@ -38,8 +38,9 @@ public:
 	fprintf(stderr, "reset done\n");
 	sem_post(&sem);
     }
-    virtual void status ( const uint8_t mmcm_locked, const uint8_t irq, const uint16_t intrSources ) {
-	fprintf(stderr, "axi eth status mmcm_locked=%d irq=%d intr sources=%x\n", mmcm_locked, irq, intrSources);
+    virtual void status ( const uint8_t reset_asserted, const uint8_t mmcm_locked, const uint8_t rx_los, const uint8_t irq, const uint16_t intrSources ) {
+	fprintf(stderr, "spikehw status reset_asserted=%d mmcm_locked=%d rx_los=%d irq=%d intr sources=%x\n",
+		reset_asserted, mmcm_locked, rx_los, irq, intrSources);
 	sem_post(&sem);
     }
 
@@ -99,6 +100,7 @@ SpikeHw::SpikeHw(IrqCallback callback)
     request = new SpikeHwRequestProxy(IfcNames_SpikeHwRequestS2H);
     indication = new SpikeHwIndication(IfcNames_SpikeHwIndicationH2S, callback);
     dmaManager = platformInit();
+    request->reset();
     request->setFlashParameters(100);
     request->iicReset(0); // de-assert reset
 }
@@ -163,10 +165,10 @@ uint32_t SpikeHw::read(unsigned long offset)
 {
     maybeReset();
 
-    //if (verbose || (offset > 0x101000)) fprintf(stderr, "SpikeHw::read offset=%08lx\n", offset);
+    if (verbose) fprintf(stderr, "SpikeHw::read offset=%08lx\n", offset);
     request->read(offset);
     indication->wait();
-    //if (verbose || (offset > 0x101000)) fprintf(stderr, "SpikeHw::read done value=%x\n", *(uint32_t *)indication->buf);
+    if (verbose) fprintf(stderr, "SpikeHw::read done value=%x\n", *(uint32_t *)indication->buf);
     return *(uint32_t *)indication->buf;
 }
 
@@ -174,10 +176,10 @@ void SpikeHw::write(unsigned long offset, const uint32_t value)
 {
     maybeReset();
 
-    //if (verbose || (offset > 0x101000)) fprintf(stderr, "SpikeHw::write offset=%08lx value=%x\n", offset, value);
+    if (verbose) fprintf(stderr, "SpikeHw::write offset=%08lx value=%x\n", offset, value);
     request->write(offset, value);
     indication->wait();
-    //if (verbose || (offset > 0x101000)) fprintf(stderr, "SpikeHw::write done\n");
+    if (verbose) fprintf(stderr, "SpikeHw::write done\n");
 }
 
 void SpikeHw::setFlashParameters(unsigned long cycles)
