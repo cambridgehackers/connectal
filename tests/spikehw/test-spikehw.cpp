@@ -1,19 +1,22 @@
 #include <stdio.h>
 
-#include <spikehw.h>
+#include "spikehw.h"
 
+#ifdef REGISTER_SPIKE_DEVICES
 #include <riscv/decode.h>
 #include <riscv/devices.h>
 #include <map>
 #include <vector>
 #include <functional>
+#endif
 
-SpikeHw *spikeHw;
+static SpikeHw *spikeHw;
 
+#ifdef REGISTER_SPIKE_DEVICES
 // spike stubs
 std::map<reg_t, std::function<abstract_device_t*()>>& devices()
 {
-    std::map<reg_t, std::function<abstract_device_t*()>> v;
+    static std::map<reg_t, std::function<abstract_device_t*()>> v;
     return v;
 }
 void register_device(reg_t addr, std::function<abstract_device_t*()> f)
@@ -21,6 +24,32 @@ void register_device(reg_t addr, std::function<abstract_device_t*()> f)
 }
 void register_mem_allocator(std::function<char *(size_t)> f)
 {
+}
+#endif
+
+const char *regnames[] = {
+  "CR",
+  "SR",
+  "TX_FIFO",
+  "RX_FIFO",
+  "ADR",
+  "TX_FIFO_OCY",
+  "RX_FIFO_OCY",
+  "TBA",
+  "RX_FIFO_DEPTH",
+  "GPO"  
+};
+
+static void dumpI2cRegs()
+{
+    fprintf(stderr, "------------------------------------------------------------\n");
+    fprintf(stderr, "I2C GIE %04x\n", spikeHw->read(0x10301c));
+    fprintf(stderr, "I2C ISR %04x\n", spikeHw->read(0x103020));
+    fprintf(stderr, "I2C IER %04x\n", spikeHw->read(0x103028));
+
+    for (int i = 0; i < 10; i++)
+	fprintf(stderr, "I2C REG%d %s %04x\n", i, regnames[i], spikeHw->read(0x103100 + 4*i));
+    fprintf(stderr, "------------------------------------------------------------\n");
 }
 
 int main(int argc, const char **argv)
@@ -32,12 +61,53 @@ int main(int argc, const char **argv)
     // query mmcm and interrupt status
     spikeHw->status();
 
+    fprintf(stderr, "boot rom[0] %x\n", spikeHw->read(0));
+
     fprintf(stderr, "scratch register %x\n", spikeHw->read(0x10001c));
     spikeHw->write(0x10001c, 0x22);
+    fprintf(stderr, "scratch register %x\n", spikeHw->read(0x10001c));
+    fprintf(stderr, "scratch register %x\n", spikeHw->read(0x10001c));
+    fprintf(stderr, "scratch register %x\n", spikeHw->read(0x10001c));
     fprintf(stderr, "scratch register %x\n", spikeHw->read(0x10001c));
 
     spikeHw->read(0x100000);
     spikeHw->write(0x100000, 'h');
+
+    spikeHw->write(0x103040, 0xa); // SOFTR
+
+    dumpI2cRegs();
+
+    // let's read i2c 0x50
+    spikeHw->write(0x103108, 0x100 | (0x56 << 1) | 1); // TX_FIFO
+    spikeHw->write(0x103120, 1); // RX_FIFO_DEPTH
+    spikeHw->write(0x103100, 5); // CR enable
+    spikeHw->write(0x103108, (uint32_t)1); // TX_FIFO
+    spikeHw->write(0x103108, 0x200 | 2); // TX_FIFO
+    fprintf(stderr, "I2C RX_FIFO_OCY %04x\n", spikeHw->read(0x103118));
+
+    dumpI2cRegs();
+    dumpI2cRegs();
+    dumpI2cRegs();
+    dumpI2cRegs();
+
+    return 0;
+
+    // let's write 1 to 0x50
+    spikeHw->write(0x103108, 0x100 | (0x56 << 1) | 0); // TX_FIFO
+    spikeHw->write(0x103100, 5); // CR enable
+    spikeHw->write(0x103108, 0x200 | 1); // TX_FIFO
+
+    dumpI2cRegs();
+
+
+    // let's read i2c 0x50
+    spikeHw->write(0x103108, 0x100 | (0x56 << 1) | 1); // TX_FIFO
+    spikeHw->write(0x103120, 2); // RX_FIFO_DEPTH
+    spikeHw->write(0x103100, 5); // CR enable
+    spikeHw->write(0x103108, 0x200 | 1); // TX_FIFO
+    fprintf(stderr, "I2C RX_FIFO_OCY %04x\n", spikeHw->read(0x103118));
+
+    dumpI2cRegs();
     return 0;
 
     // read boot rom
