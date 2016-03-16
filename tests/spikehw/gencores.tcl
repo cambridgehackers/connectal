@@ -1,7 +1,15 @@
 
-set partname {xc7vx690tffg1761-2}
 set ipdir {cores}
+
 set boardname {nfsume}
+#set boardname {miniitx100}
+
+if {$boardname == {nfsume}} {
+    set partname {xc7vx690tffg1761-2}
+}
+if {$boardname == {miniitx100}} {
+    set partname {xc7z100ffg900-2}
+}
 
 file mkdir $ipdir/$boardname
 
@@ -75,13 +83,13 @@ proc fpgamake_ipcore {core_name core_version ip_name params} {
 
 fpgamake_ipcore axi_uart16550 2.0  axi_uart16550_1 [list CONFIG.USE_BOARD_FLOW {true} CONFIG.UART_BOARD_INTERFACE {rs232_uart} CONFIG.C_HAS_EXTERNAL_XIN {1} CONFIG.C_HAS_EXTERNAL_RCLK {0} CONFIG.C_EXTERNAL_XIN_CLK_HZ_d {3.686400}  CONFIG.C_EXTERNAL_XIN_CLK_HZ {3686400}]
 
-fpgamake_ipcore axi_intc 4.1 axi_intc_0 [list CONFIG.C_NUM_INTR_INPUTS {16} CONFIG.C_NUM_SW_INTR {0} CONFIG.C_HAS_ILR {1}]
-fpgamake_ipcore axi_dma 7.1 axi_dma_0 [list CONFIG.c_sg_include_stscntrl_strm {1} CONFIG.c_m_axi_mm2s_data_width {32} CONFIG.c_m_axi_s2mm_data_width {32} CONFIG.c_mm2s_burst_size {8} CONFIG.c_s2mm_burst_size {8}]
+fpgamake_ipcore axi_intc 4.1 axi_intc_0 [list CONFIG.C_NUM_INTR_INPUTS {16} CONFIG.C_NUM_SW_INTR {0} CONFIG.C_HAS_ILR {1} CONFIG.C_S_AXI_ACLK_FREQ_MHZ  {250}]
+fpgamake_ipcore axi_dma 7.1 axi_dma_0 [list CONFIG.c_sg_include_stscntrl_strm {1} CONFIG.c_m_axi_mm2s_data_width {64} CONFIG.c_m_axi_s2mm_data_width {64} CONFIG.c_mm2s_burst_size {8} CONFIG.c_s2mm_burst_size {8}]
 
 fpgamake_ipcore axi_iic 2.0 axi_iic_0 [list CONFIG.AXI_ACLK_FREQ_MHZ {250} CONFIG.C_GPO_WIDTH {8}]
 
 ## does not exist with vivado 2014.2
-fpgamake_ipcore axi_ethernet 7.0 axi_ethernet_0 [list CONFIG.ETHERNET_BOARD_INTERFACE {sfp1} CONFIG.DIFFCLK_BOARD_INTERFACE {sfp_mgt_clk} CONFIG.axiliteclkrate {250.0} CONFIG.axisclkrate {250.0} CONFIG.PHY_TYPE {1000BaseX}]
+fpgamake_ipcore axi_ethernet 7.0 axi_ethernet_1000basex [list CONFIG.ETHERNET_BOARD_INTERFACE {sfp1} CONFIG.processor_mode {true} CONFIG.DIFFCLK_BOARD_INTERFACE {sfp_mgt_clk} CONFIG.axiliteclkrate {250.0} CONFIG.PHY_TYPE {1000BaseX}]
 
 fpgamake_ipcore axi_ethernet 7.0 axi_ethernet_sgmii [list CONFIG.ETHERNET_BOARD_INTERFACE {sfp_sgmii1} CONFIG.processor_mode {true} CONFIG.DIFFCLK_BOARD_INTERFACE {sfp_mgt_clk} CONFIG.axiliteclkrate {250.0} CONFIG.PHY_TYPE {SGMII}]
 
