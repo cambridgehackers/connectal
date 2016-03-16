@@ -25,13 +25,14 @@ class SpikeHw {
   void writeFlash(unsigned long offset, const uint8_t *buf);
   bool hasInterrupt();
   void clearInterrupt();
-  static char *allocate_mem(size_t memsz);
+  char *allocate_mem(size_t memsz);
  private:
   void setupDma( uint32_t memfd );
   SpikeHwRequestProxy *request;
   SpikeHwIndication *indication;
   DmaManager           *dmaManager;
   bool didReset;
+  int mainMemFd;
 
   void maybeReset();
 };
