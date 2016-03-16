@@ -10,5 +10,79 @@
         "bsvdefines" : ["XILINX=1", "ZynqHostInterface", "PhysAddrWidth=32", "NUMBER_OF_LEDS=8", "PcieLanes=4"],
 	"CONNECTALFLAGS": ["--mainclockperiod=5", "--derivedclockperiod=2.5"],
         "need_pcie" : "unused"
+    },
+    "uart": {
+        "d_out": {
+            "IOSTANDARD": "LVCMOS15",
+            "PIO_DIRECTION": "OUTPUT",
+            "LOC": "C19"
+        },
+        "d_in": {
+            "IOSTANDARD": "LVCMOS15",
+            "PIO_DIRECTION": "INPUT",
+            "LOC": "D18"
+        }
+    },
+    "i2c_main": {
+        "scl": {
+            "PIO_DIRECTION": "BIDIR",
+            "IOSTANDARD": "LVCMOS18",
+            "LOC": "A19"
+        },
+        "sda": {
+            "PIO_DIRECTION": "BIDIR",
+            "IOSTANDARD": "LVCMOS18",
+            "LOC": "F19"
+        },
+        "mux_reset": {
+            "IOSTANDARD": "LVCMOS15",
+            "PIO_DIRECTION": "OUTPUT",
+            "LOC": "F20"
+        }
+    },
+    "sfp1": {
+        "mod_def0": {
+            "IOSTANDARD": "LVCMOS25",
+            "LOC": "AB20"
+        },
+        "mod_def1": {
+            "IOSTANDARD": "LVCMOS25",
+            "LOC": "AB19"
+        },
+        "mod_def2": {
+            "IOSTANDARD": "LVCMOS25",
+            "LOC": "AA19"
+        },
+        "rx_los": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVCMOS25",
+            "LOC": "AE20"
+        },
+        "tx_disable": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS25",
+            "LOC": "AA18"
+        },
+        "tx_fault": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVCMOS25",
+            "LOC": "AD19"
+        },
+        "rxp": {
+            "PIO_DIRECTION": "INPUT",
+            "LOC": "AC4"
+        },
+        "rxn": {
+            "PIO_DIRECTION": "INPUT",
+            "LOC": "AC3"
+        },
+        "txp": {
+            "PIO_DIRECTION": "OUTPUT",
+            "LOC": "AB2"
+        },
+        "txn": {
+            "PIO_DIRECTION": "OUTPUT",
+            "LOC": "AB1"
+        }
     }
 }
