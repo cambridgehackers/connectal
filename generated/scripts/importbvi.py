@@ -214,6 +214,11 @@ def processline(line, phase):
         subs = f[1].translate(None,' ').lower()
         if subs[-2:] == ':0':
             subs = subs[:-2]
+        m = re.match('([^:]+):([^:]+)', subs)
+        if m:
+            i1 = int(m.group(1))
+            i2 = int(m.group(2))
+            subs = '%d' % (max(i1,i2) - min(i1,i2) + 1)
         if subs.find('(') >= 0 and subs[-1] == ')':
             subs = subs[1:-1]
         if subs[-2:] == '-1':
