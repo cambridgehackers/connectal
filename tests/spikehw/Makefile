@@ -50,7 +50,7 @@ PIN_TYPE = SpikeHwPins
 PIN_TYPE_INCLUDE = SpikeHwPins
 AUTOTOP = --interface pins:SpikeHw.pins
 
-CONNECTALFLAGS+= -DDataBusWidth=64
+CONNECTALFLAGS+= -DDataBusWidth=32
 ## ethernet uses the 200MHz SYS clock
 CONNECTALFLAGS += -D XILINX_SYS_CLK -D IMPORT_HOSTIF
 IPDIR=cores
