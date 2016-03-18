@@ -27,13 +27,17 @@ public:
     uint32_t buf[16];
     IrqCallback irqCallback;
 
-  void traceDmaRequest(DmaChannel chan, int write, uint8_t objId, uint32_t offset, uint16_t burstLen)
+  void traceDmaRequest(DmaChannel chan, int write, uint16_t objId, uint32_t offset, uint16_t burstLen)
   {
     fprintf(stderr, "traceDmaRequest chan=%d write=%d objId=%d offset=%08x burstLen=%d\n", chan, write, objId, offset, burstLen);
   }
+  void traceDmaData ( const DmaChannel chan, const int write, const uint32_t data, const int last )
+  {
+    fprintf(stderr, "traceDmaData chan=%d write=%d data=%08x last=%d\n", chan, write, data, last);
+  }
 
   void irqChanged( const uint8_t irq, const uint16_t intrSources ) {
-    if (intrSources & ~1) fprintf(stderr, "iic intr=%d %04x\n", irq, intrSources);
+    if (intrSources & 0xe) fprintf(stderr, "iic intr=%d %04x\n", irq, intrSources);
       if (verbose) fprintf(stderr, "SpikeHw::irqChanged %d intr sources %x\n", irq, intrSources);
       this->irq = irq;
       if (irqCallback)
