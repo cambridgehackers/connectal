@@ -16,7 +16,7 @@ CONNECTALFLAGS += --derivedclockperiod=67.81684027
 RISCV_INCLUDES = -I$(SPIKE_DIR) -I$(SPIKE_DIR)/build
 CONNECTALFLAGS += $(RISCV_INCLUDES) --cxxflags=-std=c++11
 
-BSVFILES =  SpikeHw.bsv
+BSVFILES =  $(CONNECTALDIR)/bsv/MemTypes.bsv $(CONNECTALDIR)/bsv/ConnectalConfig.bsv SpikeHwIfc.bsv
 CPPFILES= spikehw.cpp
 ifeq ($(BOARD),miniitx100)
 CPPFILES += test-spikehw.cpp
