@@ -290,9 +290,9 @@ function Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty) toAxi4MasterBits(Axidma
 	   method Bit#(1) aresetn(); return 1; endmethod
 	   method Bit#(tagWidth)     arid(); return 0; endmethod
 	   method arlen = m.arlen;
-	 //method arlock = m.arlock;
+	   method arlock = 0;
 	   method arprot = m.arprot;
-	 //method arqos = m.arqos;
+	   method arqos = 0;
 	   method arready = m.arready;
 	   method arsize = m.arsize;
 	   method arvalid = m.arvalid;
@@ -346,9 +346,9 @@ function Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty) toAxi4MasterBits(Axidma
       method awcache = m.awcache;
       method Bit#(tagWidth)     awid(); return 0; endmethod
       method awlen = m.awlen;
-      //method awlock = m.awlock;
+      method awlock = 0;
       method awprot = m.awprot;
-      //method awqos = m.awqos;
+      method awqos = 0;
       method awready = m.awready;
       method awsize = m.awsize;
       method awvalid = m.awvalid;
@@ -358,6 +358,7 @@ function Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty) toAxi4MasterBits(Axidma
       method bvalid = m.bvalid;
     method Action      rdata(Bit#(dataWidth) v); endmethod
     method Action      rlast(Bit#(1) v); endmethod
+    method Action      rid(Bit#(tagWidth) tag); endmethod
     method Bit#(1)     rready(); return 0; endmethod
     method Action      rresp(Bit#(2) v); endmethod
     method Action      rvalid(Bit#(1) v); endmethod
@@ -381,9 +382,9 @@ function Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty) toAxi4MasterBits(Axidma
       method Bit#(1) aresetn(); return 0; endmethod
       method Bit#(tagWidth)     arid(); return 0; endmethod
       method arlen = m.arlen;
-      //method arlock = m.arlock;
+      method arlock = 0;
       method arprot = m.arprot;
-      //method arqos = m.arqos;
+      method arqos = 0;
       method arready = m.arready;
       method arsize = m.arsize;
       method arvalid = m.arvalid;
@@ -392,9 +393,9 @@ function Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty) toAxi4MasterBits(Axidma
       method awcache = m.awcache;
       method Bit#(tagWidth)     awid(); return 0; endmethod
       method awlen = m.awlen;
-      //method awlock = m.awlock;
+      method awlock = 0;
       method awprot = m.awprot;
-      //method awqos = m.awqos;
+      method awqos = 0;
       method awready = m.awready;
       method awsize = m.awsize;
       method awvalid = m.awvalid;
