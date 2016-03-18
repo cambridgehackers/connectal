@@ -434,7 +434,8 @@ function MemReadClient#(dataWidth) toMemReadClient(Reg#(Bit#(32)) objId, Axi4Mas
       method ActionValue#(MemRequest) get() if (m.arvalid() == 1);
 	 m.arready(1);
 	 let addr = m.araddr();   
-	 return MemRequest { sglId: objId, offset: extend(addr), burstLen: extend(m.arlen()), tag: extend(m.arid()) };
+	 let burstLenBytes = (extend(m.arlen())+1)*fromInteger(valueOf(TDiv#(dataWidth,8)));
+	 return MemRequest { sglId: objId, offset: extend(addr), burstLen: burstLenBytes, tag: extend(m.arid()) };
       endmethod
    endinterface
    interface Put readData;
@@ -455,7 +456,8 @@ function MemWriteClient#(dataWidth) toMemWriteClient(Reg#(Bit#(32)) objId, Axi4M
       method ActionValue#(MemRequest) get() if (m.awvalid() == 1);
 	 m.awready(1);
 	 let addr = m.awaddr();
-	 return MemRequest { sglId: objId, offset: extend(addr), burstLen: extend(m.awlen()), tag: extend(m.awid()) };
+	 let burstLenBytes = (extend(m.awlen())+1)*fromInteger(valueOf(TDiv#(dataWidth,8)));
+	 return MemRequest { sglId: objId, offset: extend(addr), burstLen: burstLenBytes, tag: extend(m.awid()) };
       endmethod
    endinterface
    interface Get writeData;
