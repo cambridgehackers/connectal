@@ -14,6 +14,7 @@ import XilinxCells::*;
 import Probe::*;
 
 import ConnectalXilinxCells::*;
+import ConnectalBramFifo::*;
 import ConnectalConfig::*;
 import CtrlMux::*;
 import HostInterface::*;
@@ -57,48 +58,55 @@ module mkBramBootRom(Server#(BRAMRequest#(Bit#(TLog#(BootRomEntries)),Bit#(32)),
    return bram.portA;
 endmodule
 
-function MemReadClient#(dataWidth) traceReadClient(PipeIn#(Tuple3#(DmaChannel,Bool,MemRequest)) tracePipe,
-						   PipeIn#(Tuple3#(DmaChannel,Bool,MemData#(dataWidth))) traceDataPipe,
-						   DmaChannel chan,
-						   MemReadClient#(dataWidth) m);
-   return (interface MemReadClient;
-      interface Get readReq;
-	 method ActionValue#(MemRequest) get();
-	   let mr <- m.readReq.get();
-	   tracePipe.enq(tuple3(chan, False, mr));
-	   return mr;
-	 endmethod
-      endinterface: readReq
-      interface Put readData;
-	 method Action put(MemData#(dataWidth) md);
-	   traceDataPipe.enq(tuple3(chan, False, md));
-	   m.readData.put(md);
-	 endmethod
-   endinterface
-   endinterface);   
-endfunction
+module mkTraceReadClient#(PipeIn#(Tuple3#(DmaChannel,Bool,MemRequest)) tracePipe,
+			  PipeIn#(Tuple3#(DmaChannel,Bool,MemData#(dataWidth))) traceDataPipe,
+			  DmaChannel chan,
+			  MemReadClient#(dataWidth) m)
+   (MemReadClient#(dataWidth));
 
-function MemWriteClient#(dataWidth) traceWriteClient(PipeIn#(Tuple3#(DmaChannel,Bool,MemRequest)) tracePipe,
-						     PipeIn#(Tuple3#(DmaChannel,Bool,MemData#(dataWidth))) traceDataPipe,
-						     DmaChannel chan, MemWriteClient#(dataWidth) m);
-   return (interface MemWriteClient;
-   interface Get writeReq;
-      method ActionValue#(MemRequest) get();
-	 let mr <- m.writeReq.get();
-	 tracePipe.enq(tuple3(chan, True, mr));
-	 return mr;
-      endmethod
-   endinterface
-   interface Get writeData;
-      method ActionValue#(MemData#(dataWidth)) get();
-	 let md <- m.writeData.get();
-	 traceDataPipe.enq(tuple3(chan, True, md));
-	 return md;
-      endmethod
-   endinterface: writeData
+   let reqFifo  <- mkFIFOF();
+   let dataFifo <- mkFIFOF();
+
+   rule rl_req;
+      let mr <- m.readReq.get();
+      tracePipe.enq(tuple3(chan, False, mr));
+      reqFifo.enq(mr);
+   endrule
+
+   rule rl_data;
+      let md <- toGet(dataFifo).get();
+      traceDataPipe.enq(tuple3(chan, False, md));
+      m.readData.put(md);
+   endrule
+
+   interface Get readReq = toGet(reqFifo);
+   interface Put readData = toPut(dataFifo);
+endmodule
+
+module mkTraceWriteClient#(PipeIn#(Tuple3#(DmaChannel,Bool,MemRequest)) tracePipe,
+			   PipeIn#(Tuple3#(DmaChannel,Bool,MemData#(dataWidth))) traceDataPipe,
+			   DmaChannel chan, MemWriteClient#(dataWidth) m)
+   (MemWriteClient#(dataWidth));
+
+   let reqFifo <- mkFIFOF();
+   let dataFifo <- mkFIFOF();
+
+   rule rl_req;
+      let mr <- m.writeReq.get();
+      tracePipe.enq(tuple3(chan, True, mr));
+      reqFifo.enq(mr);
+   endrule
+
+   rule rl_data;
+      let md <- m.writeData.get();
+      traceDataPipe.enq(tuple3(chan, True, md));
+      dataFifo.enq(md);
+   endrule
+
+   interface Get writeReq = toGet(reqFifo);
+   interface Get writeData = toGet(dataFifo);
    interface Put writeDone = m.writeDone;
-   endinterface);
-endfunction
+endmodule
 
 module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
 
@@ -218,10 +226,12 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
    PhysMemSlave#(20,32) bootRomMemSlave      <- mkPhysMemToBram(bootRom);
    PhysMemSlave#(21,32) memSlaveMux          <- mkPhysMemSlaveMux(vec(bootRomMemSlave, deviceSlaveMux));
 
+   let memReadClients  <- mapM(mkMemReadClient(objId), vec(m_axi_mm2s, m_axi_sg));
+   let memWriteClients <- mapM(mkMemWriteClient(objId), vec(m_axi_s2mm, m_axi_sg));
+
 `ifdef IncludeFlash
    PhysMemSlave#(26,16) bpiFlashSlave <- mkPhysMemToBram(bpiFlash.server);
 `endif
-
    FIFOF#(Bit#(32)) dfifo <- mkFIFOF();
    FIFOF#(Bit#(32)) flashdfifo <- mkFIFOF();
 
@@ -288,18 +298,34 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
       axiIicBvi.scl.i(sclIOBuf.o);
    endrule
 
-   FIFOF#(Tuple3#(DmaChannel,Bool,MemRequest)) traceFifo <- mkSizedBRAMFIFOF(16);
-   PipeIn#(Tuple3#(DmaChannel,Bool,MemRequest)) tracePipe = toPipeIn(traceFifo);
-   FIFOF#(Tuple3#(DmaChannel,Bool,MemData#(DataBusWidth))) traceDataFifo <- mkSizedBRAMFIFOF(64);
-   PipeIn#(Tuple3#(DmaChannel,Bool,MemData#(DataBusWidth))) traceDataPipe = toPipeIn(traceDataFifo);
-   rule rl_trace;
-      match { .chan, .write, .req } <- toGet(traceFifo).get();
+   FIFOF#(Tuple3#(DmaChannel,Bool,MemRequest)) traceFifo <- mkDualClockBramFIFOF(clock, reset, clock, reset);
+   FIFOF#(Tuple3#(DmaChannel,Bool,MemRequest)) traceFifo0 <- mkFIFOF();
+   FIFOF#(Tuple3#(DmaChannel,Bool,MemRequest)) traceFifo1 <- mkFIFOF();
+   PipeIn#(Tuple3#(DmaChannel,Bool,MemRequest)) tracePipe = toPipeIn(traceFifo0);
+   FIFOF#(Tuple3#(DmaChannel,Bool,MemData#(DataBusWidth))) traceDataFifo <- mkDualClockBramFIFOF(clock, reset, clock, reset);
+   FIFOF#(Tuple3#(DmaChannel,Bool,MemData#(DataBusWidth))) traceDataFifo0 <- mkFIFOF();
+   FIFOF#(Tuple3#(DmaChannel,Bool,MemData#(DataBusWidth))) traceDataFifo1 <- mkFIFOF();
+   PipeIn#(Tuple3#(DmaChannel,Bool,MemData#(DataBusWidth))) traceDataPipe = toPipeIn(traceDataFifo0);
+   let trace0Cnx <- mkConnection(toGet(traceFifo0), toPut(traceFifo));
+   let trace1Cnx <- mkConnection(toGet(traceFifo), toPut(traceFifo1));
+   rule rl_trace1;
+      match { .chan, .write, .req } <- toGet(traceFifo1).get();
       ind.traceDmaRequest(chan, write, truncate(req.sglId), truncate(req.offset), extend(req.burstLen));
    endrule
+   let traceData0Cnx <- mkConnection(toGet(traceDataFifo0), toPut(traceDataFifo));
+   let traceData1Cnx <- mkConnection(toGet(traceDataFifo), toPut(traceDataFifo1));
    rule rl_trace_data;
-      match { .chan, .write, .md } <- toGet(traceDataFifo).get();
+      match { .chan, .write, .md } <- toGet(traceDataFifo1).get();
       ind.traceDmaData(chan, write, md.data, md.last);
    endrule
+
+   let traceReadClients <- mapM(uncurry(mkTraceReadClient(tracePipe,traceDataPipe)),
+				zip(vec(DMA_TX, DMA_SG),
+				    memReadClients));
+   let traceWriteClients <- mapM(uncurry(mkTraceWriteClient(tracePipe,traceDataPipe)),
+				 zip(vec(DMA_RX, DMA_SG),
+				     memWriteClients));
+
    interface SpikeHwRequest request;
       method Action reset();
 	 newReset.assertReset();
@@ -397,10 +423,6 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
 `endif
    endinterface
 
-   interface Vector dmaReadClient = map(uncurry(traceReadClient(tracePipe,traceDataPipe)),
-					zip(vec(DMA_TX, DMA_SG),
-					    map(toMemReadClient(objId), vec(m_axi_mm2s, m_axi_sg))));
-   interface Vector dmaWriteClient = map(uncurry(traceWriteClient(tracePipe,traceDataPipe)),
-					 zip(vec(DMA_RX, DMA_SG),
-					    map(toMemWriteClient(objId), vec(m_axi_s2mm, m_axi_sg))));
+   interface Vector dmaReadClient = traceReadClients;
+   interface Vector dmaWriteClient = traceWriteClients;
 endmodule
