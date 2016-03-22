@@ -2,7 +2,7 @@
 /*
    ../../generated/scripts/importbvi.py
    -o
-   AxiEthBuffer.bsv
+   AxiEthBufferBvi.bsv
    -I
    AxiEthBuffer
    -P
@@ -59,6 +59,24 @@ import DefaultValue::*;
 import XilinxCells::*;
 import GetPut::*;
 import AxiBits::*;
+
+interface AxiEthBufferClocks;
+   interface Clock axi_str_rxd_aclk;
+   interface Clock axi_str_rxs_aclk;
+   interface Clock axi_str_txc_aclk;
+   interface Clock axi_str_txd_aclk;
+   interface Clock gtx_clk;
+   interface Clock rx_mac_aclk;
+   interface Clock s_axi_aclk;
+   interface Clock tx_mac_aclk;
+   interface Reset axi_str_rxd_aresetn;
+   interface Reset axi_str_rxs_aresetn;
+   interface Reset axi_str_txc_aresetn;
+   interface Reset axi_str_txd_aresetn;
+   interface Reset rx_reset;
+   interface Reset s_axi_aresetn;
+   interface Reset tx_reset;
+endinterface
 
 (* always_ready, always_enabled *)
 interface AxiethbufferAxi;
@@ -195,54 +213,46 @@ interface AxiEthBuffer;
     method Action      speed_is_10_100(Bit#(1) v);
     interface AxiethbufferTx     tx;
 endinterface
-import "BVI" eth_buf(INTERRUPT, =
-module mkAxiEthBuffer#(Clock axi_str_rxd_aclk, Clock axi_str_rxs_aclk, Clock axi_str_txc_aclk, Clock axi_str_txd_aclk, Clock gtx_clk, Clock rx_mac_aclk, Clock s_axi_aclk, Clock tx_mac_aclk, Reset axi_str_rxd_aclk_reset, Reset axi_str_rxd_aresetn, Reset axi_str_rxs_aclk_reset, Reset axi_str_rxs_aresetn, Reset axi_str_txc_aclk_reset, Reset axi_str_txc_aresetn, Reset axi_str_txd_aclk_reset, Reset axi_str_txd_aresetn, Reset gtx_clk_reset, Reset rx_mac_aclk_reset, Reset rx_reset, Reset s_axi_aclk_reset, Reset s_axi_aresetn, Reset tx_mac_aclk_reset, Reset tx_reset)(AxiEthBuffer);
+import "BVI" eth_buf =
+module mkAxiEthBuffer#(AxiEthBufferClocks clks)(AxiEthBuffer);
     default_clock clk();
     default_reset rst();
-        input_clock axi_str_rxd_aclk(AXI_STR_RXD_ACLK) = axi_str_rxd_aclk;
-        input_reset axi_str_rxd_aclk_reset() = axi_str_rxd_aclk_reset; /* from clock*/
-        input_reset axi_str_rxd_aresetn(AXI_STR_RXD_ARESETN) = axi_str_rxd_aresetn;
-        input_clock axi_str_rxs_aclk(AXI_STR_RXS_ACLK) = axi_str_rxs_aclk;
-        input_reset axi_str_rxs_aclk_reset() = axi_str_rxs_aclk_reset; /* from clock*/
-        input_reset axi_str_rxs_aresetn(AXI_STR_RXS_ARESETN) = axi_str_rxs_aresetn;
-        input_clock axi_str_txc_aclk(AXI_STR_TXC_ACLK) = axi_str_txc_aclk;
-        input_reset axi_str_txc_aclk_reset() = axi_str_txc_aclk_reset; /* from clock*/
-        input_reset axi_str_txc_aresetn(AXI_STR_TXC_ARESETN) = axi_str_txc_aresetn;
-        input_clock axi_str_txd_aclk(AXI_STR_TXD_ACLK) = axi_str_txd_aclk;
-        input_reset axi_str_txd_aclk_reset() = axi_str_txd_aclk_reset; /* from clock*/
-        input_reset axi_str_txd_aresetn(AXI_STR_TXD_ARESETN) = axi_str_txd_aresetn;
-        input_clock gtx_clk(GTX_CLK) = gtx_clk;
-        input_reset gtx_clk_reset() = gtx_clk_reset; /* from clock*/
-        input_clock rx_mac_aclk(rx_mac_aclk) = rx_mac_aclk;
-        input_reset rx_mac_aclk_reset() = rx_mac_aclk_reset; /* from clock*/
-        input_reset rx_reset(rx_reset) = rx_reset;
-        input_clock s_axi_aclk(S_AXI_ACLK) = s_axi_aclk;
-        input_reset s_axi_aclk_reset() = s_axi_aclk_reset; /* from clock*/
-        input_reset s_axi_aresetn(S_AXI_ARESETN) = s_axi_aresetn;
-        input_clock tx_mac_aclk(tx_mac_aclk) = tx_mac_aclk;
-        input_reset tx_mac_aclk_reset() = tx_mac_aclk_reset; /* from clock*/
-        input_reset tx_reset(tx_reset) = tx_reset;
+    input_clock axi_str_rxd_aclk(AXI_STR_RXD_ACLK) = clks.axi_str_rxd_aclk;
+    input_reset axi_str_rxd_aresetn(AXI_STR_RXD_ARESETN) = clks.axi_str_rxd_aresetn;
+    input_clock axi_str_rxs_aclk(AXI_STR_RXS_ACLK) = clks.axi_str_rxs_aclk;
+    input_reset axi_str_rxs_aresetn(AXI_STR_RXS_ARESETN) = clks.axi_str_rxs_aresetn;
+    input_clock axi_str_txc_aclk(AXI_STR_TXC_ACLK) = clks.axi_str_txc_aclk;
+    input_reset axi_str_txc_aresetn(AXI_STR_TXC_ARESETN) = clks.axi_str_txc_aresetn;
+    input_clock axi_str_txd_aclk(AXI_STR_TXD_ACLK) = clks.axi_str_txd_aclk;
+    input_reset axi_str_txd_aresetn(AXI_STR_TXD_ARESETN) = clks.axi_str_txd_aresetn;
+    input_clock gtx_clk(GTX_CLK) = clks.gtx_clk;
+    input_clock rx_mac_aclk(rx_mac_aclk) = clks.rx_mac_aclk;
+    input_reset rx_reset(rx_reset) = clks.rx_reset;
+    input_clock s_axi_aclk(S_AXI_ACLK) = clks.s_axi_aclk;
+    input_reset s_axi_aresetn(S_AXI_ARESETN) = clks.s_axi_aresetn;
+    input_clock tx_mac_aclk(tx_mac_aclk) = clks.tx_mac_aclk;
+    input_reset tx_reset(tx_reset) = clks.tx_reset;
     interface AxiethbufferAxi     axi;
-        method AXI_STR_RXD_DATA str_rxd_data() clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aclk_reset);
-        method AXI_STR_RXD_KEEP str_rxd_keep() clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aclk_reset);
-        method AXI_STR_RXD_LAST str_rxd_last() clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aclk_reset);
-        method str_rxd_ready(AXI_STR_RXD_READY) clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aclk_reset) enable((*inhigh*) EN_AXI_STR_RXD_READY);
-        method AXI_STR_RXD_VALID str_rxd_valid() clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aclk_reset);
-        method AXI_STR_RXS_DATA str_rxs_data() clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aclk_reset);
-        method AXI_STR_RXS_KEEP str_rxs_keep() clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aclk_reset);
-        method AXI_STR_RXS_LAST str_rxs_last() clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aclk_reset);
-        method str_rxs_ready(AXI_STR_RXS_READY) clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aclk_reset) enable((*inhigh*) EN_AXI_STR_RXS_READY);
-        method AXI_STR_RXS_VALID str_rxs_valid() clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aclk_reset);
-        method str_txc_tdata(AXI_STR_TXC_TDATA) clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aclk_reset) enable((*inhigh*) EN_AXI_STR_TXC_TDATA);
-        method str_txc_tkeep(AXI_STR_TXC_TKEEP) clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aclk_reset) enable((*inhigh*) EN_AXI_STR_TXC_TKEEP);
-        method str_txc_tlast(AXI_STR_TXC_TLAST) clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aclk_reset) enable((*inhigh*) EN_AXI_STR_TXC_TLAST);
-        method AXI_STR_TXC_TREADY str_txc_tready() clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aclk_reset);
-        method str_txc_tvalid(AXI_STR_TXC_TVALID) clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aclk_reset) enable((*inhigh*) EN_AXI_STR_TXC_TVALID);
-        method str_txd_tdata(AXI_STR_TXD_TDATA) clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aclk_reset) enable((*inhigh*) EN_AXI_STR_TXD_TDATA);
-        method str_txd_tkeep(AXI_STR_TXD_TKEEP) clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aclk_reset) enable((*inhigh*) EN_AXI_STR_TXD_TKEEP);
-        method str_txd_tlast(AXI_STR_TXD_TLAST) clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aclk_reset) enable((*inhigh*) EN_AXI_STR_TXD_TLAST);
-        method AXI_STR_TXD_TREADY str_txd_tready() clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aclk_reset);
-        method str_txd_tvalid(AXI_STR_TXD_TVALID) clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aclk_reset) enable((*inhigh*) EN_AXI_STR_TXD_TVALID);
+        method AXI_STR_RXD_DATA str_rxd_data() clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aresetn);
+        method AXI_STR_RXD_KEEP str_rxd_keep() clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aresetn);
+        method AXI_STR_RXD_LAST str_rxd_last() clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aresetn);
+        method str_rxd_ready(AXI_STR_RXD_READY) clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aresetn) enable((*inhigh*) EN_AXI_STR_RXD_READY);
+        method AXI_STR_RXD_VALID str_rxd_valid() clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aresetn);
+        method AXI_STR_RXS_DATA str_rxs_data() clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aresetn);
+        method AXI_STR_RXS_KEEP str_rxs_keep() clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aresetn);
+        method AXI_STR_RXS_LAST str_rxs_last() clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aresetn);
+        method str_rxs_ready(AXI_STR_RXS_READY) clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aresetn) enable((*inhigh*) EN_AXI_STR_RXS_READY);
+        method AXI_STR_RXS_VALID str_rxs_valid() clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aresetn);
+        method str_txc_tdata(AXI_STR_TXC_TDATA) clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aresetn) enable((*inhigh*) EN_AXI_STR_TXC_TDATA);
+        method str_txc_tkeep(AXI_STR_TXC_TKEEP) clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aresetn) enable((*inhigh*) EN_AXI_STR_TXC_TKEEP);
+        method str_txc_tlast(AXI_STR_TXC_TLAST) clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aresetn) enable((*inhigh*) EN_AXI_STR_TXC_TLAST);
+        method AXI_STR_TXC_TREADY str_txc_tready() clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aresetn);
+        method str_txc_tvalid(AXI_STR_TXC_TVALID) clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aresetn) enable((*inhigh*) EN_AXI_STR_TXC_TVALID);
+        method str_txd_tdata(AXI_STR_TXD_TDATA) clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aresetn) enable((*inhigh*) EN_AXI_STR_TXD_TDATA);
+        method str_txd_tkeep(AXI_STR_TXD_TKEEP) clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aresetn) enable((*inhigh*) EN_AXI_STR_TXD_TKEEP);
+        method str_txd_tlast(AXI_STR_TXD_TLAST) clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aresetn) enable((*inhigh*) EN_AXI_STR_TXD_TLAST);
+        method AXI_STR_TXD_TREADY str_txd_tready() clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aresetn);
+        method str_txd_tvalid(AXI_STR_TXD_TVALID) clocked_by (axi_str_txd_aclk) reset_by (axi_str_txd_aresetn) enable((*inhigh*) EN_AXI_STR_TXD_TVALID);
     endinterface
     interface AxiethbufferEmac     emac;
         method client_autoneg_int(EMAC_CLIENT_AUTONEG_INT) enable((*inhigh*) EN_EMAC_CLIENT_AUTONEG_INT);
@@ -277,13 +287,13 @@ module mkAxiEthBuffer#(Clock axi_str_rxd_aclk, Clock axi_str_rxs_aclk, Clock axi
     output_reset reset2pcspma(RESET2PCSPMA);
     output_reset reset2temacn(RESET2TEMACn);
     interface AxiethbufferRx     rx;
-        method axis_mac_tdata(rx_axis_mac_tdata) clocked_by (rx_mac_aclk) reset_by (rx_mac_aclk_reset) enable((*inhigh*) EN_rx_axis_mac_tdata);
-        method axis_mac_tlast(rx_axis_mac_tlast) clocked_by (rx_mac_aclk) reset_by (rx_mac_aclk_reset) enable((*inhigh*) EN_rx_axis_mac_tlast);
-        method axis_mac_tuser(rx_axis_mac_tuser) clocked_by (rx_mac_aclk) reset_by (rx_mac_aclk_reset) enable((*inhigh*) EN_rx_axis_mac_tuser);
-        method axis_mac_tvalid(rx_axis_mac_tvalid) clocked_by (rx_mac_aclk) reset_by (rx_mac_aclk_reset) enable((*inhigh*) EN_rx_axis_mac_tvalid);
-        method clk_enable_in(rx_CLK_ENABLE_IN) clocked_by (rx_mac_aclk) reset_by (rx_mac_aclk_reset) enable((*inhigh*) EN_rx_CLK_ENABLE_IN);
-        method statistics_valid(rx_statistics_valid) clocked_by (rx_mac_aclk) reset_by (rx_mac_aclk_reset) enable((*inhigh*) EN_rx_statistics_valid);
-        method statistics_vector(rx_statistics_vector) clocked_by (rx_mac_aclk) reset_by (rx_mac_aclk_reset) enable((*inhigh*) EN_rx_statistics_vector);
+        method axis_mac_tdata(rx_axis_mac_tdata) clocked_by (rx_mac_aclk) reset_by (rx_reset) enable((*inhigh*) EN_rx_axis_mac_tdata);
+        method axis_mac_tlast(rx_axis_mac_tlast) clocked_by (rx_mac_aclk) reset_by (rx_reset) enable((*inhigh*) EN_rx_axis_mac_tlast);
+        method axis_mac_tuser(rx_axis_mac_tuser) clocked_by (rx_mac_aclk) reset_by (rx_reset) enable((*inhigh*) EN_rx_axis_mac_tuser);
+        method axis_mac_tvalid(rx_axis_mac_tvalid) clocked_by (rx_mac_aclk) reset_by (rx_reset) enable((*inhigh*) EN_rx_axis_mac_tvalid);
+        method clk_enable_in(rx_CLK_ENABLE_IN) clocked_by (rx_mac_aclk) reset_by (rx_reset) enable((*inhigh*) EN_rx_CLK_ENABLE_IN);
+        method statistics_valid(rx_statistics_valid) clocked_by (rx_mac_aclk) reset_by (rx_reset) enable((*inhigh*) EN_rx_statistics_valid);
+        method statistics_vector(rx_statistics_vector) clocked_by (rx_mac_aclk) reset_by (rx_reset) enable((*inhigh*) EN_rx_statistics_vector);
     endinterface
     interface AxiethbufferS_axi_2temac     s_axi_2temac;
         method S_AXI_2TEMAC_ARADDR araddr();
@@ -304,32 +314,32 @@ module mkAxiEthBuffer#(Clock axi_str_rxd_aclk, Clock axi_str_rxs_aclk, Clock axi
         method S_AXI_2TEMAC_WVALID wvalid();
     endinterface
     interface AxiethbufferS_axi     s_axi;
-        method araddr(S_AXI_ARADDR) clocked_by (s_axi_aclk) reset_by (s_axi_aclk_reset) enable((*inhigh*) EN_S_AXI_ARADDR);
-        method S_AXI_ARREADY arready() clocked_by (s_axi_aclk) reset_by (s_axi_aclk_reset);
-        method arvalid(S_AXI_ARVALID) clocked_by (s_axi_aclk) reset_by (s_axi_aclk_reset) enable((*inhigh*) EN_S_AXI_ARVALID);
-        method awaddr(S_AXI_AWADDR) clocked_by (s_axi_aclk) reset_by (s_axi_aclk_reset) enable((*inhigh*) EN_S_AXI_AWADDR);
-        method S_AXI_AWREADY awready() clocked_by (s_axi_aclk) reset_by (s_axi_aclk_reset);
-        method awvalid(S_AXI_AWVALID) clocked_by (s_axi_aclk) reset_by (s_axi_aclk_reset) enable((*inhigh*) EN_S_AXI_AWVALID);
-        method bready(S_AXI_BREADY) clocked_by (s_axi_aclk) reset_by (s_axi_aclk_reset) enable((*inhigh*) EN_S_AXI_BREADY);
-        method S_AXI_BRESP bresp() clocked_by (s_axi_aclk) reset_by (s_axi_aclk_reset);
-        method S_AXI_BVALID bvalid() clocked_by (s_axi_aclk) reset_by (s_axi_aclk_reset);
-        method S_AXI_RDATA rdata() clocked_by (s_axi_aclk) reset_by (s_axi_aclk_reset);
-        method rready(S_AXI_RREADY) clocked_by (s_axi_aclk) reset_by (s_axi_aclk_reset) enable((*inhigh*) EN_S_AXI_RREADY);
-        method S_AXI_RRESP rresp() clocked_by (s_axi_aclk) reset_by (s_axi_aclk_reset);
-        method S_AXI_RVALID rvalid() clocked_by (s_axi_aclk) reset_by (s_axi_aclk_reset);
-        method wdata(S_AXI_WDATA) clocked_by (s_axi_aclk) reset_by (s_axi_aclk_reset) enable((*inhigh*) EN_S_AXI_WDATA);
-        method S_AXI_WREADY wready() clocked_by (s_axi_aclk) reset_by (s_axi_aclk_reset);
-        method wstrb(S_AXI_WSTRB) clocked_by (s_axi_aclk) reset_by (s_axi_aclk_reset) enable((*inhigh*) EN_S_AXI_WSTRB);
-        method wvalid(S_AXI_WVALID) clocked_by (s_axi_aclk) reset_by (s_axi_aclk_reset) enable((*inhigh*) EN_S_AXI_WVALID);
+        method araddr(S_AXI_ARADDR) clocked_by (s_axi_aclk) reset_by (s_axi_aresetn) enable((*inhigh*) EN_S_AXI_ARADDR);
+        method S_AXI_ARREADY arready() clocked_by (s_axi_aclk) reset_by (s_axi_aresetn);
+        method arvalid(S_AXI_ARVALID) clocked_by (s_axi_aclk) reset_by (s_axi_aresetn) enable((*inhigh*) EN_S_AXI_ARVALID);
+        method awaddr(S_AXI_AWADDR) clocked_by (s_axi_aclk) reset_by (s_axi_aresetn) enable((*inhigh*) EN_S_AXI_AWADDR);
+        method S_AXI_AWREADY awready() clocked_by (s_axi_aclk) reset_by (s_axi_aresetn);
+        method awvalid(S_AXI_AWVALID) clocked_by (s_axi_aclk) reset_by (s_axi_aresetn) enable((*inhigh*) EN_S_AXI_AWVALID);
+        method bready(S_AXI_BREADY) clocked_by (s_axi_aclk) reset_by (s_axi_aresetn) enable((*inhigh*) EN_S_AXI_BREADY);
+        method S_AXI_BRESP bresp() clocked_by (s_axi_aclk) reset_by (s_axi_aresetn);
+        method S_AXI_BVALID bvalid() clocked_by (s_axi_aclk) reset_by (s_axi_aresetn);
+        method S_AXI_RDATA rdata() clocked_by (s_axi_aclk) reset_by (s_axi_aresetn);
+        method rready(S_AXI_RREADY) clocked_by (s_axi_aclk) reset_by (s_axi_aresetn) enable((*inhigh*) EN_S_AXI_RREADY);
+        method S_AXI_RRESP rresp() clocked_by (s_axi_aclk) reset_by (s_axi_aresetn);
+        method S_AXI_RVALID rvalid() clocked_by (s_axi_aclk) reset_by (s_axi_aresetn);
+        method wdata(S_AXI_WDATA) clocked_by (s_axi_aclk) reset_by (s_axi_aresetn) enable((*inhigh*) EN_S_AXI_WDATA);
+        method S_AXI_WREADY wready() clocked_by (s_axi_aclk) reset_by (s_axi_aresetn);
+        method wstrb(S_AXI_WSTRB) clocked_by (s_axi_aclk) reset_by (s_axi_aresetn) enable((*inhigh*) EN_S_AXI_WSTRB);
+        method wvalid(S_AXI_WVALID) clocked_by (s_axi_aclk) reset_by (s_axi_aresetn) enable((*inhigh*) EN_S_AXI_WVALID);
     endinterface
     method speed_is_10_100(speed_is_10_100) enable((*inhigh*) EN_speed_is_10_100);
     interface AxiethbufferTx     tx;
-        method tx_axis_mac_tdata axis_mac_tdata() clocked_by (tx_mac_aclk) reset_by (tx_mac_aclk_reset);
-        method tx_axis_mac_tlast axis_mac_tlast() clocked_by (tx_mac_aclk) reset_by (tx_mac_aclk_reset);
-        method axis_mac_tready(tx_axis_mac_tready) clocked_by (tx_mac_aclk) reset_by (tx_mac_aclk_reset) enable((*inhigh*) EN_tx_axis_mac_tready);
-        method tx_axis_mac_tuser axis_mac_tuser() clocked_by (tx_mac_aclk) reset_by (tx_mac_aclk_reset);
-        method tx_axis_mac_tvalid axis_mac_tvalid() clocked_by (tx_mac_aclk) reset_by (tx_mac_aclk_reset);
-        method tx_ifg_delay ifg_delay() clocked_by (tx_mac_aclk) reset_by (tx_mac_aclk_reset);
+        method tx_axis_mac_tdata axis_mac_tdata() clocked_by (tx_mac_aclk) reset_by (tx_reset);
+        method tx_axis_mac_tlast axis_mac_tlast() clocked_by (tx_mac_aclk) reset_by (tx_reset);
+        method axis_mac_tready(tx_axis_mac_tready) clocked_by (tx_mac_aclk) reset_by (tx_reset) enable((*inhigh*) EN_tx_axis_mac_tready);
+        method tx_axis_mac_tuser axis_mac_tuser() clocked_by (tx_mac_aclk) reset_by (tx_reset);
+        method tx_axis_mac_tvalid axis_mac_tvalid() clocked_by (tx_mac_aclk) reset_by (tx_reset);
+        method tx_ifg_delay ifg_delay() clocked_by (tx_mac_aclk) reset_by (tx_reset);
     endinterface
     schedule (axi.str_rxd_data, axi.str_rxd_keep, axi.str_rxd_last, axi.str_rxd_ready, axi.str_rxd_valid, axi.str_rxs_data, axi.str_rxs_keep, axi.str_rxs_last, axi.str_rxs_ready, axi.str_rxs_valid, axi.str_txc_tdata, axi.str_txc_tkeep, axi.str_txc_tlast, axi.str_txc_tready, axi.str_txc_tvalid, axi.str_txd_tdata, axi.str_txd_tkeep, axi.str_txd_tlast, axi.str_txd_tready, axi.str_txd_tvalid, emac.client_autoneg_int, emac.reset_done_int, emac.rx_dcm_locked_int, interrupt, mdc.temac, mdc.top, mdio.i_temac, mdio.i_top, mdio.o_pcspma, mdio.o_temac, mdio.o_top, mdio.t_pcspma, mdio.t_temac, mdio.t_top, pause.req, pause.val, pcspma.status_vector, rx.axis_mac_tdata, rx.axis_mac_tlast, rx.axis_mac_tuser, rx.axis_mac_tvalid, rx.clk_enable_in, rx.statistics_valid, rx.statistics_vector, s_axi_2temac.araddr, s_axi_2temac.arready, s_axi_2temac.arvalid, s_axi_2temac.awaddr, s_axi_2temac.awready, s_axi_2temac.awvalid, s_axi_2temac.bready, s_axi_2temac.bresp, s_axi_2temac.bvalid, s_axi_2temac.rdata, s_axi_2temac.rready, s_axi_2temac.rresp, s_axi_2temac.rvalid, s_axi_2temac.wdata, s_axi_2temac.wready, s_axi_2temac.wvalid, s_axi.araddr, s_axi.arready, s_axi.arvalid, s_axi.awaddr, s_axi.awready, s_axi.awvalid, s_axi.bready, s_axi.bresp, s_axi.bvalid, s_axi.rdata, s_axi.rready, s_axi.rresp, s_axi.rvalid, s_axi.wdata, s_axi.wready, s_axi.wstrb, s_axi.wvalid, speed_is_10_100, tx.axis_mac_tdata, tx.axis_mac_tlast, tx.axis_mac_tready, tx.axis_mac_tuser, tx.axis_mac_tvalid, tx.ifg_delay) CF (axi.str_rxd_data, axi.str_rxd_keep, axi.str_rxd_last, axi.str_rxd_ready, axi.str_rxd_valid, axi.str_rxs_data, axi.str_rxs_keep, axi.str_rxs_last, axi.str_rxs_ready, axi.str_rxs_valid, axi.str_txc_tdata, axi.str_txc_tkeep, axi.str_txc_tlast, axi.str_txc_tready, axi.str_txc_tvalid, axi.str_txd_tdata, axi.str_txd_tkeep, axi.str_txd_tlast, axi.str_txd_tready, axi.str_txd_tvalid, emac.client_autoneg_int, emac.reset_done_int, emac.rx_dcm_locked_int, interrupt, mdc.temac, mdc.top, mdio.i_temac, mdio.i_top, mdio.o_pcspma, mdio.o_temac, mdio.o_top, mdio.t_pcspma, mdio.t_temac, mdio.t_top, pause.req, pause.val, pcspma.status_vector, rx.axis_mac_tdata, rx.axis_mac_tlast, rx.axis_mac_tuser, rx.axis_mac_tvalid, rx.clk_enable_in, rx.statistics_valid, rx.statistics_vector, s_axi_2temac.araddr, s_axi_2temac.arready, s_axi_2temac.arvalid, s_axi_2temac.awaddr, s_axi_2temac.awready, s_axi_2temac.awvalid, s_axi_2temac.bready, s_axi_2temac.bresp, s_axi_2temac.bvalid, s_axi_2temac.rdata, s_axi_2temac.rready, s_axi_2temac.rresp, s_axi_2temac.rvalid, s_axi_2temac.wdata, s_axi_2temac.wready, s_axi_2temac.wvalid, s_axi.araddr, s_axi.arready, s_axi.arvalid, s_axi.awaddr, s_axi.awready, s_axi.awvalid, s_axi.bready, s_axi.bresp, s_axi.bvalid, s_axi.rdata, s_axi.rready, s_axi.rresp, s_axi.rvalid, s_axi.wdata, s_axi.wready, s_axi.wstrb, s_axi.wvalid, speed_is_10_100, tx.axis_mac_tdata, tx.axis_mac_tlast, tx.axis_mac_tready, tx.axis_mac_tuser, tx.axis_mac_tvalid, tx.ifg_delay);
 endmodule
