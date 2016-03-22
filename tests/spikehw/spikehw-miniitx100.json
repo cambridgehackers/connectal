@@ -1,0 +1,21 @@
+{
+    "eth_rx_los_v": {
+	"sfp1": "rx_los"
+    },
+    "eth_tx_disable": {
+	"sfp1": "tx_disable"
+    },
+    "iic_sda": {
+	"sfp1": "mod_def2",
+        "PIO_DIRECTION": "BIDIR"
+    },
+    "iic_scl": {
+	"sfp1": "mod_def1",
+        "PIO_DIRECTION": "BIDIR"
+    },
+    "iic_mux_reset": {
+	"sfp1": "mod_def0",
+        "PIO_DIRECTION": "OUTPUT",
+	"comment": "not connected"
+    }
+}
