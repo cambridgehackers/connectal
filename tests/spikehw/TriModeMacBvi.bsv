@@ -2,11 +2,11 @@
 /*
    /home/jamey/connectal.clean/generated/scripts/importbvi.py
    -o
-   TriModeEthMacBvi.bsv
+   TriModeMacBvi.bsv
    -P
-   TriModeEthBvi
+   TriModeMacBvi
    -I
-   TriModeEthBvi
+   TriModeMac
    -c
    gtx_clk
    -r
@@ -27,38 +27,26 @@
    s_axi_aclk
    -r
    s_axi_resetn
+   -f
+   rx_axis_mac
+   -f
+   tx_axis_mac
    -n
    speedis100
    -n
    speedis10100
-   ../FPGA/rtl/vc709/tri_mode_ethernet_mac_0/tri_mode_ethernet_mac_0_stub.v
+   cores/nfsume/tri_mode_ethernet_mac_0/tri_mode_ethernet_mac_0_stub.v
 */
 
 import Clocks::*;
 import DefaultValue::*;
 import XilinxCells::*;
 import GetPut::*;
-import Connectable::*;
-import Vector::*;
-import GetPut::*;
-import ClientServer::*;
-import TLM3         :: *;
-import Axi4         :: *;
-import AxiDefines   ::*;
-
-import AxiStream  :: *;
-import SoC_Defs   :: *;
-import SysConfigs :: *;
-import Utils      :: *;
-
-import GigEthPcsPma :: *;
-
-`include "SoC.defines"
-
+import AxiBits::*;
 
 (* always_ready, always_enabled *)
 (* always_ready, always_enabled *)
-interface TrimodeethbviGmii;
+interface TrimodemacbviGmii;
     method Action      rx_dv(Bit#(1) v);
     method Action      rx_er(Bit#(1) v);
     method Action      rxd(Bit#(8) v);
@@ -68,34 +56,37 @@ interface TrimodeethbviGmii;
 endinterface
 (* always_ready, always_enabled *)
 (* always_ready, always_enabled *)
-interface TrimodeethbviMac;
+interface TrimodemacbviMac;
     method Bit#(1)     irq();
 endinterface
 (* always_ready, always_enabled *)
-interface TrimodeethbviMdio;
+interface TrimodemacbviMdio;
     method Action      i(Bit#(1) v);
     method Bit#(1)     o();
     method Bit#(1)     t();
 endinterface
 (* always_ready, always_enabled *)
-interface TrimodeethbviPause;
+interface TrimodemacbviPause;
     method Action      req(Bit#(1) v);
     method Action      val(Bit#(16) v);
 endinterface
 (* always_ready, always_enabled *)
-interface TrimodeethbviRx;
+interface TrimodemacbviRx;
     method Bit#(5)     axis_filter_tuser();
-    method Bit#(8)     axis_mac_tdata();
-    method Bit#(1)     axis_mac_tlast();
-    method Bit#(1)     axis_mac_tuser();
-    method Bit#(1)     axis_mac_tvalid();
     interface Clock     mac_aclk;
     method Reset     reset();
     method Bit#(1)     statistics_valid();
     method Bit#(28)     statistics_vector();
 endinterface
 (* always_ready, always_enabled *)
-interface TrimodeethbviS_axi;
+interface TrimodemacbviRx_axis_mac;
+    method Bit#(8)     tdata();
+    method Bit#(1)     tlast();
+    method Bit#(1)     tuser();
+    method Bit#(1)     tvalid();
+endinterface
+(* always_ready, always_enabled *)
+interface TrimodemacbviS_axi;
     method Action      araddr(Bit#(12) v);
     method Bit#(1)     arready();
     method Action      arvalid(Bit#(1) v);
@@ -114,12 +105,7 @@ interface TrimodeethbviS_axi;
     method Action      wvalid(Bit#(1) v);
 endinterface
 (* always_ready, always_enabled *)
-interface TrimodeethbviTx;
-    method Action      axis_mac_tdata(Bit#(8) v);
-    method Action      axis_mac_tlast(Bit#(1) v);
-    method Bit#(1)     axis_mac_tready();
-    method Action      axis_mac_tuser(Bit#(1) v);
-    method Action      axis_mac_tvalid(Bit#(1) v);
+interface TrimodemacbviTx;
     method Action      ifg_delay(Bit#(8) v);
     interface Clock     mac_aclk;
     method Reset     reset();
@@ -127,27 +113,39 @@ interface TrimodeethbviTx;
     method Bit#(32)     statistics_vector();
 endinterface
 (* always_ready, always_enabled *)
-interface TriModeEthBvi;
-    interface TrimodeethbviGmii     gmii;
-    interface TrimodeethbviMac     mac;
+interface TrimodemacbviTx_axis_mac;
+    method Action      tdata(Bit#(8) v);
+    method Action      tlast(Bit#(1) v);
+    method Bit#(1)     tready();
+    method Action      tuser(Bit#(1) v);
+    method Action      tvalid(Bit#(1) v);
+endinterface
+(* always_ready, always_enabled *)
+interface TriModeMac;
+    interface TrimodemacbviGmii     gmii;
+    interface TrimodemacbviMac     mac;
     method Bit#(1)     mdc();
-    interface TrimodeethbviMdio     mdio;
-    interface TrimodeethbviPause     pause;
-    interface TrimodeethbviRx     rx;
-    interface TrimodeethbviS_axi     s_axi;
+    interface TrimodemacbviMdio     mdio;
+    interface TrimodemacbviPause     pause;
+    interface TrimodemacbviRx     rx;
+    interface AxiStreamMaster#(8)    rx_axis_mac;
+    interface TrimodemacbviS_axi     s_axi;
     method Bit#(1)     speedis100();
     method Bit#(1)     speedis10100();
-    interface TrimodeethbviTx     tx;
+    interface TrimodemacbviTx     tx;
+    interface AxiStreamSlave#(8)     tx_axis_mac;
 endinterface
 import "BVI" tri_mode_ethernet_mac_0 =
-module mkTriModeEthBvi#(Clock gtx_clk, Clock s_axi_aclk, Reset glbl_rstn, Reset rx_axi_rstn, Reset s_axi_resetn, Reset tx_axi_rstn)(TriModeEthBvi);
+module mkTriModeMac#(Clock gtx_clk, Clock s_axi_aclk, Reset glbl_rstn, Reset rx_axi_rstn, Reset s_axi_resetn, Reset tx_axi_rstn)(TriModeMac);
+    default_clock clk();
+    default_reset rst();
         input_reset glbl_rstn(glbl_rstn) = glbl_rstn;
         input_clock gtx_clk(gtx_clk) = gtx_clk;
         input_reset rx_axi_rstn(rx_axi_rstn) = rx_axi_rstn;
-        default_clock s_axi_aclk(s_axi_aclk) = s_axi_aclk;
-        default_reset s_axi_resetn(s_axi_resetn) = s_axi_resetn;
+        input_clock s_axi_aclk(s_axi_aclk) = s_axi_aclk;
+        input_reset s_axi_resetn(s_axi_resetn) = s_axi_resetn;
         input_reset tx_axi_rstn(tx_axi_rstn) = tx_axi_rstn;
-    interface TrimodeethbviGmii     gmii;
+    interface TrimodemacbviGmii     gmii;
         method rx_dv(gmii_rx_dv) enable((*inhigh*) EN_gmii_rx_dv);
         method rx_er(gmii_rx_er) enable((*inhigh*) EN_gmii_rx_er);
         method rxd(gmii_rxd) enable((*inhigh*) EN_gmii_rxd);
@@ -155,31 +153,33 @@ module mkTriModeEthBvi#(Clock gtx_clk, Clock s_axi_aclk, Reset glbl_rstn, Reset 
         method gmii_tx_er tx_er();
         method gmii_txd txd();
     endinterface
-    interface TrimodeethbviMac     mac;
+    interface TrimodemacbviMac     mac;
         method mac_irq irq();
     endinterface
     method mdc mdc();
-    interface TrimodeethbviMdio     mdio;
+    interface TrimodemacbviMdio     mdio;
         method i(mdio_i) enable((*inhigh*) EN_mdio_i);
         method mdio_o o();
         method mdio_t t();
     endinterface
-    interface TrimodeethbviPause     pause;
+    interface TrimodemacbviPause     pause;
         method req(pause_req) enable((*inhigh*) EN_pause_req);
         method val(pause_val) enable((*inhigh*) EN_pause_val);
     endinterface
-    interface TrimodeethbviRx     rx;
+    interface TrimodemacbviRx     rx;
         method rx_axis_filter_tuser axis_filter_tuser();
-        method rx_axis_mac_tdata axis_mac_tdata();
-        method rx_axis_mac_tlast axis_mac_tlast();
-        method rx_axis_mac_tuser axis_mac_tuser();
-        method rx_axis_mac_tvalid axis_mac_tvalid();
         output_clock mac_aclk(rx_mac_aclk);
         output_reset reset(rx_reset);
         method rx_statistics_valid statistics_valid();
         method rx_statistics_vector statistics_vector();
     endinterface
-    interface TrimodeethbviS_axi     s_axi;
+    interface AxiStreamMaster#(8) rx_axis_mac;
+        method rx_axis_mac_tdata tdata() clocked_by (s_axi_aclk) reset_by (rx_axi_rstn);
+        method rx_axis_mac_tlast tlast() clocked_by (s_axi_aclk) reset_by (rx_axi_rstn);
+        method rx_axis_mac_tuser tuser() clocked_by (s_axi_aclk) reset_by (rx_axi_rstn);
+        method rx_axis_mac_tvalid tvalid() clocked_by (s_axi_aclk) reset_by (rx_axi_rstn);
+    endinterface
+    interface TrimodemacbviS_axi     s_axi;
         method araddr(s_axi_araddr) clocked_by (s_axi_aclk) reset_by (s_axi_resetn) enable((*inhigh*) EN_s_axi_araddr);
         method s_axi_arready arready() clocked_by (s_axi_aclk) reset_by (s_axi_resetn);
         method arvalid(s_axi_arvalid) clocked_by (s_axi_aclk) reset_by (s_axi_resetn) enable((*inhigh*) EN_s_axi_arvalid);
@@ -199,23 +199,54 @@ module mkTriModeEthBvi#(Clock gtx_clk, Clock s_axi_aclk, Reset glbl_rstn, Reset 
     endinterface
     method speedis100 speedis100();
     method speedis10100 speedis10100();
-    interface TrimodeethbviTx     tx;
-        method axis_mac_tdata(tx_axis_mac_tdata) enable((*inhigh*) EN_tx_axis_mac_tdata);
-        method axis_mac_tlast(tx_axis_mac_tlast) enable((*inhigh*) EN_tx_axis_mac_tlast);
-        method tx_axis_mac_tready axis_mac_tready();
-        method axis_mac_tuser(tx_axis_mac_tuser) enable((*inhigh*) EN_tx_axis_mac_tuser);
-        method axis_mac_tvalid(tx_axis_mac_tvalid) enable((*inhigh*) EN_tx_axis_mac_tvalid);
+    interface TrimodemacbviTx     tx;
         method ifg_delay(tx_ifg_delay) enable((*inhigh*) EN_tx_ifg_delay);
         output_clock mac_aclk(tx_mac_aclk);
         output_reset reset(tx_reset);
         method tx_statistics_valid statistics_valid();
         method tx_statistics_vector statistics_vector();
     endinterface
-    schedule (gmii.rx_dv, gmii.rx_er, gmii.rxd, gmii.tx_en, gmii.tx_er, gmii.txd, mac.irq, mdc, mdio.i, mdio.o, mdio.t, pause.req, pause.val, rx.axis_filter_tuser, rx.axis_mac_tdata, rx.axis_mac_tlast, rx.axis_mac_tuser, rx.axis_mac_tvalid, rx.statistics_valid, rx.statistics_vector, s_axi.araddr, s_axi.arready, s_axi.arvalid, s_axi.awaddr, s_axi.awready, s_axi.awvalid, s_axi.bready, s_axi.bresp, s_axi.bvalid, s_axi.rdata, s_axi.rready, s_axi.rresp, s_axi.rvalid, s_axi.wdata, s_axi.wready, s_axi.wvalid, speedis100, speedis10100, tx.axis_mac_tdata, tx.axis_mac_tlast, tx.axis_mac_tready, tx.axis_mac_tuser, tx.axis_mac_tvalid, tx.ifg_delay, tx.statistics_valid, tx.statistics_vector) CF (gmii.rx_dv, gmii.rx_er, gmii.rxd, gmii.tx_en, gmii.tx_er, gmii.txd, mac.irq, mdc, mdio.i, mdio.o, mdio.t, pause.req, pause.val, rx.axis_filter_tuser, rx.axis_mac_tdata, rx.axis_mac_tlast, rx.axis_mac_tuser, rx.axis_mac_tvalid, rx.statistics_valid, rx.statistics_vector, s_axi.araddr, s_axi.arready, s_axi.arvalid, s_axi.awaddr, s_axi.awready, s_axi.awvalid, s_axi.bready, s_axi.bresp, s_axi.bvalid, s_axi.rdata, s_axi.rready, s_axi.rresp, s_axi.rvalid, s_axi.wdata, s_axi.wready, s_axi.wvalid, speedis100, speedis10100, tx.axis_mac_tdata, tx.axis_mac_tlast, tx.axis_mac_tready, tx.axis_mac_tuser, tx.axis_mac_tvalid, tx.ifg_delay, tx.statistics_valid, tx.statistics_vector);
+    interface AxiStreamSlave#(8)     tx_axis_mac;
+        method tdata(tx_axis_mac_tdata) enable((*inhigh*) EN_tx_axis_mac_tdata) clocked_by (s_axi_aclk) reset_by (tx_axi_rstn);
+        method tlast(tx_axis_mac_tlast) enable((*inhigh*) EN_tx_axis_mac_tlast) clocked_by (s_axi_aclk) reset_by (tx_axi_rstn);
+        method tx_axis_mac_tready tready() clocked_by (s_axi_aclk) reset_by (tx_axi_rstn);
+        method tuser(tx_axis_mac_tuser) enable((*inhigh*) EN_tx_axis_mac_tuser) clocked_by (s_axi_aclk) reset_by (tx_axi_rstn);
+        method tvalid(tx_axis_mac_tvalid) enable((*inhigh*) EN_tx_axis_mac_tvalid) clocked_by (s_axi_aclk) reset_by (tx_axi_rstn);
+    endinterface
+    schedule (gmii.rx_dv, gmii.rx_er, gmii.rxd, gmii.tx_en, gmii.tx_er, gmii.txd, mac.irq, mdc, mdio.i, mdio.o, mdio.t, pause.req, pause.val, rx.axis_filter_tuser, rx.statistics_valid, rx.statistics_vector, rx_axis_mac.tdata, rx_axis_mac.tlast, rx_axis_mac.tuser, rx_axis_mac.tvalid, s_axi.araddr, s_axi.arready, s_axi.arvalid, s_axi.awaddr, s_axi.awready, s_axi.awvalid, s_axi.bready, s_axi.bresp, s_axi.bvalid, s_axi.rdata, s_axi.rready, s_axi.rresp, s_axi.rvalid, s_axi.wdata, s_axi.wready, s_axi.wvalid, speedis100, speedis10100, tx.ifg_delay, tx.statistics_valid, tx.statistics_vector, tx_axis_mac.tdata, tx_axis_mac.tlast, tx_axis_mac.tready, tx_axis_mac.tuser, tx_axis_mac.tvalid) CF (gmii.rx_dv, gmii.rx_er, gmii.rxd, gmii.tx_en, gmii.tx_er, gmii.txd, mac.irq, mdc, mdio.i, mdio.o, mdio.t, pause.req, pause.val, rx.axis_filter_tuser, rx.statistics_valid, rx.statistics_vector, rx_axis_mac.tdata, rx_axis_mac.tlast, rx_axis_mac.tuser, rx_axis_mac.tvalid, s_axi.araddr, s_axi.arready, s_axi.arvalid, s_axi.awaddr, s_axi.awready, s_axi.awvalid, s_axi.bready, s_axi.bresp, s_axi.bvalid, s_axi.rdata, s_axi.rready, s_axi.rresp, s_axi.rvalid, s_axi.wdata, s_axi.wready, s_axi.wvalid, speedis100, speedis10100, tx.ifg_delay, tx.statistics_valid, tx.statistics_vector, tx_axis_mac.tdata, tx_axis_mac.tlast, tx_axis_mac.tready, tx_axis_mac.tuser, tx_axis_mac.tvalid);
 endmodule
 
-instance ToAxi4LRdWrSlave#(TrimodeethbviS_axi);
-   function Axi4LRdWrSlave#(`SoC_PRM) toAxi4LRdWrSlave(TrimodeethbviS_axi s);
+instance Connectable#(TrimodemacbviGmii,GigethpcspmabviGmii);
+   module mkConnection#(TrimodemacbviGmii mac, GigethpcspmabviGmii phy)(Empty);
+      rule rx;
+	 mac.rx_dv(phy.rx_dv());
+	 mac.rx_er(phy.rx_er());
+	 mac.rxd(phy.rxd());
+      endrule
+      rule tx;
+	 phy.tx_en(mac.tx_en());
+	 phy.tx_er(mac.tx_er());
+	 phy.txd(mac.txd());
+      endrule
+   endmodule
+endinstance
+
+instance Connectable#(TrimodemacbviMdio,GigethpcspmabviMdio);
+   module mkConnection#(TrimodemacbviMdio macMdio, GigethpcspmabviMdio phyMdio)(Empty);
+      rule rl_mdio;
+	 macMdio.i(phyMdio.o());
+	 phyMdio.i(macMdio.o());
+      endrule
+   endmodule
+endinstance
+
+`ifdef FLUTE
+import TLM3         :: *;
+import Axi4         :: *;
+import AxiDefines   ::*;
+
+instance ToAxi4LRdWrSlave#(TrimodemacbviS_axi);
+   function Axi4LRdWrSlave#(`SoC_PRM) toAxi4LRdWrSlave(TrimodemacbviS_axi s);
       return (interface Axi4LRdWrSlave#(`SoC_PRM);
          interface Axi4LRdSlave read;
 	    method Action arADDR(AxiAddr#(`SoC_PRM) addr); s.araddr(truncate(addr)); endmethod
@@ -241,83 +272,34 @@ instance ToAxi4LRdWrSlave#(TrimodeethbviS_axi);
    endfunction
 endinstance
 
-instance Connectable#(TrimodeethbviGmii,GigethpcspmabviGmii);
-   module mkConnection#(TrimodeethbviGmii mac, GigethpcspmabviGmii phy)(Empty);
-      rule rx;
-	 mac.rx_dv(phy.rx_dv());
-	 mac.rx_er(phy.rx_er());
-	 mac.rxd(phy.rxd());
-      endrule
-      rule tx;
-	 phy.tx_en(mac.tx_en());
-	 phy.tx_er(mac.tx_er());
-	 phy.txd(mac.txd());
-      endrule
-   endmodule
-endinstance
-
-instance Connectable#(TrimodeethbviMdio,GigethpcspmabviMdio);
-   module mkConnection#(TrimodeethbviMdio macMdio, GigethpcspmabviMdio phyMdio)(Empty);
-      rule rl_mdio;
-	 macMdio.i(phyMdio.o());
-	 phyMdio.i(macMdio.o());
-      endrule
-   endmodule
-endinstance
-
-
-interface TriModeEthMac;
+interface TriModeMacMac;
     method Bit#(1)     mdc();
-   interface TrimodeethbviMdio          mdio;
-   interface TrimodeethbviGmii          gmii;
+   interface TrimodemacbviMdio          mdio;
+   interface TrimodemacbviGmii          gmii;
    interface Server #(SoC_Req, SoC_Rsp) bus_ifc;
-   interface TrimodeethbviTx            s_axis_tx;
-   interface TrimodeethbviRx            m_axis_rx;
+   interface TrimodemacbviTx            s_axis_tx;
+   interface TrimodemacbviRx            m_axis_rx;
    interface Clock     mm2s_aclk;
    interface Clock     s2mm_aclk;
    method Bit#(1) interrupt();
 endinterface
 
-instance Connectable#(TriModeEthMac,GigEthPcsPma);
-   module mkConnection#(TriModeEthMac mac, GigEthPcsPma phy)(Empty);
+instance Connectable#(TriModeMacMac,GigEthPcsPma);
+   module mkConnection#(TriModeMacMac mac, GigEthPcsPma phy)(Empty);
       let mdcCnx  <- mkConnection(phy.mdc,  mac.mdc); // should be a clock, but PHY is providing a clock to MAC and this would make a cycle
       let mdioCnx <- mkConnection(mac.mdio, phy.mdio);
       let gmiiCnx <- mkConnection(mac.gmii, phy.gmii);
    endmodule
 endinstance
 
-instance Connectable#(TrimodeethbviRx,AxiStreamSlave#(32));
-   module mkConnection#(TrimodeethbviRx from, AxiStreamSlave#(32) to)(Empty);
-      rule rl_axi_stream;
-	 to.tdata(extend(from.axis_mac_tdata()));
-	 to.tkeep(1); // only 8 bits valid
-	 to.tlast(from.axis_mac_tlast());
-	 to.tvalid(from.axis_mac_tvalid());
-	 //from.axis_mac_tready(to.tready()); no tready
-      endrule
-   endmodule
-endinstance
-
-instance Connectable#(AxiStreamMaster#(32),TrimodeethbviTx);
-   module mkConnection#(AxiStreamMaster#(32) from, TrimodeethbviTx to)(Empty);
-      rule rl_axi_stream;
-	 to.axis_mac_tdata(truncate(from.tdata()));
-	 // tkeep unused
-	 to.axis_mac_tlast(from.tlast());
-	 to.axis_mac_tvalid(from.tvalid());
-	 from.tready(to.axis_mac_tready());
-      endrule
-   endmodule
-endinstance
-
 (* synthesize *)
-module mkTriModeEthMac#(Clock gtx_clock)(TriModeEthMac);
+module mkTriModeMacMac#(Clock gtx_clock)(TriModeMacMac);
    let clock <- exposeCurrentClock;
    let reset <- exposeCurrentReset;
 
    let gtx_reset = reset;
 
-   let axiEth <- mkTriModeEthBvi(gtx_clock, clock, reset, reset, reset, reset);
+   let axiEth <- mkTriModeMacBvi(gtx_clock, clock, reset, reset, reset, reset);
    Axi4LRdWrSlave#(`SoC_PRM) axiRdWrSlave = toAxi4LRdWrSlave(axiEth.s_axi);
    let tlmRecv <- mkTLMRecvFromAxi4LSlave(axiRdWrSlave);
 
@@ -331,4 +313,30 @@ module mkTriModeEthMac#(Clock gtx_clock)(TriModeEthMac);
    interface mm2s_aclk = axiEth.rx.mac_aclk;
    interface s2mm_aclk = axiEth.tx.mac_aclk;
 endmodule
+`endif //FLUTE
 
+instance ToAxi4SlaveBits#(Axi4SlaveLiteBits#(12,32), TrimodemacbviS_axi);
+   function Axi4SlaveLiteBits#(12,32) toAxi4SlaveBits(TrimodemacbviS_axi s);
+      return (interface Axi4SlaveLiteBits#(12,32);
+	 method araddr = compose(s.araddr, extend);
+	 method arready = s.arready;
+	 method arvalid = s.arvalid;
+	 method awaddr = compose(s.awaddr, extend);
+	 method awready = s.awready;
+	 method awvalid = s.awvalid;
+	 method bready = s.bready;
+	 method bresp = s.bresp;
+	 method bvalid = s.bvalid;
+	 method rdata = s.rdata;
+	 method rready = s.rready;
+	 method rresp = s.rresp;
+	 method rvalid = s.rvalid;
+	 method wdata = s.wdata;
+	 method wready = s.wready;
+	 method Action      wvalid(Bit#(1) v);
+	    s.wvalid(v);
+	    //s.wstrb(pack(replicate(v)));
+	 endmethod
+	 endinterface);
+   endfunction
+endinstance
