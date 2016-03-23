@@ -89,7 +89,12 @@ if {[version -short] == "2014.2"} {
 
 fpgamake_ipcore axi_uart16550 2.0  axi_uart16550_1 [list CONFIG.USE_BOARD_FLOW {true} CONFIG.UART_BOARD_INTERFACE {rs232_uart} CONFIG.C_HAS_EXTERNAL_XIN {1} CONFIG.C_HAS_EXTERNAL_RCLK {0} CONFIG.C_EXTERNAL_XIN_CLK_HZ_d {3.686400}  CONFIG.C_EXTERNAL_XIN_CLK_HZ {3686400}]
 
-fpgamake_ipcore axi_intc 4.1 axi_intc_0 [list CONFIG.C_NUM_INTR_INPUTS {16} CONFIG.C_NUM_SW_INTR {0} CONFIG.C_HAS_ILR {1} CONFIG.C_S_AXI_ACLK_FREQ_MHZ  {250}]
+if {[version -short] == "2014.2"} {
+    fpgamake_ipcore axi_intc 4.1 axi_intc_0 [list CONFIG.C_NUM_INTR_INPUTS {16} CONFIG.C_NUM_SW_INTR {0} CONFIG.C_HAS_ILR {1}]
+} else {
+    fpgamake_ipcore axi_intc 4.1 axi_intc_0 [list CONFIG.C_NUM_INTR_INPUTS {16} CONFIG.C_NUM_SW_INTR {0} CONFIG.C_HAS_ILR {1} CONFIG.C_S_AXI_ACLK_FREQ_MHZ  {250}]
+}
+
 fpgamake_ipcore axi_dma 7.1 axi_dma_0 [list CONFIG.c_sg_include_stscntrl_strm {1} CONFIG.c_m_axi_mm2s_data_width $databuswidth CONFIG.c_m_axi_s2mm_data_width $databuswidth CONFIG.c_mm2s_burst_size {8} CONFIG.c_s2mm_burst_size {8} CONFIG.c_include_mm2s_dre {1} CONFIG.c_sg_use_stsapp_length {1} CONFIG.c_include_s2mm_dre {1}]
 
 fpgamake_ipcore axi_iic 2.0 axi_iic_0 [list CONFIG.AXI_ACLK_FREQ_MHZ {250} CONFIG.C_GPO_WIDTH {8}]
@@ -97,21 +102,26 @@ fpgamake_ipcore axi_iic 2.0 axi_iic_0 [list CONFIG.AXI_ACLK_FREQ_MHZ {250} CONFI
 fpgamake_ipcore axi_quad_spi 3.2 axi_spi_0 [list CONFIG.C_USE_STARTUP {0} CONFIG.C_SPI_MODE {0} CONFIG.C_XIP_MODE {0} CONFIG.C_USE_STARTUP_INT {0} CONFIG.C_SCK_RATIO {16} CONFIG.C_FIFO_DEPTH {16} CONFIG.C_TYPE_OF_AXI4_INTERFACE {0}]
 
 ## does not exist with vivado 2014.2
-if {[version -short] >= "2014.2"} {
+if {[version -short] > "2014.2"} {
     fpgamake_ipcore axi_ethernet 7.0 axi_ethernet_1000basex [list CONFIG.ETHERNET_BOARD_INTERFACE {sfp1} CONFIG.processor_mode {true} CONFIG.DIFFCLK_BOARD_INTERFACE {sfp_mgt_clk} CONFIG.axiliteclkrate {250.0} CONFIG.PHY_TYPE {1000BaseX}]
 
-    #fpgamake_ipcore axi_ethernet 7.0 axi_ethernet_sgmii [list CONFIG.ETHERNET_BOARD_INTERFACE {sfp_sgmii1} CONFIG.processor_mode {true} CONFIG.DIFFCLK_BOARD_INTERFACE {sfp_mgt_clk} CONFIG.axiliteclkrate {250.0} CONFIG.PHY_TYPE {SGMII}]
-} else {
-    ## 2014.2: 8.2
-    ## 2015.4: 9.0
     fpgamake_ipcore tri_mode_ethernet_mac 9.0 tri_mode_ethernet_mac_0 [list CONFIG.Physical_Interface {Internal}  CONFIG.MAC_Speed {1000_Mbps} CONFIG.SupportLevel {1}]
 
     ## 2014.2: 14.2
     ## 2015.4: 15.1
     fpgamake_ipcore gig_ethernet_pcs_pma 15.1 gig_ethernet_pcs_pma_0 [list  CONFIG.USE_BOARD_FLOW {true} CONFIG.Management_Interface {true} CONFIG.ETHERNET_BOARD_INTERFACE {sfp1} CONFIG.DIFFCLK_BOARD_INTERFACE {sfp_mgt_clk} CONFIG.Standard {1000BASEX} CONFIG.SupportLevel {Include_Shared_Logic_in_Core}]
+
+} else {
+    ## 2014.2: 8.2
+    ## 2015.4: 9.0
+    fpgamake_ipcore tri_mode_ethernet_mac 8.2 tri_mode_ethernet_mac_0 [list CONFIG.Physical_Interface {Internal}  CONFIG.MAC_Speed {1000_Mbps} CONFIG.SupportLevel {1}]
+
+    ## 2014.2: 14.2
+    ## 2015.4: 15.1
+    fpgamake_ipcore gig_ethernet_pcs_pma 14.2 gig_ethernet_pcs_pma_0 [list  CONFIG.USE_BOARD_FLOW {true} CONFIG.Management_Interface {true} CONFIG.ETHERNET_BOARD_INTERFACE {sfp1} CONFIG.DIFFCLK_BOARD_INTERFACE {sfp_mgt_clk} CONFIG.Standard {1000BASEX} CONFIG.SupportLevel {Include_Shared_Logic_in_Core}]
 }
 
-#fpgamake_ipcore axi_gpio 2.0 axi_gpio_0 []
-
-fpgamake_ipcore mig_7series 2.1 ddr3_v2_1 [list CONFIG.XML_INPUT_FILE [pwd]/mig_a.prj CONFIG.RESET_BOARD_INTERFACE {Custom} CONFIG.MIG_DONT_TOUCH_PARAM {Custom} CONFIG.BOARD_MIG_PARAM {Custom}]
+if {[version -short] > "2014.2"} {
+    fpgamake_ipcore mig_7series 2.1 ddr3_v2_1 [list CONFIG.XML_INPUT_FILE [pwd]/mig_a.prj CONFIG.RESET_BOARD_INTERFACE {Custom} CONFIG.MIG_DONT_TOUCH_PARAM {Custom} CONFIG.BOARD_MIG_PARAM {Custom}]
+}
 
