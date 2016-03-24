@@ -1,26 +1,165 @@
 
+import FIFOF::*;
+import BRAMFIFO::*;
 import GetPut::*;
 import Clocks::*;
 import Connectable::*;
+import Probe::*;
+import Vector::*;
+
 import AxiBits::*;
 import AxiStream::*;
 import AxiEthBufferBvi::*;
-import TriModeEthMacBvi::*;
+import GetPutWithClocks::*;
+import TriModeMacBvi::*;
 import GigEthPcsPmaBvi::*;
 import AxiEth1000BaseX::*;
+import SyncAxisFifo32x1024::*;
 
 interface AxiEthSubsystem;
-   interface AxiStreamMaster#(32) m_axis_rxd;
-   interface AxiStreamMaster#(32) m_axis_rxs;
-   interface AxiStreamSlave#(32)  s_axis_txd;
-   interface AxiStreamSlave#(32)  s_axis_txc;
-   interface TrimodeethbviS_axi s_axi;
-   interface TrimodeethbviMac mac;
+   interface TrimodemacRx_axis_mac m_axis_rxd;
+   //interface AxiStreamMaster#(32) m_axis_rxs;
+   interface TrimodemacTx_axis_mac  s_axis_txd;
+   //interface AxiStreamSlave#(32)  s_axis_txc;
+   interface TrimodemacRx     rx;
+   interface TrimodemacTx     tx;
+
+   interface TrimodemacS_axi s_axi;
+   interface TrimodemacMac mac;
    interface AxiethbviSfp sfp;
    interface AxiethbviMgt mgt;
    interface GigethpcspmabviSignal signal;
    interface GigethpcspmabviMmcm mmcm;
 endinterface
+
+instance Connectable#(TrimodemacGmii,GigethpcspmabviGmii);
+   module mkConnection#(TrimodemacGmii mac, GigethpcspmabviGmii phy)(Empty);
+      rule rx;
+	 mac.rx_dv(phy.rx_dv());
+	 mac.rx_er(phy.rx_er());
+	 mac.rxd(phy.rxd());
+      endrule
+      rule tx;
+	 phy.tx_en(mac.tx_en());
+	 phy.tx_er(mac.tx_er());
+	 phy.txd(mac.txd());
+      endrule
+   endmodule
+endinstance
+
+instance Connectable#(TrimodemacMdio,GigethpcspmabviMdio);
+   module mkConnection#(TrimodemacMdio macMdio, GigethpcspmabviMdio phyMdio)(Empty);
+      rule rl_mdio;
+	 macMdio.i(phyMdio.o());
+	 phyMdio.i(macMdio.o());
+      endrule
+   endmodule
+endinstance
+
+instance Connectable#(TriModeMac,GigEthPcsPma);
+   module mkConnection#(TriModeMac mac, GigEthPcsPma phy)(Empty);
+      let mdcCnx  <- mkConnection(phy.mdc,  mac.mdc); // should be a clock, but PHY is providing a clock to MAC and this would make a cycle
+      let mdioCnx <- mkConnection(mac.mdio, phy.mdio);
+      let gmiiCnx <- mkConnection(mac.gmii, phy.gmii);
+   endmodule
+endinstance
+
+instance ConnectableWithClocks#(AxiStreamMaster#(32), TrimodemacTx_axis_mac);
+   module mkConnectionWithClocks#(AxiStreamMaster#(32) from, TrimodemacTx_axis_mac to, Clock fromClock, Reset fromReset, Clock toClock, Reset toReset)(Empty);
+      Reg#(Bit#(2)) phaseReg <- mkReg(0, clocked_by toClock, reset_by toReset);
+      let sfifo <- mkSyncAxisFifo32x1024(fromClock, fromReset, toClock, toReset);
+
+      Probe#(Bit#(32)) fromDataProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
+      Probe#(Bit#(4)) fromKeepProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
+      Probe#(Bit#(1)) fromLastProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
+      Probe#(Bit#(8)) toDataProbe <- mkProbe(clocked_by toClock, reset_by toReset);
+      Probe#(Bit#(1)) toLastProbe <- mkProbe(clocked_by toClock, reset_by toReset);
+      Probe#(Bit#(2)) phaseProbe    <- mkProbe(clocked_by toClock, reset_by toReset);
+
+      mkConnection(from, sfifo.s_axis);
+
+      Wire#(Bool) doDeq <- mkDWire(False, clocked_by toClock, reset_by toReset);
+      rule rl_expand if (to.tready() == 1 && sfifo.m_axis.tvalid() == 1);
+	 Vector#(4,Bit#(8)) data = unpack(sfifo.m_axis.tdata());
+	 let keep = sfifo.m_axis.tkeep();
+	 let last = sfifo.m_axis.tlast();
+	 //match { .data, .keep, .last } = sfifo.first();
+	 let phase = phaseReg;
+	 Bool lastPhase = (phaseReg == 3);
+	 Bit#(4) moreData = keep[3:phase+1];
+	 if (!lastPhase)
+	    lastPhase = (moreData != 0);
+	 phase = phase + 1;
+
+	 to.tdata(data[phase]);
+	 //to.tkeep(keep[phase]);
+	 to.tlast(pack(last == 1 && lastPhase));
+
+	 toDataProbe <= data[phase];
+	 toLastProbe <= pack(last == 1 && lastPhase);
+
+	 if (lastPhase) begin
+	    //sfifo.deq();
+	    doDeq <= True;
+	    phase = 0;
+	 end
+	 phaseProbe <= phaseReg;
+	 phaseReg <= phase;
+      endrule
+
+      rule rl_to_handshake;
+	 to.tvalid(sfifo.m_axis.tvalid());
+	 sfifo.m_axis.tready(pack(doDeq));
+      endrule
+   endmodule
+endinstance
+
+instance ConnectableWithClocks#(TrimodemacRx_axis_mac, AxiStreamSlave#(32));
+   module mkConnectionWithClocks#(TrimodemacRx_axis_mac from, AxiStreamSlave#(32) to, Clock fromClock, Reset fromReset, Clock toClock, Reset toReset)(Empty);
+      Reg#(Bit#(2)) phaseReg <- mkReg(0, clocked_by fromClock, reset_by fromReset);
+      Vector#(4,Reg#(Bit#(8))) dataReg <- replicateM(mkReg(0), clocked_by fromClock, reset_by fromReset);
+      Reg#(Bit#(4)) keepReg <- mkReg(0, clocked_by fromClock, reset_by fromReset);
+      let sfifo <- mkSyncAxisFifo32x1024(fromClock, fromReset, toClock, toReset);
+
+      Wire#(Bool) doEnq <- mkDWire(False, clocked_by fromClock, reset_by fromReset);
+
+      Probe#(Bool) probeOverrun <- mkProbe(clocked_by fromClock, reset_by fromReset);
+      rule rl_overrun if (from.tvalid() == 1 && sfifo.s_axis.tready() == 0);
+	 probeOverrun <= True;
+      endrule
+
+      rule rl_combine if (unpack(from.tvalid()));
+	 Bool last = unpack(from.tlast());
+	 let phase = phaseReg + 1;
+	 Vector#(4,Bit#(8)) data = readVReg(dataReg);
+	 let keep = keepReg;
+	 keep[phase]             = 1; //from.tkeep();
+	 data[phase] = from.tdata();
+
+	 sfifo.s_axis.tdata(pack(data));
+	 sfifo.s_axis.tkeep(keep);
+	 sfifo.s_axis.tlast(pack(last));
+
+	 if (last || phaseReg == 3) begin
+	    phase = 0;
+	    data  = unpack(0);
+	    keep  = 0;
+	    doEnq <= True;
+	    //sfifo.enq(tuple3(pack(data), keep, pack(last)));
+	 end
+	 phaseReg <= phase;
+	 writeVReg(dataReg, data);
+	 keepReg  <= keep;
+      endrule
+
+      rule rl_from_handshake;
+	 //from.tready(pack(sfifo.s_axis.tready())); // scary -- no backpressure
+	 sfifo.s_axis.tvalid(pack(doEnq));
+      endrule	 
+
+      mkConnection(sfifo.m_axis, to);
+   endmodule
+endinstance
 
 module mkAxiEthBvi#(Clock axis_clk, Clock ref_clk)(AxiEthSubsystem);
    let reset <- exposeCurrentReset;
@@ -32,7 +171,7 @@ module mkAxiEthBvi#(Clock axis_clk, Clock ref_clk)(AxiEthSubsystem);
   // connect_bd_net -net pcs_pma_userclk2_out [get_bd_ports userclk2_out] [get_bd_pins eth_buf/GTX_CLK] [get_bd_pins eth_mac/gtx_clk] [get_bd_pins pcs_pma/userclk2_out]
    Clock gtx_clk = pcs.userclk2.out;
 
-   let trimodemac <- mkTriModeMacBvi(gtx_clk, axis_clk, reset, reset, reset);
+   let trimodemac <- mkTriModeMacBvi(gtx_clk, axis_clk, reset, reset, reset, reset);
 
   // connect_bd_intf_net -intf_net eth_mac_gmii [get_bd_intf_pins eth_mac/gmii] [get_bd_intf_pins pcs_pma/gmii_pcs_pma]
    let gmiiConnection <- mkConnection(trimodemac.gmii, pcs.gmii);
@@ -82,10 +221,10 @@ module mkAxiEthBvi#(Clock axis_clk, Clock ref_clk)(AxiEthSubsystem);
    // connect_bd_net -net tx_ifg_delay_1 [get_bd_ports tx_ifg_delay] [get_bd_pins eth_mac/tx_ifg_delay]
 
 
-   interface m_axis_rxd = buffer.axi_str_rxd;
-   //interface m_axis_rxs = buffer.axi_str_rxs;
-   interface s_axis_txd = buffer.axi_str_txd;
-   //interface s_axis_txc = buffer.axi_str_txc;
+   interface m_axis_rxd = trimodemac.rx_axis_mac;
+   interface s_axis_txd = trimodemac.tx_axis_mac;
+   interface rx = trimodemac.rx;
+   interface tx = trimodemac.tx;
    interface s_axi = trimodemac.s_axi;
    interface mac   = trimodemac.mac;
 
