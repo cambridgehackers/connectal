@@ -29,6 +29,14 @@ interface SpikeIicPins;
 endinterface
 
 (* always_ready, always_enabled *)
+interface SpikeSpiPins;
+   interface Inout#(Bit#(1)) miso;
+   interface Inout#(Bit#(1)) mosi;
+   interface Inout#(Bit#(1)) sck;
+   interface Inout#(Bit#(1)) ss;
+endinterface
+
+(* always_ready, always_enabled *)
 interface SpikeUartPins;
 `ifndef BOARD_miniitx100
    method Bit#(1) tx;
@@ -45,6 +53,7 @@ interface SpikeHwPins;
    interface EthPins eth;
    interface SpikeUartPins uart;
    interface SpikeIicPins iic;
+   interface SpikeSpiPins spi;
 `ifdef IncludeFlash
    interface BpiFlashPins flash;
 `endif

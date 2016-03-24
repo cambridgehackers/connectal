@@ -26,6 +26,7 @@ import PhysMemToBram::*;
 import BpiFlash::*;
 import AxiIntcBvi::*;
 import AxiIic::*;
+import AxiSpiBvi::*;
 import AxiUart::*;
 `ifdef EthernetSgmii
 import AxiEthBvi::*;
@@ -129,14 +130,14 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
 `endif
    let axiIntcBvi <- mkAxiIntcBvi(clock, newReset.new_rst);
    let axiIicBvi  <- mkAxiIicBvi(clock, newReset.new_rst);
+   let axiSpiBvi  <- mkAxiSpiBvi(clock, clock, newReset.new_rst);
    let axiUartBvi <- mkAxiUartBvi(clock, newReset.new_rst, uartClk);
    let axiDmaBvi <- mkAxiDmaBvi(clock,clock,clock,clock,newReset.new_rst);
 `ifdef IncludeEthernet
-   let axiEthBvi <- mkAxiEthBvi(clock, host.tsys_clk_200mhz_buf, clock,
-				newReset.new_rst, newReset.new_rst, newReset.new_rst, newReset.new_rst, newReset.new_rst);
+//   let axiEthBvi <- mkAxiEthBvi(clock, host.tsys_clk_200mhz_buf, clock,
+//				newReset.new_rst, newReset.new_rst, newReset.new_rst, newReset.new_rst, newReset.new_rst);
+   let eth <- mkEth(host.tsys_clk_200mhz_buf);
 `endif
-
-   
 
    Reg#(Bit#(32)) objId <- mkReg(0);
    Reg#(Bit#(1))  iicResetReg <- mkReg(0);
@@ -155,6 +156,7 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
       _intr[4] = axiEthBvi.interrupt();
 `endif
       _intr[5] = axiIicBvi.iic2intc_irpt();
+      _intr[6] = axiSpiBvi.ip2intc_irpt();
       return _intr;
    endfunction
 
@@ -213,12 +215,16 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
    Axi4SlaveLiteBits#(9,32) axiIicSlaveLite  = toAxi4SlaveBits(axiIicBvi.s_axi);
    PhysMemSlave#(12,32) axiIicMemSlave       <- mkPhysMemSlave(axiIicSlaveLite);
 
+   Axi4SlaveLiteBits#(7,32) axiSpiSlaveLite  = toAxi4SlaveBits(axiSpiBvi.s_axi);
+   PhysMemSlave#(12,32) axiSpiMemSlave       <- mkPhysMemSlave(axiSpiSlaveLite);
+
    PhysMemSlave#(12,32) axiDmaMemSlave       <- mkPhysMemSlave(axiDmaBvi.s_axi_lite);
 
 `ifdef IncludeEthernet
    Axi4SlaveLiteBits#(12,32) axiEthSlaveLite = toAxi4SlaveBits(axiEthBvi.s_axi);
    PhysMemSlave#(12,32) axiEthMemSlave       <- mkPhysMemSlave(axiEthSlaveLite);
-   PhysMemSlave#(20,32) deviceSlaveMux       <- mkPhysMemSlaveMux(vec(axiUartMemSlave, axiIntcMemSlave, axiDmaMemSlave, axiIicMemSlave, axiEthMemSlave));
+   PhysMemSlave#(20,32) deviceSlaveMux       <- mkPhysMemSlaveMux(vec(axiUartMemSlave, axiIntcMemSlave, axiDmaMemSlave, axiIicMemSlave,
+								      axiEthMemSlave, axiSpiMemSlave));
 `else
    PhysMemSlave#(20,32) deviceSlaveMux       <- mkPhysMemSlaveMux(vec(axiUartMemSlave, axiIntcMemSlave, axiDmaMemSlave, axiIicMemSlave));
 `endif
@@ -297,6 +303,45 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
       axiIicBvi.sda.i(sdaIOBuf.o);
       axiIicBvi.scl.i(sclIOBuf.o);
    endrule
+
+   IOBUF spiSckIOBuf  <- mkIOBUF(axiSpiBvi.sck.t, axiSpiBvi.sck.o);
+   IOBUF spiSsIOBuf   <- mkIOBUF(axiSpiBvi.ss.t, axiSpiBvi.ss.o);
+   IOBUF spiMosiIOBuf <- mkIOBUF(axiSpiBvi.io0.t, axiSpiBvi.io0.o);
+   IOBUF spiMisoIOBuf <- mkIOBUF(axiSpiBvi.io1.t, axiSpiBvi.io1.o);
+   rule spi_o;
+      axiSpiBvi.sck.i(spiSckIOBuf.o);
+      axiSpiBvi.ss.i(spiSsIOBuf.o);
+      axiSpiBvi.io0.i(spiMosiIOBuf.o);
+      axiSpiBvi.io1.i(spiMisoIOBuf.o);
+   endrule
+
+   Probe#(Bit#(1)) spi_sck_i_probe <- mkProbe();
+   Probe#(Bit#(1)) spi_sck_o_probe <- mkProbe();
+   Probe#(Bit#(1)) spi_sck_t_probe <- mkProbe();
+   Probe#(Bit#(1)) spi_ss_i_probe <- mkProbe();
+   Probe#(Bit#(1)) spi_ss_o_probe <- mkProbe();
+   Probe#(Bit#(1)) spi_ss_t_probe <- mkProbe();
+   Probe#(Bit#(1)) spi_miso_i_probe <- mkProbe();
+   Probe#(Bit#(1)) spi_miso_o_probe <- mkProbe();
+   Probe#(Bit#(1)) spi_miso_t_probe <- mkProbe();
+   Probe#(Bit#(1)) spi_mosi_i_probe <- mkProbe();
+   Probe#(Bit#(1)) spi_mosi_o_probe <- mkProbe();
+   Probe#(Bit#(1)) spi_mosi_t_probe <- mkProbe();
+   rule rl_spi_trace;
+      spi_sck_i_probe <= spiSckIOBuf.o;
+      spi_sck_o_probe <= axiSpiBvi.sck.o;
+      spi_sck_t_probe <= axiSpiBvi.sck.t;
+      spi_ss_i_probe <= spiSsIOBuf.o;
+      spi_ss_o_probe <= axiSpiBvi.ss.o;
+      spi_ss_t_probe <= axiSpiBvi.ss.t;
+      spi_miso_i_probe <= spiMisoIOBuf.o;
+      spi_miso_o_probe <= axiSpiBvi.io1.o;
+      spi_miso_t_probe <= axiSpiBvi.io1.t;
+      spi_mosi_i_probe <= spiMosiIOBuf.o;
+      spi_mosi_o_probe <= axiSpiBvi.io0.o;
+      spi_mosi_t_probe <= axiSpiBvi.io0.t;
+   endrule
+
 
    FIFOF#(Tuple3#(DmaChannel,Bool,MemRequest)) traceFifo <- mkDualClockBramFIFOF(clock, reset, clock, reset);
    FIFOF#(Tuple3#(DmaChannel,Bool,MemRequest)) traceFifo0 <- mkFIFOF();
@@ -414,6 +459,12 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
          interface scl = sclIOBuf.io;
          interface sda = sdaIOBuf.io;
 	 method mux_reset = iicResetReg;
+      endinterface
+      interface SpikeSpiPins spi;
+         interface sck  = spiSckIOBuf.io;
+         interface ss   = spiSsIOBuf.io;
+         interface miso = spiMisoIOBuf.io;
+         interface mosi = spiMosiIOBuf.io;
       endinterface
       interface Clock deleteme_unused_clock = clock;
       interface Reset deleteme_unused_reset = reset;

@@ -56,6 +56,7 @@ CONNECTALFLAGS += -D XILINX_SYS_CLK -D IMPORT_HOSTIF
 IPDIR=cores
 CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/axi_intc_0/axi_intc_0.xci
 CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/axi_iic_0/axi_iic_0.xci
+CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/axi_spi_0/axi_spi_0.xci
 CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/axi_uart16550_1/axi_uart16550_1.xci
 CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/axi_dma_0/axi_dma_0.xci
 

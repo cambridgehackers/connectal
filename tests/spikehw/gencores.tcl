@@ -94,6 +94,8 @@ fpgamake_ipcore axi_dma 7.1 axi_dma_0 [list CONFIG.c_sg_include_stscntrl_strm {1
 
 fpgamake_ipcore axi_iic 2.0 axi_iic_0 [list CONFIG.AXI_ACLK_FREQ_MHZ {250} CONFIG.C_GPO_WIDTH {8}]
 
+fpgamake_ipcore axi_quad_spi 3.2 axi_spi_0 [list CONFIG.C_USE_STARTUP {0} CONFIG.C_SPI_MODE {0} CONFIG.C_XIP_MODE {0} CONFIG.C_USE_STARTUP_INT {0} CONFIG.C_SCK_RATIO {16} CONFIG.C_FIFO_DEPTH {16} CONFIG.C_TYPE_OF_AXI4_INTERFACE {0}]
+
 ## does not exist with vivado 2014.2
 if {[version -short] >= "2014.2"} {
     fpgamake_ipcore axi_ethernet 7.0 axi_ethernet_1000basex [list CONFIG.ETHERNET_BOARD_INTERFACE {sfp1} CONFIG.processor_mode {true} CONFIG.DIFFCLK_BOARD_INTERFACE {sfp_mgt_clk} CONFIG.axiliteclkrate {250.0} CONFIG.PHY_TYPE {1000BaseX}]
