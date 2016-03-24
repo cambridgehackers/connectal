@@ -66,8 +66,9 @@ CONNECTALFLAGS += --constraint=spikehw.xdc --implconstraint=spikehw.xdc
 ##PREBUILD_DEPS = $(IPDIR)/$(BOARD)/axi_dma_0/axi_dma_0.xci $(IPDIR)/$(BOARD)/axi_intc_0/axi_intc_0.xci
 
 ifeq ($(INCLUDE_ETHERNET),1)
-CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/axi_ethernet_sgmii/axi_ethernet_sgmii.xci
-CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/axi_ethernet_1000basex/axi_ethernet_1000basex.xci
+#CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/axi_ethernet_1000basex/axi_ethernet_1000basex.xci
+CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/tri_mode_ethernet_mac_0/tri_mode_ethernet_mac_0.xci
+CONNECTALFLAGS+= --xci=$(IPDIR)/$(BOARD)/gig_ethernet_pcs_pma_0/gig_ethernet_pcs_pma_0.xci
 CONNECTALFLAGS+= -D IncludeEthernet
 ##PREBUILD_DEPS += $(IPDIR)/$(BOARD)/axi_ethernet_0/axi_ethernet_0.xci
 endif

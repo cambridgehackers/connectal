@@ -16,6 +16,7 @@ import Probe::*;
 import ConnectalXilinxCells::*;
 import ConnectalBramFifo::*;
 import ConnectalConfig::*;
+import GetPutWithClocks::*;
 import CtrlMux::*;
 import HostInterface::*;
 import MemTypes::*;
@@ -31,7 +32,12 @@ import AxiUart::*;
 `ifdef EthernetSgmii
 import AxiEthBvi::*;
 `else
-import AxiEth1000BaseX::*;
+//import AxiEth1000BaseX::*;
+import AxiEthSubsystem::*;
+import TriModeMacBvi::*;
+import GigEthPcsPmaBvi::*;
+import AxiEthBufferBvi::*;
+import AxiEth1000BaseX::*; // for interfaces
 `endif
 import AxiDmaBvi::*;
 import SpikeHwPins::*;
@@ -136,7 +142,8 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
 `ifdef IncludeEthernet
 //   let axiEthBvi <- mkAxiEthBvi(clock, host.tsys_clk_200mhz_buf, clock,
 //				newReset.new_rst, newReset.new_rst, newReset.new_rst, newReset.new_rst, newReset.new_rst);
-   let eth <- mkEth(host.tsys_clk_200mhz_buf);
+   let axiEthBvi <- AxiEthSubsystem::mkAxiEthBvi(clock, host.tsys_clk_200mhz_buf, reset_by newReset.new_rst);
+
 `endif
 
    Reg#(Bit#(32)) objId <- mkReg(0);
@@ -153,7 +160,7 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
       _intr[2] = axiDmaBvi.mm2s.introut(); // tx
 `ifdef IncludeEthernet
       _intr[3] = axiEthBvi.mac.irq();
-      _intr[4] = axiEthBvi.interrupt();
+//      _intr[4] = axiEthBvi.interrupt();
 `endif
       _intr[5] = axiIicBvi.iic2intc_irpt();
       _intr[6] = axiSpiBvi.ip2intc_irpt();
@@ -194,12 +201,12 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
 
 `ifdef IncludeEthernet
    // packet data and status from the ethernet
-   mkConnection(axiEthBvi.m_axis_rxd, axiDmaBvi.s_axis_s2mm);
-   mkConnection(axiEthBvi.m_axis_rxs, axiDmaBvi.s_axis_s2mm_sts);
+   mkConnectionWithClocks(axiEthBvi.m_axis_rxd, axiDmaBvi.s_axis_s2mm, axiEthBvi.rx.mac_aclk, axiEthBvi.rx.reset, clock, reset);
+   //mkConnection(axiEthBvi.m_axis_rxs, axiDmaBvi.s_axis_s2mm_sts);
 
    // packet data and control to the ethernet
-   mkConnection(axiDmaBvi.m_axis_mm2s,       axiEthBvi.s_axis_txd);
-   mkConnection(axiDmaBvi.m_axis_mm2s_cntrl, axiEthBvi.s_axis_txc);
+   mkConnectionWithClocks(axiDmaBvi.m_axis_mm2s,       axiEthBvi.s_axis_txd, clock, reset, axiEthBvi.tx.mac_aclk, axiEthBvi.tx.reset);
+   //mkConnection(axiDmaBvi.m_axis_mm2s_cntrl, axiEthBvi.s_axis_txc);
 `endif
 
    Axi4MasterBits#(32,DataBusWidth,MemTagSize,Empty) m_axi_mm2s = toAxi4MasterBits(axiDmaBvi.m_axi_mm2s);
