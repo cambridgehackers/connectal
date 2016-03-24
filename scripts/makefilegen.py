@@ -462,15 +462,22 @@ if __name__=='__main__':
     substs['FPGAMAKE_DEFINE'] = '-D BSV_POSITIVE_RESET' if 'BSV_POSITIVE_RESET' in options.bsvdefine else ''
     bitsmake=fpgamakeRuleTemplate % substs
 
+    ## make list of unique bsvpaths, in the order they were given
+    unique_bsvpaths = []
+    for l in [[os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in (options.bsvfile + [project_dir])],
+              [os.path.abspath(bsvpath) for bsvpath in options.bsvpath],
+              [os.path.join(connectaldir, 'bsv')],
+              [os.path.join(connectaldir, 'lib/bsv')],
+              [os.path.join(connectaldir, 'generated/xilinx')],
+              [os.path.join(connectaldir, 'generated/altera')]]:
+        for p in l:
+            if p not in unique_bsvpaths:
+                unique_bsvpaths.append(p)
+
     if options.protobuf:
         protolist = [os.path.abspath(fn) for fn in options.protobuf]
     make.write(makefileTemplate % {'connectaldir': connectaldir,
-                                   'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in (options.bsvfile + [project_dir])])
-                                                            | set([os.path.abspath(bsvpath) for bsvpath in options.bsvpath])
-                                                            | set([os.path.join(connectaldir, 'bsv')])
-                                                            | set([os.path.join(connectaldir, 'lib/bsv')])
-                                                            | set([os.path.join(connectaldir, 'generated/xilinx')])
-                                                            | set([os.path.join(connectaldir, 'generated/altera')]))),
+                                   'bsvpath': ':'.join(unique_bsvpaths),
                                    'bsvdefines': util.foldl((lambda e,a: e+' -D '+a), '', bsvdefines),
                                    'boardname': boardname,
                                    'OS': options.os,
