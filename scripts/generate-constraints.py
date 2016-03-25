@@ -83,8 +83,9 @@ if __name__=='__main__':
             used = []
             boardPinInfo = {}
             pinName = ''
-            if not projectPinInfo.items()[0][0] in binding:
-               continue
+            pinFound = len([x for x in projectPinInfo.keys() if x in bindings.keys()])
+            if pinFound is not 1:
+                continue
             #print('PPP', projectPinInfo)
             for groupName in bindings:
                 if projectPinInfo.has_key(groupName):
