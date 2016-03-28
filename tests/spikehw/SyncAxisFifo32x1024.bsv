@@ -17,7 +17,9 @@
 */
 
 import Clocks::*;
+import CFFIFO::*;
 import DefaultValue::*;
+import FIFOF::*;
 import XilinxCells::*;
 import GetPut::*;
 import AxiBits::*;
@@ -70,3 +72,32 @@ module mkSyncAxisFifo32x1024#(Clock s_aclk, Reset s_aresetn, Clock m_aclk, Reset
     endinterface
     schedule (m_axis.tdata, m_axis.tkeep, m_axis.tlast, m_axis.tready, m_axis.tvalid, s_axis.tdata, s_axis.tkeep, s_axis.tlast, s_axis.tready, s_axis.tvalid) CF (m_axis.tdata, m_axis.tkeep, m_axis.tlast, m_axis.tready, m_axis.tvalid, s_axis.tdata, s_axis.tkeep, s_axis.tlast, s_axis.tready, s_axis.tvalid);
 endmodule
+
+module mkSyncAxisFifo32x1024FIFOF#(Clock fromClock, Reset fromReset, Clock toClock, Reset toReset)(FIFOF#(a)) provisos (Bits#(a, asz), Add#(asz, a__, 32));
+   let fromFIFOF <- mkCFFIFOF(clocked_by fromClock, reset_by fromReset);
+   let syncFIFOF <- mkSyncAxisFifo32x1024(fromClock, fromReset, toClock, toReset);
+   let   toFIFOF <- mkCFFIFOF(clocked_by toClock, reset_by toReset);
+
+   rule rl_from if (syncFIFOF.s_axis.tready() == 1);
+      syncFIFOF.s_axis.tdata(extend(pack(fromFIFOF.first())));
+   endrule
+   rule rl_from_handshake;
+      syncFIFOF.s_axis.tvalid(pack(fromFIFOF.notEmpty()));
+      syncFIFOF.s_axis.tkeep(maxBound);
+      syncFIFOF.s_axis.tlast(1);
+   endrule
+
+   rule rl_to if (syncFIFOF.m_axis.tvalid() == 1);
+      toFIFOF.enq(unpack(truncate(syncFIFOF.m_axis.tdata)));
+   endrule
+   rule rl_to_handshake;
+      syncFIFOF.m_axis.tready(pack(toFIFOF.notFull()));
+   endrule
+
+   method notEmpty = toFIFOF.notEmpty;
+   method first    = toFIFOF.first;
+   method deq      = toFIFOF.deq;
+   method enq      = fromFIFOF.enq;
+   method notFull  = fromFIFOF.notFull;
+endmodule
+   
