@@ -4,7 +4,18 @@ import BRAMFIFO::*;
 import GetPut::*;
 import Clocks::*;
 import Connectable::*;
+`define PROBE_ME
+`ifdef PROBE_ME
 import Probe::*;
+`else
+interface Probe#(type a);
+   method Action _write(a v);
+endinterface   
+module mkProbe(Probe#(a));
+   method Action _write(a v);
+   endmethod
+endmodule
+`endif
 import Vector::*;
 
 import AxiBits::*;
@@ -15,16 +26,18 @@ import TriModeMacBvi::*;
 import GigEthPcsPmaBvi::*;
 import AxiEth1000BaseX::*;
 import SyncAxisFifo32x1024::*;
+import AxiDmaBvi::*;
 
 interface AxiEthSubsystem;
-   interface TrimodemacRx_axis_mac m_axis_rxd;
-   //interface AxiStreamMaster#(32) m_axis_rxs;
-   interface TrimodemacTx_axis_mac  s_axis_txd;
-   //interface AxiStreamSlave#(32)  s_axis_txc;
-   interface TrimodemacRx     rx;
-   interface TrimodemacTx     tx;
+   interface AxidmabviMm2s     mm2s_dma;
+   interface AxidmabviS2mm     s2mm_dma;
+   interface AxidmabviM_axi_mm2s     m_axi_mm2s;
+   interface AxidmabviM_axi_s2mm     m_axi_s2mm;
+   interface AxidmabviM_axi_sg       m_axi_sg;
 
-   interface TrimodemacS_axi s_axi;
+   interface Axi4SlaveLiteBits#(10,32) s_axi_dma;
+
+   interface TrimodemacS_axi s_axi_mac;
    interface TrimodemacMac mac;
    interface AxiethbviSfp sfp;
    interface AxiethbviMgt mgt;
@@ -66,20 +79,31 @@ endinstance
 
 instance ConnectableWithClocks#(AxiStreamMaster#(32), TrimodemacTx_axis_mac);
    module mkConnectionWithClocks#(AxiStreamMaster#(32) from, TrimodemacTx_axis_mac to, Clock fromClock, Reset fromReset, Clock toClock, Reset toReset)(Empty);
-      Reg#(Bit#(2)) phaseReg <- mkReg(0, clocked_by toClock, reset_by toReset);
       let sfifo <- mkSyncAxisFifo32x1024(fromClock, fromReset, toClock, toReset);
 
-      Probe#(Bit#(32)) fromDataProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
-      Probe#(Bit#(4)) fromKeepProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
-      Probe#(Bit#(1)) fromLastProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
-      Probe#(Bit#(8)) toDataProbe <- mkProbe(clocked_by toClock, reset_by toReset);
-      Probe#(Bit#(1)) toLastProbe <- mkProbe(clocked_by toClock, reset_by toReset);
-      Probe#(Bit#(2)) phaseProbe    <- mkProbe(clocked_by toClock, reset_by toReset);
+      Reg#(Bit#(2)) phaseReg <- mkReg(0, clocked_by toClock, reset_by toReset);
 
-      mkConnection(from, sfifo.s_axis);
+      Probe#(Bit#(32)) fromDataProbe <- mkProbe(clocked_by toClock, reset_by toReset);
+      Probe#(Bit#(4)) fromKeepProbe <- mkProbe(clocked_by toClock, reset_by toReset);
+      Probe#(Bit#(1)) fromLastProbe <- mkProbe(clocked_by toClock, reset_by toReset);
+
+      Probe#(Bit#(8)) toDataProbe <- mkProbe(clocked_by toClock, reset_by toReset);
+      Probe#(Bit#(4)) toKeepProbe <- mkProbe(clocked_by toClock, reset_by toReset);
+      Probe#(Bit#(1)) toLastProbe <- mkProbe(clocked_by toClock, reset_by toReset);
+      Probe#(Bit#(1)) toValidProbe <- mkProbe(clocked_by toClock, reset_by toReset);
+
+      Probe#(Bit#(2)) phaseProbe    <- mkProbe(clocked_by toClock, reset_by toReset);
+      Probe#(Bit#(4)) moreDataProbe <- mkProbe(clocked_by toClock, reset_by toReset);
+
+      let fromCnx <- mkConnection(from, sfifo.s_axis);
 
       Wire#(Bool) doDeq <- mkDWire(False, clocked_by toClock, reset_by toReset);
       rule rl_expand if (to.tready() == 1 && sfifo.m_axis.tvalid() == 1);
+
+	 fromDataProbe <= sfifo.m_axis.tdata();
+	 fromKeepProbe <= sfifo.m_axis.tkeep();
+	 fromLastProbe <= sfifo.m_axis.tlast();
+
 	 Vector#(4,Bit#(8)) data = unpack(sfifo.m_axis.tdata());
 	 let keep = sfifo.m_axis.tkeep();
 	 let last = sfifo.m_axis.tlast();
@@ -88,8 +112,7 @@ instance ConnectableWithClocks#(AxiStreamMaster#(32), TrimodemacTx_axis_mac);
 	 Bool lastPhase = (phaseReg == 3);
 	 Bit#(4) moreData = keep[3:phase+1];
 	 if (!lastPhase)
-	    lastPhase = (moreData != 0);
-	 phase = phase + 1;
+	    lastPhase = (moreData == 0);
 
 	 to.tdata(data[phase]);
 	 //to.tkeep(keep[phase]);
@@ -103,12 +126,18 @@ instance ConnectableWithClocks#(AxiStreamMaster#(32), TrimodemacTx_axis_mac);
 	    doDeq <= True;
 	    phase = 0;
 	 end
-	 phaseProbe <= phaseReg;
+	 else begin
+	    phase = phase + 1;
+	 end
 	 phaseReg <= phase;
+
+	 phaseProbe <= phase;
+	 moreDataProbe <= moreData;
       endrule
 
       rule rl_to_handshake;
 	 to.tvalid(sfifo.m_axis.tvalid());
+	 toValidProbe <= sfifo.m_axis.tvalid();
 	 sfifo.m_axis.tready(pack(doDeq));
       endrule
    endmodule
@@ -124,44 +153,76 @@ instance ConnectableWithClocks#(TrimodemacRx_axis_mac, AxiStreamSlave#(32));
       Wire#(Bool) doEnq <- mkDWire(False, clocked_by fromClock, reset_by fromReset);
 
       Probe#(Bool) probeOverrun <- mkProbe(clocked_by fromClock, reset_by fromReset);
+      Probe#(Bit#(1)) fromValidProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
+      Probe#(Bit#(8)) fromDataProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
+      Probe#(Bit#(1)) fromLastProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
+      Probe#(Bit#(32)) toDataProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
+      Probe#(Bit#(4)) toKeepProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
+      Probe#(Bit#(2)) phaseProbe    <- mkProbe(clocked_by fromClock, reset_by fromReset);
+      Probe#(Bit#(1)) toReadyProbe <- mkProbe(clocked_by toClock, reset_by toReset);
+
       rule rl_overrun if (from.tvalid() == 1 && sfifo.s_axis.tready() == 0);
 	 probeOverrun <= True;
       endrule
 
+      rule rl_from_valid;
+	 fromValidProbe <= from.tvalid();
+      endrule
+
       rule rl_combine if (unpack(from.tvalid()));
+	 phaseProbe <= phaseReg;
+
 	 Bool last = unpack(from.tlast());
-	 let phase = phaseReg + 1;
+	 let phase = phaseReg;
 	 Vector#(4,Bit#(8)) data = readVReg(dataReg);
 	 let keep = keepReg;
-	 keep[phase]             = 1; //from.tkeep();
+	 keep[phase] = 1; //from.tkeep();
 	 data[phase] = from.tdata();
 
 	 sfifo.s_axis.tdata(pack(data));
 	 sfifo.s_axis.tkeep(keep);
 	 sfifo.s_axis.tlast(pack(last));
 
-	 if (last || phaseReg == 3) begin
+	 if (last || (phaseReg == 3)) begin
+
+	    toDataProbe <= pack(data);
+	    fromLastProbe <= pack(last); //from.tlast();
+
 	    phase = 0;
 	    data  = unpack(0);
 	    keep  = 0;
 	    doEnq <= True;
 	    //sfifo.enq(tuple3(pack(data), keep, pack(last)));
 	 end
+	 else begin
+	    phase = phase + 1;
+	 end
+
 	 phaseReg <= phase;
 	 writeVReg(dataReg, data);
 	 keepReg  <= keep;
+
+	 fromDataProbe <= from.tdata();
+	 toKeepProbe <= keep;
+
       endrule
 
       rule rl_from_handshake;
 	 //from.tready(pack(sfifo.s_axis.tready())); // scary -- no backpressure
 	 sfifo.s_axis.tvalid(pack(doEnq));
+      endrule
+
+      rule rl_to_ready_probe;
+	 toReadyProbe <= to.tready();
       endrule	 
 
-      mkConnection(sfifo.m_axis, to);
+      let toCnx <- mkConnection(sfifo.m_axis, to);
    endmodule
 endinstance
 
+(* synthesize *)
 module mkAxiEthBvi#(Clock axis_clk, Clock ref_clk)(AxiEthSubsystem);
+   let clock <- exposeCurrentClock;
    let reset <- exposeCurrentReset;
 
   // connect_bd_net -net eth_buf_RESET2PCSPMA [get_bd_pins eth_buf/RESET2PCSPMA] [get_bd_pins pcs_pma/reset] //FIXME
@@ -220,13 +281,27 @@ module mkAxiEthBvi#(Clock axis_clk, Clock ref_clk)(AxiEthSubsystem);
    // connect_bd_net -net signal_detect_1 [get_bd_ports signal_detect] [get_bd_pins pcs_pma/signal_detect]
    // connect_bd_net -net tx_ifg_delay_1 [get_bd_ports tx_ifg_delay] [get_bd_pins eth_mac/tx_ifg_delay]
 
+   let axiDmaBvi <- mkAxiDmaBvi(clock,clock,clock,clock,reset);
 
-   interface m_axis_rxd = trimodemac.rx_axis_mac;
-   interface s_axis_txd = trimodemac.tx_axis_mac;
-   interface rx = trimodemac.rx;
-   interface tx = trimodemac.tx;
-   interface s_axi = trimodemac.s_axi;
-   interface mac   = trimodemac.mac;
+   // packet data and status from the ethernet
+   let rxResetInverted <- mkResetInverter(trimodemac.rx.reset, clocked_by trimodemac.rx.mac_aclk);
+   let rxCnx <- mkConnectionWithClocks(trimodemac.rx_axis_mac, axiDmaBvi.s_axis_s2mm, trimodemac.rx.mac_aclk, rxResetInverted, clock, reset);
+   //mkConnection(axiEthBvi.m_axis_rxs, axiDmaBvi.s_axis_s2mm_sts);
+
+   // packet data and control to the ethernet
+   let txResetInverted <- mkResetInverter(trimodemac.tx.reset, clocked_by trimodemac.tx.mac_aclk);
+   let txCnx <- mkConnectionWithClocks(axiDmaBvi.m_axis_mm2s,       trimodemac.tx_axis_mac, clock, reset, trimodemac.tx.mac_aclk, txResetInverted);
+   //mkConnection(axiDmaBvi.m_axis_mm2s_cntrl, axiEthBvi.s_axis_txc);
+   interface   mm2s_dma = axiDmaBvi.mm2s;
+   interface   s2mm_dma = axiDmaBvi.s2mm;
+   interface m_axi_mm2s = axiDmaBvi.m_axi_mm2s;
+   interface m_axi_s2mm = axiDmaBvi.m_axi_s2mm;
+   interface m_axi_sg   = axiDmaBvi.m_axi_sg;
+
+   interface  s_axi_dma = axiDmaBvi.s_axi_lite;
+
+   interface  s_axi_mac = trimodemac.s_axi;
+   interface        mac = trimodemac.mac;
 
    interface signal = pcs.signal;
    interface mmcm = pcs.mmcm;
