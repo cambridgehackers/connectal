@@ -368,6 +368,7 @@ $(2): $(3) $(4) $(5)
 	@echo BSCVERILOG [$(1)]
 	cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -verilog -remove-dollar -g $(1) $(3)
 	$(Q)sed -i 's|// On .*|// timestamp removed|' verilog/*.v
+	$(Q)sed -i 's|  reg.*PROBE[,;]|(* mark_debug="true" *)&|' verilog/*.v 
 	$(Q)sed -i 's|  wire.*PROBE[,;]|(* mark_debug="true" *)&|' verilog/*.v 
 	$(Q)sed -i 's|  wire.*PROBE_VALID[,;]|(* mark_debug="true" *)&|' verilog/*.v 
 endef
