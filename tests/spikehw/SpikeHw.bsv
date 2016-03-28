@@ -136,9 +136,8 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
 `endif
    let axiIntcBvi <- mkAxiIntcBvi(clock, newReset.new_rst);
    let axiIicBvi  <- mkAxiIicBvi(clock, newReset.new_rst);
-   let axiSpiBvi  <- mkAxiSpiBvi(clock, clock, newReset.new_rst);
+//   let axiSpiBvi  <- mkAxiSpiBvi(clock, clock, newReset.new_rst);
    let axiUartBvi <- mkAxiUartBvi(clock, newReset.new_rst, uartClk);
-   let axiDmaBvi <- mkAxiDmaBvi(clock,clock,clock,clock,newReset.new_rst);
 `ifdef IncludeEthernet
 //   let axiEthBvi <- mkAxiEthBvi(clock, host.tsys_clk_200mhz_buf, clock,
 //				newReset.new_rst, newReset.new_rst, newReset.new_rst, newReset.new_rst, newReset.new_rst);
@@ -156,14 +155,14 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
    function Bit#(16) intr();
       Bit#(16) _intr = 0;
       _intr[0] = axiUartBvi.ip2intc_irpt();
-      _intr[1] = axiDmaBvi.s2mm.introut(); // rx
-      _intr[2] = axiDmaBvi.mm2s.introut(); // tx
+      _intr[1] = axiEthBvi.s2mm_dma.introut(); // rx
+      _intr[2] = axiEthBvi.mm2s_dma.introut(); // tx
 `ifdef IncludeEthernet
       _intr[3] = axiEthBvi.mac.irq();
 //      _intr[4] = axiEthBvi.interrupt();
 `endif
       _intr[5] = axiIicBvi.iic2intc_irpt();
-      _intr[6] = axiSpiBvi.ip2intc_irpt();
+//      _intr[6] = axiSpiBvi.ip2intc_irpt();
       return _intr;
    endfunction
 
@@ -199,19 +198,9 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
    FIFOF#(BRAMRequest#(Bit#(32),Bit#(32))) reqFifo <- mkSizedFIFOF(4);
    FIFOF#(Bit#(32))                       dataFifo <- mkSizedFIFOF(16);
 
-`ifdef IncludeEthernet
-   // packet data and status from the ethernet
-   mkConnectionWithClocks(axiEthBvi.m_axis_rxd, axiDmaBvi.s_axis_s2mm, axiEthBvi.rx.mac_aclk, axiEthBvi.rx.reset, clock, reset);
-   //mkConnection(axiEthBvi.m_axis_rxs, axiDmaBvi.s_axis_s2mm_sts);
-
-   // packet data and control to the ethernet
-   mkConnectionWithClocks(axiDmaBvi.m_axis_mm2s,       axiEthBvi.s_axis_txd, clock, reset, axiEthBvi.tx.mac_aclk, axiEthBvi.tx.reset);
-   //mkConnection(axiDmaBvi.m_axis_mm2s_cntrl, axiEthBvi.s_axis_txc);
-`endif
-
-   Axi4MasterBits#(32,DataBusWidth,MemTagSize,Empty) m_axi_mm2s = toAxi4MasterBits(axiDmaBvi.m_axi_mm2s);
-   Axi4MasterBits#(32,DataBusWidth,MemTagSize,Empty) m_axi_s2mm = toAxi4MasterBits(axiDmaBvi.m_axi_s2mm);
-   Axi4MasterBits#(32,DataBusWidth,MemTagSize,Empty) m_axi_sg = toAxi4MasterBits(axiDmaBvi.m_axi_sg);
+   Axi4MasterBits#(32,DataBusWidth,MemTagSize,Empty) m_axi_mm2s = toAxi4MasterBits(axiEthBvi.m_axi_mm2s);
+   Axi4MasterBits#(32,DataBusWidth,MemTagSize,Empty) m_axi_s2mm = toAxi4MasterBits(axiEthBvi.m_axi_s2mm);
+   Axi4MasterBits#(32,DataBusWidth,MemTagSize,Empty) m_axi_sg = toAxi4MasterBits(axiEthBvi.m_axi_sg);
 
    Axi4SlaveLiteBits#(12,32) axiUartSlaveLite = toAxi4SlaveBits(axiUartBvi.s_axi);
    PhysMemSlave#(12,32) axiUartMemSlave      <- mkPhysMemSlave(axiUartSlaveLite);
@@ -222,18 +211,18 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
    Axi4SlaveLiteBits#(9,32) axiIicSlaveLite  = toAxi4SlaveBits(axiIicBvi.s_axi);
    PhysMemSlave#(12,32) axiIicMemSlave       <- mkPhysMemSlave(axiIicSlaveLite);
 
-   Axi4SlaveLiteBits#(7,32) axiSpiSlaveLite  = toAxi4SlaveBits(axiSpiBvi.s_axi);
-   PhysMemSlave#(12,32) axiSpiMemSlave       <- mkPhysMemSlave(axiSpiSlaveLite);
-
-   PhysMemSlave#(12,32) axiDmaMemSlave       <- mkPhysMemSlave(axiDmaBvi.s_axi_lite);
+//   Axi4SlaveLiteBits#(7,32) axiSpiSlaveLite  = toAxi4SlaveBits(axiSpiBvi.s_axi);
+//   PhysMemSlave#(12,32) axiSpiMemSlave       <- mkPhysMemSlave(axiSpiSlaveLite);
 
 `ifdef IncludeEthernet
-   Axi4SlaveLiteBits#(12,32) axiEthSlaveLite = toAxi4SlaveBits(axiEthBvi.s_axi);
+   PhysMemSlave#(12,32) axiDmaMemSlave       <- mkPhysMemSlave(axiEthBvi.s_axi_dma);
+
+   Axi4SlaveLiteBits#(12,32) axiEthSlaveLite = toAxi4SlaveBits(axiEthBvi.s_axi_mac);
    PhysMemSlave#(12,32) axiEthMemSlave       <- mkPhysMemSlave(axiEthSlaveLite);
-   PhysMemSlave#(20,32) deviceSlaveMux       <- mkPhysMemSlaveMux(vec(axiUartMemSlave, axiIntcMemSlave, axiDmaMemSlave, axiIicMemSlave,
-								      axiEthMemSlave, axiSpiMemSlave));
+   PhysMemSlave#(20,32) deviceSlaveMux       <- mkPhysMemSlaveMux(vec(axiUartMemSlave, axiIntcMemSlave, axiIicMemSlave,
+								      axiDmaMemSlave, axiEthMemSlave)); // , axiSpiMemSlave
 `else
-   PhysMemSlave#(20,32) deviceSlaveMux       <- mkPhysMemSlaveMux(vec(axiUartMemSlave, axiIntcMemSlave, axiDmaMemSlave, axiIicMemSlave));
+   PhysMemSlave#(20,32) deviceSlaveMux       <- mkPhysMemSlaveMux(vec(axiUartMemSlave, axiIntcMemSlave, axiIicMemSlave));
 `endif
 
    PhysMemSlave#(20,32) bootRomMemSlave      <- mkPhysMemToBram(bootRom);
@@ -311,43 +300,43 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
       axiIicBvi.scl.i(sclIOBuf.o);
    endrule
 
-   IOBUF spiSckIOBuf  <- mkIOBUF(axiSpiBvi.sck.t, axiSpiBvi.sck.o);
-   IOBUF spiSsIOBuf   <- mkIOBUF(axiSpiBvi.ss.t, axiSpiBvi.ss.o);
-   IOBUF spiMosiIOBuf <- mkIOBUF(axiSpiBvi.io0.t, axiSpiBvi.io0.o);
-   IOBUF spiMisoIOBuf <- mkIOBUF(axiSpiBvi.io1.t, axiSpiBvi.io1.o);
-   rule spi_o;
-      axiSpiBvi.sck.i(spiSckIOBuf.o);
-      axiSpiBvi.ss.i(spiSsIOBuf.o);
-      axiSpiBvi.io0.i(spiMosiIOBuf.o);
-      axiSpiBvi.io1.i(spiMisoIOBuf.o);
-   endrule
+   // IOBUF spiSckIOBuf  <- mkIOBUF(axiSpiBvi.sck.t, axiSpiBvi.sck.o);
+   // IOBUF spiSsIOBuf   <- mkIOBUF(axiSpiBvi.ss.t, axiSpiBvi.ss.o);
+   // IOBUF spiMosiIOBuf <- mkIOBUF(axiSpiBvi.io0.t, axiSpiBvi.io0.o);
+   // IOBUF spiMisoIOBuf <- mkIOBUF(axiSpiBvi.io1.t, axiSpiBvi.io1.o);
+   // rule spi_o;
+   //    axiSpiBvi.sck.i(spiSckIOBuf.o);
+   //    axiSpiBvi.ss.i(spiSsIOBuf.o);
+   //    axiSpiBvi.io0.i(spiMosiIOBuf.o);
+   //    axiSpiBvi.io1.i(spiMisoIOBuf.o);
+   // endrule
 
-   Probe#(Bit#(1)) spi_sck_i_probe <- mkProbe();
-   Probe#(Bit#(1)) spi_sck_o_probe <- mkProbe();
-   Probe#(Bit#(1)) spi_sck_t_probe <- mkProbe();
-   Probe#(Bit#(1)) spi_ss_i_probe <- mkProbe();
-   Probe#(Bit#(1)) spi_ss_o_probe <- mkProbe();
-   Probe#(Bit#(1)) spi_ss_t_probe <- mkProbe();
-   Probe#(Bit#(1)) spi_miso_i_probe <- mkProbe();
-   Probe#(Bit#(1)) spi_miso_o_probe <- mkProbe();
-   Probe#(Bit#(1)) spi_miso_t_probe <- mkProbe();
-   Probe#(Bit#(1)) spi_mosi_i_probe <- mkProbe();
-   Probe#(Bit#(1)) spi_mosi_o_probe <- mkProbe();
-   Probe#(Bit#(1)) spi_mosi_t_probe <- mkProbe();
-   rule rl_spi_trace;
-      spi_sck_i_probe <= spiSckIOBuf.o;
-      spi_sck_o_probe <= axiSpiBvi.sck.o;
-      spi_sck_t_probe <= axiSpiBvi.sck.t;
-      spi_ss_i_probe <= spiSsIOBuf.o;
-      spi_ss_o_probe <= axiSpiBvi.ss.o;
-      spi_ss_t_probe <= axiSpiBvi.ss.t;
-      spi_miso_i_probe <= spiMisoIOBuf.o;
-      spi_miso_o_probe <= axiSpiBvi.io1.o;
-      spi_miso_t_probe <= axiSpiBvi.io1.t;
-      spi_mosi_i_probe <= spiMosiIOBuf.o;
-      spi_mosi_o_probe <= axiSpiBvi.io0.o;
-      spi_mosi_t_probe <= axiSpiBvi.io0.t;
-   endrule
+   // Probe#(Bit#(1)) spi_sck_i_probe <- mkProbe();
+   // Probe#(Bit#(1)) spi_sck_o_probe <- mkProbe();
+   // Probe#(Bit#(1)) spi_sck_t_probe <- mkProbe();
+   // Probe#(Bit#(1)) spi_ss_i_probe <- mkProbe();
+   // Probe#(Bit#(1)) spi_ss_o_probe <- mkProbe();
+   // Probe#(Bit#(1)) spi_ss_t_probe <- mkProbe();
+   // Probe#(Bit#(1)) spi_miso_i_probe <- mkProbe();
+   // Probe#(Bit#(1)) spi_miso_o_probe <- mkProbe();
+   // Probe#(Bit#(1)) spi_miso_t_probe <- mkProbe();
+   // Probe#(Bit#(1)) spi_mosi_i_probe <- mkProbe();
+   // Probe#(Bit#(1)) spi_mosi_o_probe <- mkProbe();
+   // Probe#(Bit#(1)) spi_mosi_t_probe <- mkProbe();
+   // rule rl_spi_trace;
+   //    spi_sck_i_probe <= spiSckIOBuf.o;
+   //    spi_sck_o_probe <= axiSpiBvi.sck.o;
+   //    spi_sck_t_probe <= axiSpiBvi.sck.t;
+   //    spi_ss_i_probe <= spiSsIOBuf.o;
+   //    spi_ss_o_probe <= axiSpiBvi.ss.o;
+   //    spi_ss_t_probe <= axiSpiBvi.ss.t;
+   //    spi_miso_i_probe <= spiMisoIOBuf.o;
+   //    spi_miso_o_probe <= axiSpiBvi.io1.o;
+   //    spi_miso_t_probe <= axiSpiBvi.io1.t;
+   //    spi_mosi_i_probe <= spiMosiIOBuf.o;
+   //    spi_mosi_o_probe <= axiSpiBvi.io0.o;
+   //    spi_mosi_t_probe <= axiSpiBvi.io0.t;
+   // endrule
 
 
    FIFOF#(Tuple3#(DmaChannel,Bool,MemRequest)) traceFifo <- mkDualClockBramFIFOF(clock, reset, clock, reset);
@@ -467,12 +456,12 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
          interface sda = sdaIOBuf.io;
 	 method mux_reset = iicResetReg;
       endinterface
-      interface SpikeSpiPins spi;
-         interface sck  = spiSckIOBuf.io;
-         interface ss   = spiSsIOBuf.io;
-         interface miso = spiMisoIOBuf.io;
-         interface mosi = spiMosiIOBuf.io;
-      endinterface
+      // interface SpikeSpiPins spi;
+      //    interface sck  = spiSckIOBuf.io;
+      //    interface ss   = spiSsIOBuf.io;
+      //    interface miso = spiMisoIOBuf.io;
+      //    interface mosi = spiMosiIOBuf.io;
+      // endinterface
       interface Clock deleteme_unused_clock = clock;
       interface Reset deleteme_unused_reset = reset;
 `ifndef BOARD_miniitx100
