@@ -246,6 +246,8 @@ def typeCName(item):
                 return 'uint64_t'
             else:
                 return 'std::bitset<%d>' % (numbits)
+        elif cid == 'bit':
+            return 'int'
         elif cid == 'Bool':
             return 'int'
         elif cid == 'Int':
@@ -312,7 +314,7 @@ def typeJson(item):
     return tname
 
 def hasBitWidth(item):
-    return item['name'] == 'Bit' or item['name'] == 'Int' or item['name'] == 'UInt' or item['name'] == 'fixed32'
+    return item['name'] in ['Bit', 'Int', 'UInt', 'fixed32', 'bit']
 
 def getNumeric(item):
    if globalv_globalvars.has_key(item['name']):
@@ -343,6 +345,8 @@ def getNumeric(item):
 
 def typeBitWidth(item):
     if item['name'] == 'Bool':
+        return 1
+    if item['name'] == 'bit':
         return 1
     if item['name'] == 'Float':
         return 32
