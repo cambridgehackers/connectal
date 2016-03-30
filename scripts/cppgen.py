@@ -701,6 +701,19 @@ def emitType(item, name, f, indentation):
         f.write(' %s;' % name)
     f.write('\n')
 
+def convertVerilogNumber(n):
+    if "'" in n:
+        width, n = n.split("'")
+        base = 10
+        if n[0] in ['h', 'd', 'o', 'b']:
+            if n[0] == 'h': base = 16
+            if n[0] == 'd': base = 10
+            if n[0] == 'o': base = 8
+            if n[0] == 'b': base = 2
+            n = n[1:]
+            n = hex(int(n, base))
+    return n
+
 def emitEnum(item, name, f, indentation):
     indent(f, indentation)
     if (indentation == 0):
@@ -710,7 +723,7 @@ def emitEnum(item, name, f, indentation):
     for val in item['elements']:
         temp = val[0]
         if val[1] != None:
-            temp += '=' + val[1]
+            temp += '=' + convertVerilogNumber(val[1])
         f.write(temp + ', ')
     indent(f, indentation)
     f.write(' }')
