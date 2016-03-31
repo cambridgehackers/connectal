@@ -297,6 +297,9 @@ XVLOGDEFINES = $(subst -D,-d,$(BSVDEFINES))
 SVLOG = $(addprefix -svlog $(CONNECTALDIR)/verilog/, xsimtop.sv XsimDmaReadWrite.sv XsimLink.sv XsimSink.sv XsimSource.sv)
 
 xsim: verilog $(XSIM_OBJECTS)
+	-test -f xsim/vlog.prj && sed -i s/xil_defaultlib/work/ xsim/*.prj
+	-test -f xsim/vlog.prj && xvlog $(XVLOGFLAGS) -prj xsim/vlog.prj
+	-test -f xsim/vhdl.prj && xvhdl $(XVLOGFLAGS) -prj xsim/vhdl.prj
 	xvlog $(XVLOGFLAGS) $(XVLOGDEFINES) $(VERILOG_PATH:%=--sourcelibdir %) --sourcelibext .v verilog/*.v
 	#xvlog $(XVLOGDEFINES) --sv $(CONNECTALDIR)/verilog/*.sv ## not needed because these all get passed to xelab because they use DPI
 	#xsc -v -cc gcc -compile $(SOURCES)
