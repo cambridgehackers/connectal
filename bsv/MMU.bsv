@@ -66,6 +66,7 @@ interface MMU#(numeric type addrWidth);
 endinterface
 
 typedef struct {
+   DmaErrorType error;
    Bit#(3) pageSize;
    Bit#(SGListPageShift12) value;
 } Offset deriving (Eq,Bits,FShow);
@@ -208,7 +209,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
       rule stage3; // Based on results of comparision, select a region, putting it into 'o.pageSize'.  idxOffset holds offset in sglist table of relevant entry
 	 let params <- toGet(stage3Params[i]).get();
 	 AddrTransRequest req = params.req;
-	 Offset o = Offset{pageSize: 0, value: truncate(req.off)};
+	 Offset o = Offset { error: DmaErrorNone, pageSize: 0, value: truncate(req.off)};
 	 Bit#(IndexWidth) pbase = 0;
 	 Bit#(IndexWidth) idxOffset = 0;
 
@@ -249,13 +250,15 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 	 if (off.pageSize == 0) begin
 	    if (verbose) $display("mkMMU::addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
 	    dmaErrorFifos[1].enq(DmaError { errorType: DmaErrorOffsetOutOfRange, pref: extend(ptr), off:extend(off.value) });
+	    off.error = DmaErrorOffsetOutOfRange;
+	    p         = 0; // FIXME
 	 end
-	 else begin
-	    if (verbose) $display("mkMMU::translationTable[%d].read %h", i, {ptr,p});
-	    portsel(translationTable, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
-						      address:{ptr,p}, datain:?});
-	    offs1[i].enq(off);
-	 end
+
+	 if (verbose) $display("mkMMU::translationTable[%d].read %h", i, {ptr,p});
+	 portsel(translationTable, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
+							      address:{ptr,p}, datain:?});
+	 offs1[i].enq(off);
+
       endrule
       rule stage5; // Concatenate page base address from sglist entry with LSB offset bits from request and return
 	 Page0 page <- portsel(translationTable, i).response.get;
@@ -271,7 +274,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 	    3: rv = {b8,truncate(offset.value)};
 	    4: rv = {b12,truncate(offset.value)};
 	 endcase
-	 pageResponseFifos[i].enq(AddrTransResponse { error: DmaErrorNone, physAddr: truncate(rv) });
+	 pageResponseFifos[i].enq(AddrTransResponse { error: offset.error, physAddr: truncate(rv) });
       endrule
    end
 
