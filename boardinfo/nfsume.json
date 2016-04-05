@@ -389,6 +389,43 @@
             "LOC": "AM39"
         }
     },
+    "sdio": {
+        "cmd": {
+            "PIO_DIRECTION": "BIDIR",
+            "IOSTANDARD": "LVCMOS18",
+            "LOC": "AJ26"
+        },
+        "clk": {
+            "PIO_DIRECTION": "BIDIR",
+            "IOSTANDARD": "LVCMOS18",
+            "LOC": "AJ25"
+        },
+        "cd": {
+            "PIO_DIRECTION": "BIDIR",
+            "IOSTANDARD": "LVCMOS18",
+            "LOC": "AW35"
+        },
+        "d0": {
+            "PIO_DIRECTION": "BIDIR",
+            "IOSTANDARD": "LVCMOS18",
+            "LOC": "AY29"
+        },
+        "d1": {
+            "PIO_DIRECTION": "BIDIR",
+            "IOSTANDARD": "LVCMOS18",
+            "LOC": "AM28"
+        },
+        "d2": {
+            "PIO_DIRECTION": "BIDIR",
+            "IOSTANDARD": "LVCMOS18",
+            "LOC": "AL25"
+        },
+        "d3": {
+            "PIO_DIRECTION": "BIDIR",
+            "IOSTANDARD": "LVCMOS18",
+            "LOC": "AL26"
+        }
+    },
     "LED": {
         "LED[0]": {
             "PIO_DIRECTION": "OUTPUT",
