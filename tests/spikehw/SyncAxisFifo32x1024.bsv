@@ -80,6 +80,7 @@ module mkSyncAxisFifo32x1024FIFOF#(Clock fromClock, Reset fromReset, Clock toClo
 
    rule rl_from if (syncFIFOF.s_axis.tready() == 1);
       syncFIFOF.s_axis.tdata(extend(pack(fromFIFOF.first())));
+      fromFIFOF.deq();
    endrule
    rule rl_from_handshake;
       syncFIFOF.s_axis.tvalid(pack(fromFIFOF.notEmpty()));
