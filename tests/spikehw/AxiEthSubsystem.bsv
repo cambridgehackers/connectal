@@ -4,6 +4,7 @@ import BRAMFIFO::*;
 import GetPut::*;
 import Clocks::*;
 import Connectable::*;
+import StmtFSM::*;
 `define PROBE_ME
 `ifdef PROBE_ME
 import Probe::*;
@@ -21,7 +22,6 @@ import Vector::*;
 import AxiBits::*;
 import AxiStream::*;
 import AxiEthBufferBvi::*;
-import GetPutWithClocks::*;
 import TriModeMacBvi::*;
 import GigEthPcsPmaBvi::*;
 import AxiEth1000BaseX::*;
@@ -77,148 +77,234 @@ instance Connectable#(TriModeMac,GigEthPcsPma);
    endmodule
 endinstance
 
-instance ConnectableWithClocks#(AxiStreamMaster#(32), TrimodemacTx_axis_mac);
-   module mkConnectionWithClocks#(AxiStreamMaster#(32) from, TrimodemacTx_axis_mac to, Clock fromClock, Reset fromReset, Clock toClock, Reset toReset)(Empty);
-      let sfifo <- mkSyncAxisFifo32x1024(fromClock, fromReset, toClock, toReset);
+module mkStreamControlConnection#(AxiStreamMaster#(32) from, AxiStreamMaster#(32) cntrl,
+				  TrimodemacTx_axis_mac to,
+				  Clock fromClock, Reset fromReset, Clock toClock, Reset toReset)(Empty);
+   let sfifo <- mkSyncAxisFifo32x1024(fromClock, fromReset, toClock, toReset);
 
-      Reg#(Bit#(2)) phaseReg <- mkReg(0, clocked_by toClock, reset_by toReset);
+   Reg#(Bit#(2)) phaseReg <- mkReg(0, clocked_by toClock, reset_by toReset);
 
-      Probe#(Bit#(32)) fromDataProbe <- mkProbe(clocked_by toClock, reset_by toReset);
-      Probe#(Bit#(4)) fromKeepProbe <- mkProbe(clocked_by toClock, reset_by toReset);
-      Probe#(Bit#(1)) fromLastProbe <- mkProbe(clocked_by toClock, reset_by toReset);
+   Probe#(Bit#(32)) fromControlDataProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
+   Probe#(Bit#(1)) fromControlValidProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
 
-      Probe#(Bit#(8)) toDataProbe <- mkProbe(clocked_by toClock, reset_by toReset);
-      Probe#(Bit#(4)) toKeepProbe <- mkProbe(clocked_by toClock, reset_by toReset);
-      Probe#(Bit#(1)) toLastProbe <- mkProbe(clocked_by toClock, reset_by toReset);
-      Probe#(Bit#(1)) toValidProbe <- mkProbe(clocked_by toClock, reset_by toReset);
+   Probe#(Bit#(32)) fromDataProbe <- mkProbe(clocked_by toClock, reset_by toReset);
+   Probe#(Bit#(4)) fromKeepProbe <- mkProbe(clocked_by toClock, reset_by toReset);
+   Probe#(Bit#(1)) fromLastProbe <- mkProbe(clocked_by toClock, reset_by toReset);
 
-      Probe#(Bit#(2)) phaseProbe    <- mkProbe(clocked_by toClock, reset_by toReset);
-      Probe#(Bit#(4)) moreDataProbe <- mkProbe(clocked_by toClock, reset_by toReset);
+   Probe#(Bit#(8)) toDataProbe <- mkProbe(clocked_by toClock, reset_by toReset);
+   Probe#(Bit#(4)) toKeepProbe <- mkProbe(clocked_by toClock, reset_by toReset);
+   Probe#(Bit#(1)) toLastProbe <- mkProbe(clocked_by toClock, reset_by toReset);
+   Probe#(Bit#(1)) toValidProbe <- mkProbe(clocked_by toClock, reset_by toReset);
 
-      let fromCnx <- mkConnection(from, sfifo.s_axis);
+   Probe#(Bit#(2)) phaseProbe    <- mkProbe(clocked_by toClock, reset_by toReset);
+   Probe#(Bit#(4)) moreDataProbe <- mkProbe(clocked_by toClock, reset_by toReset);
 
-      Wire#(Bool) doDeq <- mkDWire(False, clocked_by toClock, reset_by toReset);
-      rule rl_expand if (to.tready() == 1 && sfifo.m_axis.tvalid() == 1);
+   rule rl_control if (cntrl.tvalid() == 1);
+      fromControlDataProbe <= cntrl.tdata();
+      fromControlValidProbe <= cntrl.tvalid();
+   endrule
 
-	 fromDataProbe <= sfifo.m_axis.tdata();
-	 fromKeepProbe <= sfifo.m_axis.tkeep();
-	 fromLastProbe <= sfifo.m_axis.tlast();
+   let fromCnx <- mkConnection(from, sfifo.s_axis);
 
-	 Vector#(4,Bit#(8)) data = unpack(sfifo.m_axis.tdata());
-	 let keep = sfifo.m_axis.tkeep();
-	 let last = sfifo.m_axis.tlast();
-	 //match { .data, .keep, .last } = sfifo.first();
-	 let phase = phaseReg;
-	 Bool lastPhase = (phaseReg == 3);
-	 Bit#(4) moreData = keep[3:phase+1];
-	 if (!lastPhase)
-	    lastPhase = (moreData == 0);
+   Wire#(Bool) doDeq <- mkDWire(False, clocked_by toClock, reset_by toReset);
+   rule rl_expand if (to.tready() == 1 && sfifo.m_axis.tvalid() == 1);
 
-	 to.tdata(data[phase]);
-	 //to.tkeep(keep[phase]);
-	 to.tlast(pack(last == 1 && lastPhase));
+      fromDataProbe <= sfifo.m_axis.tdata();
+      fromKeepProbe <= sfifo.m_axis.tkeep();
+      fromLastProbe <= sfifo.m_axis.tlast();
 
-	 toDataProbe <= data[phase];
-	 toLastProbe <= pack(last == 1 && lastPhase);
+      Vector#(4,Bit#(8)) data = unpack(sfifo.m_axis.tdata());
+      let keep = sfifo.m_axis.tkeep();
+      let last = sfifo.m_axis.tlast();
+      //match { .data, .keep, .last } = sfifo.first();
+      let phase = phaseReg;
+      Bool lastPhase = (phaseReg == 3);
+      Bit#(4) moreData = keep[3:phase+1];
+      if (!lastPhase)
+	 lastPhase = (moreData == 0);
 
-	 if (lastPhase) begin
-	    //sfifo.deq();
-	    doDeq <= True;
-	    phase = 0;
-	 end
-	 else begin
-	    phase = phase + 1;
-	 end
-	 phaseReg <= phase;
+      to.tdata(data[phase]);
+      //to.tkeep(keep[phase]);
+      to.tlast(pack(last == 1 && lastPhase));
 
-	 phaseProbe <= phase;
-	 moreDataProbe <= moreData;
-      endrule
+      toDataProbe <= data[phase];
+      toLastProbe <= pack(last == 1 && lastPhase);
 
-      rule rl_to_handshake;
-	 to.tvalid(sfifo.m_axis.tvalid());
-	 toValidProbe <= sfifo.m_axis.tvalid();
-	 sfifo.m_axis.tready(pack(doDeq));
-      endrule
-   endmodule
-endinstance
+      if (lastPhase) begin
+	 //sfifo.deq();
+	 doDeq <= True;
+	 phase = 0;
+      end
+      else begin
+	 phase = phase + 1;
+      end
+      phaseReg <= phase;
 
-instance ConnectableWithClocks#(TrimodemacRx_axis_mac, AxiStreamSlave#(32));
-   module mkConnectionWithClocks#(TrimodemacRx_axis_mac from, AxiStreamSlave#(32) to, Clock fromClock, Reset fromReset, Clock toClock, Reset toReset)(Empty);
-      Reg#(Bit#(2)) phaseReg <- mkReg(0, clocked_by fromClock, reset_by fromReset);
-      Vector#(4,Reg#(Bit#(8))) dataReg <- replicateM(mkReg(0), clocked_by fromClock, reset_by fromReset);
-      Reg#(Bit#(4)) keepReg <- mkReg(0, clocked_by fromClock, reset_by fromReset);
-      let sfifo <- mkSyncAxisFifo32x1024(fromClock, fromReset, toClock, toReset);
+      phaseProbe <= phase;
+      moreDataProbe <= moreData;
+   endrule
 
-      Wire#(Bool) doEnq <- mkDWire(False, clocked_by fromClock, reset_by fromReset);
+   rule rl_to_handshake;
+      to.tvalid(sfifo.m_axis.tvalid());
+      toValidProbe <= sfifo.m_axis.tvalid();
+      sfifo.m_axis.tready(pack(doDeq));
+   endrule
+endmodule
 
-      Probe#(Bool) probeOverrun <- mkProbe(clocked_by fromClock, reset_by fromReset);
-      Probe#(Bit#(1)) fromValidProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
-      Probe#(Bit#(8)) fromDataProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
-      Probe#(Bit#(1)) fromLastProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
-      Probe#(Bit#(32)) toDataProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
-      Probe#(Bit#(4)) toKeepProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
-      Probe#(Bit#(2)) phaseProbe    <- mkProbe(clocked_by fromClock, reset_by fromReset);
-      Probe#(Bit#(1)) toReadyProbe <- mkProbe(clocked_by toClock, reset_by toReset);
+module mkStreamStatusConnection#(TrimodemacRx_axis_mac from,
+				 AxiStreamSlave#(32) to, AxiStreamSlave#(32) status,
+				 Clock fromClock, Reset fromReset, Clock toClock, Reset toReset)(Empty);
 
-      rule rl_overrun if (from.tvalid() == 1 && sfifo.s_axis.tready() == 0);
-	 probeOverrun <= True;
-      endrule
+   Reg#(Bit#(16)) byteCountReg <- mkReg(0, clocked_by fromClock, reset_by fromReset);
+   Reg#(Bit#(2)) phaseReg <- mkReg(0, clocked_by fromClock, reset_by fromReset);
+   Vector#(4,Reg#(Bit#(8))) dataReg <- replicateM(mkReg(0), clocked_by fromClock, reset_by fromReset);
+   Reg#(Bit#(4)) keepReg <- mkReg(0, clocked_by fromClock, reset_by fromReset);
+   let sfifo <- mkSyncAxisFifo32x1024(fromClock, fromReset, toClock, toReset);
+   let stsfifo <- mkSyncAxisFifo32x1024(fromClock, fromReset, toClock, toReset);
 
-      rule rl_from_valid;
-	 fromValidProbe <= from.tvalid();
-      endrule
+   Wire#(Bool) doEnq <- mkDWire(False, clocked_by fromClock, reset_by fromReset);
 
-      rule rl_combine if (unpack(from.tvalid()));
-	 phaseProbe <= phaseReg;
+   Probe#(Bool) probeOverrun <- mkProbe(clocked_by fromClock, reset_by fromReset);
+   Probe#(Bit#(1)) fromValidProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
+   Probe#(Bit#(8)) fromDataProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
+   Probe#(Bit#(1)) fromLastProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
+   Probe#(Bit#(32)) toDataProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
+   Probe#(Bit#(4)) toKeepProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
+   Probe#(Bit#(2)) phaseProbe    <- mkProbe(clocked_by fromClock, reset_by fromReset);
+   Probe#(Bit#(1)) toReadyProbe <- mkProbe(clocked_by toClock, reset_by toReset);
+   Probe#(Bit#(16)) byteCountProbe    <- mkProbe(clocked_by fromClock, reset_by fromReset);
 
-	 Bool last = unpack(from.tlast());
-	 let phase = phaseReg;
-	 Vector#(4,Bit#(8)) data = readVReg(dataReg);
-	 let keep = keepReg;
-	 keep[phase] = 1; //from.tkeep();
-	 data[phase] = from.tdata();
+   FIFOF#(Bit#(16)) lengthFifo <- mkFIFOF(clocked_by fromClock, reset_by fromReset);
+   Wire#(Bit#(32)) statusDataWire <- mkDWire(0, clocked_by fromClock, reset_by fromReset);
+   Wire#(Bit#(1))  statusLastWire <- mkDWire(0, clocked_by fromClock, reset_by fromReset);
+   Wire#(Bit#(1))  statusValidWire <- mkDWire(0, clocked_by fromClock, reset_by fromReset);
 
-	 sfifo.s_axis.tdata(pack(data));
-	 sfifo.s_axis.tkeep(keep);
-	 sfifo.s_axis.tlast(pack(last));
+   Probe#(Bit#(32)) statusDataProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
+   Probe#(Bit#(1))  statusLastProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
+   Probe#(Bit#(1))  statusValidProbe <- mkProbe(clocked_by fromClock, reset_by fromReset);
+   let stsFsm <- mkAutoFSM((seq
+			    while (True) seq
+			      await (lengthFifo.notEmpty && stsfifo.s_axis.tready==1);
+			      action // status word
+				 statusDataWire <= 32'h80000000 | extend(lengthFifo.first);
+				 statusLastWire <= 0;
+				 statusValidWire <= 1;
+			      endaction
+			      await (stsfifo.s_axis.tready==1);
+			      action // app0
+				 statusDataWire <= 0;
+				 statusLastWire <= 0;
+				 statusValidWire <= 1;
+			      endaction
+			      await (stsfifo.s_axis.tready==1);
+			      action // app1
+				 statusDataWire <= 1;
+				 statusLastWire <= 0;
+				 statusValidWire <= 1;
+			      endaction
+			      await (stsfifo.s_axis.tready==1);
+			      action // app2
+				 statusDataWire <= 2;
+				 statusLastWire <= 0;
+				 statusValidWire <= 1;
+			      endaction
+			      await (stsfifo.s_axis.tready==1);
+			      action // app3
+				 statusDataWire <= 3;
+				 statusLastWire <= 0;
+				 statusValidWire <= 1;
+			      endaction
+			      await (stsfifo.s_axis.tready==1);
+			      action // app4
+				 statusDataWire <= extend(lengthFifo.first);
+				 statusLastWire <= 0;
+				 statusValidWire <= 1;
+				 lengthFifo.deq();
+			      endaction
+			    endseq // while
+			   endseq),
+			   clocked_by fromClock, reset_by fromReset);
+   rule rl_status_handshake;
 
-	 if (last || (phaseReg == 3)) begin
+      if (statusValidWire == 1) begin
+	 statusValidProbe <= 1;
+	 statusDataProbe <= statusDataWire;
+	 statusLastProbe <= statusLastWire;
+      end
 
-	    toDataProbe <= pack(data);
-	    fromLastProbe <= pack(last); //from.tlast();
+      stsfifo.s_axis.tvalid(statusValidWire);
+      stsfifo.s_axis.tdata(statusDataWire);
+      stsfifo.s_axis.tlast(statusLastWire);
+      stsfifo.s_axis.tkeep(maxBound);
+   endrule
 
-	    phase = 0;
-	    data  = unpack(0);
-	    keep  = 0;
-	    doEnq <= True;
-	    //sfifo.enq(tuple3(pack(data), keep, pack(last)));
-	 end
-	 else begin
-	    phase = phase + 1;
-	 end
+   rule rl_overrun if (from.tvalid() == 1 && sfifo.s_axis.tready() == 0);
+      probeOverrun <= True;
+   endrule
 
-	 phaseReg <= phase;
-	 writeVReg(dataReg, data);
-	 keepReg  <= keep;
+   rule rl_from_valid;
+      fromValidProbe <= from.tvalid();
+   endrule
 
-	 fromDataProbe <= from.tdata();
+   rule rl_combine if (unpack(from.tvalid()));
+      phaseProbe <= phaseReg;
+
+      Bool last = unpack(from.tlast());
+      let byteCount = byteCountReg + 1;
+      let phase = phaseReg;
+      Vector#(4,Bit#(8)) data = readVReg(dataReg);
+      let keep = keepReg;
+      keep[phase] = 1; //from.tkeep();
+      data[phase] = from.tdata();
+
+      sfifo.s_axis.tdata(pack(data));
+      sfifo.s_axis.tkeep(keep);
+      sfifo.s_axis.tlast(pack(last));
+
+      byteCountProbe <= byteCount;
+
+      if (last || (phaseReg == 3)) begin
+
 	 toKeepProbe <= keep;
+	 toDataProbe <= pack(data);
+	 fromLastProbe <= pack(last); //from.tlast();
 
-      endrule
+	 phase = 0;
+	 data  = unpack(0);
+	 keep  = 0;
+	 doEnq <= True;
+	 //sfifo.enq(tuple3(pack(data), keep, pack(last)));
+      end
+      else begin
+	 phase = phase + 1;
+      end
 
-      rule rl_from_handshake;
-	 //from.tready(pack(sfifo.s_axis.tready())); // scary -- no backpressure
-	 sfifo.s_axis.tvalid(pack(doEnq));
-      endrule
+      if (last) begin
+	 byteCount = 0;
+	 lengthFifo.enq(byteCount);
+      end
 
-      rule rl_to_ready_probe;
-	 toReadyProbe <= to.tready();
-      endrule	 
+      byteCountReg <= byteCount;
+      phaseReg <= phase;
+      writeVReg(dataReg, data);
+      keepReg  <= keep;
 
-      let toCnx <- mkConnection(sfifo.m_axis, to);
-   endmodule
-endinstance
+      fromDataProbe <= from.tdata();
+
+   endrule
+
+   rule rl_from_handshake;
+      //from.tready(pack(sfifo.s_axis.tready())); // scary -- no backpressure
+      sfifo.s_axis.tvalid(pack(doEnq));
+   endrule
+
+   rule rl_to_ready_probe;
+      toReadyProbe <= to.tready();
+   endrule	 
+
+   let toCnx <- mkConnection(sfifo.m_axis, to);
+   let stsCnx <- mkConnection(stsfifo.m_axis, status);
+endmodule
 
 (* synthesize *)
 module mkAxiEthBvi#(Clock axis_clk, Clock ref_clk)(AxiEthSubsystem);
@@ -285,12 +371,15 @@ module mkAxiEthBvi#(Clock axis_clk, Clock ref_clk)(AxiEthSubsystem);
 
    // packet data and status from the ethernet
    let rxResetInverted <- mkResetInverter(trimodemac.rx.reset, clocked_by trimodemac.rx.mac_aclk);
-   let rxCnx <- mkConnectionWithClocks(trimodemac.rx_axis_mac, axiDmaBvi.s_axis_s2mm, trimodemac.rx.mac_aclk, rxResetInverted, clock, reset);
+   let rxCnx <- mkStreamStatusConnection(trimodemac.rx_axis_mac, axiDmaBvi.s_axis_s2mm, axiDmaBvi.s_axis_s2mm_sts,
+					 trimodemac.rx.mac_aclk, rxResetInverted, clock, reset);
    //mkConnection(axiEthBvi.m_axis_rxs, axiDmaBvi.s_axis_s2mm_sts);
 
    // packet data and control to the ethernet
    let txResetInverted <- mkResetInverter(trimodemac.tx.reset, clocked_by trimodemac.tx.mac_aclk);
-   let txCnx <- mkConnectionWithClocks(axiDmaBvi.m_axis_mm2s,       trimodemac.tx_axis_mac, clock, reset, trimodemac.tx.mac_aclk, txResetInverted);
+   let txCnx <- mkStreamControlConnection(axiDmaBvi.m_axis_mm2s, axiDmaBvi.m_axis_mm2s_cntrl,
+					  trimodemac.tx_axis_mac,
+					  clock, reset, trimodemac.tx.mac_aclk, txResetInverted);
    //mkConnection(axiDmaBvi.m_axis_mm2s_cntrl, axiEthBvi.s_axis_txc);
    interface   mm2s_dma = axiDmaBvi.mm2s;
    interface   s2mm_dma = axiDmaBvi.s2mm;
