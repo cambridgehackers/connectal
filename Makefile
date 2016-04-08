@@ -115,7 +115,7 @@ ifeq ($(shell uname), Darwin)
 	port install asciidoc
 	easy_install ply
 else
-	if [ -f /usr/bin/yum ] ; then yum install libgmp10 python-ply; else apt-get install libgmp10 python-ply; fi
+	PKGS="libgmp10 strace python-ply python-gevent" if [ -f /usr/bin/yum ] ; then yum install $PKGS; else apt-get install $PKGS; fi
 	ln -sf /usr/lib/x86_64-linux-gnu/libgmp.so /usr/lib/x86_64-linux-gnu/libgmp.so.3
 endif
 
