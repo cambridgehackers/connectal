@@ -35,13 +35,6 @@ import MemTypes::*;
 import ConnectalMemory::*;
 import SharedMemoryFifo::*;
 
-typedef enum {
-   Idle,
-   SendHeader,
-   SendMessage,
-   Stop
-   } SharedMemoryPortalState deriving (Bits,Eq);
-
 module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32) portal,
    function Bit#(16) messageSize(Bit#(16) methodNumber),
    Vector#(2, MemReadEngineServer#(64)) readEngine, Vector#(2, MemWriteEngineServer#(64)) writeEngine)(SharedMemoryPortal#(64));
@@ -98,29 +91,72 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests,numIndications,32
    interface SharedMemoryPortalConfig cfg = pipeIn.cfg;
 endmodule
 
-interface SerialPortalPipeOut#(numeric type dataBusWidth, numeric type pipeCount);
+interface SerialPortalPipeOut#(numeric type pipeCount);
    interface Vector#(pipeCount, PipeOut#(Bit#(32))) data;
+   interface PipeIn#(Bit#(8))                       inputPipe;
 endinterface
 interface SerialPortalPipeIn#(numeric type dataBusWidth);
 endinterface
 
+
 typedef enum {
    Idle,
-   WrPtrRequested, // 1
-   RdPtrRequested, // 2
-   RequestMessage, // 3
-   MessageHeaderRequested, // 4
-   MessageRequested, // 5
-   Drain,
-   UpdateRdPtr,
-   UpdateWrPtr,
-   UpdateWrPtr2,
-   Waiting,
-   SendHeader,
-   SendMessage,
-   SendPadding,
+   MessageHeader,
+   MessageBody,
    Stop
    } SerialPortalState deriving (Bits,Eq);
+
+module mkSerialPortalPipeOut(SerialPortalPipeOut#(pipeCount));
+   let clock <- exposeCurrentClock();
+   let reset <- exposeCurrentReset();
+   Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
+   Reg#(Bit#(16)) methodIdReg <- mkReg(0);
+   Reg#(SerialPortalState) state <- mkReg(Idle);
+   FIFOF#(Bit#(8)) inputFifo <- mkFIFOF();
+   Gearbox#(1,4,Bit#(8)) gearbox <- mk1toNGearbox(clock,reset,clock,reset);
+   Vector#(pipeCount, FIFOF#(Bit#(32))) dataFifo <- replicateM(mkFIFOF);
+
+   let verbose = False;
+
+   rule rx;
+      let char <- toGet(inputFifo).get();
+      gearbox.enq(vec(char));
+   endrule
+
+   rule idle if (state == Idle);
+      state <= MessageHeader;
+   endrule
+
+   rule receiveMessageHeader if (state == MessageHeader);
+      let bytevec = gearbox.first(); gearbox.deq();
+      let hdr = pack(bytevec);
+      let methodId = hdr[31:16];
+      let messageWords = hdr[15:0];
+      methodIdReg <= methodId;
+      if (verbose)
+         $display("receiveMessageHeader hdr=%x methodId=%x messageWords=%d", hdr, methodId, messageWords);
+      messageWordsReg <= messageWords - 1;
+      if (messageWords == 1)
+         state <= MessageHeader;
+      else
+         state <= MessageBody;
+   endrule
+
+   rule receiveMessage if (state == MessageBody);
+      let vec = gearbox.first(); gearbox.deq();
+      let data = pack(vec);
+      if (verbose)
+         $display("receiveMessage data=%x messageWords=%d", data, messageWordsReg);
+      if (methodIdReg != 16'hFFFF)
+         dataFifo[methodIdReg].enq(data);
+      messageWordsReg <= messageWordsReg - 1;
+      if (messageWordsReg == 1)
+         state <= MessageHeader;
+   endrule
+
+   interface data      = map(toPipeOut, dataFifo);
+   interface inputPipe = toPipeIn(inputFifo);
+endmodule
 
 module mkSerialPortalPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes)(PipeOut#(Bit#(8)));
    let clock <- exposeCurrentClock;
@@ -154,10 +190,10 @@ module mkSerialPortalPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes)(
    endrule
 
    rule idle if (state == Idle);
-      state <= SendHeader;
+      state <= MessageHeader;
    endrule
 
-   rule sendHeader if (state == SendHeader && interruptStatus);
+   rule sendHeader if (state == MessageHeader && interruptStatus);
       Bit#(32) hdr <- toGet(pipes[readyChannel]).get();
       Bit#(16) totalWords = hdr[15:0];
       let messageWords = totalWords-1;
@@ -165,16 +201,16 @@ module mkSerialPortalPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes)(
       messageWordsReg <= messageWords;
       methodIdReg <= readyChannel;
       gb.enq(unpack(hdr));
-      state <= SendMessage;
+      state <= MessageBody;
    endrule
 
-   rule sendMessage if (state == SendMessage);
+   rule sendMessage if (state == MessageBody);
       messageWordsReg <= messageWordsReg - 1;
       let v <- toGet(pipes[methodIdReg]).get();
       gb.enq(unpack(v));
       $display("sendMessage v=%h messageWords=%d paddingReg=%d", v, messageWordsReg, paddingReg);
       if (messageWordsReg == 1) begin
-         state <= SendHeader;
+         state <= MessageHeader;
       end
    endrule
 
