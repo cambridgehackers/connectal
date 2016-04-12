@@ -19,14 +19,16 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-import Vector::*;
-import GetPut::*;
-import Connectable::*;
+import BuildVector::*;
 import ClientServer::*;
-import Gearbox::*;
-import MIFO::*;
+import Connectable::*;
 import DefaultValue::*;
+import FIFOF::*;
+import Gearbox::*;
+import GetPut::*;
 import MIMO::*;
+import Vector::*;
+
 import Pipe::*;
 import Portal::*;
 import MemTypes::*;
@@ -35,19 +37,8 @@ import SharedMemoryFifo::*;
 
 typedef enum {
    Idle,
-   HeadRequested,
-   TailRequested,
-   RequestMessage,
-   MessageHeaderRequested,
-   MessageRequested,
-   Drain,
-   UpdateTail,
-   UpdateHead,
-   UpdateHead2,
-   Waiting,
    SendHeader,
    SendMessage,
-   SendPadding,
    Stop
    } SharedMemoryPortalState deriving (Bits,Eq);
 
@@ -105,4 +96,87 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests,numIndications,32
 
    SharedMemoryPipeIn#(64) pipeIn <- mkSharedMemoryPipeIn(indicationPipes, readEngines, writeEngines);
    interface SharedMemoryPortalConfig cfg = pipeIn.cfg;
+endmodule
+
+interface SerialPortalPipeOut#(numeric type dataBusWidth, numeric type pipeCount);
+   interface Vector#(pipeCount, PipeOut#(Bit#(32))) data;
+endinterface
+interface SerialPortalPipeIn#(numeric type dataBusWidth);
+endinterface
+
+typedef enum {
+   Idle,
+   WrPtrRequested, // 1
+   RdPtrRequested, // 2
+   RequestMessage, // 3
+   MessageHeaderRequested, // 4
+   MessageRequested, // 5
+   Drain,
+   UpdateRdPtr,
+   UpdateWrPtr,
+   UpdateWrPtr2,
+   Waiting,
+   SendHeader,
+   SendMessage,
+   SendPadding,
+   Stop
+   } SerialPortalState deriving (Bits,Eq);
+
+module mkSerialPortalPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes)(PipeOut#(Bit#(8)));
+   let clock <- exposeCurrentClock;
+   let reset <- exposeCurrentReset;
+   Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
+   Reg#(Bit#(16)) methodIdReg <- mkReg(0);
+   Reg#(Bool) paddingReg <- mkReg(False);
+   Reg#(SerialPortalState) state <- mkReg(Idle);
+   Reg#(Bit#(32)) sglIdReg <- mkReg(0);
+   function Bool pipeOutNotEmpty(PipeOut#(a) po); return po.notEmpty(); endfunction
+   Vector#(numIndications, Bool) readyBits = map(pipeOutNotEmpty, pipes);
+   Bool      interruptStatus = False;
+   Bit#(16)  readyChannel = -1;
+   FIFOF#(Bit#(8)) outputFifo <- mkFIFOF();
+   Gearbox#(4,1,Bit#(8)) gb <- mkNto1Gearbox(clock,reset,clock,reset);
+
+   let verbose = True;
+
+   for (Integer i = valueOf(numIndications) - 1; i >= 0; i = i - 1) begin
+      if (readyBits[i]) begin
+         interruptStatus = True;
+         readyChannel = fromInteger(i);
+      end
+   end
+
+   rule send8bits;
+      let v = gb.first();
+      gb.deq();
+      if (verbose) $display("send8bits v=%h", v);
+      outputFifo.enq(v[0]);
+   endrule
+
+   rule idle if (state == Idle);
+      state <= SendHeader;
+   endrule
+
+   rule sendHeader if (state == SendHeader && interruptStatus);
+      Bit#(32) hdr <- toGet(pipes[readyChannel]).get();
+      Bit#(16) totalWords = hdr[15:0];
+      let messageWords = totalWords-1;
+
+      messageWordsReg <= messageWords;
+      methodIdReg <= readyChannel;
+      gb.enq(unpack(hdr));
+      state <= SendMessage;
+   endrule
+
+   rule sendMessage if (state == SendMessage);
+      messageWordsReg <= messageWordsReg - 1;
+      let v <- toGet(pipes[methodIdReg]).get();
+      gb.enq(unpack(v));
+      $display("sendMessage v=%h messageWords=%d paddingReg=%d", v, messageWordsReg, paddingReg);
+      if (messageWordsReg == 1) begin
+         state <= SendHeader;
+      end
+   endrule
+
+   return toPipeOut(outputFifo);
 endmodule
