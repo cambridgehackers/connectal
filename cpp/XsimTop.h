@@ -23,7 +23,7 @@
 #ifndef _XsimTop_h
 #define _XsimTop_h
 extern "C" void dpi_init();
-extern "C" int dpi_finish();
+extern "C" int dpi_cycle();
 #endif
 
 
