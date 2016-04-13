@@ -315,6 +315,7 @@ extern PortalTransportFunctions transportBsim, // Transport for bsim
                    // (the 'connect()' call is on Initiator side; Responder does 'listen()'
   transportSocketResp,  // Linux socket transport (Unix sockets and TCP); Responder side
   transportSerial,      // Serial port transport
+  transportSerialMux,   // Serial port mux
   transportShared,      // Shared memory transport
   transportMux,         // Multiplex transport (to use 1 transport for all methods or multiple portals)
   transportTrace,       // Trace transport tee
