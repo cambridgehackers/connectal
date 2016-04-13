@@ -90,11 +90,12 @@ static int busywait_serial(struct PortalInternal *pint, unsigned int v, const ch
 static void send_serial(struct PortalInternal *pint, volatile unsigned int *buff, unsigned int hdr, int sendFd)
 {
     int reqwords = hdr & 0xffff;
+    int i;
 
     pint->map_base[0] = hdr;
     fprintf(stderr, "send_serial head=%d hdr=%08x reqwords=%d\n", pint->map_base[0], hdr, reqwords);
     if (0)
-    for (int i = 0; i < reqwords+1; i++)
+    for (i = 0; i < reqwords+1; i++)
 	pint->map_base[i] = htonl(pint->map_base[i]);
     int nbytes = write(pint->client_fd[0], (void*)pint->map_base, 4*reqwords);
     if (nbytes != 4*reqwords) {
