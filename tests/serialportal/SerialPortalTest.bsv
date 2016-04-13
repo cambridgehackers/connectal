@@ -62,12 +62,12 @@ module mkSerialPortalTest#(SerialPortalIndication indication, EchoRequest echoRe
    mkConnection(serialEchoRequestPipe.data, echoRequestInput.portalIfc.requests);
 
    let echoIndicationOutput <- mkEchoIndicationOutput;
-   Vector#(2,PipeOut#(Bit#(32))) echoIndicationPipes <- genWithM(mkFramedIndicationPipe(echoIndicationOutput.portalIfc,
+   Vector#(2,PipeOut#(Bit#(32))) echoMessagePipes <- genWithM(mkFramedMessagePipe(echoIndicationOutput.portalIfc,
 											getEchoIndicationMessageSize));
-   PipeOut#(Bit#(8)) serialEchoIndicationPipe <- mkSerialPortalPipeIn(echoIndicationPipes);
-   //mkConnection(toGet(serialEchoIndicationPipe), uart.rx);
+   PipeOut#(Bit#(8)) serialEchoMessagePipe <- mkSerialPortalPipeIn(echoMessagePipes);
+   //mkConnection(toGet(serialEchoMessagePipe), uart.rx);
    rule rl_rx;
-      let char <- toGet(serialEchoIndicationPipe).get();
+      let char <- toGet(serialEchoMessagePipe).get();
       uart.rx.put(char);
       indication.rx(char);
    endrule

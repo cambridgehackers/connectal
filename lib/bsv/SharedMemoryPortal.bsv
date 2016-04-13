@@ -46,7 +46,7 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
 endmodule
 
 // adds a header word to each message out of an indication pipe
-module mkFramedIndicationPipe#(PipePortal#(numRequests,numIndications,32) pipePortal,
+module mkFramedMessagePipe#(PipePortal#(numRequests,numIndications,32) pipePortal,
 			       function Bit#(16) messageSize(Bit#(16) methodNumber),
 			       Integer i)(PipeOut#(Bit#(32)));
 
@@ -86,7 +86,7 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests,numIndications,32
 				       Vector#(2, MemReadEngineServer#(64)) readEngines, Vector#(2, MemWriteEngineServer#(64)) writeEngines)
    (SharedMemoryPortal#(64));
 
-   Vector#(numIndications, PipeOut#(Bit#(32))) indicationPipes <- genWithM(mkFramedIndicationPipe(pipePortal,messageSize));
+   Vector#(numIndications, PipeOut#(Bit#(32))) indicationPipes <- genWithM(mkFramedMessagePipe(pipePortal,messageSize));
 
    SharedMemoryPipeIn#(64) pipeIn <- mkSharedMemoryPipeIn(indicationPipes, readEngines, writeEngines);
    interface SharedMemoryPortalConfig cfg = pipeIn.cfg;
@@ -111,7 +111,7 @@ module mkSerialPortalPipeOut(SerialPortalPipeOut#(pipeCount));
    let clock <- exposeCurrentClock();
    let reset <- exposeCurrentReset();
    Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
-   Reg#(Bit#(16)) methodIdReg <- mkReg(0);
+   Reg#(Bit#(8))  methodIdReg <- mkReg(0);
    Reg#(SerialPortalState) state <- mkReg(Idle);
    FIFOF#(Bit#(8)) inputFifo <- mkFIFOF();
    Gearbox#(1,4,Bit#(8)) gearbox <- mk1toNGearbox(clock,reset,clock,reset);
@@ -131,7 +131,7 @@ module mkSerialPortalPipeOut(SerialPortalPipeOut#(pipeCount));
    rule receiveMessageHeader if (state == MessageHeader);
       let bytevec = gearbox.first(); gearbox.deq();
       let hdr = pack(bytevec);
-      let methodId = hdr[31:16];
+      let methodId = hdr[23:16];
       let messageWords = hdr[15:0];
       methodIdReg <= methodId;
       if (verbose)
