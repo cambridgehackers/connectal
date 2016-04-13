@@ -78,12 +78,11 @@ int initSerial(const char *dev)
   int fd = open(dev, O_RDWR | O_NONBLOCK);
   tcflush(fd, TCIOFLUSH);
   tcgetattr(fd, &terminfo);
-  terminfo.c_ispeed = B115200;
-  terminfo.c_ospeed = B115200;
-  terminfo.c_cflag = B115200 | CS8 | CLOCAL | CREAD | PARENB;
+  terminfo.c_cflag = CS8 | CLOCAL | CREAD | PARENB;
   terminfo.c_cflag &= ~CRTSCTS; // needed for /dev/tty.SLAB_USBtoUART
   terminfo.c_iflag = IGNCR;
   terminfo.c_lflag &= ~(ICANON | ECHO | ISIG);
+  cfsetspeed(&terminfo, B115200);
   rc = tcsetattr(fd, TCSANOW, &terminfo);
   if (rc != 0)
       fprintf(stderr, "tcsetattr rc=%d errno=%d\n", rc, errno);
