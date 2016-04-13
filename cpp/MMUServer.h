@@ -75,6 +75,6 @@ public:
     void registerInterface(uint32_t interfaceId, PortalInternal *p) {
         ifcarr[interfaceId] = p;
     }
-    MMUServer(unsigned int id, MMUIndicationProxy *mind, PortalTransportFunctions *item, void *param) :
-        MMURequestWrapper(id, item, param), memoryAreasIndex(1), mIndicationProxy(mind) {}
+    MMUServer(unsigned int id, MMUIndicationProxy *mind, PortalTransportFunctions *transport, void *param) :
+        MMURequestWrapper(id, transport, param), memoryAreasIndex(1), mIndicationProxy(mind) {}
 };

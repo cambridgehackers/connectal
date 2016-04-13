@@ -90,12 +90,12 @@ static volatile unsigned int *mapchannel_req_xsim(struct PortalInternal *pint, u
     if (trace_xsim)
         printf("%s: %d sending header %x\n", __FUNCTION__, pint->fpga_number, (v << 16) | size);
     XsimMsgRequest_msgSink(&reqPortal, pint->fpga_number, (v << 16) | size);
-    return pint->item->mapchannelInd(pint, v);
+    return pint->transport->mapchannelInd(pint, v);
 }
 
 static int event_xsim(struct PortalInternal *pint)
 {
-    mcommon.item->event(&mcommon);
+    mcommon.transport->event(&mcommon);
     return -1;
 }
 

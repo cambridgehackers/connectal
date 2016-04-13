@@ -35,8 +35,8 @@ class %(className)sProxy : public Portal {
 public:
     %(className)sProxy(int id, int tile = DEFAULT_TILE, %(classNameOrig)sCb *cbarg = &%(className)sProxyReq, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
         Portal(id, tile, bufsize, NULL, NULL, this, poller), cb(cbarg) {};
-    %(className)sProxy(int id, PortalTransportFunctions *item, void *param, %(classNameOrig)sCb *cbarg = &%(className)sProxyReq, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
-        Portal(id, DEFAULT_TILE, bufsize, NULL, NULL, item, param, this, poller), cb(cbarg) {};
+    %(className)sProxy(int id, PortalTransportFunctions *transport, void *param, %(classNameOrig)sCb *cbarg = &%(className)sProxyReq, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
+        Portal(id, DEFAULT_TILE, bufsize, NULL, NULL, transport, param, this, poller), cb(cbarg) {};
     %(className)sProxy(int id, PortalPoller *poller) :
         Portal(id, DEFAULT_TILE, %(classNameOrig)s_reqinfo, NULL, NULL, NULL, NULL, this, poller), cb(&%(className)sProxyReq) {};
 '''
@@ -48,14 +48,14 @@ public:
     %(className)sWrapper(int id, int tile = DEFAULT_TILE, PORTAL_INDFUNC cba = %(className)s_handleMessage, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
            Portal(id, tile, bufsize, cba, (void *)&%(className)s_cbTable, this, poller) {
     };
-    %(className)sWrapper(int id, PortalTransportFunctions *item, void *param, PORTAL_INDFUNC cba = %(className)s_handleMessage, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller=0):
-           Portal(id, DEFAULT_TILE, bufsize, cba, (void *)&%(className)s_cbTable, item, param, this, poller) {
+    %(className)sWrapper(int id, PortalTransportFunctions *transport, void *param, PORTAL_INDFUNC cba = %(className)s_handleMessage, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller=0):
+           Portal(id, DEFAULT_TILE, bufsize, cba, (void *)&%(className)s_cbTable, transport, param, this, poller) {
     };
     %(className)sWrapper(int id, PortalPoller *poller) :
            Portal(id, DEFAULT_TILE, %(classNameOrig)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, this, poller) {
     };
-    %(className)sWrapper(int id, PortalTransportFunctions *item, void *param, PortalPoller *poller):
-           Portal(id, DEFAULT_TILE, %(classNameOrig)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, item, param, this, poller) {
+    %(className)sWrapper(int id, PortalTransportFunctions *transport, void *param, PortalPoller *poller):
+           Portal(id, DEFAULT_TILE, %(classNameOrig)s_reqinfo, %(className)s_handleMessage, (void *)&%(className)s_cbTable, transport, param, this, poller) {
     };
     virtual void disconnect(void) {
         printf("%(className)sWrapper.disconnect called %%d\\n", pint.client_fd_number);
@@ -85,7 +85,7 @@ handleMessageTemplate1='''
     switch (channel) {'''
 
 handleMessagePrep='''
-        p->item->recv(p, temp_working_addr, %(wordLen)s, &tmpfd);
+        p->transport->recv(p, temp_working_addr, %(wordLen)s, &tmpfd);
         %(paramStructDemarshall)s'''
 
 handleMessageCase='''
@@ -126,11 +126,11 @@ int %(className)s_%(methodName)s (%(paramProxyDeclarations)s )'''
 
 proxyMethodTemplate='''
 {
-    volatile unsigned int* temp_working_addr_start = p->item->mapchannelReq(p, %(channelNumber)s, %(wordLenP1)s);
+    volatile unsigned int* temp_working_addr_start = p->transport->mapchannelReq(p, %(channelNumber)s, %(wordLenP1)s);
     volatile unsigned int* temp_working_addr = temp_working_addr_start;
-    if (p->item->busywait(p, %(channelNumber)s, "%(className)s_%(methodName)s")) return 1;
+    if (p->transport->busywait(p, %(channelNumber)s, "%(className)s_%(methodName)s")) return 1;
     %(paramStructMarshall)s
-    p->item->send(p, temp_working_addr_start, (%(channelNumber)s << 16) | %(wordLenP1)s, %(fdName)s);
+    p->transport->send(p, temp_working_addr_start, (%(channelNumber)s << 16) | %(wordLenP1)s, %(fdName)s);
     return 0;
 };
 '''
@@ -422,7 +422,7 @@ def generate_marshall(pfmt, w):
         off = off+e.width-e.shifted
         if typeCName(e.datatype) == 'SpecialTypeForSendingFd':
             fdName = field
-            fmt = 'p->item->writefd(p, &temp_working_addr, %s);'
+            fmt = 'p->transport->writefd(p, &temp_working_addr, %s);'
     return fmt % (''.join(util.intersperse('|', word)))
 
 def generate_demarshall(argStruct, w):
@@ -469,8 +469,8 @@ def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
     argWords  = accumWords([], 0, argAtoms)
     fdName = '-1'
 
-    paramStructMarshallStr = 'p->item->write(p, &temp_working_addr, %s);'
-    paramStructDemarshallStr = 'tmp = p->item->read(p, &temp_working_addr);'
+    paramStructMarshallStr = 'p->transport->write(p, &temp_working_addr, %s);'
+    paramStructDemarshallStr = 'tmp = p->transport->read(p, &temp_working_addr);'
 
     if argWords == []:
         paramStructMarshall = [paramStructMarshallStr % '0']
@@ -609,7 +609,7 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
     if classVariant:
         subs['handleStartup'] = 'channel = connnectalJsonDecode(p, channel, &tempdata, %(classNameOrig)sInfo);' % subs
     else:
-        subs['handleStartup'] = 'volatile unsigned int* temp_working_addr = p->item->mapchannelInd(p, channel);'
+        subs['handleStartup'] = 'volatile unsigned int* temp_working_addr = p->transport->mapchannelInd(p, channel);'
         generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqinfo %(reqInfo)s\n' % subs)
         hpp.write(proxyClassPrefixTemplate % subs)
         for mitem in declList:

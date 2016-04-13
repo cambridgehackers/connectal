@@ -115,7 +115,7 @@ typedef struct PortalInternal {
     PORTAL_INDFUNC         handler;
     uint32_t               reqinfo;
     int                    accept_finished;
-    PortalTransportFunctions    *item;
+    PortalTransportFunctions    *transport;
     PortalHandlerTemplate  *cb;
     struct PortalInternal  *mux;
     int                    muxid;
@@ -249,7 +249,7 @@ extern "C" {
 #endif
 // Initialize portal control structure. (called by constructor when creating a portal at runtime)
 void init_portal_internal(PortalInternal *pint, int id, int tile,
-    PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *item,
+    PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *transport,
     void *param, void *parent, uint32_t reqinfo);
 int portal_disconnect(struct PortalInternal *p);
 // Shared memory functions
@@ -373,8 +373,8 @@ public:
         initPortal();
     };
     Portal(int id, int tile, uint32_t reqinfo, PORTAL_INDFUNC handler, void *cb,
-          PortalTransportFunctions *item, void *param, void *parent, PortalPoller *poller = 0) {
-        init_portal_internal(&pint, id, tile, handler, cb, item, param, parent, reqinfo); 
+          PortalTransportFunctions *transport, void *param, void *parent, PortalPoller *poller = 0) {
+        init_portal_internal(&pint, id, tile, handler, cb, transport, param, parent, reqinfo); 
         pint.poller = poller;
         initPortal();
     };

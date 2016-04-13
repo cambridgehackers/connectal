@@ -96,10 +96,10 @@ void connectalJsonEncode(char *datap, void *binarydata, ConnectalMethodJsonInfo 
 void connectalJsonEncodeAndSend(PortalInternal *pint, void *binarydata, ConnectalMethodJsonInfo *info)
 {
     ConnectalParamJsonInfo *iparam = info->param;
-    char *jsonp = (char *)pint->item->mapchannelInd(pint, 0);
+    char *jsonp = (char *)pint->transport->mapchannelInd(pint, 0);
     connectalJsonEncode(jsonp, binarydata, info); 
     int rounded_size = strlen(jsonp);
-    pint->item->send(pint, (volatile unsigned int*)jsonp, (iparam->offset << 16) | (1 + rounded_size), -1);
+    pint->transport->send(pint, (volatile unsigned int*)jsonp, (iparam->offset << 16) | (1 + rounded_size), -1);
 }
 
 int connnectalJsonDecode(PortalInternal *pint, int _unused_channel, void *binarydata, ConnectalMethodJsonInfo *infoa)
@@ -108,11 +108,11 @@ int connnectalJsonDecode(PortalInternal *pint, int _unused_channel, void *binary
     ConnectalMethodJsonInfo *info = NULL;
     //&infoa[channel];
     uint32_t header = *(uint32_t *)pint->map_base;
-    char *datap = (char *)pint->item->mapchannelInd(pint, 0);
+    char *datap = (char *)pint->transport->mapchannelInd(pint, 0);
     char ch, *attr = NULL, *val = NULL;
     int tmpfd;
     int len = (header & 0xffff)-1;
-    int rc = pint->item->recv(pint, (volatile unsigned int*)datap, len, &tmpfd);
+    int rc = pint->transport->recv(pint, (volatile unsigned int*)datap, len, &tmpfd);
     if (rc != len)
       fprintf(stderr, "[%s:%d] short read %d\n", __FUNCTION__, __LINE__, rc);
     

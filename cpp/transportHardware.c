@@ -74,7 +74,7 @@ void write_fd_portal_memory(PortalInternal *pint, volatile unsigned int **addr, 
 }
 volatile unsigned int *mapchannel_req_generic(struct PortalInternal *pint, unsigned int v, unsigned int size)
 {
-    return pint->item->mapchannelInd(pint, v);
+    return pint->transport->mapchannelInd(pint, v);
 }
 volatile unsigned int *mapchannel_hardware(struct PortalInternal *pint, unsigned int v)
 {
@@ -82,17 +82,17 @@ volatile unsigned int *mapchannel_hardware(struct PortalInternal *pint, unsigned
 }
 int notfull_hardware(PortalInternal *pint, unsigned int v)
 {
-    volatile unsigned int *tempp = pint->item->mapchannelInd(pint, v) + 1;
-    return pint->item->read(pint, &tempp);
+    volatile unsigned int *tempp = pint->transport->mapchannelInd(pint, v) + 1;
+    return pint->transport->read(pint, &tempp);
 }
 int busy_hardware(struct PortalInternal *pint, unsigned int v, const char *str)
 {
     int count = 50;
-    while (!pint->item->notFull(pint, v) && ((pint->busyType == BUSY_SPIN) || count-- > 0))
+    while (!pint->transport->notFull(pint, v) && ((pint->busyType == BUSY_SPIN) || count-- > 0))
         ; /* busy wait a bit on 'fifo not full' */
     if (count <= 0) {
         if (0 && pint->busyType == BUSY_TIMEWAIT)
-            while (!pint->item->notFull(pint, v)) {
+            while (!pint->transport->notFull(pint, v)) {
 #ifndef __KERNEL__
                 struct timeval timeout;
                 timeout.tv_sec = 0;
@@ -114,7 +114,7 @@ int busy_hardware(struct PortalInternal *pint, unsigned int v, const char *str)
 void enableint_hardware(struct PortalInternal *pint, int val)
 {
     volatile unsigned int *enp = &(pint->map_base[PORTAL_CTRL_INTERRUPT_ENABLE]);
-    pint->item->write(pint, &enp, val);
+    pint->transport->write(pint, &enp, val);
 }
 int event_hardware(struct PortalInternal *pint)
 {
@@ -125,17 +125,17 @@ int event_hardware(struct PortalInternal *pint)
     volatile unsigned int *statp = &map_base[PORTAL_CTRL_IND_QUEUE_STATUS];
     volatile unsigned int *srcp = &map_base[PORTAL_CTRL_INTERRUPT_STATUS];
     volatile unsigned int *enp = &map_base[PORTAL_CTRL_INTERRUPT_ENABLE];
-    while ((queue_status = pint->item->read(pint, &statp))) {
+    while ((queue_status = pint->transport->read(pint, &statp))) {
         if(trace_hardware) {
-            unsigned int int_src = pint->item->read(pint, &srcp);
-            unsigned int int_en  = pint->item->read(pint, &enp);
+            unsigned int int_src = pint->transport->read(pint, &srcp);
+            unsigned int int_en  = pint->transport->read(pint, &enp);
             PORTAL_PRINTF( "%s: (fpga%d) about to receive messages int=%08x en=%08x qs=%08x handler %p parent %p\n", __FUNCTION__, pint->fpga_number, int_src, int_en, queue_status, pint->handler, pint->parent);
         }
         if (pint->handler)
             pint->handler(pint, queue_status-1, 0);
         else {
-            unsigned int int_src = pint->item->read(pint, &srcp);
-            unsigned int int_en  = pint->item->read(pint, &enp);
+            unsigned int int_src = pint->transport->read(pint, &srcp);
+            unsigned int int_en  = pint->transport->read(pint, &enp);
             PORTAL_PRINTF( "%s: (fpga%d) no handler receive int=%08x en=%08x qs=%08x handler %p parent %p\n", __FUNCTION__, pint->fpga_number, int_src, int_en, queue_status, pint->handler, pint->parent);
             exit(-1);
         }
