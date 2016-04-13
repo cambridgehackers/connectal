@@ -78,7 +78,7 @@ module mkSerialPortalTest#(SerialPortalIndication indication, EchoRequest echoRe
    let echoIndicationOutput <- mkEchoIndicationOutput;
    Vector#(2,PipeOut#(Bit#(32))) echoMessagePipes <- genWithM(mkFramedMessagePipe(echoIndicationOutput.portalIfc,
 											getEchoIndicationMessageSize));
-   PipeOut#(Bit#(32)) serialEchoMessagePipe <- mkSerialPortalPipeIn(echoMessagePipes);
+   PipeOut#(Bit#(32)) serialEchoMessagePipe <- mkSerialPortalMux(echoMessagePipes);
    Gearbox#(4,1,Bit#(8)) rx_gb <- mkNto1Gearbox(clock,reset,clock,reset);
    rule rl_rx_gb;
       let v <- toGet(serialEchoMessagePipe).get();

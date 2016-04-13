@@ -155,7 +155,7 @@ module mkSerialPortalDemux#(SerialPortalDemuxLevel portalDemux)(SerialPortalDemu
    interface inputPipe = toPipeIn(inputFifo);
 endmodule
 
-module mkSerialPortalPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes)(PipeOut#(Bit#(32)));
+module mkSerialPortalMux#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes)(PipeOut#(Bit#(32)));
    let clock <- exposeCurrentClock;
    let reset <- exposeCurrentReset;
    Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
