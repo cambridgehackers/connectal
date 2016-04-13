@@ -37,6 +37,8 @@ import SerialPortalIfc::*;
 import Echo::*;
 import EchoRequest::*;
 import EchoIndication::*;
+import Simple::*;
+import SimpleRequest::*;
 
 interface SerialPortalTest;
    interface SerialPortalRequest request;
@@ -44,7 +46,7 @@ interface SerialPortalTest;
    interface SerialPortalPins    pins;
 endinterface
 
-module mkSerialPortalTest#(SerialPortalIndication indication, EchoRequest echoRequest)(SerialPortalTest);
+module mkSerialPortalTest#(SerialPortalIndication indication, EchoRequest echoRequest, SimpleRequest simpleRequest)(SerialPortalTest);
 
    let clock <- exposeCurrentClock();
    let reset <- exposeCurrentReset();
@@ -60,11 +62,18 @@ module mkSerialPortalTest#(SerialPortalIndication indication, EchoRequest echoRe
    mkConnection(echoRequestInput.pipes, echoRequest);
    mkConnection(serialEchoRequestDemux.data, echoRequestInput.portalIfc.requests);
 
-   SerialPortalDemux#(1) portalDemux <- mkSerialPortalDemux(Portal);
+   SerialPortalDemux#(12) serialSimpleRequestDemux <- mkSerialPortalDemux(Method); // why the asymmetry?
+   let simpleRequestInput <- mkSimpleRequestInput();
+   mkConnection(simpleRequestInput.pipes, simpleRequest);
+   mkConnection(serialSimpleRequestDemux.data, simpleRequestInput.portalIfc.requests);
+
+   SerialPortalDemux#(2) portalDemux <- mkSerialPortalDemux(Portal);
+   mkConnection(portalDemux.data[0], serialEchoRequestDemux.inputPipe);
+   mkConnection(portalDemux.data[1], serialSimpleRequestDemux.inputPipe);
+
    Gearbox#(1,4,Bit#(8)) tx_gb <- mk1toNGearbox(clock,reset,clock,reset);
    mkConnection(uart.tx, toPut(toPipeIn(tx_gb)));
    mkConnection(mapPipe(pack,toPipeOut(tx_gb)), portalDemux.inputPipe);
-   mkConnection(portalDemux.data[0], serialEchoRequestDemux.inputPipe);
 
    let echoIndicationOutput <- mkEchoIndicationOutput;
    Vector#(2,PipeOut#(Bit#(32))) echoMessagePipes <- genWithM(mkFramedMessagePipe(echoIndicationOutput.portalIfc,

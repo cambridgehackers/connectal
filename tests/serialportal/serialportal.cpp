@@ -32,6 +32,7 @@
 #include "SerialPortalRequest.h"
 #include "EchoRequest.h"
 #include "EchoIndication.h"
+#include "SimpleRequest.h"
 
 class SerialPortalIndication : public SerialPortalIndicationWrapper
 {  
@@ -106,7 +107,8 @@ int main(int argc, const char **argv)
   int serial_fd = initSerial(argv[1]);
   PortalSharedParam param;
   param.serial.serial_fd = serial_fd;
-  EchoRequestProxy echoSerial(1, &transportSerial, &param);
+  EchoRequestProxy   echoSerial(0, &transportSerial, &param);
+  //SimpleRequestProxy simpleSerial(1, &transportSerial, &param); // need to mux
   EchoIndication echoSerialIndication(2, &transportSerial, &param);
 
   device->setDivisor(134);
