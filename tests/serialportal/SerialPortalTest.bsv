@@ -55,13 +55,16 @@ module mkSerialPortalTest#(SerialPortalIndication indication, EchoRequest echoRe
    Reg#(Bit#(16)) divisor <- mkReg(134);
    UART#(16) uart <- mkUART(8, EVEN, STOP_1, divisor);
 
-   SerialPortalPipeOut#(3) serialEchoRequestPipe <- mkSerialPortalPipeOut(); // why the asymmetry?
+   SerialPortalDemux#(3) serialEchoRequestDemux <- mkSerialPortalDemux(Method); // why the asymmetry?
    let echoRequestInput <- mkEchoRequestInput();
-   Gearbox#(1,4,Bit#(8)) tx_gb <- mk1toNGearbox(clock,reset,clock,reset);
    mkConnection(echoRequestInput.pipes, echoRequest);
+   mkConnection(serialEchoRequestDemux.data, echoRequestInput.portalIfc.requests);
+
+   SerialPortalDemux#(1) portalDemux <- mkSerialPortalDemux(Portal);
+   Gearbox#(1,4,Bit#(8)) tx_gb <- mk1toNGearbox(clock,reset,clock,reset);
    mkConnection(uart.tx, toPut(toPipeIn(tx_gb)));
-   mkConnection(mapPipe(pack,toPipeOut(tx_gb)), serialEchoRequestPipe.inputPipe);
-   mkConnection(serialEchoRequestPipe.data, echoRequestInput.portalIfc.requests);
+   mkConnection(mapPipe(pack,toPipeOut(tx_gb)), portalDemux.inputPipe);
+   mkConnection(portalDemux.data[0], serialEchoRequestDemux.inputPipe);
 
    let echoIndicationOutput <- mkEchoIndicationOutput;
    Vector#(2,PipeOut#(Bit#(32))) echoMessagePipes <- genWithM(mkFramedMessagePipe(echoIndicationOutput.portalIfc,

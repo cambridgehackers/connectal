@@ -92,7 +92,7 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests,numIndications,32
    interface SharedMemoryPortalConfig cfg = pipeIn.cfg;
 endmodule
 
-interface SerialPortalPipeOut#(numeric type pipeCount);
+interface SerialPortalDemux#(numeric type pipeCount);
    interface Vector#(pipeCount, PipeOut#(Bit#(32))) data;
    interface PipeIn#(Bit#(32))                      inputPipe;
 endinterface
@@ -104,11 +104,16 @@ typedef enum {
    Stop
    } SerialPortalState deriving (Bits,Eq);
 
-module mkSerialPortalPipeOut(SerialPortalPipeOut#(pipeCount));
+typedef enum {
+   Portal,
+   Method
+   } SerialPortalDemuxLevel deriving (Bits,Eq);
+
+module mkSerialPortalDemux#(SerialPortalDemuxLevel portalDemux)(SerialPortalDemux#(pipeCount));
    let clock <- exposeCurrentClock();
    let reset <- exposeCurrentReset();
    Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
-   Reg#(Bit#(8))  methodIdReg <- mkReg(0);
+   Reg#(Bit#(8))  selectorReg <- mkReg(0);
    Reg#(SerialPortalState) state <- mkReg(Idle);
    FIFOF#(Bit#(32)) inputFifo <- mkFIFOF();
    Vector#(pipeCount, FIFOF#(Bit#(32))) dataFifo <- replicateM(mkFIFOF);
@@ -121,11 +126,13 @@ module mkSerialPortalPipeOut(SerialPortalPipeOut#(pipeCount));
 
    rule receiveMessageHeader if (state == MessageHeader);
       let hdr <- toGet(inputFifo).get();
-      let methodId = hdr[23:16];
+      let selector = (portalDemux == Portal) ? hdr[31:24] : hdr[23:16];
       let messageWords = hdr[15:0];
-      methodIdReg <= methodId;
+      selectorReg <= selector;
       if (verbose)
-         $display("receiveMessageHeader hdr=%x methodId=%x messageWords=%d", hdr, methodId, messageWords);
+         $display("receiveMessageHeader hdr=%x selector=%x messageWords=%d", hdr, selector, messageWords);
+      if (portalDemux == Portal) // methodDemux need the header
+         dataFifo[selector].enq(hdr);
       messageWordsReg <= messageWords - 1;
       if (messageWords == 1)
          state <= MessageHeader;
@@ -137,8 +144,8 @@ module mkSerialPortalPipeOut(SerialPortalPipeOut#(pipeCount));
       let data <- toGet(inputFifo).get();
       if (verbose)
          $display("receiveMessage data=%x messageWords=%d", data, messageWordsReg);
-      if (methodIdReg != 8'hFF)
-         dataFifo[methodIdReg].enq(data);
+      if (selectorReg != 8'hFF)
+         dataFifo[selectorReg].enq(data);
       messageWordsReg <= messageWordsReg - 1;
       if (messageWordsReg == 1)
          state <= MessageHeader;
