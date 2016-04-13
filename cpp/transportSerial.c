@@ -62,12 +62,11 @@ static int init_serial(struct PortalInternal *pint, void *aparam)
 	    int rc;
 	    tcflush(serial_fd, TCIOFLUSH);
 	    tcgetattr(serial_fd, &terminfo);
-	    terminfo.c_ispeed = B115200;
-	    terminfo.c_ospeed = B115200;
-	    terminfo.c_cflag = B115200 | CS8 | CLOCAL | CREAD | PARENB;
+	    terminfo.c_cflag = CS8 | CLOCAL | CREAD | PARENB;
 	    terminfo.c_cflag &= ~CRTSCTS; // needed for /dev/tty.SLAB_USBtoUART
 	    terminfo.c_iflag = IGNCR;
 	    terminfo.c_lflag = ICANON;
+	    cfsetspeed(&terminfo, B115200);
 	    rc = tcsetattr(serial_fd, TCSANOW, &terminfo);
 	    if (rc != 0) {
 		fprintf(stderr, "tcsetattr %d errno %d:%s\n", rc, errno, strerror(errno));
