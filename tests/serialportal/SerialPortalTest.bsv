@@ -43,6 +43,7 @@ import SimpleRequest::*;
 interface SerialPortalTest;
    interface SerialPortalRequest request;
    interface EchoIndication echoIndication;
+   interface SimpleRequest  simpleRequest;
    interface SerialPortalPins    pins;
 endinterface
 
@@ -76,12 +77,18 @@ module mkSerialPortalTest#(SerialPortalIndication indication, EchoRequest echoRe
    mkConnection(mapPipe(pack,toPipeOut(tx_gb)), portalDemux.inputPipe);
 
    let echoIndicationOutput <- mkEchoIndicationOutput;
-   Vector#(2,PipeOut#(Bit#(32))) echoMessagePipes <- genWithM(mkFramedMessagePipe(echoIndicationOutput.portalIfc,
-											getEchoIndicationMessageSize));
-   PipeOut#(Bit#(32)) serialEchoMessagePipe <- mkSerialPortalMux(echoMessagePipes);
+   Vector#(2,PipeOut#(Bit#(32))) echoMethodPipes <- genWithM(mkFramedMessagePipe(0, echoIndicationOutput.portalIfc, getEchoIndicationMessageSize));
+   PipeOut#(Bit#(32)) serialEchoPortalPipe <- mkSerialPortalMux(echoMethodPipes);
+
+   let simpleRequestOutput <- mkSimpleRequestOutput;
+   Vector#(12,PipeOut#(Bit#(32))) simpleMethodPipes <- genWithM(mkFramedMessagePipe(1, simpleRequestOutput.portalIfc, getSimpleRequestMessageSize));
+   PipeOut#(Bit#(32)) serialSimplePortalPipe <- mkSerialPortalMux(simpleMethodPipes);
+
+   PipeOut#(Bit#(32)) portalMux <- mkSerialPortalMux(vec(serialEchoPortalPipe, serialSimplePortalPipe));
+
    Gearbox#(4,1,Bit#(8)) rx_gb <- mkNto1Gearbox(clock,reset,clock,reset);
    rule rl_rx_gb;
-      let v <- toGet(serialEchoMessagePipe).get();
+      let v <- toGet(portalMux).get();
       rx_gb.enq(unpack(v));
    endrule
    rule rl_rx;
@@ -96,6 +103,7 @@ module mkSerialPortalTest#(SerialPortalIndication indication, EchoRequest echoRe
       endmethod
    endinterface
    interface EchoIndication echoIndication = echoIndicationOutput.ifc;
+   interface SimpleRequest  simpleRequest  = simpleRequestOutput.ifc;
    interface SerialPortalPins pins;
       interface uart = uart.rs232;
       interface deleteme_unused_clock = clock;
