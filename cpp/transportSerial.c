@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include <arpa/inet.h>
 #include <errno.h>
 
 #include "portal.h"
@@ -49,32 +50,35 @@ static int init_serial(struct PortalInternal *pint, void *aparam)
 {
     PortalSharedParam *param = (PortalSharedParam *)aparam;
     if (param) {
-	struct termios terminfo;
-	int rc;
+	int serial_fd = param->serial.serial_fd;
 	pint->map_base = (volatile unsigned int *)malloc(4096);
-	pint->client_fd[0] = param->serial.serial_fd;
+	pint->client_fd[0] = serial_fd;
 	pint->client_fd_number = 1;
 	fprintf(stderr, "init_serial param=%p serial_fd=%d map_base=%p\n",
 		param, param->serial.serial_fd, pint->map_base);
 
-	pint->fpga_fd = param->serial.serial_fd;
-	tcgetattr(pint->fpga_fd, &terminfo);
-	terminfo.c_ispeed = B115200;
-	terminfo.c_ospeed = B115200;
-	terminfo.c_cflag = B115200 | CS8 | CLOCAL | CREAD | PARENB;
-	terminfo.c_cflag &= ~CRTSCTS; // needed for /dev/tty.SLAB_USBtoUART
-	terminfo.c_iflag = IGNCR;
-	terminfo.c_lflag = ICANON;
-	rc = tcsetattr(pint->fpga_fd, TCSANOW, &terminfo);
-	if (rc != 0) {
-	  fprintf(stderr, "tcsetattr %d errno %d:%s\n", rc, errno, strerror(errno));
+	if (0) {
+	    struct termios terminfo;
+	    int rc;
+	    tcflush(serial_fd, TCIOFLUSH);
+	    tcgetattr(serial_fd, &terminfo);
+	    terminfo.c_ispeed = B115200;
+	    terminfo.c_ospeed = B115200;
+	    terminfo.c_cflag = B115200 | CS8 | CLOCAL | CREAD | PARENB;
+	    terminfo.c_cflag &= ~CRTSCTS; // needed for /dev/tty.SLAB_USBtoUART
+	    terminfo.c_iflag = IGNCR;
+	    terminfo.c_lflag = ICANON;
+	    rc = tcsetattr(serial_fd, TCSANOW, &terminfo);
+	    if (rc != 0) {
+		fprintf(stderr, "tcsetattr %d errno %d:%s\n", rc, errno, strerror(errno));
+	    }
 	}
     }
     return 0;
 }
 static volatile unsigned int *mapchannel_serialInd(struct PortalInternal *pint, unsigned int v)
 {
-    return &pint->map_base[1024];
+    return &pint->map_base[128+1];
 }
 static volatile unsigned int *mapchannel_serialReq(struct PortalInternal *pint, unsigned int v, unsigned int size)
 {
@@ -89,17 +93,42 @@ static void send_serial(struct PortalInternal *pint, volatile unsigned int *buff
     int reqwords = hdr & 0xffff;
 
     pint->map_base[0] = hdr;
-    fprintf(stderr, "send_serial head=%d hdr=%08x\n", pint->map_base[0], hdr);
-    int nbytes = write(pint->client_fd[0], (void*)pint->map_base, 4*reqwords+4);
-    if (nbytes != 4*reqwords+4) {
+    fprintf(stderr, "send_serial head=%d hdr=%08x reqwords=%d\n", pint->map_base[0], hdr, reqwords);
+    if (0)
+    for (int i = 0; i < reqwords+1; i++)
+	pint->map_base[i] = htonl(pint->map_base[i]);
+    int nbytes = write(pint->client_fd[0], (void*)pint->map_base, 4*reqwords);
+    if (nbytes != 4*reqwords) {
 	fprintf(stderr, "%s:%d nbytes=%d errno=%d:%s\n", __FUNCTION__, __LINE__, nbytes, errno, strerror(errno));
     }
     pint->map_base[0] = 0;
+    tcdrain(pint->client_fd[0]);
 }
 static int event_serial(struct PortalInternal *pint)
 {
-    if (pint->map_base && pint->map_base[SHARED_READ] != pint->map_base[SHARED_WRITE]) {
-    }
+    if (0) fprintf(stderr, "%s:%d serial_fd=%d\n", __FUNCTION__, __LINE__, pint->client_fd[0]);
+    int nbytes;
+    int i = 0;
+    char *base = (char *)&pint->map_base[128];
+    int tries = 0;
+    do {
+      nbytes = read(pint->client_fd[0], (void*)(base + i), 1);
+      if (nbytes > 0)
+	i += nbytes;
+      if (0) fprintf(stderr, "%s:%d i=%d nbytes=%d hdr=%#08x\n", __FUNCTION__, __LINE__, i, nbytes, pint->map_base[128]);
+      if (i == 4) {
+	int reqwords = pint->map_base[128] & 0xFFFF;
+	int msg_num = pint->map_base[128] >> 16;
+	if (reqwords > 1) {
+	  nbytes = read(pint->client_fd[0], (void*)&pint->map_base[129], 4*(reqwords-1));
+	  if (0) fprintf(stderr, "%s:%d i=%d nbytes=%d msgbody[0]=%#08x\n", __FUNCTION__, __LINE__, i, nbytes, pint->map_base[129]);
+	}
+	if (0) fprintf(stderr, "%s:%d reqwords=%d msg_num=%d handler=%p\n", __FUNCTION__, __LINE__, reqwords, msg_num, pint->handler);
+	if (msg_num != 0xFFFF && pint->handler)
+	    pint->handler(pint, msg_num, 0);
+	i = 0;
+      }
+    } while (nbytes > 0 || tries-- > 0);
     return -1;
 }
 PortalTransportFunctions transportSerial = {
