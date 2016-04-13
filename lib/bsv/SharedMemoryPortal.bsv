@@ -27,6 +27,7 @@ import FIFOF::*;
 import Gearbox::*;
 import GetPut::*;
 import MIMO::*;
+import Probe::*;
 import Vector::*;
 
 import Pipe::*;
@@ -170,10 +171,15 @@ module mkSerialPortalPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes)(
    Vector#(numIndications, Bool) readyBits = map(pipeOutNotEmpty, pipes);
    Bool      interruptStatus = False;
    Bit#(16)  readyChannel = -1;
-   FIFOF#(Bit#(8)) outputFifo <- mkFIFOF();
+   FIFOF#(Bit#(32)) outputFifo <- mkFIFOF();
+   FIFOF#(Bit#(8)) outputChars <- mkFIFOF();
    Gearbox#(4,1,Bit#(8)) gb <- mkNto1Gearbox(clock,reset,clock,reset);
 
    let verbose = True;
+   let stateProbe <- mkProbe();
+   let messageWordsProbe <- mkProbe();
+   let messageDataProbe <- mkProbe();
+   let charProbe <- mkProbe();
 
    for (Integer i = valueOf(numIndications) - 1; i >= 0; i = i - 1) begin
       if (readyBits[i]) begin
@@ -182,37 +188,47 @@ module mkSerialPortalPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes)(
       end
    end
 
-   rule send8bits;
-      let v = gb.first();
-      gb.deq();
-      if (verbose) $display("send8bits v=%h", v);
-      outputFifo.enq(v[0]);
+   rule rl_gb;
+      let v <- toGet(outputFifo).get();
+      gb.enq(unpack(v));
+   endrule
+   rule rl_chars;
+      let char = gb.first[0]; gb.deq();
+      charProbe <= char;
+      outputChars.enq(char);
    endrule
 
    rule idle if (state == Idle);
       state <= MessageHeader;
+      stateProbe <= MessageHeader;
    endrule
 
    rule sendHeader if (state == MessageHeader && interruptStatus);
       Bit#(32) hdr <- toGet(pipes[readyChannel]).get();
       Bit#(16) totalWords = hdr[15:0];
       let messageWords = totalWords-1;
+      messageWordsProbe <= messageWords;
 
       messageWordsReg <= messageWords;
       methodIdReg <= readyChannel;
-      gb.enq(unpack(hdr));
+      outputFifo.enq(hdr);
       state <= MessageBody;
+      stateProbe <= MessageBody;
+      messageDataProbe <= hdr;
    endrule
 
    rule sendMessage if (state == MessageBody);
       messageWordsReg <= messageWordsReg - 1;
       let v <- toGet(pipes[methodIdReg]).get();
-      gb.enq(unpack(v));
+      outputFifo.enq(v);
       $display("sendMessage v=%h messageWords=%d paddingReg=%d", v, messageWordsReg, paddingReg);
       if (messageWordsReg == 1) begin
          state <= MessageHeader;
+	 stateProbe <= MessageHeader;
       end
+      messageDataProbe <= v;
    endrule
 
-   return toPipeOut(outputFifo);
+   //PipeOut#(Bit#(8)) outputPipe = toPipeOut(gb);
+   return toPipeOut(outputChars);
 endmodule
