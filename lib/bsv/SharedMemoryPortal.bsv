@@ -94,11 +94,8 @@ endmodule
 
 interface SerialPortalPipeOut#(numeric type pipeCount);
    interface Vector#(pipeCount, PipeOut#(Bit#(32))) data;
-   interface PipeIn#(Bit#(8))                       inputPipe;
+   interface PipeIn#(Bit#(32))                      inputPipe;
 endinterface
-interface SerialPortalPipeIn#(numeric type dataBusWidth);
-endinterface
-
 
 typedef enum {
    Idle,
@@ -113,24 +110,17 @@ module mkSerialPortalPipeOut(SerialPortalPipeOut#(pipeCount));
    Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
    Reg#(Bit#(8))  methodIdReg <- mkReg(0);
    Reg#(SerialPortalState) state <- mkReg(Idle);
-   FIFOF#(Bit#(8)) inputFifo <- mkFIFOF();
-   Gearbox#(1,4,Bit#(8)) gearbox <- mk1toNGearbox(clock,reset,clock,reset);
+   FIFOF#(Bit#(32)) inputFifo <- mkFIFOF();
    Vector#(pipeCount, FIFOF#(Bit#(32))) dataFifo <- replicateM(mkFIFOF);
 
    let verbose = False;
-
-   rule rx;
-      let char <- toGet(inputFifo).get();
-      gearbox.enq(vec(char));
-   endrule
 
    rule idle if (state == Idle);
       state <= MessageHeader;
    endrule
 
    rule receiveMessageHeader if (state == MessageHeader);
-      let bytevec = gearbox.first(); gearbox.deq();
-      let hdr = pack(bytevec);
+      let hdr <- toGet(inputFifo).get();
       let methodId = hdr[23:16];
       let messageWords = hdr[15:0];
       methodIdReg <= methodId;
@@ -144,11 +134,10 @@ module mkSerialPortalPipeOut(SerialPortalPipeOut#(pipeCount));
    endrule
 
    rule receiveMessage if (state == MessageBody);
-      let vec = gearbox.first(); gearbox.deq();
-      let data = pack(vec);
+      let data <- toGet(inputFifo).get();
       if (verbose)
          $display("receiveMessage data=%x messageWords=%d", data, messageWordsReg);
-      if (methodIdReg != 16'hFFFF)
+      if (methodIdReg != 8'hFF)
          dataFifo[methodIdReg].enq(data);
       messageWordsReg <= messageWordsReg - 1;
       if (messageWordsReg == 1)
@@ -159,7 +148,7 @@ module mkSerialPortalPipeOut(SerialPortalPipeOut#(pipeCount));
    interface inputPipe = toPipeIn(inputFifo);
 endmodule
 
-module mkSerialPortalPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes)(PipeOut#(Bit#(8)));
+module mkSerialPortalPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes)(PipeOut#(Bit#(32)));
    let clock <- exposeCurrentClock;
    let reset <- exposeCurrentReset;
    Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
@@ -172,14 +161,11 @@ module mkSerialPortalPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes)(
    Bool      interruptStatus = False;
    Bit#(16)  readyChannel = -1;
    FIFOF#(Bit#(32)) outputFifo <- mkFIFOF();
-   FIFOF#(Bit#(8)) outputChars <- mkFIFOF();
-   Gearbox#(4,1,Bit#(8)) gb <- mkNto1Gearbox(clock,reset,clock,reset);
 
    let verbose = True;
    let stateProbe <- mkProbe();
    let messageWordsProbe <- mkProbe();
    let messageDataProbe <- mkProbe();
-   let charProbe <- mkProbe();
 
    for (Integer i = valueOf(numIndications) - 1; i >= 0; i = i - 1) begin
       if (readyBits[i]) begin
@@ -187,16 +173,6 @@ module mkSerialPortalPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes)(
          readyChannel = fromInteger(i);
       end
    end
-
-   rule rl_gb;
-      let v <- toGet(outputFifo).get();
-      gb.enq(unpack(v));
-   endrule
-   rule rl_chars;
-      let char = gb.first[0]; gb.deq();
-      charProbe <= char;
-      outputChars.enq(char);
-   endrule
 
    rule idle if (state == Idle);
       state <= MessageHeader;
@@ -229,6 +205,5 @@ module mkSerialPortalPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes)(
       messageDataProbe <= v;
    endrule
 
-   //PipeOut#(Bit#(8)) outputPipe = toPipeOut(gb);
-   return toPipeOut(outputChars);
+   return toPipeOut(outputFifo);
 endmodule

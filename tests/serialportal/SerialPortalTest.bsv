@@ -57,17 +57,23 @@ module mkSerialPortalTest#(SerialPortalIndication indication, EchoRequest echoRe
 
    SerialPortalPipeOut#(3) serialEchoRequestPipe <- mkSerialPortalPipeOut(); // why the asymmetry?
    let echoRequestInput <- mkEchoRequestInput();
+   Gearbox#(1,4,Bit#(8)) tx_gb <- mk1toNGearbox(clock,reset,clock,reset);
    mkConnection(echoRequestInput.pipes, echoRequest);
-   mkConnection(uart.tx, toPut(serialEchoRequestPipe.inputPipe));
+   mkConnection(uart.tx, toPut(toPipeIn(tx_gb)));
+   mkConnection(mapPipe(pack,toPipeOut(tx_gb)), serialEchoRequestPipe.inputPipe);
    mkConnection(serialEchoRequestPipe.data, echoRequestInput.portalIfc.requests);
 
    let echoIndicationOutput <- mkEchoIndicationOutput;
    Vector#(2,PipeOut#(Bit#(32))) echoMessagePipes <- genWithM(mkFramedMessagePipe(echoIndicationOutput.portalIfc,
 											getEchoIndicationMessageSize));
-   PipeOut#(Bit#(8)) serialEchoMessagePipe <- mkSerialPortalPipeIn(echoMessagePipes);
-   //mkConnection(toGet(serialEchoMessagePipe), uart.rx);
+   PipeOut#(Bit#(32)) serialEchoMessagePipe <- mkSerialPortalPipeIn(echoMessagePipes);
+   Gearbox#(4,1,Bit#(8)) rx_gb <- mkNto1Gearbox(clock,reset,clock,reset);
+   rule rl_rx_gb;
+      let v <- toGet(serialEchoMessagePipe).get();
+      rx_gb.enq(unpack(v));
+   endrule
    rule rl_rx;
-      let char <- toGet(serialEchoMessagePipe).get();
+      let char = rx_gb.first()[0]; rx_gb.deq();
       uart.rx.put(char);
       indication.rx(char);
    endrule
