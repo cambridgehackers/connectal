@@ -159,6 +159,9 @@ typedef struct {
         void              *callbackFunctions;
         SHARED_MMUINDICATION_POLL poll;
     } dma;
+    struct {
+	int serial_fd;
+    } serial;
     uint32_t    size;
     struct {
         int port;
@@ -311,6 +314,7 @@ extern PortalTransportFunctions transportBsim, // Transport for bsim
   transportSocketInit,  // Linux socket transport (Unix sockets and TCP); Initiator side
                    // (the 'connect()' call is on Initiator side; Responder does 'listen()'
   transportSocketResp,  // Linux socket transport (Unix sockets and TCP); Responder side
+  transportSerial,      // Serial port transport
   transportShared,      // Shared memory transport
   transportMux,         // Multiplex transport (to use 1 transport for all methods or multiple portals)
   transportTrace,       // Trace transport tee
