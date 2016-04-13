@@ -135,4 +135,43 @@ PortalTransportFunctions transportSerial = {
     init_serial, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_serialInd, mapchannel_serialReq,
     send_serial, recv_portal_null, busywait_serial, enableint_portal_null, event_serial, notfull_null};
 
+static int init_serialmux(struct PortalInternal *pint, void *aparam)
+{
+    PortalMuxParam *param = (PortalMuxParam *)aparam;
+    pint->mux = param->pint;
+    pint->map_base = ((volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo) + sizeof(uint32_t))) + 1;
+    memset((void *)(pint->map_base-1), 0, REQINFO_SIZE(pint->reqinfo) + sizeof(uint32_t));  // for valgrind
+    pint->mux->map_base[0] = -1;
+    pint->mux->mux_ports_number++;
+    pint->mux->mux_ports = (PortalMuxHandler *)realloc(pint->mux->mux_ports, pint->mux->mux_ports_number * sizeof(PortalMuxHandler));
+    pint->mux->mux_ports[pint->mux->mux_ports_number-1].pint = pint;
+    return 0;
+}
+static void send_serialmux(struct PortalInternal *pint, volatile unsigned int *data, unsigned int hdr, int sendFd)
+{
+    volatile unsigned int *buffer = data-1;
+    buffer[0] = hdr;
+    pint->mux->request_index = pint->request_index;
+    pint->mux->transport->send(pint->mux, buffer, (pint->fpga_number << 24) | hdr, sendFd);
+}
+static int recv_serialmux(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
+{
+    return pint->mux->transport->recv(pint->mux, buffer, len, recvfd);
+}
+int portal_serialmux_handler(struct PortalInternal *pint, unsigned int channel, int messageFd)
+{
+    int i;
+    unsigned int fpga_number = (channel >> 8) & 0xFF;
+    unsigned int msg_number  = (channel >> 0) & 0xFF;
+    for (i = 0; i < pint->mux_ports_number; i++) {
+        PortalInternal *p = pint->mux_ports[i].pint;
+        if (fpga_number == p->fpga_number && p->handler) {
+            p->handler(p, msg_number, messageFd);
+        }
+    }
+    return -1;
+}
+PortalTransportFunctions transportSerialMux = {
+    init_serialmux, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_req_generic,
+    send_serialmux, recv_serialmux, busy_portal_null, enableint_portal_null, event_null, notfull_null};
 
