@@ -9,12 +9,12 @@ if {$boardname == {miniitx100}} {
     set partname {xc7z100ffg900-2}
     set databuswidth 64
 }
-
-file mkdir $ipdir/$boardname
+puts "partname=$partname"
 
 create_project -name local_synthesized_ip -in_memory -part $partname
-set_property board_part xilinx.com:vc709:part0:1.0 [current_project]
-
+if {$boardname == {nfsume}} {
+    set_property board_part xilinx.com:vc709:part0:1.0 [current_project]
+}
 proc fpgamake_ipcore {core_name core_version ip_name params} {
     global ipdir boardname
 
