@@ -46,16 +46,17 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
 endmodule
 
 // adds a header word to each message out of an indication pipe
-module mkFramedMessagePipe#(PipePortal#(numRequests,numIndications,32) pipePortal,
-			       function Bit#(16) messageSize(Bit#(16) methodNumber),
-			       Integer i)(PipeOut#(Bit#(32)));
+module mkFramedMessagePipe#(Integer portalNumber,
+			    PipePortal#(numRequests,numIndications,32) pipePortal,
+			    function Bit#(16) messageSize(Bit#(16) methodNumber),
+			    Integer i)(PipeOut#(Bit#(32)));
 
    let pipeOut = pipePortal.indications[i];
    Bit#(16) messageBits = messageSize(fromInteger(i));
    Bit#(16) roundup = messageBits[4:0] == 0 ? 0 : 1;
    Bit#(16) numWords = (messageBits >> 5) + roundup;
    Bit#(16) totalWords = numWords + 1;
-   Bit#(32) hdr = fromInteger(i) << 16 | extend(numWords + 1);
+   Bit#(32) hdr = (fromInteger(portalNumber) << 24) | (fromInteger(i) << 16) | extend(numWords + 1);
    let sendHeader <- mkReg(True);
    Reg#(Bit#(16)) burstLenReg <- mkReg(0);
    return (interface PipeOut;
@@ -86,7 +87,7 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests,numIndications,32
 				       Vector#(2, MemReadEngineServer#(64)) readEngines, Vector#(2, MemWriteEngineServer#(64)) writeEngines)
    (SharedMemoryPortal#(64));
 
-   Vector#(numIndications, PipeOut#(Bit#(32))) indicationPipes <- genWithM(mkFramedMessagePipe(pipePortal,messageSize));
+   Vector#(numIndications, PipeOut#(Bit#(32))) indicationPipes <- genWithM(mkFramedMessagePipe(0,pipePortal,messageSize));
 
    SharedMemoryPipeIn#(64) pipeIn <- mkSharedMemoryPipeIn(indicationPipes, readEngines, writeEngines);
    interface SharedMemoryPortalConfig cfg = pipeIn.cfg;
