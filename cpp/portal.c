@@ -287,6 +287,7 @@ static void initPortalHardwareOnce(void)
 	}
 #if defined(BOARD_bluesim)
 	const char *exetype = "bsim";
+	argv[ind++] = (char*)"-w"; // wait for license
 	if (simulator_dump_vcd) {
 	  argv[ind++] = (char*)"-V";
 	  argv[ind++] = (char*)simulator_vcd_name;
