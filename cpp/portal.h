@@ -159,15 +159,15 @@ typedef struct {
         void              *callbackFunctions;
         SHARED_MMUINDICATION_POLL poll;
     } dma;
-    struct {
-	int serial_fd;
-    } serial;
     uint32_t    size;
     struct {
         int port;
         uint32_t reqinfo;
         SHARED_CONFIG_SETSGLID setSglId;
     } hardware;
+    struct {
+	int serial_fd;
+    } serial;
 } PortalSharedParam; /* for ITEMINIT function */
 
 typedef struct {
