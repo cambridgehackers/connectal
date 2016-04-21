@@ -34,6 +34,7 @@ import json
 import re
 
 supported_os = ['android', 'ubuntu']
+supported_stl = ['stlport_static', 'stlport_shared', 'gnustl_static', 'gnustl_shared', 'c++_static', 'c++_shared', 'gabi++_static', 'gabi++_shared']
 
 argparser = argparse.ArgumentParser("Generate C++/BSV/Xilinx stubs for an interface.")
 argparser.add_argument('bsvfile', help='BSV files to parse', nargs='+')
@@ -74,7 +75,7 @@ argparser.add_argument('--xelabflags', help='Options to pass to the xelab compil
 argparser.add_argument('--xsimflags', help='Options to pass to the xsim simulator', action='append', default=[])
 argparser.add_argument('--ipdir', help='Directory in which to store generated IP')
 argparser.add_argument('-q', '--qtused', help='Qt used in simulator test application', action='store_true')
-argparser.add_argument('--stl', help='STL implementation to use for Android builds', default=None)
+argparser.add_argument('--stl', help='STL implementation to use for Android builds', default=None, choices=supported_stl)
 argparser.add_argument('--android-platform', help='Android platform to use for Android builds', type=int, default=None)
 argparser.add_argument('--floorplan', help='Floorplan XDC', default=None)
 argparser.add_argument('-P', '--partition-module', help='Modules to separately synthesize/place/route', action='append', default=[])
