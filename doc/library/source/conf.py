@@ -66,7 +66,7 @@ googleanalytics_enabled = True
 # built documents.
 #
 # The short X.Y version.
-version = '16.02.1'
+version = '16.04.1'
 # The full version, including alpha/beta/rc tags.
 release = '16.02.1'
 
