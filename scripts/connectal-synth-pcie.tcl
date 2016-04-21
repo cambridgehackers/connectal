@@ -69,9 +69,7 @@ if {$need_pcie == "x7_gen3x8"} {
 							 CONFIG.per_func_status_if {false} CONFIG.en_ext_clk {false} CONFIG.rcv_msg_if \
 							 {false} CONFIG.tx_fc_if {false} CONFIG.shared_logic_in_core {true} \
 							 CONFIG.en_msi_per_vec_masking {false} \
-							 CONFIG.pf0_vc_cap_enabled {true} \
-							 CONFIG.pipe_mode_sim {Enable_External_PIPE_Interface} CONFIG.pipe_sim {false} \
-							 CONFIG.en_ext_pipe_interface {true} ]
+							 CONFIG.pf0_vc_cap_enabled {true} ]
 # add the following to enable PF1:
 # CONFIG.TL_PF_ENABLE_REG {true} CONFIG.PF1_DEVICE_ID {c100} \
 # CONFIG.pf1_bar0_64bit {true} CONFIG.pf1_bar0_size {16} \

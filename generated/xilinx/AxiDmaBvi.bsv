@@ -26,6 +26,7 @@ import Clocks::*;
 import DefaultValue::*;
 import XilinxCells::*;
 import GetPut::*;
+import ConnectalConfig::*;
 import AxiBits::*;
 import AxiStream::*;
 
@@ -43,7 +44,7 @@ interface AxidmabviM_axi_mm2s;
     method Action      arready(Bit#(1) v);
     method Bit#(3)     arsize();
     method Bit#(1)     arvalid();
-    method Action      rdata(Bit#(32) v);
+    method Action      rdata(Bit#(DataBusWidth) v);
     method Action      rlast(Bit#(1) v);
     method Bit#(1)     rready();
     method Action      rresp(Bit#(2) v);
@@ -62,10 +63,10 @@ interface AxidmabviM_axi_s2mm;
     method Bit#(1)     bready();
     method Action      bresp(Bit#(2) v);
     method Action      bvalid(Bit#(1) v);
-    method Bit#(32)     wdata();
+    method Bit#(DataBusWidth)     wdata();
     method Bit#(1)     wlast();
     method Action      wready(Bit#(1) v);
-    method Bit#(4)     wstrb();
+    method Bit#(TDiv#(DataBusWidth,8))     wstrb();
     method Bit#(1)     wvalid();
 endinterface
 (* always_ready, always_enabled *)
@@ -89,15 +90,15 @@ interface AxidmabviM_axi_sg;
     method Bit#(1)     bready();
     method Action      bresp(Bit#(2) v);
     method Action      bvalid(Bit#(1) v);
-    method Action      rdata(Bit#(32) v);
+    method Action      rdata(Bit#(DataBusWidth) v);
     method Action      rlast(Bit#(1) v);
     method Bit#(1)     rready();
     method Action      rresp(Bit#(2) v);
     method Action      rvalid(Bit#(1) v);
-    method Bit#(32)     wdata();
+    method Bit#(DataBusWidth)     wdata();
     method Bit#(1)     wlast();
     method Action      wready(Bit#(1) v);
-    method Bit#(4)     wstrb();
+    method Bit#(TDiv#(DataBusWidth,8))     wstrb();
     method Bit#(1)     wvalid();
 endinterface
 (* always_ready, always_enabled *)
@@ -280,18 +281,18 @@ module mkAxiDmaBvi#(Clock m_axi_mm2s_aclk, Clock m_axi_s2mm_aclk, Clock m_axi_sg
     schedule (axi_dma.tstvec, m_axi_mm2s.araddr, m_axi_mm2s.arburst, m_axi_mm2s.arcache, m_axi_mm2s.arlen, m_axi_mm2s.arprot, m_axi_mm2s.arready, m_axi_mm2s.arsize, m_axi_mm2s.arvalid, m_axi_mm2s.rdata, m_axi_mm2s.rlast, m_axi_mm2s.rready, m_axi_mm2s.rresp, m_axi_mm2s.rvalid, m_axi_s2mm.awaddr, m_axi_s2mm.awburst, m_axi_s2mm.awcache, m_axi_s2mm.awlen, m_axi_s2mm.awprot, m_axi_s2mm.awready, m_axi_s2mm.awsize, m_axi_s2mm.awvalid, m_axi_s2mm.bready, m_axi_s2mm.bresp, m_axi_s2mm.bvalid, m_axi_s2mm.wdata, m_axi_s2mm.wlast, m_axi_s2mm.wready, m_axi_s2mm.wstrb, m_axi_s2mm.wvalid, m_axi_sg.araddr, m_axi_sg.arburst, m_axi_sg.arcache, m_axi_sg.arlen, m_axi_sg.arprot, m_axi_sg.arready, m_axi_sg.arsize, m_axi_sg.arvalid, m_axi_sg.awaddr, m_axi_sg.awburst, m_axi_sg.awcache, m_axi_sg.awlen, m_axi_sg.awprot, m_axi_sg.awready, m_axi_sg.awsize, m_axi_sg.awvalid, m_axi_sg.bready, m_axi_sg.bresp, m_axi_sg.bvalid, m_axi_sg.rdata, m_axi_sg.rlast, m_axi_sg.rready, m_axi_sg.rresp, m_axi_sg.rvalid, m_axi_sg.wdata, m_axi_sg.wlast, m_axi_sg.wready, m_axi_sg.wstrb, m_axi_sg.wvalid, m_axis_mm2s_cntrl.tdata, m_axis_mm2s_cntrl.tkeep, m_axis_mm2s_cntrl.tlast, m_axis_mm2s_cntrl.tready, m_axis_mm2s_cntrl.tvalid, m_axis_mm2s.tdata, m_axis_mm2s.tkeep, m_axis_mm2s.tlast, m_axis_mm2s.tready, m_axis_mm2s.tvalid, mm2s.cntrl_reset_out_n, mm2s.introut, mm2s.prmry_reset_out_n, s2mm.introut, s2mm.prmry_reset_out_n, s2mm.sts_reset_out_n, s_axi_lite.araddr, s_axi_lite.arready, s_axi_lite.arvalid, s_axi_lite.awaddr, s_axi_lite.awready, s_axi_lite.awvalid, s_axi_lite.bready, s_axi_lite.bresp, s_axi_lite.bvalid, s_axi_lite.rdata, s_axi_lite.rready, s_axi_lite.rresp, s_axi_lite.rvalid, s_axi_lite.wdata, s_axi_lite.wready, s_axi_lite.wvalid, s_axis_s2mm_sts.tdata, s_axis_s2mm_sts.tkeep, s_axis_s2mm_sts.tlast, s_axis_s2mm_sts.tready, s_axis_s2mm_sts.tvalid, s_axis_s2mm.tdata, s_axis_s2mm.tkeep, s_axis_s2mm.tlast, s_axis_s2mm.tready, s_axis_s2mm.tvalid) CF (axi_dma.tstvec, m_axi_mm2s.araddr, m_axi_mm2s.arburst, m_axi_mm2s.arcache, m_axi_mm2s.arlen, m_axi_mm2s.arprot, m_axi_mm2s.arready, m_axi_mm2s.arsize, m_axi_mm2s.arvalid, m_axi_mm2s.rdata, m_axi_mm2s.rlast, m_axi_mm2s.rready, m_axi_mm2s.rresp, m_axi_mm2s.rvalid, m_axi_s2mm.awaddr, m_axi_s2mm.awburst, m_axi_s2mm.awcache, m_axi_s2mm.awlen, m_axi_s2mm.awprot, m_axi_s2mm.awready, m_axi_s2mm.awsize, m_axi_s2mm.awvalid, m_axi_s2mm.bready, m_axi_s2mm.bresp, m_axi_s2mm.bvalid, m_axi_s2mm.wdata, m_axi_s2mm.wlast, m_axi_s2mm.wready, m_axi_s2mm.wstrb, m_axi_s2mm.wvalid, m_axi_sg.araddr, m_axi_sg.arburst, m_axi_sg.arcache, m_axi_sg.arlen, m_axi_sg.arprot, m_axi_sg.arready, m_axi_sg.arsize, m_axi_sg.arvalid, m_axi_sg.awaddr, m_axi_sg.awburst, m_axi_sg.awcache, m_axi_sg.awlen, m_axi_sg.awprot, m_axi_sg.awready, m_axi_sg.awsize, m_axi_sg.awvalid, m_axi_sg.bready, m_axi_sg.bresp, m_axi_sg.bvalid, m_axi_sg.rdata, m_axi_sg.rlast, m_axi_sg.rready, m_axi_sg.rresp, m_axi_sg.rvalid, m_axi_sg.wdata, m_axi_sg.wlast, m_axi_sg.wready, m_axi_sg.wstrb, m_axi_sg.wvalid, m_axis_mm2s_cntrl.tdata, m_axis_mm2s_cntrl.tkeep, m_axis_mm2s_cntrl.tlast, m_axis_mm2s_cntrl.tready, m_axis_mm2s_cntrl.tvalid, m_axis_mm2s.tdata, m_axis_mm2s.tkeep, m_axis_mm2s.tlast, m_axis_mm2s.tready, m_axis_mm2s.tvalid, mm2s.cntrl_reset_out_n, mm2s.introut, mm2s.prmry_reset_out_n, s2mm.introut, s2mm.prmry_reset_out_n, s2mm.sts_reset_out_n, s_axi_lite.araddr, s_axi_lite.arready, s_axi_lite.arvalid, s_axi_lite.awaddr, s_axi_lite.awready, s_axi_lite.awvalid, s_axi_lite.bready, s_axi_lite.bresp, s_axi_lite.bvalid, s_axi_lite.rdata, s_axi_lite.rready, s_axi_lite.rresp, s_axi_lite.rvalid, s_axi_lite.wdata, s_axi_lite.wready, s_axi_lite.wvalid, s_axis_s2mm_sts.tdata, s_axis_s2mm_sts.tkeep, s_axis_s2mm_sts.tlast, s_axis_s2mm_sts.tready, s_axis_s2mm_sts.tvalid, s_axis_s2mm.tdata, s_axis_s2mm.tkeep, s_axis_s2mm.tlast, s_axis_s2mm.tready, s_axis_s2mm.tvalid);
 endmodule
 
-instance ToAxi4MasterBits#(Axi4MasterBits#(32,32,tagWidth,Empty), AxidmabviM_axi_mm2s);
-function Axi4MasterBits#(32,32,tagWidth,Empty) toAxi4MasterBits(AxidmabviM_axi_mm2s m);
-   return (interface Axi4MasterBits#(32,32,tagWidth,Empty);
+instance ToAxi4MasterBits#(Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty), AxidmabviM_axi_mm2s);
+function Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty) toAxi4MasterBits(AxidmabviM_axi_mm2s m);
+   return (interface Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty);
       method araddr = m.araddr;
 	   method arburst = m.arburst;
 	   method arcache = m.arcache;
 	   method Bit#(1) aresetn(); return 1; endmethod
 	   method Bit#(tagWidth)     arid(); return 0; endmethod
 	   method arlen = m.arlen;
-	 //method arlock = m.arlock;
+	   method arlock = 0;
 	   method arprot = m.arprot;
-	 //method arqos = m.arqos;
+	   method arqos = 0;
 	   method arready = m.arready;
 	   method arsize = m.arsize;
 	   method arvalid = m.arvalid;
@@ -316,20 +317,20 @@ function Axi4MasterBits#(32,32,tagWidth,Empty) toAxi4MasterBits(AxidmabviM_axi_m
 	   method rready = m.rready;
 	   method rresp = m.rresp;
 	   method rvalid = m.rvalid;
-	   method Bit#(32)     wdata(); return 0; endmethod
+	   method Bit#(DataBusWidth)     wdata(); return 0; endmethod
 	   method Bit#(tagWidth)     wid(); return 0; endmethod
 	   method Bit#(1)     wlast(); return 0; endmethod
 	   method Action      wready(Bit#(1) v); endmethod
-	   method Bit#(TDiv#(32,8))     wstrb(); return 0; endmethod
+	   method Bit#(TDiv#(DataBusWidth,8))     wstrb(); return 0; endmethod
 	   method Bit#(1)     wvalid(); return 0; endmethod
 	 interface extra = ?;   
 	 endinterface);
    endfunction
 endinstance
 
-instance ToAxi4MasterBits#(Axi4MasterBits#(32,32,tagWidth,Empty), AxidmabviM_axi_s2mm);
-function Axi4MasterBits#(32,32,tagWidth,Empty) toAxi4MasterBits(AxidmabviM_axi_s2mm m);
-   return (interface Axi4MasterBits#(32,32,tagWidth,Empty);
+instance ToAxi4MasterBits#(Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty), AxidmabviM_axi_s2mm);
+function Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty) toAxi4MasterBits(AxidmabviM_axi_s2mm m);
+   return (interface Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty);
     method Bit#(32)     araddr(); return 0; endmethod
     method Bit#(2)     arburst(); return 0; endmethod
     method Bit#(4)     arcache(); return 0; endmethod
@@ -345,9 +346,9 @@ function Axi4MasterBits#(32,32,tagWidth,Empty) toAxi4MasterBits(AxidmabviM_axi_s
       method awcache = m.awcache;
       method Bit#(tagWidth)     awid(); return 0; endmethod
       method awlen = m.awlen;
-      //method awlock = m.awlock;
+      method awlock = 0;
       method awprot = m.awprot;
-      //method awqos = m.awqos;
+      method awqos = 0;
       method awready = m.awready;
       method awsize = m.awsize;
       method awvalid = m.awvalid;
@@ -357,6 +358,7 @@ function Axi4MasterBits#(32,32,tagWidth,Empty) toAxi4MasterBits(AxidmabviM_axi_s
       method bvalid = m.bvalid;
     method Action      rdata(Bit#(dataWidth) v); endmethod
     method Action      rlast(Bit#(1) v); endmethod
+    method Action      rid(Bit#(tagWidth) tag); endmethod
     method Bit#(1)     rready(); return 0; endmethod
     method Action      rresp(Bit#(2) v); endmethod
     method Action      rvalid(Bit#(1) v); endmethod
@@ -371,18 +373,18 @@ function Axi4MasterBits#(32,32,tagWidth,Empty) toAxi4MasterBits(AxidmabviM_axi_s
 endfunction
 endinstance
 
-instance ToAxi4MasterBits#(Axi4MasterBits#(32,32,tagWidth,Empty), AxidmabviM_axi_sg);
-function Axi4MasterBits#(32,32,tagWidth,Empty) toAxi4MasterBits(AxidmabviM_axi_sg m);
-   return (interface Axi4MasterBits#(32,32,tagWidth,Empty);
+instance ToAxi4MasterBits#(Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty), AxidmabviM_axi_sg);
+function Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty) toAxi4MasterBits(AxidmabviM_axi_sg m);
+   return (interface Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty);
     method araddr = m.araddr;
       method arburst = m.arburst;
       method arcache = m.arcache;
       method Bit#(1) aresetn(); return 0; endmethod
       method Bit#(tagWidth)     arid(); return 0; endmethod
       method arlen = m.arlen;
-      //method arlock = m.arlock;
+      method arlock = 0;
       method arprot = m.arprot;
-      //method arqos = m.arqos;
+      method arqos = 0;
       method arready = m.arready;
       method arsize = m.arsize;
       method arvalid = m.arvalid;
@@ -391,9 +393,9 @@ function Axi4MasterBits#(32,32,tagWidth,Empty) toAxi4MasterBits(AxidmabviM_axi_s
       method awcache = m.awcache;
       method Bit#(tagWidth)     awid(); return 0; endmethod
       method awlen = m.awlen;
-      //method awlock = m.awlock;
+      method awlock = 0;
       method awprot = m.awprot;
-      //method awqos = m.awqos;
+      method awqos = 0;
       method awready = m.awready;
       method awsize = m.awsize;
       method awvalid = m.awvalid;

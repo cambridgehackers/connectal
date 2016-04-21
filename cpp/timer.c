@@ -41,8 +41,8 @@ uint64_t portalCycleCount()
         return 0;
     msb = &utility_portal->map_base[PORTAL_CTRL_COUNTER_MSB];
     lsb = &utility_portal->map_base[PORTAL_CTRL_COUNTER_LSB];
-    high_bits = utility_portal->item->read(utility_portal, &msb);
-    low_bits = utility_portal->item->read(utility_portal, &lsb);
+    high_bits = utility_portal->transport->read(utility_portal, &msb);
+    low_bits = utility_portal->transport->read(utility_portal, &lsb);
     return (high_bits << 32) | low_bits;
 }
 

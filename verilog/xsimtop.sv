@@ -22,7 +22,7 @@
 `timescale 1ns / 1ps
 
 import "DPI-C" function void dpi_init();
-import "DPI-C" function bit dpi_finish();
+import "DPI-C" function bit dpi_cycle(); // returns non-zero if verilog should $finish().
 
 `ifdef BSV_POSITIVE_RESET
   `define BSV_RESET_VALUE 1'b1
@@ -92,7 +92,7 @@ module xsimtop(
    
    always @(posedge CLK) begin
       count <= count + 1;
-      finish <= dpi_finish();
+      finish <= dpi_cycle();
       if (finish) begin
 	 $display("simulator calling $finish");
 	 $finish();

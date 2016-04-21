@@ -67,7 +67,7 @@ static tBoard* tboard;
  * Initialize control data structure for portal
  */
 void init_portal_internal(PortalInternal *pint, int id, int tile,
-    PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *item, void *param, void *parent,
+    PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *transport, void *param, void *parent,
     uint32_t reqinfo)
 {
     int rc;
@@ -84,18 +84,18 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     pint->reqinfo = reqinfo;
     if(trace_portal)
         PORTAL_PRINTF("%s: **initialize portal_%d_%d handler %p cb %p parent %p\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number, handler, cb, parent);
-    if (!item) {
+    if (!transport) {
         // Use defaults for transport handling methods
 #ifdef BOARD_bluesim
-        item = &transportBsim;
+        transport = &transportBsim;
 #elif defined(BOARD_xsim) || defined(BOARD_verilator) || defined(BOARD_vsim)
-        item = &transportXsim;
+        transport = &transportXsim;
 #else
-        item = &transportHardware;
+        transport = &transportHardware;
 #endif
     }
-    pint->item = item;
-    rc = pint->item->init(pint, param);
+    pint->transport = transport;
+    rc = pint->transport->init(pint, param);
     if (rc != 0) {
         PORTAL_PRINTF("%s: failed to initialize Portal portal_%d_%d\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number);
 #ifndef __KERNEL__
@@ -257,8 +257,10 @@ static void initPortalHardwareOnce(void)
 	    close(fd);
 	    break;
 	  }
-	  if (fd == -1)
+	  if (fd == -1) {
+	      PORTAL_PRINTF("Error: %s: failed to open /dev/connectal, exiting\n", __FUNCTION__);
 	      exit(-1);
+	  }
 	}
         checkSignature("/dev/connectal", DEV_CONNECTAL_SIGNATURE);
 #endif // !defined(SIMULATION)
@@ -285,6 +287,7 @@ static void initPortalHardwareOnce(void)
 	}
 #if defined(BOARD_bluesim)
 	const char *exetype = "bsim";
+	argv[ind++] = (char*)"-w"; // wait for license
 	if (simulator_dump_vcd) {
 	  argv[ind++] = (char*)"-V";
 	  argv[ind++] = (char*)simulator_vcd_name;
@@ -308,7 +311,7 @@ static void initPortalHardwareOnce(void)
 	bindir = 0; // the simulation driver is found in $PATH
         argv[ind++] = (char *)"-c";
         argv[ind++] = (char *)"-sv_lib";
-        argv[ind++] = (char *)"./bin/xsimtop";
+        argv[ind++] = (char *)"xsimtop";
         argv[ind++] = (char *)"work.xsimtop";
         argv[ind++] = (char *)"-do";
         argv[ind++] = (char *)"run -all; quit -f";

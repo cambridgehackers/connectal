@@ -1,4 +1,4 @@
-// Copyright (c) 2014 Quanta Research Cambridge, Inc.
+// Copyright (c) 2016 Connectal Project
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -19,31 +19,23 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-import Vector::*;
-import FIFO::*;
-import Connectable::*;
-import Portal::*;
-import HostInterface::*;
-import CtrlMux::*;
-import FibIndication::*;
-import FibRequest::*;
-import FibWide::*;
 
-typedef enum {IfcNames_FibIndication, IfcNames_FibRequest} IfcNames deriving (Eq,Bits);
+import RS232::*;
 
-module mkConnectalTop(StdConnectalTop#(PhysAddrWidth));
+interface SerialPortalRequest;
+   method Action setDivisor(Bit#(16) d);
+endinterface
 
-   // instantiate user portals
-   FibIndicationProxy fibIndicationProxy <- mkFibIndicationProxy(IfcNames_FibIndication);
-   FibRequest fibRequest <- mkFibRequest(fibIndicationProxy.ifc);
-   FibRequestWrapper fibRequestWrapper <- mkFibRequestWrapper(IfcNames_FibRequest,fibRequest);
+interface SerialPortalIndication;
+   method Action rx(Bit#(8) c);
+endinterface
+
+interface SerialPortalPins;
+   interface RS232 uart;
+   interface Clock deleteme_unused_clock;
+endinterface
    
-   Vector#(2,StdPortal) portals;
-   portals[0] = fibRequestWrapper.portalIfc; 
-   portals[1] = fibIndicationProxy.portalIfc;
-   let ctrl_mux <- mkSlaveMux(portals);
-   
-   interface interrupt = getInterruptVector(portals);
-   interface slave = ctrl_mux;
-   interface masters = nil;
-endmodule : mkConnectalTop
+export RS232(..);
+export SerialPortalRequest(..);
+export SerialPortalIndication(..);
+export SerialPortalPins(..);

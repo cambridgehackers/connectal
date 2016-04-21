@@ -39,7 +39,7 @@ sem_t test_sem;
 uint32_t lasta;
 uint32_t lastd;
 
-  SerialconfigRequestProxy *dev = 0;
+static SerialconfigRequestProxy *serialconfigRequestProxy = 0;
 
 class SerialconfigIndication : public SerialconfigIndicationWrapper
 {
@@ -67,7 +67,7 @@ void lastashouldbe(uint32_t a)
 
 void doread(uint32_t a, uint32_t expect)
 {
-  dev->send(a & ~1, 0xfeedface);
+  serialconfigRequestProxy->send(a & ~1, 0xfeedface);
   sem_wait(&test_sem);
   lastashouldbe(a);
   lastdshouldbe(expect);
@@ -75,7 +75,7 @@ void doread(uint32_t a, uint32_t expect)
 
 void dowrite(uint32_t a, uint32_t d)
 {
-  dev->send(a | 1, d);
+  serialconfigRequestProxy->send(a | 1, d);
   sem_wait(&test_sem);
   lastashouldbe(a);
   lastdshouldbe(d);
@@ -114,12 +114,11 @@ void dotest()
 int main(int argc, const char **argv)
 {
   
-  SerialconfigIndication *deviceIndication = 0;
+  SerialconfigIndication serialconfigIndication(IfcNames_SerialconfigIndicationH2S);
 
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
-  dev = new SerialconfigRequestProxy(IfcNames_SerialconfigRequest);
 
-  deviceIndication = new SerialconfigIndication(IfcNames_SerialconfigIndication);
+  serialconfigRequestProxy = new SerialconfigRequestProxy(IfcNames_SerialconfigRequestS2H);
 
   if(sem_init(&test_sem, 1, 0)){
     fprintf(stderr, "failed to init test_sem\n");

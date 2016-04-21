@@ -184,14 +184,13 @@ module mkMemWriteChannel#(Integer bufferSizeBytes, Integer channelNumber,
 	    // and on startup the simulator gets a floating-point exception
 	    if (bl ==0)
 	       bl = 1;
-	    let mdw0 = ((cmd.len)/bl)*bl != cmd.len;
 	    let mdw1 = ((cmd.len)/dw)*dw != cmd.len;
 	    let bbl = extend(cmd.burstLen) > bsb;
-	    if(bbl || mdw0 || mdw1 || cmd.len == 0) begin
+	    if(bbl || mdw1 || cmd.len == 0) begin
 	       if (bbl)
 					  $display("XXXXXXXXXX mkMemWriteEngineBuff::unsupported burstLen %d %d", bsb, cmd.burstLen);
-	       if (mdw0 || mdw1 || cmd.len == 0)
-					  $display("XXXXXXXXXX mkMemWriteEngineBuff::unsupported len %h mdw0=%d mdw1=%d", cmd.len, mdw0, mdw1);
+	       if (mdw1 || cmd.len == 0)
+					  $display("XXXXXXXXXX mkMemWriteEngineBuff::unsupported len %h mdw1=%d", cmd.len, mdw1);
 	    end
 	    else
       `endif

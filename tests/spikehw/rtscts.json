@@ -1,0 +1,8 @@
+{
+    "uart_rts": {
+	"uart": "rts"
+    },
+    "uart_cts_x": {
+	"uart": "cts"
+    }
+}

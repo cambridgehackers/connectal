@@ -368,6 +368,40 @@
 			     "PIO_DIRECTION" : "OUTPUT"
 		 }
     },	
+    "uart": {
+		"d_in": {
+			"LOC": "AU33",
+			"IOSTANDARD": "LVCMOS18",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"d_out": {
+			"LOC": "AU36",
+			"IOSTANDARD": "LVCMOS18",
+			"PIO_DIRECTION": "OUTPUT"
+		},
+		"rts": {
+			"LOC": "AR34",
+			"IOSTANDARD": "LVCMOS18",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"cts": {
+			"LOC": "AT32",
+			"IOSTANDARD": "LVCMOS18",
+			"PIO_DIRECTION": "OUTPUT"
+		}
+    },
+    "iic_main": {
+		"sda": {
+			"LOC": "AU32",
+			"IOSTANDARD": "LVCMOS18",
+			"PIO_DIRECTION": "BIDIR"
+		},
+		"scl": {
+			"LOC": "AT35",
+			"IOSTANDARD": "LVCMOS18",
+			"PIO_DIRECTION": "BIDIR"
+		}
+    },
     "pins": {
 		"userClk_p": {
 			"LOC": "bogus",
@@ -447,14 +481,9 @@
 			"DIFF_TERM": "TRUE",
 			"PIO_DIRECTION": "OUTPUT"
 		},
-		"uart_d_in": {
-			"LOC": "bogus",
-			"IOSTANDARD": "LVCMOS25",
-			"PIO_DIRECTION": "INPUT"
-		},
-		"uart_d_out": {
-			"LOC": "bogus",
-			"IOSTANDARD": "LVCMOS25",
+		"si5324_rst_n": {
+			"LOC": "AT36",
+			"IOSTANDARD": "LVCMOS18",
 			"PIO_DIRECTION": "OUTPUT"
 		}
     }

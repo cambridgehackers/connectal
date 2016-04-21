@@ -127,7 +127,7 @@ module mkMemServerRead#(MemServerIndication indication,
    Reg#(Bit#(8)) trafficPtr <- mkReg(0);
    Reg#(Bit#(64)) trafficAccum <- mkReg(0);
    
-   function Server#(AddrTransRequest,Bit#(addrWidth)) selectMMUPort(Integer i);
+   function Server#(AddrTransRequest,AddrTransResponse#(addrWidth)) selectMMUPort(Integer i);
       return mmus[i].addr[0];
    endfunction
    Vector#(numMMUs,ArbitratedMMU#(addrWidth,numClients)) mmu_servers <- mapM(mkArbitratedMMU,map(selectMMUPort,genVector));
@@ -136,7 +136,7 @@ module mkMemServerRead#(MemServerIndication indication,
    Vector#(numServers, MemReadServer#(busWidth)) read_servers;
 
    for(Integer i = 0; i < valueOf(numClients); i = i+1) begin
-      Vector#(numMMUs,Server#(AddrTransRequest,Bit#(addrWidth))) ss;
+      Vector#(numMMUs,Server#(AddrTransRequest,AddrTransResponse#(addrWidth))) ss;
       for(Integer j = 0; j < valueOf(numMMUs); j=j+1)
 	 ss[j] = mmu_servers[j].servers[i];
       readers[i] <- mkMemReadInternal(indication,ss);
@@ -147,8 +147,8 @@ module mkMemServerRead#(MemServerIndication indication,
    
    rule mmuEntry;
       addrReqFifo.deq;
-      let physAddr <- mmus[addrReqFifo.first[31:16]].addr[0].response.get;
-      indication.addrResponse(zeroExtend(physAddr));
+      let addrTransResponse <- mmus[addrReqFifo.first[31:16]].addr[0].response.get;
+      indication.addrResponse(zeroExtend(addrTransResponse.physAddr));
    endrule
    
    Stmt dbgStmt = 
@@ -210,7 +210,7 @@ module mkMemServerWrite#(MemServerIndication indication,
    Reg#(Bit#(8)) trafficPtr <- mkReg(0);
    Reg#(Bit#(64)) trafficAccum <- mkReg(0);
    
-   function Server#(AddrTransRequest,Bit#(addrWidth)) selectMMUPort(Integer i);
+   function Server#(AddrTransRequest,AddrTransResponse#(addrWidth)) selectMMUPort(Integer i);
       return mmus[i].addr[1];
    endfunction
    Vector#(numMMUs,ArbitratedMMU#(addrWidth,numClients)) mmu_servers <- mapM(mkArbitratedMMU,map(selectMMUPort,genVector));
@@ -219,7 +219,7 @@ module mkMemServerWrite#(MemServerIndication indication,
    Vector#(numServers, MemWriteServer#(busWidth)) write_servers;
 
    for(Integer i = 0; i < valueOf(numClients); i = i+1) begin
-      Vector#(numMMUs,Server#(AddrTransRequest,Bit#(addrWidth))) ss;
+      Vector#(numMMUs,Server#(AddrTransRequest,AddrTransResponse#(addrWidth))) ss;
       for(Integer j = 0; j < valueOf(numMMUs); j=j+1)
 	 ss[j] = mmu_servers[j].servers[i];
       writers[i] <- mkMemWriteInternal(indication, ss);
@@ -230,7 +230,8 @@ module mkMemServerWrite#(MemServerIndication indication,
    
    rule mmuEntry;
       addrReqFifo.deq;
-      let physAddr <- mmus[addrReqFifo.first[31:16]].addr[1].response.get;
+      let addrTransResponse <- mmus[addrReqFifo.first[31:16]].addr[1].response.get;
+      let physAddr = addrTransResponse.physAddr;
       indication.addrResponse(zeroExtend(physAddr));
    endrule
 

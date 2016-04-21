@@ -44,9 +44,6 @@ import PCIE              ::*;
 
 `ifdef BOARD_de5
 import PS5LIB            ::*;
-`elsif BOARD_vsim
-import PS5LIB            ::*;
-//import PcieEndpointS5Test ::*;
 `elsif BOARD_htg4
 import PS4LIB            ::*;
 `endif
@@ -77,9 +74,6 @@ interface PcieEndpointS5#(numeric type lanes);
    interface PciewrapPci_exp#(lanes)   pcie;
    interface PciewrapUser#(lanes)      user;
    interface Server#(TLPData#(16), TLPData#(16)) tlp;
-`ifdef VSIM
-   interface PcieHipPipe pipe;
-`endif
    interface Clock epPcieClock;
    interface Reset epPcieReset;
    interface Clock epPortalClock;
@@ -120,15 +114,11 @@ module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieE
    PcieWrap#(12, 32, 128) pcie_ep <- mkPcieS4Wrap(clk_100MHz, clk_50MHz, clk_100MHz, npor, perst_n);
 `endif
 
-`ifdef BOARD_vsim
-   PcieWrap#(12, 32, 128) pcie_ep <- mkPcieS5Wrap(clk_100MHz, clk_50MHz, npor, perst_n);
-`endif
-
    Clock core_clk = pcie_ep.coreclkout_hip;
    Reset core_reset = pcie_ep.core_reset;
    Reset core_resetn <- mkResetInverter(pcie_ep.core_reset, clocked_by core_clk);
 
-   Reg#(PciId) deviceReg <- mkReg(?, clocked_by core_clk, reset_by core_resetn);
+   Reg#(PciId) deviceReg <- mkReg(defaultValue, clocked_by core_clk, reset_by noReset);
 
    FIFOF#(AvalonStTx#(16)) fAvalonStTx <- mkBypassFIFOF(clocked_by core_clk, reset_by noReset);
    FIFOF#(AvalonStRx#(16)) fAvalonStRx <- mkBypassFIFOF(clocked_by core_clk, reset_by noReset);
@@ -201,17 +191,33 @@ module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieE
 
    rule pertick1;
       pcie_ep.rx_st.ready(pack(fAvalonStRx.notFull));
-      //pcie_ep.hip_rst.core_ready(pcie_ep.hip_rst.serdes_pll_locked);
+      pcie_ep.hip_rst.core_ready(pcie_ep.hip_rst.serdes_pll_locked);
    endrule
 
    rule every1;
       pcie_ep.hip_ctrl.test_in({26'h2, 1'b1, 5'b01000});
    endrule
 
-   rule capture_deviceid(pcie_ep.tl_cfg.add == 4'hF);
-      deviceReg <= PciId {bus: pcie_ep.tl_cfg.ctl[12:5],
-                          dev: pcie_ep.tl_cfg.ctl[4:0],
+   rule capture_deviceid;
+      deviceReg <= PciId {bus: pcie_ep.tl_cfg.bus_number,
+                          dev: pcie_ep.tl_cfg.dev_number,
                           func: 0};
+   endrule
+
+   rule pulldown_msi;
+      pcie_ep.msi.msi_num(0);
+      pcie_ep.msi.msi_req(0);
+      pcie_ep.msi.msi_tc(0);
+      pcie_ep.msi.int_sts(0);
+   endrule
+
+   rule pulldown_cpl;
+      pcie_ep.tl_cfg.cpl_pending(0);
+      pcie_ep.tl_cfg.cpl_err(0);
+   endrule
+
+   rule unused_non_posted_signal;
+      pcie_ep.rx_st.mask(0);
    endrule
 
    // The PCIE endpoint is processing TLPData#(16)s at 125MHz.  The
@@ -273,13 +279,8 @@ module mkPcieEndpointS5#(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieE
    interface Reset epPcieReset = core_resetn;
    interface Clock epPortalClock = core_clk;
    interface Reset epPortalReset = core_resetn;
-   //FIXME: verify derivedClock value
    interface Clock epDerivedClock = core_clk;
    interface Reset epDerivedReset = core_resetn;
-
-`ifdef VSIM
-   interface pipe = pcie_ep.hip_pipe;
-`endif
 
 endmodule: mkPcieEndpointS5
 

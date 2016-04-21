@@ -35,16 +35,6 @@ import ALTERA_PCIE_SV_WRAPPER              ::*;
 //import ALTERA_PLL_WRAPPER                  ::*;
 
 (* always_ready, always_enabled *)
-interface PcieLmi#(numeric type address_width, numeric type data_width);
-   method Action           rden(Bit#(1) rden);
-   method Action           wren(Bit#(1) wren);
-   method Action           addr(Bit#(address_width) addr);
-   method Action           din(Bit#(data_width) din);
-   method Bit#(data_width) dout();
-   method Bit#(1)          ack();
-endinterface
-
-(* always_ready, always_enabled *)
 interface PcieRxSt#(numeric type data_width);
    method Bit#(1)          sop;
    method Bit#(1)          eop;
@@ -81,9 +71,8 @@ endinterface
 
 (* always_ready, always_enabled *)
 interface PcieTlCfg;
-   method Bit#(4)  add();
-   method Bit#(32) ctl();
-   method Bit#(53) sts();
+   method Bit#(8)  bus_number;
+   method Bit#(5)  dev_number;
    method Action   cpl_pending(Bit#(1) cpl_pending);
    method Action   cpl_err(Bit#(7) cpl_err);
 endinterface
@@ -150,7 +139,6 @@ interface PcieHipPipe;
 (* prefix="", result="rxstatus" *)   method Action     rxstatus  (Vector#(8, Bit#(3)) rxstatus);
 (* prefix="", result="rxvalid" *)    method Action     rxvalid   (Vector#(8, Bit#(1)) rxvalid);
 (* prefix="", result="phystatus" *)  method Action     phystatus (Vector#(8, Bit#(1)) phystatus);
-(* prefix="", result="sim_pipe_pclk_in" *) method Action sim_pipe_pclk_in(Bit#(1) sim_pipe_pclk_in);
     method Vector#(8, Bit#(1))    rxpolarity();
     method Vector#(8, Bit#(1))    txcompl();
     method Vector#(8, Bit#(8))    txdata();
@@ -169,12 +157,10 @@ endinterface
 (* always_ready, always_enabled *)
 interface PcieHipCtrl;
 (* prefix="", result="test_in" *)        method Action test_in(Bit#(32) test_in);
-(* prefix="", result="simu_mode_pipe" *) method Action simu_mode_pipe(Bit#(1) simu_mode_pipe);
 endinterface
 
 (* always_ready, always_enabled *)
 interface PcieWrap#(numeric type address_width, numeric type data_width, numeric type app_width);
-   interface PcieLmi#(address_width, data_width) lmi;
    interface PcieRxSt#(app_width) rx_st;
    interface PcieTxSt#(app_width) tx_st;
    interface PcieMsi msi;
@@ -215,6 +201,9 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
 
    PcieReconfigWrap pcie_cfg <- mkPcieReconfigWrap(coreclk, clk_50Mhz, npor, reset_high, reset_high);
    XcvrReconfigWrap xcvr_cfg <- mkXcvrReconfigWrap(clk_50Mhz, reset_high, reset_high);
+
+   Reg#(Bit#(8)) bus_number_reg <- mkReg(0, clocked_by coreclk, reset_by core_resetn);
+   Reg#(Bit#(5)) dev_number_reg <- mkReg(0, clocked_by coreclk, reset_by core_resetn);
 
    rule pertick1;
       pcie.pld.core_ready(pcie.serdes.pll_locked);
@@ -372,6 +361,11 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
       pcie.phy.status7(phystatus_wires[7]);
    endrule
 
+   rule capture_deviceid(pcie.tl.cfg_add == 4'hF);
+      bus_number_reg <= pcie.tl.cfg_ctl[12:5];
+      dev_number_reg <= pcie.tl.cfg_ctl[4:0];
+   endrule
+
    method Clock coreclkout_hip;
       return pcie.coreclkout.hip;
    endmethod
@@ -381,32 +375,14 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
    endmethod
 
    interface PcieTlCfg tl_cfg;
-      method Bit#(4) add();
-         return pcie.tl.cfg_add;
+      method Bit#(8) bus_number();
+         return bus_number_reg;
       endmethod
-      method Bit#(32) ctl();
-         return pcie.tl.cfg_ctl;
-      endmethod
-      method Bit#(53) sts();
-         return pcie.tl.cfg_sts;
+      method Bit#(5) dev_number();
+         return dev_number_reg;
       endmethod
       method cpl_pending = pcie.cpl.pending;
       method cpl_err = pcie.cpl.err;
-   endinterface
-
-   interface PcieLmi lmi;
-      method Bit#(32) dout();
-         return pcie.lmi.dout;
-      endmethod
-
-      method Bit#(1) ack ();
-         return pcie.lmi.ack;
-      endmethod
-
-      method rden = pcie.lmi.rden;
-      method wren = pcie.lmi.wren;
-      method addr = pcie.lmi.addr;
-      method din = pcie.lmi.din;
    endinterface
 
    interface PcieRxSt rx_st;
@@ -445,7 +421,7 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
    interface PcieHipRst hip_rst;
       method Bit#(1) serdes_pll_locked(); return pcie.serdes.pll_locked; endmethod
       method Bit#(1) pld_clk_inuse(); return pcie.pld.clk_inuse; endmethod
-      //method core_ready = pcie.pld.core_ready;
+      method core_ready = pcie.pld.core_ready;
    endinterface
 
    interface PcieTxCred tx_cred;
@@ -668,8 +644,6 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
          return retval;
       endmethod
 
-      method sim_pipe_pclk_in = pcie.sim.pipe_pclk_in;
-
       method sim_ltssmstate();
          return pcie.sim.ltssmstate;
       endmethod
@@ -681,7 +655,6 @@ module mkPcieS5Wrap#(Clock clk_100Mhz, Clock clk_50Mhz, Reset npor, Reset pin_pe
 
    interface PcieHipCtrl hip_ctrl;
       method test_in = pcie.test.in;
-      method simu_mode_pipe = pcie.simu.mode_pipe;
    endinterface
 endmodule
 
@@ -693,7 +666,6 @@ interface AlteraPcieHipRs;
 (* prefix="", result="hotrst_exit" *) method Action hotrst_exit(Bit#(1) hotrst_exit);
 (* prefix="", result="l2_exit" *)     method Action l2_exit(Bit#(1) l2_exit);
 (* prefix="", result="ltssm" *)       method Action ltssm(Bit#(5) ltssm);
-(* prefix="", result="test_sim" *)    method Action test_sim(Bit#(1) test_sim);
    method Reset app_rstn;
 endinterface
 

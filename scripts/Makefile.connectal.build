@@ -207,6 +207,10 @@ else
 endif # XILINX
 ifneq ($(ALTERA),)
 	gzip -c $(MKTOP).sof > bin/$(MKTOP).sof.gz
+	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --remove-section fpgadata bin/ubuntu.exe
+	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --add-section fpgadata=bin/$(MKTOP).sof.gz bin/ubuntu.exe
+	$(Q)[ ! -f bin/connectal.so ] || objcopy --remove-section fpgadata bin/connectal.so
+	$(Q)[ ! -f bin/connectal.so ] || objcopy --add-section fpgadata=bin/$(MKTOP).sof.gz bin/connectal.so
 endif # ALTERA
 
 endif # android
@@ -293,6 +297,9 @@ XVLOGDEFINES = $(subst -D,-d,$(BSVDEFINES))
 SVLOG = $(addprefix -svlog $(CONNECTALDIR)/verilog/, xsimtop.sv XsimDmaReadWrite.sv XsimLink.sv XsimSink.sv XsimSource.sv)
 
 xsim: verilog $(XSIM_OBJECTS)
+	-test -f xsim/vlog.prj && sed -i s/xil_defaultlib/work/ xsim/*.prj
+	-test -f xsim/vlog.prj && xvlog $(XVLOGFLAGS) -prj xsim/vlog.prj
+	-test -f xsim/vhdl.prj && xvhdl $(XVLOGFLAGS) -prj xsim/vhdl.prj
 	xvlog $(XVLOGFLAGS) $(XVLOGDEFINES) $(VERILOG_PATH:%=--sourcelibdir %) --sourcelibext .v verilog/*.v
 	#xvlog $(XVLOGDEFINES) --sv $(CONNECTALDIR)/verilog/*.sv ## not needed because these all get passed to xelab because they use DPI
 	#xsc -v -cc gcc -compile $(SOURCES)
@@ -302,14 +309,15 @@ endif #VIVADO
 
 vlsim: $(DTOP)/obj_dir/vlsim
 
-VERILATOR_ARGS?= -O3 -CFLAGS "-I$(CONNECTALDIR)/cpp -I$(DTOP)/jni -O $(PROF_FLAGS)" -LDFLAGS "-O $(PROF_FLAGS)" --profile-cfuncs
+VERILATOR_ARGS?= -O3 -CFLAGS "-I$(CONNECTALDIR)/cpp -I$(DTOP)/jni -O $(PROF_FLAGS)" -LDFLAGS "-O $(PROF_FLAGS)" --profile-cfuncs --output-split 20000
 VERILATOR_ARGS += $(VERILATOR_PROJECT_ARGS)
 
 $(DTOP)/obj_dir/vlsim.mk: $(DTOP)/bin/libconnectal-sim.so verilog
+	rm -fr $(DTOP)/obj_dir
 	verilator -o vlsim --prefix vlsim $(VERILATOR_ARGS) -cc -exe $(DTOP)/verilog/mkXsimTop.v -DMainClockPeriod=4 -DDerivedClockPeriod=4 --top-module mkXsimTop $(VERILOG_PATH:%=-y %) -Wno-fatal $(CONNECTALDIR)/cpp/verilatortop.cpp $(DTOP)/bin/libconnectal-sim.so -LDFLAGS -lpthread
 
 $(DTOP)/obj_dir/vlsim: $(DTOP)/obj_dir/vlsim.mk
-	+$(MAKE) -C obj_dir -f vlsim.mk
+	+$(MAKE) VM_PARALLEL_BUILDS=1 -C obj_dir -f vlsim.mk
 	cp obj_dir/vlsim bin/vlsim
 
 ifneq ($(MODELSIM), )
@@ -334,14 +342,18 @@ vsim.dir/xsc/%.lnx64.o: jni/%.cpp
 
 VSIM_DEFINES = $(subst -D ,+define+,$(BSVDEFINES))
 VSIM_SV = $(addprefix -sv $(CONNECTALDIR)/verilog/, xsimtop.sv XsimDmaReadWrite.sv XsimLink.sv XsimSink.sv XsimSource.sv)
-SV_SEARCH_PATH = $(addprefix -y , $(SYSTEMVERILOG_PATH) $(SYSTEMVERILOG_PATH)/submodules $(SYSTEMVERILOG_PATH)/submodules/mentor)
-VSIM_ALTERA_LIB = $(addprefix -v $(QUARTUSDIR)/eda/sim_lib/, altera_mf.v 220model.v sgate.v altera_primitives.v)
+SV_SEARCH_PATH = $(addprefix -y , $(VERILOG_PATH))
+SV_SEARCH_PATH += $(addprefix -y , $(addsuffix /submodules, $(VERILOG_PATH)))
+SV_SEARCH_PATH += $(addprefix -y , $(addsuffix /submodules/mentor, $(VERILOG_PATH)))
+VSIM_LIBRARY_FILES += $(addprefix -sv $(QUARTUSDIR)/eda/sim_lib/, altera_lnsim.sv)
+VSIM_LIBRARY_FILES += $(addprefix -v $(QUARTUSDIR)/eda/sim_lib/, altera_mf.v 220model.v sgate.v altera_primitives.v mentor/stratixv_atoms_ncrypt.v stratixv_atoms.v mentor/stratixv_hssi_atoms_ncrypt.v stratixv_hssi_atoms.v)
+VSIM_MISC_FILES = $(addprefix -sv , $(MODELSIM_FILES))
 
 vsim: verilog $(VSIM_OBJECTS)
 	rm -rf work
 	vlib work
-	vlog -timescale 1ns/1ps -dpiheader XsimTop.h $(VSIM_DEFINES) $(VSIM_SV) $(VSIM_ALTERA_LIB) +libext+.v+.sv $(SV_SEARCH_PATH) $(VERILOG_PATH:%=-y %) -sv verilog/*.v
-	g++ -O -g -I$(DTOP)/jni -shared -fPIC -g -o $(DTOP)/bin/xsimtop.so $(VSIM_OBJECTS)
+	vlog -timescale 1ns/1ps -dpiheader XsimTop.h $(VSIM_DEFINES) $(VSIM_SV) $(VSIM_LIBRARY_FILES) $(VSIM_MISC_FILES) +libext+.sv+.v $(SV_SEARCH_PATH) $(VERILOG_PATH:%=-y %) -sv verilog/*.v
+	g++ -O -g -I$(DTOP)/jni -shared -fPIC -g -o xsimtop.so $(VSIM_OBJECTS)
 endif #MODELSIM
 
 obj/%.bvi: verilog/%.v
@@ -360,6 +372,7 @@ $(2): $(3) $(4) $(5)
 	@echo BSCVERILOG [$(1)]
 	cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -verilog -remove-dollar -g $(1) $(3)
 	$(Q)sed -i 's|// On .*|// timestamp removed|' verilog/*.v
+	$(Q)sed -i 's|  reg.*PROBE[,;]|(* mark_debug="true" *)&|' verilog/*.v 
 	$(Q)sed -i 's|  wire.*PROBE[,;]|(* mark_debug="true" *)&|' verilog/*.v 
 	$(Q)sed -i 's|  wire.*PROBE_VALID[,;]|(* mark_debug="true" *)&|' verilog/*.v 
 endef

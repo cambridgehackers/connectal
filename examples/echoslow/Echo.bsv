@@ -20,7 +20,9 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+import Clocks::*;
 import FIFO::*;
+import GetPut::*;
 import Vector::*;
 
 interface EchoIndication;
@@ -44,26 +46,39 @@ typedef struct {
 } EchoPair deriving (Bits);
 
 module mkEcho#(Clock derivedClock, Reset derivedReset, EchoIndication indication)(Echo);
-    FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
-    FIFO#(EchoPair) delay2 <- mkSizedFIFO(8);
+   let clock <- exposeCurrentClock;
+   let reset <- exposeCurrentReset;
 
-    rule heard;
-        delay.deq;
-        indication.heard(delay.first);
-    endrule
+    let delay_toslow <- mkSyncFIFO(16, clock, reset, derivedClock);
+    let delay_fromslow <- mkSyncFIFO(16, derivedClock, derivedReset, clock);
+    let delay2_toslow <- mkSyncFIFO(16, clock, reset, derivedClock);
+    let delay2_fromslow <- mkSyncFIFO(16, derivedClock, derivedReset, clock);
 
-    rule heard2;
-        delay2.deq;
-        indication.heard2(delay2.first.b, delay2.first.a);
-    endrule
+   rule heard_slow; // derivedClock domain
+      let v <- toGet(delay_toslow).get();
+      delay_fromslow.enq(v);
+   endrule
+   rule hear_fast;
+      let v <- toGet(delay_fromslow).get();
+      indication.heard(v);
+   endrule
+
+   rule heard2_slow; // derivedClock domain
+      let v <- toGet(delay2_toslow).get();
+      delay2_fromslow.enq(v);
+   endrule
+   rule heard2_fast;
+      let v <- toGet(delay2_fromslow).get();
+      indication.heard2(v.b, v.a);
+   endrule
    
    interface EchoRequest request;
       method Action say(Bit#(32) v);
-	 delay.enq(v);
+	 delay_toslow.enq(v);
       endmethod
       
       method Action say2(Bit#(16) a, Bit#(16) b);
-	 delay2.enq(EchoPair { a: a, b: b});
+	 delay2_toslow.enq(EchoPair { a: a, b: b});
       endmethod
       
       method Action setLeds(Bit#(8) v);

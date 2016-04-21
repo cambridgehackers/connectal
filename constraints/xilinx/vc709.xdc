@@ -26,7 +26,7 @@ set_property LOC G18  [get_ports { CLK_sys_clk_n }]
 ######################################################################################################
 set_property IOSTANDARD LVCMOS15    [get_ports { leds_leds[*] }]
 set_property IOSTANDARD DIFF_SSTL15 [get_ports { CLK_sys_clk_* }]
-set_property IOSTANDARD LVCMOS15    [get_ports { RST_N_pci_sys_reset_n }]
+set_property IOSTANDARD LVCMOS18    [get_ports { RST_N_pci_sys_reset_n }]
 set_property PULLUP     true        [get_ports { RST_N_pci_sys_reset_n }]
 
 ######################################################################################################

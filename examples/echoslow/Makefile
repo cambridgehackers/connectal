@@ -5,6 +5,7 @@ H2S_INTERFACES = Echo:EchoIndication:host.derivedClock,host.derivedReset
 BSVFILES = Echo.bsv
 CPPFILES= ../echo/testecho.cpp
 CONNECTALFLAGS += -D IMPORT_HOST_CLOCKS
-CONNECTALFLAGS += --mainclockperiod=20
+CONNECTALFLAGS += --derivedclockperiod=125
+CONNECTALFLAGS += --implconstraint=echoslow.xdc
 
 include $(CONNECTALDIR)/Makefile.connectal

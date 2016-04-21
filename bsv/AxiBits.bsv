@@ -22,6 +22,7 @@
 import Vector::*;
 import Clocks::*;
 import FIFOF::*;
+import CFFIFO::*;
 import GetPut::*;
 import MemTypes::*;
 import EHRM::*;
@@ -428,51 +429,89 @@ module mkPhysMemSlave#(Axi4SlaveLiteBits#(axiAddrWidth,dataWidth) axiSlave)(Phys
    endinterface   
 endmodule   
 
-function MemReadClient#(dataWidth) toMemReadClient(Reg#(Bit#(32)) objId, Axi4MasterBits#(32,dataWidth,MemTagSize,Empty) m);
-   return (interface MemReadClient;
-   interface Get readReq;
-      method ActionValue#(MemRequest) get() if (m.arvalid() == 1);
-	 m.arready(1);
-	 let addr = m.araddr();   
-	 return MemRequest { sglId: objId, offset: extend(addr), burstLen: extend(m.arlen()), tag: extend(m.arid()) };
-      endmethod
-   endinterface
-   interface Put readData;
-      method Action put(MemData#(dataWidth) md) if (m.rready() == 1);
-	 m.rvalid(1);
-         m.rdata(md.data);
-	 m.rlast(pack(md.last));
-	 m.rresp(0);
-	 m.rid(truncate(md.tag));
-      endmethod
-   endinterface   
-   endinterface);   
-endfunction
+module mkMemReadClient#(Reg#(Bit#(32)) objId, Axi4MasterBits#(32,dataWidth,MemTagSize,Empty) m)(MemReadClient#(dataWidth));
 
-function MemWriteClient#(dataWidth) toMemWriteClient(Reg#(Bit#(32)) objId, Axi4MasterBits#(32,dataWidth,MemTagSize,Empty) m);
-   return (interface MemWriteClient;
-   interface Get writeReq;
-      method ActionValue#(MemRequest) get() if (m.awvalid() == 1);
-	 m.awready(1);
-	 let addr = m.awaddr();
-	 return MemRequest { sglId: objId, offset: extend(addr), burstLen: extend(m.awlen()), tag: extend(m.awid()) };
-      endmethod
-   endinterface
-   interface Get writeData;
-      method ActionValue#(MemData#(dataWidth)) get() if (m.wvalid() == 1);
-	 m.wready(1);
-      return MemData { data: m.wdata(), last: unpack(m.wlast()), tag: extend(m.wid()) };
-      endmethod
-   endinterface
-   interface Put writeDone;
-      method Action put(Bit#(MemTagSize) tag) if (m.bready() == 1);
-	 m.bvalid(1);
-	 m.bresp(0);
-	 m.bid(truncate(tag));
-      endmethod
-   endinterface
-   endinterface);
-endfunction
+   Wire#(Bit#(1)) arready <- mkDWire(0);
+   Wire#(Bit#(1)) rvalid <- mkDWire(0);
+   Wire#(Bit#(MemTagSize)) rid <- mkDWire(0);
+   Wire#(Bit#(2)) rresp <- mkDWire(0);
+   Wire#(Bit#(dataWidth)) rdata <- mkDWire(0);
+   Wire#(Bit#(1)) rlast <- mkDWire(0);
+
+   FIFOF#(MemRequest)          arfifo <- mkCFFIFOF();
+   FIFOF#(MemData#(dataWidth))  rfifo <- mkCFFIFOF();
+
+   rule rl_araddr if (m.arvalid() == 1);
+      let addr = m.araddr();   
+      let burstLenBytes = (extend(m.arlen())+1)*fromInteger(valueOf(TDiv#(dataWidth,8)));
+      arfifo.enq(MemRequest { sglId: objId, offset: extend(addr), burstLen: burstLenBytes, tag: extend(m.arid()) });
+   endrule
+   rule handshake_ar;
+        m.arready(pack(arfifo.notFull()));
+   endrule
+
+   rule rl_rdata if (m.rready() == 1);
+      let md <- toGet(rfifo).get();
+      rdata <= md.data;
+      rlast <= pack(md.last);
+      rresp <= 0;
+      rid <= truncate(md.tag);
+   endrule
+   rule handshake_rdata;
+      m.rvalid(pack(rfifo.notEmpty()));
+      m.rid(rid);
+      m.rresp(rresp);
+      m.rdata(rdata);
+      m.rlast(rlast);
+   endrule
+
+   interface Get readReq = toGet(arfifo);
+   interface Put readData = toPut(rfifo);
+endmodule
+
+module mkMemWriteClient#(Reg#(Bit#(32)) objId, Axi4MasterBits#(32,dataWidth,MemTagSize,Empty) m)(MemWriteClient#(dataWidth));
+
+   Wire#(Bit#(1)) awready <- mkDWire(0);
+   Wire#(Bit#(1)) wready <- mkDWire(0);
+   Wire#(Bit#(1)) bvalid <- mkDWire(0);
+   Wire#(Bit#(MemTagSize)) bid <- mkDWire(0);
+   Wire#(Bit#(2)) bresp <- mkDWire(0);
+
+   FIFOF#(MemRequest)       awfifo   <- mkCFFIFOF();
+   FIFOF#(MemData#(dataWidth)) wfifo <- mkCFFIFOF();
+   FIFOF#(Bit#(MemTagSize))    bfifo <- mkCFFIFOF();
+
+   rule rl_awaddr if (m.awvalid() == 1);
+      let addr = m.awaddr();
+      let burstLenBytes = (extend(m.awlen())+1)*fromInteger(valueOf(TDiv#(dataWidth,8)));
+      awfifo.enq(MemRequest { sglId: objId, offset: extend(addr), burstLen: burstLenBytes, tag: extend(m.awid()) });
+   endrule
+   rule handshake_awaddr;
+      m.awready(pack(awfifo.notFull()));
+   endrule
+
+   rule rl_wdata if (m.wvalid() == 1);
+      wfifo.enq(MemData { data: m.wdata(), last: unpack(m.wlast()), tag: extend(m.wid()) });
+   endrule
+   rule handshake_wdata;
+      m.wready(pack(wfifo.notFull()));
+   endrule
+
+   rule rl_bresp if (m.bready() == 1);
+      let tag <- toGet(bfifo).get();
+      bresp <= 0;
+      bid <= truncate(tag);
+   endrule
+   rule handshake_b;
+        m.bvalid(pack(bfifo.notEmpty()));
+        m.bid(bid);
+        m.bresp(bresp);
+   endrule
+
+   interface Get writeReq = toGet(awfifo);
+   interface Get writeData = toGet(wfifo);
+   interface Put writeDone = toPut(bfifo);
+endmodule
 
 typedef AxiMasterBits#(32,32,12,Empty) Pps7Maxigp;
 typedef AxiSlaveBits#(32,32,6,Empty) Pps7Saxigp;

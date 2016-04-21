@@ -57,8 +57,6 @@ import Pipe              :: *;
 interface PcieEndpointX7#(numeric type lanes);
    interface PciewrapPci_exp#(lanes)           pcie;
    interface PciewrapUser#(lanes)              user;
-   interface PciewrapPipe#(lanes)              pipe;
-   interface PciewrapCommon#(lanes)            common;
    interface Server#(TLPData#(16), TLPData#(16)) tlpr;
    interface Server#(TLPData#(16), TLPData#(16)) tlpc;
    interface Put#(Tuple2#(Bit#(64),Bit#(32)))  interruptRequest;
@@ -237,22 +235,26 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    let rq_txready = (pcie_ep.s_axis_rq.tready != 0 && fAxiRq.notEmpty);
 
    //(* fire_when_enabled, no_implicit_conditions *)
-   rule drive_axi_rq if (rq_txready);
-      let info = fAxiRq.first; fAxiRq.deq;
-      pcie_ep.s_axis_rq.tvalid(1);
-      pcie_ep.s_axis_rq.tlast(pack(info.last));
-      pcie_ep.s_axis_rq.tdata(info.data);
-      pcie_ep.s_axis_rq.tkeep(info.keep);
-      pcie_ep.s_axis_rq.tuser({0, info.last_be, info.first_be});
-   endrule
+   rule drive_axi_rq;
+      let tvalid = 0;
+      let tlast = 0;
+      let tdata = 0;
+      let tkeep = 0;
+      let tuser = 0;
+      if (rq_txready) begin
+	 let info = fAxiRq.first; fAxiRq.deq;
+	 tvalid = 1;
+	 tlast = pack(info.last);
+	 tdata = info.data;
+	 tkeep = info.keep;
+	 tuser = {0, info.last_be, info.first_be};
+      end
 
-   (* fire_when_enabled, no_implicit_conditions *)
-   rule drive_axi_rq2 if (!rq_txready);
-      pcie_ep.s_axis_rq.tvalid(0);
-      pcie_ep.s_axis_rq.tlast(0);
-      pcie_ep.s_axis_rq.tdata(0);
-      pcie_ep.s_axis_rq.tkeep(0);
-      pcie_ep.s_axis_rq.tuser(0);
+      pcie_ep.s_axis_rq.tvalid(tvalid);
+      pcie_ep.s_axis_rq.tlast(tlast);
+      pcie_ep.s_axis_rq.tdata(tdata);
+      pcie_ep.s_axis_rq.tkeep(tkeep);
+      pcie_ep.s_axis_rq.tuser(tuser);
    endrule
 
    Reg#(Bit#(16)) rqBackpressureCycles <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
@@ -592,7 +594,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       pcie_ep.cfg.link_training_enable(1);
       pcie_ep.cfg.per_function_number(0);
       pcie_ep.cfg.per_function_output_request(0);
-      pcie_ep.cfg.power_state_change_ack(0);
+      pcie_ep.cfg.power_state_change_ack(1);
       pcie_ep.cfg.subsys_vend_id(16'h1be8);
       pcie_ep.cfg.vf_flr_done(0);
 
@@ -621,8 +623,6 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    interface interruptRequest = toPut(intrFifo);
    interface pcie    = pcie_ep.pci_exp;
    interface Pcie3wrapUser user = pcie_ep.user;
-   interface PciewrapPipe pipe = pcie_ep.pipe;
-   interface PciewrapCommon common= pcie_ep.common;
    interface regChanges = mapPipe(pack, toPipeOut(changeFifo));
    interface Clock epPcieClock = pcieClock250;
    interface Reset epPcieReset = pcieReset250;

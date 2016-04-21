@@ -55,12 +55,18 @@ typedef struct {
    Bit#(MemOffsetSize) off;
 } AddrTransRequest deriving (Eq,Bits,FShow);
 
+typedef struct {
+   DmaErrorType    error;
+   Bit#(addrWidth) physAddr;
+} AddrTransResponse#(numeric type addrWidth) deriving (Eq,Bits,FShow);
+
 interface MMU#(numeric type addrWidth);
    interface MMURequest request;
-   interface Vector#(2,Server#(AddrTransRequest,Bit#(addrWidth))) addr;
+   interface Vector#(2,Server#(AddrTransRequest,AddrTransResponse#(addrWidth))) addr;
 endinterface
 
 typedef struct {
+   DmaErrorType error;
    Bit#(3) pageSize;
    Bit#(SGListPageShift12) value;
 } Offset deriving (Eq,Bits,FShow);
@@ -142,7 +148,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
    Vector#(2,FIFOF#(Offset))           offs1 <- replicateM(mkSizedFIFOF(3));
 
    // stage 4 (latnecy == 1)
-   Vector#(2,FIFOF#(Bit#(addrWidth))) pageResponseFifos <- replicateM(mkFIFOF);
+   Vector#(2,FIFOF#(AddrTransResponse#(addrWidth))) pageResponseFifos <- replicateM(mkFIFOF);
       
    FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
    Vector#(2,FIFO#(DmaError)) dmaErrorFifos <- replicateM(mkFIFO());
@@ -203,7 +209,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
       rule stage3; // Based on results of comparision, select a region, putting it into 'o.pageSize'.  idxOffset holds offset in sglist table of relevant entry
 	 let params <- toGet(stage3Params[i]).get();
 	 AddrTransRequest req = params.req;
-	 Offset o = Offset{pageSize: 0, value: truncate(req.off)};
+	 Offset o = Offset { error: DmaErrorNone, pageSize: 0, value: truncate(req.off)};
 	 Bit#(IndexWidth) pbase = 0;
 	 Bit#(IndexWidth) idxOffset = 0;
 
@@ -244,13 +250,15 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 	 if (off.pageSize == 0) begin
 	    if (verbose) $display("mkMMU::addr[%d].request.put: ERROR   ptr=%h off=%h\n", i, ptr, off);
 	    dmaErrorFifos[1].enq(DmaError { errorType: DmaErrorOffsetOutOfRange, pref: extend(ptr), off:extend(off.value) });
+	    off.error = DmaErrorOffsetOutOfRange;
+	    p         = 0; // FIXME
 	 end
-	 else begin
-	    if (verbose) $display("mkMMU::translationTable[%d].read %h", i, {ptr,p});
-	    portsel(translationTable, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
-						      address:{ptr,p}, datain:?});
-	    offs1[i].enq(off);
-	 end
+
+	 if (verbose) $display("mkMMU::translationTable[%d].read %h", i, {ptr,p});
+	 portsel(translationTable, i).request.put(BRAMRequest{write:False, responseOnWrite:False,
+							      address:{ptr,p}, datain:?});
+	 offs1[i].enq(off);
+
       endrule
       rule stage5; // Concatenate page base address from sglist entry with LSB offset bits from request and return
 	 Page0 page <- portsel(translationTable, i).response.get;
@@ -266,7 +274,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 	    3: rv = {b8,truncate(offset.value)};
 	    4: rv = {b12,truncate(offset.value)};
 	 endcase
-	 pageResponseFifos[i].enq(truncate(rv));
+	 pageResponseFifos[i].enq(AddrTransResponse { error: offset.error, physAddr: truncate(rv) });
       endrule
    end
 
@@ -285,7 +293,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
       $display("idReturn %d", sglId);
    endrule
    
-   function Server#(AddrTransRequest,Bit#(addrWidth)) addrServer(Integer i);
+   function Server#(AddrTransRequest,AddrTransResponse#(addrWidth)) addrServer(Integer i);
    return
       (interface Server#(AddrTransRequest,Bit#(addrWidth));
 	  interface Put request;
@@ -294,10 +302,10 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 	     endmethod
 	  endinterface
 	  interface Get response;
-	     method ActionValue#(Bit#(addrWidth)) get();
+	     method ActionValue#(AddrTransResponse#(addrWidth)) get();
 		let rv <- toGet(pageResponseFifos[i]).get();
 `ifdef SIMULATION
-		rv = rv | (fromInteger(iid)<<valueOf(addrWidth)-3);
+		rv.physAddr = rv.physAddr | (fromInteger(iid)<<valueOf(addrWidth)-3);
 `endif
 		return rv;
 	     endmethod
@@ -350,10 +358,10 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 endmodule
 
 interface ArbitratedMMU#(numeric type addrWidth, numeric type numServers);
-   interface Vector#(numServers,Server#(AddrTransRequest,Bit#(addrWidth))) servers;
+   interface Vector#(numServers,Server#(AddrTransRequest,AddrTransResponse#(addrWidth))) servers;
 endinterface
 
-module mkArbitratedMMU#(Server#(AddrTransRequest,Bit#(addrWidth)) server) (ArbitratedMMU#(addrWidth,numServers));
+module mkArbitratedMMU#(Server#(AddrTransRequest,AddrTransResponse#(addrWidth)) server) (ArbitratedMMU#(addrWidth,numServers));
    
    FIFOF#(Bit#(TAdd#(1,TLog#(numServers)))) tokFifo <- mkSizedFIFOF(9);
    Reg#(Bit#(TLog#(numServers))) arb <- mkReg(0);
@@ -363,9 +371,9 @@ module mkArbitratedMMU#(Server#(AddrTransRequest,Bit#(addrWidth)) server) (Arbit
       arb <= arb+1;
    endrule
    
-   function Server#(AddrTransRequest,Bit#(addrWidth)) arbitratedServer(Integer i);
+   function Server#(AddrTransRequest,AddrTransResponse#(addrWidth)) arbitratedServer(Integer i);
    return
-      (interface Server#(AddrTransRequest,Bit#(addrWidth));
+      (interface Server#(AddrTransRequest,AddrTransResponse#(addrWidth));
 	  interface Put request;
 	     method Action put(AddrTransRequest req) if (arb == fromInteger(i));
 		tokFifo.enq(fromInteger(i));
@@ -373,7 +381,7 @@ module mkArbitratedMMU#(Server#(AddrTransRequest,Bit#(addrWidth)) server) (Arbit
 	     endmethod
 	  endinterface
 	  interface Get response;
-	     method ActionValue#(Bit#(addrWidth)) get() if (tokFifo.first == fromInteger(i));
+	     method ActionValue#(AddrTransResponse#(addrWidth)) get() if (tokFifo.first == fromInteger(i));
 		tokFifo.deq;
 		let rv <- server.response.get;
 		return rv;

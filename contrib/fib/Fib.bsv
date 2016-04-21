@@ -20,158 +20,93 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import Stack::*;
+import StackReg::*;
 import StmtFSM::*;
 
 interface FibIndication;
     method Action fibresult(Bit#(32) v);
-    method Action fibnote(Bit#(32) v);
 endinterface
 
 interface FibRequest;
    method Action fib(Bit#(32) v);
 endinterface
 
+interface Fib;
+   interface FibRequest request;
+endinterface
+
 typedef enum {FIBSTATEIDLE, FIBSTATE1, FIBSTATE2, 
-   FIBSTATE3, FIBSTATECOMPLETE, FIBCALLING, FIBRETURNING} FSState
+   FIBSTATE3, FIBSTATECOMPLETE} FSState
 deriving (Bits,Eq);
 
-module mkFibRequest#(FibIndication indication)(FibRequest);
-//   provisos(Literal#(FSState));
 
+module mkFib#(FibIndication indication)(Fib);
 
-   /* stack frame */
-   Reg#(Bit#(16)) fibn <- mkReg(0);
-   Reg#(Bit#(16)) fibtmp1 <- mkReg(0);
-   Reg#(FSState) fibstate <- mkReg(FIBSTATEIDLE);
+   /* pc, args, vars */
+   StackReg#(128, FSState, Bit#(16), Bit#(16)) frame <- mkStackReg(128, FIBSTATEIDLE);
 
-   /* function variables that do not need to be saved or restored */
+   /* function variables that do not need to be saved or restored 
+    *    in the pseudocode below, this is tmp2
+    */
    Reg#(Bit#(16)) fibretval <- mkReg(0);
-   
-   
-   /* offsets in stack frame */
-   Bit#(2) fsoffsetn = 0;
-   Bit#(2) fsoffsettmp1 = 1;
-   Bit#(2) fsoffsetnext = 2;
-   
-   Stack#(128, 3, Bit#(16)) stack <- mkStack(128 ,3);
-   
+      
    /* experiment: recursive fibonnaci
     * fib(n):
     *   int tmp1, tmp2;
-    *   if n == 0 return 1  // fibstate1
+    *   if n == 0 return 0  // fibstate1
     *   if n == 1 return 1
     *   tmp1 = fib(n-1)
-    *   tmp2 = fib(n-2      // fibstate2
+    *   tmp2 = fib(n-2)     // fibstate2
     *   return tmp1 + tmp2  // fibstate3
-    *
-    * with explicit stack:
-    * struct fsf {
-    *   int level;
-    *   int tmp1;
-    *   int n;
-    *   int next_state;
-    * } stack[N]
-    * 
     */
-   
-   Reg#(Bit#(16)) fibcallarg <- mkReg(0);
-   Reg#(FSState) fibcallreturnto <- mkReg(FIBSTATEIDLE);
-   
-   Stmt callfibstmt =
-   seq
-//      $display("FIBCALL");
-      stack.store(fsoffsetn, fibn);
-      stack.store(fsoffsettmp1, fibtmp1);
-      stack.store(fsoffsetnext, zeroExtend(pack(fibcallreturnto)));
-//      par
-	 stack.push();
-	 fibn <= fibcallarg;
-	 fibstate <= FIBSTATE1;
-//      endpar
-   endseq;
-   
-   FSM callFibFSM <- mkFSM(callfibstmt);
-   
-   Stmt fibreturnstmt =
-   seq
-//      $display("FIBRETURN");
-      stack.pop();
-//      $display("FIBRETURN pop");
-      stack.loadstart(fsoffsetn);
-      action
-	 let t <- stack.loadfinish();
-	 stack.loadstart(fsoffsettmp1);
-	 fibn <= t;
-      endaction
-//      $display("FIBRETURN n");
-      action
-	 let t <- stack.loadfinish();
-	 stack.loadstart(fsoffsetnext);
-	 fibtmp1 <= t;
-      endaction
-//      $display("FIBRETURN tmp1");
-      action
-	 let t <- stack.loadfinish();
-//	 $display("FIBRETURN set state %d", t);
-	 fibstate <= unpack(truncate(t));
-      endaction
-   endseq;
 
-   FSM fibreturnFSM <- mkFSM(fibreturnstmt);
-
-   function Action callfib(Bit#(16) arg,  FSState returnto);
-   return action
-	     fibstate <= FIBCALLING;
-	     fibcallarg <= arg;
-	     fibcallreturnto <= returnto;
-	     callFibFSM.start();
-	  endaction;
-   endfunction
-   
-   
-   
-   function Action fibreturn(Bit#(16) returnval);
-      return action
-		fibstate <= FIBRETURNING;
-		fibretval <= returnval;      
-		fibreturnFSM.start();
-	     endaction;
-   endfunction
-
-   rule fib1 (fibstate == FIBSTATE1);
-//      $display("FIBSTATE1");
-     if (fibn == 0)
-	fibreturn(0);
-     else if (fibn == 1)
-	fibreturn(1);
+   rule fib1 (frame.pc == FIBSTATE1);
+      //$display("FIBSTATE1 %d", frame.args);
+      if (frame.args == 0)
+	 begin
+	    fibretval <= 0;
+	    frame.doreturn();
+	 end
+     else if (frame.args == 1)
+	begin
+	   fibretval <= 1;
+	   frame.doreturn();
+	end
      else
-	callfib(fibn - 1, FIBSTATE2);
+	// call FIBSTATE1 and return to FIBSTATE2
+	// call with argument frame.args -1 and tmp2 = 0
+	frame.docall(FIBSTATE1, FIBSTATE2, frame.args - 1, 0);
      endrule
 
-   rule fib2 (fibstate == FIBSTATE2);
-//      $display("FIBSTATE2");
-      fibtmp1 <= fibretval;
-      callfib(fibn - 2, FIBSTATE3);
-   endrule
-   
-   rule fib3 (fibstate == FIBSTATE3);
-//      $display("FIBSTATE3 fibtmp1 %d fibretval %d return %d", fibtmp1, fibretval, fibtmp1 + fibretval);
-      fibreturn(fibtmp1 + fibretval);
+   rule fib2 (frame.pc == FIBSTATE2);
+      //$display("FIBSTATE2 (retval %d)", fibretval);
+      // frame.vars <= fibretval; subsumed in docall
+      frame.docall(FIBSTATE1, FIBSTATE3, frame.args - 2, fibretval);
    endrule
       
-   rule fibcomplete (fibstate == FIBSTATECOMPLETE);
-//      $display("FIBSTATECOMPLETE %d %d", fibn, fibretval);
-      indication.fibresult(zeroExtend(fibretval));
-      fibstate <= FIBSTATEIDLE;
+   rule fib3 (frame.pc == FIBSTATE3);
+      //$display("FIBSTATE3 tmp1 %d fibretval %d return %d", frame.vars, fibretval, frame.vars + fibretval);
+      fibretval <= frame.vars + fibretval;
+      frame.doreturn();
    endrule
-   
-   method Action fib(Bit#(32) v);
-      $display("request fib %d", v);
-      fibn <= truncate(v);
-      indication.fibnote(8);
-      callfib(truncate(v), FIBSTATECOMPLETE);
-   endmethod
+      
+   rule fibcomplete (frame.pc == FIBSTATECOMPLETE);
+      //$display("FIBSTATECOMPLETE %d %d", frame.args, fibretval);
+      indication.fibresult(zeroExtend(fibretval));
+      // our work here is done
+      frame.nextpc(FIBSTATEIDLE);
+   endrule
+
+   interface FibRequest request;
+
+      method Action fib(Bit#(32) v);
+         //$display("request fib %d", v);
+         // call FIBSTATE1 and return to FIBSTATECOMPLETE
+         // with argument v
+         frame.docall(FIBSTATE1, FIBSTATECOMPLETE, truncate(v), 0);
+      endmethod
+
+   endinterface
       
 endmodule
 

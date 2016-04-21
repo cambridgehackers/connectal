@@ -14,6 +14,7 @@ Contents
    :maxdepth: 2
 
    intro.rst
+   installation.rst
    design/design.rst
    devguide/devguide.rst
    make.rst

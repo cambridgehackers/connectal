@@ -19,37 +19,22 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-import Vector::*;
-import GetPut::*;
-import Connectable::*;
+import BuildVector::*;
 import ClientServer::*;
-import Gearbox::*;
-import MIFO::*;
+import Connectable::*;
 import DefaultValue::*;
+import FIFOF::*;
+import Gearbox::*;
+import GetPut::*;
 import MIMO::*;
+import Probe::*;
+import Vector::*;
+
 import Pipe::*;
 import Portal::*;
 import MemTypes::*;
 import ConnectalMemory::*;
 import SharedMemoryFifo::*;
-
-typedef enum {
-   Idle,
-   HeadRequested,
-   TailRequested,
-   RequestMessage,
-   MessageHeaderRequested,
-   MessageRequested,
-   Drain,
-   UpdateTail,
-   UpdateHead,
-   UpdateHead2,
-   Waiting,
-   SendHeader,
-   SendMessage,
-   SendPadding,
-   Stop
-   } SharedMemoryPortalState deriving (Bits,Eq);
 
 module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32) portal,
    function Bit#(16) messageSize(Bit#(16) methodNumber),
@@ -61,16 +46,17 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
 endmodule
 
 // adds a header word to each message out of an indication pipe
-module mkFramedIndicationPipe#(PipePortal#(numRequests,numIndications,32) pipePortal,
-			       function Bit#(16) messageSize(Bit#(16) methodNumber),
-			       Integer i)(PipeOut#(Bit#(32)));
+module mkFramedMessagePipe#(Integer portalNumber,
+			    PipePortal#(numRequests,numIndications,32) pipePortal,
+			    function Bit#(16) messageSize(Bit#(16) methodNumber),
+			    Integer i)(PipeOut#(Bit#(32)));
 
    let pipeOut = pipePortal.indications[i];
    Bit#(16) messageBits = messageSize(fromInteger(i));
    Bit#(16) roundup = messageBits[4:0] == 0 ? 0 : 1;
    Bit#(16) numWords = (messageBits >> 5) + roundup;
    Bit#(16) totalWords = numWords + 1;
-   Bit#(32) hdr = fromInteger(i) << 16 | extend(numWords + 1);
+   Bit#(32) hdr = (fromInteger(portalNumber) << 24) | (fromInteger(i) << 16) | extend(numWords + 1);
    let sendHeader <- mkReg(True);
    Reg#(Bit#(16)) burstLenReg <- mkReg(0);
    return (interface PipeOut;
@@ -101,8 +87,131 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests,numIndications,32
 				       Vector#(2, MemReadEngineServer#(64)) readEngines, Vector#(2, MemWriteEngineServer#(64)) writeEngines)
    (SharedMemoryPortal#(64));
 
-   Vector#(numIndications, PipeOut#(Bit#(32))) indicationPipes <- genWithM(mkFramedIndicationPipe(pipePortal,messageSize));
+   Vector#(numIndications, PipeOut#(Bit#(32))) indicationPipes <- genWithM(mkFramedMessagePipe(0,pipePortal,messageSize));
 
    SharedMemoryPipeIn#(64) pipeIn <- mkSharedMemoryPipeIn(indicationPipes, readEngines, writeEngines);
    interface SharedMemoryPortalConfig cfg = pipeIn.cfg;
+endmodule
+
+interface SerialPortalDemux#(numeric type pipeCount);
+   interface Vector#(pipeCount, PipeOut#(Bit#(32))) data;
+   interface PipeIn#(Bit#(32))                      inputPipe;
+endinterface
+
+typedef enum {
+   Idle,
+   MessageHeader,
+   MessageBody,
+   Stop
+   } SerialPortalState deriving (Bits,Eq);
+
+typedef enum {
+   Portal,
+   Method
+   } SerialPortalDemuxLevel deriving (Bits,Eq);
+
+module mkSerialPortalDemux#(SerialPortalDemuxLevel portalDemux)(SerialPortalDemux#(pipeCount));
+   let clock <- exposeCurrentClock();
+   let reset <- exposeCurrentReset();
+   Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
+   Reg#(Bit#(8))  selectorReg <- mkReg(0);
+   Reg#(SerialPortalState) state <- mkReg(Idle);
+   FIFOF#(Bit#(32)) inputFifo <- mkFIFOF();
+   Vector#(pipeCount, FIFOF#(Bit#(32))) dataFifo <- replicateM(mkFIFOF);
+
+   let verbose = False;
+
+   rule idle if (state == Idle);
+      state <= MessageHeader;
+   endrule
+
+   rule receiveMessageHeader if (state == MessageHeader);
+      let hdr <- toGet(inputFifo).get();
+      let selector = (portalDemux == Portal) ? hdr[31:24] : hdr[23:16];
+      let messageWords = hdr[15:0];
+      selectorReg <= selector;
+      if (verbose)
+         $display("receiveMessageHeader hdr=%x selector=%x messageWords=%d", hdr, selector, messageWords);
+      if (portalDemux == Portal) // methodDemux need the header
+         dataFifo[selector].enq(hdr);
+      messageWordsReg <= messageWords - 1;
+      if (messageWords == 1)
+         state <= MessageHeader;
+      else
+         state <= MessageBody;
+   endrule
+
+   rule receiveMessage if (state == MessageBody);
+      let data <- toGet(inputFifo).get();
+      if (verbose)
+         $display("receiveMessage data=%x messageWords=%d", data, messageWordsReg);
+      if (selectorReg != 8'hFF)
+         dataFifo[selectorReg].enq(data);
+      messageWordsReg <= messageWordsReg - 1;
+      if (messageWordsReg == 1)
+         state <= MessageHeader;
+   endrule
+
+   interface data      = map(toPipeOut, dataFifo);
+   interface inputPipe = toPipeIn(inputFifo);
+endmodule
+
+module mkSerialPortalMux#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes)(PipeOut#(Bit#(32)));
+   let clock <- exposeCurrentClock;
+   let reset <- exposeCurrentReset;
+   Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
+   Reg#(Bit#(16)) methodIdReg <- mkReg(0);
+   Reg#(Bool) paddingReg <- mkReg(False);
+   Reg#(SerialPortalState) state <- mkReg(Idle);
+   Reg#(Bit#(32)) sglIdReg <- mkReg(0);
+   function Bool pipeOutNotEmpty(PipeOut#(a) po); return po.notEmpty(); endfunction
+   Vector#(numIndications, Bool) readyBits = map(pipeOutNotEmpty, pipes);
+   Bool      interruptStatus = False;
+   Bit#(16)  readyChannel = -1;
+   FIFOF#(Bit#(32)) outputFifo <- mkFIFOF();
+
+   let verbose = True;
+   let stateProbe <- mkProbe();
+   let messageWordsProbe <- mkProbe();
+   let messageDataProbe <- mkProbe();
+
+   for (Integer i = valueOf(numIndications) - 1; i >= 0; i = i - 1) begin
+      if (readyBits[i]) begin
+         interruptStatus = True;
+         readyChannel = fromInteger(i);
+      end
+   end
+
+   rule idle if (state == Idle);
+      state <= MessageHeader;
+      stateProbe <= MessageHeader;
+   endrule
+
+   rule sendHeader if (state == MessageHeader && interruptStatus);
+      Bit#(32) hdr <- toGet(pipes[readyChannel]).get();
+      Bit#(16) totalWords = hdr[15:0];
+      let messageWords = totalWords-1;
+      messageWordsProbe <= messageWords;
+
+      messageWordsReg <= messageWords;
+      methodIdReg <= readyChannel;
+      outputFifo.enq(hdr);
+      state <= MessageBody;
+      stateProbe <= MessageBody;
+      messageDataProbe <= hdr;
+   endrule
+
+   rule sendMessage if (state == MessageBody);
+      messageWordsReg <= messageWordsReg - 1;
+      let v <- toGet(pipes[methodIdReg]).get();
+      outputFifo.enq(v);
+      $display("sendMessage v=%h messageWords=%d paddingReg=%d", v, messageWordsReg, paddingReg);
+      if (messageWordsReg == 1) begin
+         state <= MessageHeader;
+	 stateProbe <= MessageHeader;
+      end
+      messageDataProbe <= v;
+   endrule
+
+   return toPipeOut(outputFifo);
 endmodule

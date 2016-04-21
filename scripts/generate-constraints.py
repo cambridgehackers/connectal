@@ -51,7 +51,7 @@ if __name__=='__main__':
         bindings[split[0]] = split[1]
 
     boardInfo = json.loads(open(options.boardfile).read())
-
+    print(options.fpga)
     if options.fpga == "xilinx":
         template='''\
     set_property LOC "%(LOC)s" [get_ports "%(name)s"]
@@ -101,22 +101,27 @@ if __name__=='__main__':
                         #print('FFF', prop, pinName, boardPinInfo, boardPinInfo.has_key(pinName), boardPinInfo.get(pinName))
                         break
             if boardPinInfo == {}:
-                print('Missing group description for', pinName, projectPinInfo, file=sys.stderr)
+                print('Missing group description for', pin, pinName, projectPinInfo, file=sys.stderr)
                 errorDetected = True
             pinInfo = {}
             if boardPinInfo.has_key(pinName):
                 pinInfo = copy.copy(boardPinInfo[pinName])
             else:
-                print('Missing pin description for', pinName, projectPinInfo, file=sys.stderr)
+                print('Missing pin description for', pin, pinName, projectPinInfo, file=sys.stderr)
                 pinInfo['LOC'] = 'fmc.%s' % (pinName)
                 errorDetected = True
             pinInfo['name'] = pin
             for prop in projectPinInfo:
                 if projectPinInfo.has_key(prop):
                     pinInfo[prop] = projectPinInfo[prop]
-            out.write(template % pinInfo)
+            try:
+                out.write(template % pinInfo)
+            except:
+                print('missing bindings for pin ', pinName)
+                print(template)
+                print(pinInfo)
             for k in pinInfo:
-                if k in used+['name', 'PIO_DIRECTION']: continue
+                if k in used+['name', 'LOC', 'PIO_DIRECTION']: continue
                 out.write(setPropertyTemplate % {
                         'name': pin,
                         'prop': k,

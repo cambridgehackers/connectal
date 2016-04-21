@@ -91,7 +91,7 @@ typedef struct {DmaErrorType errorType;
 		Bit#(32) pref; } DmaError deriving (Bits);
 
 module mkMemReadInternal#(MemServerIndication ind,
-			  Vector#(numMMUs,Server#(AddrTransRequest,Bit#(addrWidth))) mmus) 
+			  Vector#(numMMUs,Server#(AddrTransRequest,AddrTransResponse#(addrWidth))) mmus) 
    (MemReadInternal#(addrWidth, busWidth, numTags, numServers))
    provisos(Log#(busWidthBytes,beatShift)
 	    ,Div#(busWidth,8,busWidthBytes)
@@ -155,7 +155,8 @@ module mkMemReadInternal#(MemServerIndication ind,
          
    rule checkMmuResp;
       let request <- toGet(clientRequest).get();
-      let physAddr <- mmus[request.req.sglId[31:16]].response.get;
+      let addrTransResponse <- mmus[request.req.sglId[31:16]].response.get;
+      let physAddr = addrTransResponse.physAddr;
       let rename_tag <- tag_gen.getTag;
       let burstLenBeats = request.req.burstLen >> beat_shift;
       clientBurstLen.upd(truncate(rename_tag), tuple2(burstLenBeats == 1, burstLenBeats));
@@ -307,7 +308,7 @@ module mkMemReadInternal#(MemServerIndication ind,
 endmodule
 
 module mkMemWriteInternal#(MemServerIndication ind, 
-			   Vector#(numMMUs,Server#(AddrTransRequest,Bit#(addrWidth))) mmus)
+			   Vector#(numMMUs,Server#(AddrTransRequest,AddrTransResponse#(addrWidth))) mmus)
    (MemWriteInternal#(addrWidth, busWidth, numTags, numServers))
    provisos(Log#(busWidthBytes,beatShift)
 	    ,Div#(busWidth,8,busWidthBytes)
@@ -359,7 +360,8 @@ module mkMemWriteInternal#(MemServerIndication ind,
       let request <- toGet(clientRequest).get;
       let req = request.req;
       let client = request.client;
-      let physAddr <- mmus[req.sglId[31:16]].response.get;
+      let addrTransResponse <- mmus[req.sglId[31:16]].response.get;
+      let physAddr = addrTransResponse.physAddr;
       let rename_tag <- tag_gen.getTag;
       serverRequest.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
       //if (verbose) $display("mkMemWriteInternal::checkMmuResp: client=%d, rename_tag=%d", client,rename_tag);

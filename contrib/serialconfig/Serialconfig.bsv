@@ -32,8 +32,11 @@ interface SerialconfigRequest;
    method Action send(Bit#(32) a, Bit#(32) d);
 endinterface
 
+interface Serialconfig;
+    interface SerialconfigRequest request;
+endinterface
 
-module mkSerialconfigRequest#(SerialconfigIndication indication)(SerialconfigRequest);
+module mkSerialconfig#(SerialconfigIndication indication)(Serialconfig);
 
    
    SpiReg#(Bit#(32)) tap1 <- mkSpiReg('h11110000);
@@ -52,10 +55,12 @@ module mkSerialconfigRequest#(SerialconfigIndication indication)(SerialconfigReq
       spi.deq();
    endrule
 
+   interface SerialconfigRequest request;
  
-   method Action send(Bit#(32) a, Bit#(32) d);
-      spi.enq(SpiItem{a: a, d: d});
-   endmethod
-  
+      method Action send(Bit#(32) a, Bit#(32) d);
+         spi.enq(SpiItem{a: a, d: d});
+      endmethod
+
+  endinterface
    
 endmodule

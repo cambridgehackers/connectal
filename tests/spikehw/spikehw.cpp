@@ -4,15 +4,18 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include <SpikeHwIndication.h>
 #include <SpikeHwRequest.h>
 #include "dmaManager.h"
 #include "spikehw.h"
-#include <iostream>
+#ifdef REGISTER_SPIKE_DEVICES
 #include <functional>
 #include <riscv/sim.h>
 #include <riscv/devices.h>
+#endif
+
 
 int verbose = 0;
 
@@ -22,17 +25,31 @@ class SpikeHwIndication : public SpikeHwIndicationWrapper
 public:
     int irq;
     uint32_t buf[16];
+    IrqCallback irqCallback;
 
-  void irqChanged( const uint8_t irq, const uint8_t intrSources ) {
-      fprintf(stderr, "irq %d intr sources %x\n", irq, intrSources);
+  void traceDmaRequest(DmaChannel chan, int write, uint16_t objId, uint32_t offset, uint16_t burstLen)
+  {
+    fprintf(stderr, "traceDmaRequest chan=%d write=%d objId=%d offset=%08x burstLen=%d\n", chan, write, objId, offset, burstLen);
+  }
+  void traceDmaData ( const DmaChannel chan, const int write, const uint32_t data, const int last )
+  {
+    fprintf(stderr, "traceDmaData chan=%d write=%d data=%08x last=%d\n", chan, write, data, last);
+  }
+
+  void irqChanged( const uint8_t irq, const uint16_t intrSources ) {
+    if (intrSources & 0xe) fprintf(stderr, "iic intr=%d %04x\n", irq, intrSources);
+      if (verbose) fprintf(stderr, "SpikeHw::irqChanged %d intr sources %x\n", irq, intrSources);
       this->irq = irq;
+      if (irqCallback)
+	irqCallback(irq);
     }
     virtual void resetDone() {
 	fprintf(stderr, "reset done\n");
 	sem_post(&sem);
     }
-    virtual void status ( const uint8_t mmcm_locked, const uint8_t irq, const uint8_t intrSources ) {
-	fprintf(stderr, "axi eth status mmcm_locked=%d irq=%d intr sources=%x\n", mmcm_locked, irq, intrSources);
+    virtual void status ( const uint8_t reset_asserted, const uint8_t mmcm_locked, const uint8_t rx_los, const uint8_t irq, const uint16_t intrSources ) {
+	fprintf(stderr, "spikehw status reset_asserted=%d mmcm_locked=%d rx_los=%d irq=%d intr sources=%x\n",
+		reset_asserted, mmcm_locked, rx_los, irq, intrSources);
 	sem_post(&sem);
     }
 
@@ -40,14 +57,18 @@ public:
 	struct timespec timeout;
 	timeout.tv_sec = 1000;
 	timeout.tv_nsec = 0;
-	for (int tries = 0; tries < 10; tries++) {
+	if (0) {
+	  for (int tries = 0; tries < 10; tries++) {
 	    int status = sem_timedwait(&sem, &timeout);
 	    if (status != 0 && errno == ETIMEDOUT) {
-		if (tries > 5)
-		fprintf(stderr, "try %d timed out waiting for response status=%d errno=%d\n", tries, status, errno);
+	      if (tries > 5)
+		fprintf(stderr, "%s:%d: try %d timed out waiting for response status=%d errno=%d\n", __FILE__, __LINE__, tries, status, errno);
 	    } else {
-		break;
+	      break;
 	    }
+	  }
+	} else {
+	  sem_wait(&sem);
 	}
     }
 
@@ -73,7 +94,7 @@ public:
 	sem_post(&sem);
     }
 
-    SpikeHwIndication(unsigned int id) : SpikeHwIndicationWrapper(id), irq(0) {
+    SpikeHwIndication(unsigned int id, IrqCallback callback=0) : SpikeHwIndicationWrapper(id), irq(0), irqCallback(callback) {
       sem_init(&sem, 0, 0);
     }
 };
@@ -82,13 +103,15 @@ public:
 SpikeHwRequestProxy *request;
 SpikeHwIndication *indication;
 
-SpikeHw::SpikeHw()
-    : request(0), indication(0), dmaManager(0), didReset(false)
+SpikeHw::SpikeHw(IrqCallback callback)
+    : request(0), indication(0), dmaManager(0), didReset(false), mainMemFd(0)
 {
     request = new SpikeHwRequestProxy(IfcNames_SpikeHwRequestS2H);
-    indication = new SpikeHwIndication(IfcNames_SpikeHwIndicationH2S);
+    indication = new SpikeHwIndication(IfcNames_SpikeHwIndicationH2S, callback);
     dmaManager = platformInit();
+    request->reset();
     request->setFlashParameters(100);
+    request->iicReset(0); // de-assert reset
 }
 
 SpikeHw::~SpikeHw()
@@ -147,6 +170,27 @@ void SpikeHw::write(unsigned long offset, const uint8_t *buf)
     //indication->wait();
 }
 
+uint32_t SpikeHw::read(unsigned long offset)
+{
+    maybeReset();
+
+    if (verbose) fprintf(stderr, "SpikeHw::read offset=%08lx\n", offset);
+    request->read(offset);
+    indication->wait();
+    if (verbose) fprintf(stderr, "SpikeHw::read done value=%x\n", *(uint32_t *)indication->buf);
+    return *(uint32_t *)indication->buf;
+}
+
+void SpikeHw::write(unsigned long offset, const uint32_t value)
+{
+    maybeReset();
+
+    if (verbose) fprintf(stderr, "SpikeHw::write offset=%08lx value=%x\n", offset, value);
+    request->write(offset, value);
+    indication->wait();
+    if (verbose) fprintf(stderr, "SpikeHw::write done\n");
+}
+
 void SpikeHw::setFlashParameters(unsigned long cycles)
 {
     request->setFlashParameters(cycles);
@@ -181,8 +225,28 @@ void SpikeHw::clearInterrupt()
     indication->irq = 0;
 }
 
+char *SpikeHw::allocate_mem(size_t memsz)
+{
+    int memfd = portalAlloc(memsz, 1);
+    if (memfd < 0)
+	return 0;
+    char *buf = (char *)portalMmap(memfd, memsz);
+    if (buf == MAP_FAILED) {
+	close(memfd);
+	return 0;
+    }
+    fprintf(stderr, "SpikeHw::allocate_mem memsz=%lx memfd=%d buf=%p\n", memsz, memfd, buf);
+    if (!mainMemFd) {
+	setupDma(memfd);
+	mainMemFd = memfd;
+	fprintf(stderr, "SpikeHw::allocate_mem mainMemFd=%d\n", memfd);
+    }
+    return buf;
+}
+
 SpikeHw *spikeHw;
 
+#ifdef REGISTER_SPIKE_DEVICES
 class spikehw_device_t : public abstract_device_t {
 public:
   spikehw_device_t();
@@ -329,24 +393,52 @@ abstract_device_t *devicetree_device_t::make_device()
     return new devicetree_device_t();
 }
 
-char *SpikeHw::allocate_mem(size_t memsz)
-{
-    if (!spikeHw)
-	spikeHw = new SpikeHw();
-    int memfd = portalAlloc(memsz, 1);
-    if (memfd < 0)
-	return 0;
-    char *buf = (char *)portalMmap(memfd, memsz);
-    if (buf == MAP_FAILED) {
-	close(memfd);
-	return 0;
-    }
-    fprintf(stderr, "SpikeHw::allocate_mem memsz=%lx memfd=%d buf=%p\n", memsz, memfd, buf);
-    spikeHw->setupDma(memfd);
-    return buf;
-}
-
-REGISTER_MEM_ALLOCATOR(SpikeHw::allocate_mem);
+//REGISTER_MEM_ALLOCATOR(SpikeHw::allocate_mem);
 REGISTER_DEVICE(devicetree, 0x04080000, devicetree_device_t::make_device);
 REGISTER_DEVICE(spikehw,    0x04100000, spikehw_device_t::make_device);
 REGISTER_DEVICE(spikeflash, 0x08000000, spikeflash_device_t::make_device);
+#endif
+
+#ifndef REGISTER_SPIKE_DEVICES
+extern "C" {
+
+    struct FpgaOps {
+	uint64_t (*read)(uint64_t addr);
+	void (*write)(uint64_t addr, uint64_t value);
+	void (*close)();
+        void *(*alloc_mem)(size_t size);
+    };
+
+    uint64_t fpga_read(uint64_t addr)
+    {
+      uint64_t val = spikeHw->read(0x100000 + addr);
+      return val;
+    }
+
+    void fpga_write(uint64_t addr, uint64_t value)
+    {
+	spikeHw->write(0x100000 + addr, value);
+    }
+
+    void fpga_close()
+    {
+    }
+
+    void *fpga_alloc_mem(size_t size)
+    {
+	return (void *)spikeHw->allocate_mem(size);;
+    }
+
+    void *fpgadev_init(void (*irqCallback)(int irq)) {
+	fprintf(stderr, "connectal.so init called\n");
+	if (!spikeHw)
+	    spikeHw = new SpikeHw(irqCallback);
+	struct FpgaOps *ops = (struct FpgaOps *)malloc(sizeof(struct FpgaOps));
+	ops->read = fpga_read;
+	ops->write = fpga_write;
+	ops->close = fpga_close;
+	ops->alloc_mem = fpga_alloc_mem;
+	return ops;
+    }
+}
+#endif

@@ -11,6 +11,51 @@
         "CONNECTALFLAGS": ["--mainclockperiod=5", "--derivedclockperiod=2.5"],
         "need_pcie" : "unused"
     },
+    "sfp1": {
+        "mod_def0": {
+            "IOSTANDARD": "LVCMOS15",
+            "LOC": "AB20"
+        },
+        "mod_def1": {
+            "IOSTANDARD": "LVCMOS15",
+            "LOC": "AB19"
+        },
+        "mod_def2": {
+            "IOSTANDARD": "LVCMOS15",
+            "LOC": "AA19"
+        },
+        "rx_los": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVCMOS25",
+            "LOC": "AE20"
+        },
+        "tx_disable": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS25",
+            "LOC": "AA18"
+        },
+        "tx_fault": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVCMOS25",
+            "LOC": "AD19"
+        },
+        "rxp": {
+            "PIO_DIRECTION": "INPUT",
+            "LOC": "AC4"
+        },
+        "rxn": {
+            "PIO_DIRECTION": "INPUT",
+            "LOC": "AC3"
+        },
+        "txp": {
+            "PIO_DIRECTION": "OUTPUT",
+            "LOC": "AB2"
+        },
+        "txn": {
+            "PIO_DIRECTION": "OUTPUT",
+            "LOC": "AB1"
+        }
+    },
     "fmc1": {
     "LA00_p_CC": {
         "PACKAGE_PIN": "",

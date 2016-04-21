@@ -1,0 +1,249 @@
+{
+    "options": {
+        "bsvdefines" : ["XILINX=1", "Virtex7", "PCIE", "PCIE3", "PcieHostInterface", "PhysAddrWidth=40", "NUMBER_OF_LEDS=8", "PcieLanes=8"],
+        "os" : "ubuntu",
+        "partname" : "XCKU040-2FFVA1156E",
+        "need_pcie" : "x7_gen3x8",
+        "TOP" : "PcieTop",
+        "constraints": [],
+        "implconstraints": ["constraints/xilinx/kcu105.xdc", "constraints/xilinx/pcie-clocks.xdc"],
+        "runscript" : "run.pcietest",
+        "CONNECTALFLAGS" : ["--mainclockperiod=4", "--derivedclockperiod=4", "--pcieclockperiod=4"],
+        "rewireclockstring" : ""
+    },
+    "leds" : {
+		"L0" : {
+		 "LOC" : "bogus",
+		 "IOSTANDARD" : "LVCMOS15",
+		 "PIO_DIRECTION" : "OUTPUT"
+		 },
+		"L1" : {
+		 "LOC" : "bogus",
+		 "IOSTANDARD" : "LVCMOS15",
+		 "PIO_DIRECTION" : "OUTPUT"
+		 },
+		"L2" : {
+		 "LOC" : "bogus",
+		 "IOSTANDARD" : "LVCMOS15",
+		 "PIO_DIRECTION" : "OUTPUT"
+		 },
+		"L3" : {
+		 "LOC" : "bogus",
+		 "IOSTANDARD" : "LVCMOS15",
+		 "PIO_DIRECTION" : "OUTPUT"
+		 },
+		"L4" : {
+		 "LOC" : "bogus",
+		 "IOSTANDARD" : "LVCMOS15",
+		 "PIO_DIRECTION" : "OUTPUT"
+		 },
+		"L5" : {
+		 "LOC" : "bogus",
+		 "IOSTANDARD" : "LVCMOS15",
+		 "PIO_DIRECTION" : "OUTPUT"
+		 },
+		"L6" : {
+		 "LOC" : "bogus",
+		 "IOSTANDARD" : "LVCMOS15",
+		 "PIO_DIRECTION" : "OUTPUT"
+		 },
+		"L7" : {
+		 "LOC" : "bogus",
+		 "IOSTANDARD" : "LVCMOS15",
+		 "PIO_DIRECTION" : "OUTPUT"
+		 }
+	},
+    "sfp1": {
+		 "rxp" : {
+			     "LOC" : "bogus",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "rxn" : {
+			     "LOC" : "bogus",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "txp" : {
+			     "LOC" : "bogus",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "txn" : {
+			     "LOC" : "bogus",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 }
+    },
+    "sfp2": {
+		 "rxp" : {
+			     "LOC" : "bogus",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "rxn" : {
+			     "LOC" : "bogus",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "txp" : {
+			     "LOC" : "bogus",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "txn" : {
+			     "LOC" : "bogus",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 }
+    },
+    "sfp3": {
+		 "rxp" : {
+			     "LOC" : "bogus",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "rxn" : {
+			     "LOC" : "bogus",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "txp" : {
+			     "LOC" : "bogus",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "txn" : {
+			     "LOC" : "bogus",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 }
+    },
+    "sfp4": {
+		 "rxp" : {
+			     "LOC" : "bogus",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "rxn" : {
+			     "LOC" : "bogus",
+			     "PIO_DIRECTION" : "INPUT"
+		 },
+		 "txp" : {
+			     "LOC" : "bogus",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 },
+		 "txn" : {
+			     "LOC" : "bogus",
+			     "PIO_DIRECTION" : "OUTPUT"
+		 }
+    },
+    "uart": {
+		"d_in": {
+			"LOC": "bogus",
+			"IOSTANDARD": "LVCMOS18",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"d_out": {
+			"LOC": "bogus",
+			"IOSTANDARD": "LVCMOS18",
+			"PIO_DIRECTION": "OUTPUT"
+		},
+		"rts": {
+			"LOC": "bogus",
+			"IOSTANDARD": "LVCMOS18",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"cts": {
+			"LOC": "bogus",
+			"IOSTANDARD": "LVCMOS18",
+			"PIO_DIRECTION": "OUTPUT"
+		}
+    },
+    "iic_main": {
+		"sda": {
+			"LOC": "bogus",
+			"IOSTANDARD": "LVCMOS18",
+			"PIO_DIRECTION": "BIDIR"
+		},
+		"scl": {
+			"LOC": "bogus",
+			"IOSTANDARD": "LVCMOS18",
+			"PIO_DIRECTION": "BIDIR"
+		}
+    },
+    "pins": {
+		"userClk_p": {
+			"LOC": "bogus",
+			"IOSTANDARD": "LVDS_25",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"userClk_n": {
+			"LOC": "bogus",
+			"IOSTANDARD": "LVDS_25",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"smaUserClk_p": {
+			"LOC": "bogus",
+			"IOSTANDARD": "LVDS_25",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "OUTPUT"
+		},
+		"smaUserClk_n": {
+			"LOC": "bogus",
+			"IOSTANDARD": "LVDS_25",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "OUTPUT"
+		},
+	        "sys_clk_p": {
+			"LOC": "bogus",
+			"IOSTANDARD": "LVDS_25",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
+	        "sys_clk_n": {
+			"LOC": "bogus",
+			"IOSTANDARD": "LVDS_25",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
+	        "si5324_clk_p": {
+			"LOC": "bogus",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
+	        "si5324_clk_n": {
+			"LOC": "bogus",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"mgtRefClk_p": {
+			"LOC": "bogus",
+			"IOSTANDARD": "LVDS_25",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"mgtRefClk_n": {
+			"LOC": "bogus",
+			"IOSTANDARD": "LVDS_25",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"mgtRx_p": {
+			"LOC": "bogus",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"mgtRx_n": {
+			"LOC": "bogus",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"mgtTx_p": {
+			"LOC": "bogus",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "OUTPUT"
+		},
+		"mgtTx_n": {
+			"LOC": "bogus",
+			"DIFF_TERM": "TRUE",
+			"PIO_DIRECTION": "OUTPUT"
+		},
+		"si5324_rst_n": {
+			"LOC": "bogus",
+			"IOSTANDARD": "LVCMOS18",
+			"PIO_DIRECTION": "OUTPUT"
+		}
+    }
+}
+
+

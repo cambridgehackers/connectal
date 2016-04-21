@@ -51,7 +51,16 @@ Environment Variables
 
 .. envvar:: NOFPGAJTAG
 
-   If NOFPGAJTAG is defined, then fpgajtag is not called by ubuntu.exe or android.exe.
+   (Deprecated, use :envvar::`NOPROGRAM`. See also See also :c:data:`noprogram`.)
+   If NOFPGAJTAG is defined, then fpgajtag is not called by ubuntu.exe
+   or android.exe.
+
+.. envvar:: NOPROGRAM
+
+   If NOPROGRAM is defined, then the FPGA is not automatically
+   programmed by ubuntu.exe or android.exe. See also
+   :c:data:`noprogram`.
+
 
 Variables Controlling the Build
 -------------------------------

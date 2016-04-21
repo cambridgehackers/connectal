@@ -54,7 +54,7 @@ static int manualWaitForResp(PortalInternal *p, uint32_t *arg_id)
     return_code = ManualMMU_None;
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     while(return_code == ManualMMU_None) {
-        p->item->event(p);
+        p->transport->event(p);
     }
 printf("[%s:%d]\n", __FUNCTION__, __LINE__);
     *arg_id = return_id;
