@@ -21,6 +21,9 @@
 // SOFTWARE.
 
 import Connectable::*;
+import FIFOF::*;
+import GetPut::*;
+import GetPutM::*;
 
 (* always_ready, always_enabled *)
 interface AxiStreamMaster#(numeric type dsz);
@@ -51,3 +54,43 @@ instance Connectable#(AxiStreamMaster#(dataWidth), AxiStreamSlave#(dataWidth));
       endrule
    endmodule
 endinstance
+
+////////////////////////////////////////////////////////////
+
+instance ToGetM#(AxiStreamMaster#(asz), Bit#(asz));
+   module toGetM#(AxiStreamMaster#(asz) m)(Get#(Bit#(asz)));
+      FIFOF#(Bit#(asz)) dfifo <- mkFIFOF();
+
+      rule handshake;
+         m.tready(pack(dfifo.notFull));
+      endrule
+      rule enq if (unpack(m.tvalid));
+	 dfifo.enq(m.tdata());
+      endrule
+
+      return toGet(dfifo);
+   endmodule
+endinstance
+
+instance ToPutM#(AxiStreamSlave#(asz), Bit#(asz));
+   module toPutM#(AxiStreamSlave#(asz) m)(Put#(Bit#(asz)));
+      FIFOF#(Bit#(asz)) dfifo <- mkFIFOF();
+
+      rule handshake;
+	 m.tvalid(pack(dfifo.notEmpty()));
+      endrule
+      rule deq if (unpack(m.tready()));
+	 m.tdata(dfifo.first());
+	 m.tkeep(maxBound);
+	 m.tlast(1);
+	 dfifo.deq();
+      endrule
+
+      return toPut(dfifo);
+   endmodule
+endinstance
+
+////////////////////////////////////////////////////////////
+typeclass ToAxiStream#(type atype, type btype);
+   function atype toAxiStream(btype b);
+endtypeclass
