@@ -375,25 +375,38 @@ void initPortalMemory(void)
 {
 #ifndef __KERNEL__
     if (global_pa_fd == -1)
+#ifndef SIMULATION
         global_pa_fd = open("/dev/portalmem", O_RDWR);
     if (global_pa_fd < 0){
         PORTAL_PRINTF("Failed to open /dev/portalmem pa_fd=%d errno=%d\n", global_pa_fd, errno);
         exit(ENODEV);
     }
+#else
+        global_pa_fd = -1;
+#endif
 #endif
 }
+
+int portalmem_sizes[1024];
 
 int portalAlloc(size_t size, int cached)
 {
     int fd;
-    struct PortalAlloc portalAlloc;
-    portalAlloc.len = size;
-    portalAlloc.cached = cached;
     initPortalMemory();
 #ifdef __KERNEL__
     fd = portalmem_dmabuffer_create(size);
 #else
-    fd = ioctl(global_pa_fd, PA_MALLOC, &portalAlloc);
+#ifndef SIMULATION
+    {
+	    struct PortalAlloc portalAlloc;
+	    portalAlloc.len = size;
+	    portalAlloc.cached = cached;
+	    fd = ioctl(global_pa_fd, PA_MALLOC, &portalAlloc);
+    }
+#else
+    fd = open("/dev/zero", O_RDWR);
+    portalmem_sizes[fd] = size;
+#endif
 #endif
     if(trace_portal)
         PORTAL_PRINTF("alloc size=%ld fd=%d\n", (unsigned long)size, fd);
