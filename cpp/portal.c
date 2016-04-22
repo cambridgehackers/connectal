@@ -263,8 +263,8 @@ static void initPortalHardwareOnce(void)
 	  }
 	}
         checkSignature("/dev/connectal", DEV_CONNECTAL_SIGNATURE);
-#endif // !defined(SIMULATION)
         checkSignature("/dev/portalmem", PA_SIGNATURE);
+#endif // !defined(SIMULATION)
     }
     else {
 #define MAX_PATH 2000
