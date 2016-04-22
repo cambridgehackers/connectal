@@ -119,6 +119,7 @@ int portal_disconnect(struct PortalInternal *pint)
 #define DEV_CONNECTAL_SIGNATURE PCIE_SIGNATURE
 #endif
 
+#ifndef SIMULATION
 /*
  * Check md5 signatures of Linux device drivers to be sure they are up to date
  */
@@ -169,6 +170,7 @@ static void checkSignature(const char *filename, int ioctlnum)
     }
     close(fd);
 }
+#endif
 
 char *getExecutionFilename(char *buf, int buflen)
 {
@@ -412,9 +414,9 @@ int portalAlloc(size_t size, int cached)
       fprintf(stderr, "%s:%d fname=%s fd=%d\n", __FUNCTION__, __LINE__, fname, fd);
       unlink(fname);
       lseek(fd, size, SEEK_SET);
-      int rc = write(fd, (void*)fname, size);
+      size_t rc = write(fd, (void*)fname, size);
       if (rc != size)
-	fprintf(stderr, "%s:%d fname=%s fd=%d wrote %d bytes\n", __FUNCTION__, __LINE__, fname, fd, rc);
+	fprintf(stderr, "%s:%d fname=%s fd=%d wrote %ld bytes\n", __FUNCTION__, __LINE__, fname, fd, rc);
       portalmem_sizes[fd] = size;
     }
 #endif
