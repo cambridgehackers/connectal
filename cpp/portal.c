@@ -404,8 +404,19 @@ int portalAlloc(size_t size, int cached)
 	    fd = ioctl(global_pa_fd, PA_MALLOC, &portalAlloc);
     }
 #else
-    fd = open("/dev/zero", O_RDWR);
-    portalmem_sizes[fd] = size;
+    {
+      static int portalmem_number = 0;
+      char fname[128];
+      snprintf(fname, sizeof(fname), "/tmp/portalmem-%d-%d.bin", getpid(), portalmem_number++);
+      fd = open(fname, O_RDWR|O_CREAT, 0600);
+      fprintf(stderr, "%s:%d fname=%s fd=%d\n", __FUNCTION__, __LINE__, fname, fd);
+      unlink(fname);
+      lseek(fd, size, SEEK_SET);
+      int rc = write(fd, (void*)fname, size);
+      if (rc != size)
+	fprintf(stderr, "%s:%d fname=%s fd=%d wrote %d bytes\n", __FUNCTION__, __LINE__, fname, fd, rc);
+      portalmem_sizes[fd] = size;
+    }
 #endif
 #endif
     if(trace_portal)
