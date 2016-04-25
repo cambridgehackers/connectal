@@ -162,6 +162,7 @@ DUT=%(dut)s
 
 export INTERFACES = %(interfaces)s
 BSVFILES = %(bsvfiles)s
+XCIFILES = %(xcifiles)s
 
 BSCFLAGS_PROJECT = %(bscflags)s
 SIM_CXX_PROJECT = %(bsimsource)s
@@ -485,6 +486,7 @@ if __name__=='__main__':
                                    'qtused': 'cd jni; qmake ../..; make' if options.qtused else '',
                                    'interfaces': ' '.join(options.interfaces),
                                    'bsvfiles': ' '.join([ os.path.abspath(bsvfile) for bsvfile in options.bsvfile]),
+                                   'xcifiles': ' '.join([ os.path.abspath(xci) for xci in options.xci]),
                                    'bsimsource': ' '.join([os.path.abspath(bsimsource) for bsimsource in options.bsimsource]) if options.bsimsource else '',
                                    'includepath': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(source)) for source in options.source]) if options.source else '',
                                    'runsource2': 'RUNSOURCE2=1' if options.source2 else '',
