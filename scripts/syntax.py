@@ -1071,7 +1071,7 @@ if __name__=='__main__':
     t = os.environ.get('BSVDEFINES_LIST')
     if t:
         deflist = t.split()
-    noisyFlag = os.environ.get('V') == '1'
+    noisyFlag = os.environ.get('D') == '1'
     if os.environ.get('D'):
         parseDebugFlag=True
     if noisyFlag:
