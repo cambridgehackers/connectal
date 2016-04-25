@@ -309,7 +309,7 @@ def signCName(item):
 def typeJson(item):
     tname = typeCName(item)
     if tname not in itypeNames:
-        print 'typeJson.other', tname, tname in itypeNames
+        #print 'typeJson.other', tname, tname in itypeNames
         return 'other'
     return tname
 
