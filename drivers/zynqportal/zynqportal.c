@@ -166,7 +166,7 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
                 /* pushd down allocated fd */
                 PortalSendFd sendFd;
 		struct pmentry *pmentry;
-                PortalInternal devptr = {.map_base = portal_data->map_base, .item=&kernelfunc};
+                PortalInternal devptr = {.map_base = portal_data->map_base, .transport=&kernelfunc};
 
                 int err = copy_from_user(&sendFd, (void __user *) arg, sizeof(sendFd));
                 if (err)
@@ -189,7 +189,7 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
 	case PORTAL_DEREFERENCE: {
 		int id = arg;
 		struct list_head *pmlist, *n;
-                PortalInternal devptr = {.map_base = portal_data->map_base, .item=&kernelfunc};
+                PortalInternal devptr = {.map_base = portal_data->map_base, .transport=&kernelfunc};
 		MMURequest_idReturn(&devptr, id);
 		list_for_each_safe(pmlist, n, &portal_data->pmlist) {
 			struct pmentry *pmentry = list_entry(pmlist, struct pmentry, pmlist);
@@ -333,7 +333,7 @@ unsigned int portal_poll (struct file *filep, poll_table *poll_table)
 static int portal_release(struct inode *inode, struct file *filep)
 {
         struct portal_data *portal_data = container_of((struct miscdevice *)filep->private_data, struct portal_data, misc);
-	PortalInternal devptr = {.map_base = portal_data->map_base, .item=&kernelfunc};
+	PortalInternal devptr = {.map_base = portal_data->map_base, .transport=&kernelfunc};
 	struct list_head *pmlist;
         driver_devel("%s inode=%p filep=%p\n", __func__, inode, filep);
         if (portal_data->name[0]) {

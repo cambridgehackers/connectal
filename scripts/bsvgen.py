@@ -500,9 +500,9 @@ def emitBDef(item, generated_hpp, indentation):
     else:
         print 'EMITCD', n, t, td
 
-def generate_bsv(project_dir, nf, aGenDef, jsondata):
+def generate_bsv(project_dir, noisyFlag, aGenDef, jsondata):
     global generateInterfaceDefs,verbose
-    verbose = nf
+    verbose = noisyFlag
     generateInterfaceDefs = aGenDef
     generatedPackageNames = []
     if generateInterfaceDefs:

@@ -36,6 +36,11 @@ static int trace_memory = 0;
 
 #include "GeneratedTypes.h" // generated in project directory
 
+#ifdef SIMULATION
+// indexed by fd
+extern int portalmem_sizes[1024];
+#endif
+
 int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
 {
     int rc = 0;
@@ -64,25 +69,27 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
       long addr = sg_phys(sg);
       long len = sg->length;
 #elif defined(SIMULATION)
-  for(i = 0; 1; i++){
-    long len, addr;
-    PortalElementSize portalElementSize;
-
-    portalElementSize.fd = fd;
-    portalElementSize.index = i;
-    len = ioctl(pa_fd, PA_ELEMENT_SIZE, &portalElementSize);
-    if (len < 0) {
-        PORTAL_PRINTF("send_fd_to_portal: bad return from PA_ELEMENT_SIZE %ld\n", len);
-        rc = len;
+  long object_len = portalmem_sizes[fd];
+  for (i = 0; object_len > 0; i++) {
+    long addr = size_accum;
+    long len = object_len;
+    if ((unsigned int)fd > sizeof(portalmem_sizes)/sizeof(portalmem_sizes[0]))
         goto retlab;
-    }
     if (!len)
         break;
-#endif
-#if defined(SIMULATION)
-    addr = size_accum;
+    for (j = 0; (unsigned)j < sizeof(shifts)/sizeof(shifts[0]); j++) {
+      long size = 1 << shifts[j];
+      if (object_len >= size) {
+	len = size;
+	break;
+      }
+    }
+    //fprintf(stderr, "%s:%d i=%d fd=%d object_len=%ld len=%ld\n", __FUNCTION__, __LINE__, i, fd, object_len, len);
     size_accum += len;
+    object_len -= len;
     addr |= ((long)id) << 32; //[39:32] = truncate(pref);
+#elif !defined(SIMULATION)
+#error
 #endif
 
     for(j = 0; j < 4; j++)
