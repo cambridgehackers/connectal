@@ -97,6 +97,10 @@ interface SerialPortalDemux#(numeric type pipeCount);
    interface Vector#(pipeCount, PipeOut#(Bit#(32))) data;
    interface PipeIn#(Bit#(32))                      inputPipe;
 endinterface
+interface SerialPortalMux#(numeric type pipeCount);
+   interface Vector#(pipeCount, PipeIn#(Bit#(32))) data;
+   interface PipeOut#(Bit#(32))                    outputPipe;
+endinterface
 
 typedef enum {
    Idle,
@@ -156,7 +160,7 @@ module mkSerialPortalDemux#(SerialPortalDemuxLevel portalDemux)(SerialPortalDemu
    interface inputPipe = toPipeIn(inputFifo);
 endmodule
 
-module mkSerialPortalMux#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes)(PipeOut#(Bit#(32)));
+module mkSerialPortalMux(SerialPortalMux#(pipeCount));
    let clock <- exposeCurrentClock;
    let reset <- exposeCurrentReset;
    Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
@@ -164,8 +168,12 @@ module mkSerialPortalMux#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes)(Pip
    Reg#(Bool) paddingReg <- mkReg(False);
    Reg#(SerialPortalState) state <- mkReg(Idle);
    Reg#(Bit#(32)) sglIdReg <- mkReg(0);
-   function Bool pipeOutNotEmpty(PipeOut#(a) po); return po.notEmpty(); endfunction
-   Vector#(numIndications, Bool) readyBits = map(pipeOutNotEmpty, pipes);
+
+   function Bool fifoNotEmpty(FIFOF#(a) fifo); return fifo.notEmpty(); endfunction
+
+   Vector#(pipeCount, FIFOF#(Bit#(32)))   inputFifos <- replicateM(mkFIFOF());
+   Vector#(pipeCount, PipeOut#(Bit#(32))) pipes      = map(toPipeOut, inputFifos);
+   Vector#(pipeCount, Bool)               readyBits  = map(fifoNotEmpty, inputFifos);
    Bool      interruptStatus = False;
    Bit#(16)  readyChannel = -1;
    FIFOF#(Bit#(32)) outputFifo <- mkFIFOF();
@@ -175,7 +183,7 @@ module mkSerialPortalMux#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes)(Pip
    let messageWordsProbe <- mkProbe();
    let messageDataProbe <- mkProbe();
 
-   for (Integer i = valueOf(numIndications) - 1; i >= 0; i = i - 1) begin
+   for (Integer i = valueOf(pipeCount) - 1; i >= 0; i = i - 1) begin
       if (readyBits[i]) begin
          interruptStatus = True;
          readyChannel = fromInteger(i);
@@ -188,7 +196,7 @@ module mkSerialPortalMux#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes)(Pip
    endrule
 
    rule sendHeader if (state == MessageHeader && interruptStatus);
-      Bit#(32) hdr <- toGet(pipes[readyChannel]).get();
+      Bit#(32) hdr <- toGet(inputFifos[readyChannel]).get();
       Bit#(16) totalWords = hdr[15:0];
       let messageWords = totalWords-1;
       messageWordsProbe <= messageWords;
@@ -203,7 +211,7 @@ module mkSerialPortalMux#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes)(Pip
 
    rule sendMessage if (state == MessageBody);
       messageWordsReg <= messageWordsReg - 1;
-      let v <- toGet(pipes[methodIdReg]).get();
+      let v <- toGet(inputFifos[methodIdReg]).get();
       outputFifo.enq(v);
       $display("sendMessage v=%h messageWords=%d paddingReg=%d", v, messageWordsReg, paddingReg);
       if (messageWordsReg == 1) begin
@@ -213,5 +221,6 @@ module mkSerialPortalMux#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes)(Pip
       messageDataProbe <= v;
    endrule
 
-   return toPipeOut(outputFifo);
+   interface data       = map(toPipeIn, inputFifos);
+   interface outputPipe = toPipeOut(outputFifo);
 endmodule
