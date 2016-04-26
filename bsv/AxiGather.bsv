@@ -25,6 +25,48 @@ import PPS7LIB::*;
 import AxiMasterSlave::*;
 import Axi4MasterSlave::*;
 import AxiBits::*;
+import GetPutM::*;
+import FIFOF::*;
+
+instance ToPutM#(AxiMasterBits#(addrWidth,dataWidth,tagWidth,Empty), Axi3ReadResponse#(dataWidth, tagWidth));
+   module toPutM#(AxiMasterBits#(addrWidth, dataWidth, tagWidth, Empty) m)(Put#(Axi3ReadResponse#(dataWidth, tagWidth)));
+      FIFOF#(Axi3ReadResponse#(dataWidth, tagWidth)) dfifo <- mkFIFOF();
+
+      rule handshake;
+          m.rvalid(pack(dfifo.notEmpty()));
+      endrule
+
+      rule deq if (unpack(m.rready()));
+          let d = dfifo.first;
+          m.rid(d.id);
+          m.rresp(d.resp);
+          m.rdata(d.data);
+          m.rlast(d.last);
+          dfifo.deq;
+      endrule
+
+      return toPut(dfifo);
+   endmodule
+endinstance
+
+instance ToPutM#(AxiMasterBits#(addrWidth,dataWidth,tagWidth,Empty), Axi3WriteResponse#(tagWidth));
+   module toPutM#(AxiMasterBits#(addrWidth, dataWidth, tagWidth, Empty) m)(Put#(Axi3WriteResponse#(tagWidth)));
+      FIFOF#(Axi3WriteResponse#(tagWidth)) dfifo <- mkFIFOF();
+
+      rule handshake;
+          m.bvalid(pack(dfifo.notEmpty()));
+      endrule
+
+      rule deq if (unpack(m.rready()));
+          let d = dfifo.first;
+          m.bid(d.id);
+          m.bresp(d.resp);
+          dfifo.deq;
+      endrule
+
+      return toPut(dfifo);
+   endmodule
+endinstance
 
 interface AxiMasterCommon#(numeric type addrWidth, numeric type dataWidth, numeric type tagWidth);
     method Bit#(1)            aresetn();
@@ -62,21 +104,13 @@ module mkAxi3MasterGather#(AxiMasterBits#(addrWidth, dataWidth, tagWidth, Empty)
    rule handshake2;
         axiWires.awready(awready);
    endrule
-   rule handshake3;
-        axiWires.rid(rid);
-        axiWires.rresp(rresp);
-        axiWires.rdata(rdata);
-        axiWires.rlast(rlast);
-        axiWires.rvalid(rvalid);
-   endrule
    rule handshake4;
         axiWires.wready(wready);
    endrule
-   rule handshake5;
-        axiWires.bvalid(bvalid);
-        axiWires.bid(bid);
-        axiWires.bresp(bresp);
-   endrule
+
+   // rule handshake 3 & 5 done in toPutM modules
+   Put#(Axi3ReadResponse#(dataWidth, tagWidth)) resp_read_put <- toPutM(axiWires);
+   Put#(Axi3WriteResponse#(tagWidth)) resp_b_put <- toPutM(axiWires);
 
    interface Axi3Master client;
         interface Get req_ar;
@@ -113,15 +147,7 @@ module mkAxi3MasterGather#(AxiMasterBits#(addrWidth, dataWidth, tagWidth, Empty)
                 return v;
            endmethod
         endinterface
-        interface Put resp_read;
-            method Action put(Axi3ReadResponse#(dataWidth, tagWidth) v) if (axiWires.rready() != 0);
-                rid <= v.id;
-                rresp <= v.resp;
-                rdata <= v.data;
-                rlast <= v.last;
-                rvalid <= 1;
-            endmethod
-        endinterface
+        interface Put resp_read = resp_read_put;
         interface Get resp_write;
             method ActionValue#(Axi3WriteData#(dataWidth,tagWidth)) get() if (axiWires.wvalid() != 0);
                 Axi3WriteData#(dataWidth,tagWidth) v;
@@ -134,13 +160,7 @@ module mkAxi3MasterGather#(AxiMasterBits#(addrWidth, dataWidth, tagWidth, Empty)
                 return v;
             endmethod
         endinterface
-        interface Put resp_b;
-            method Action put(Axi3WriteResponse#(tagWidth) v) if (axiWires.bready() != 0);
-                bvalid <= 1;
-                bid    <= v.id;
-                bresp  <= v.resp;
-            endmethod
-        endinterface
+        interface Put resp_b = resp_b_put;
     endinterface
     method aresetn = axiWires.aresetn;
 endmodule
