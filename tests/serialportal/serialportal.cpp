@@ -170,8 +170,8 @@ int main(int argc, const char **argv)
   simpleSerial.say2(v2a, v2b);
 
   sleep(2);
-  echoIndication->heard2(68,47);
-  echoIndication->heard(22);
+  echoIndication->heard2(0x68,0x47);
+  echoIndication->heard(0x22);
 
   sleep(2);
   simpleRequest->say1(19);
