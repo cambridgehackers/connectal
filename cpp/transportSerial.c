@@ -122,10 +122,9 @@ static int event_serial(struct PortalInternal *pint)
 	int msg_num = pint->map_base[128] >> 16;
 	if (reqwords > 1) {
 	  nbytes = read(pint->client_fd[0], (void*)&pint->map_base[129], 4*(reqwords-1));
-	  if (0) fprintf(stderr, "%s:%d i=%d nbytes=%d msgbody[0]=%#08x\n", __FUNCTION__, __LINE__, i, nbytes, pint->map_base[129]);
+	  if (nbytes < 4*(reqwords-1))
+	    fprintf(stderr, "SHORT READ %s:%d i=%d nbytes=%d buffer=%p msgbody[0]=%08x\n", __FUNCTION__, __LINE__, i, nbytes, &pint->map_base[128], pint->map_base[128+1]);
 	}
-	if (nbytes < 4*(reqwords-1))
-	    fprintf(stderr, "%s:%d reqwords=%d msg_num=%d handler=%p\n", __FUNCTION__, __LINE__, reqwords, msg_num, pint->handler);
 	if (msg_num != 0xFFFF && pint->handler)
 	    pint->handler(pint, msg_num, 0);
 	i = 0;
