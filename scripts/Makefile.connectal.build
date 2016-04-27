@@ -296,15 +296,36 @@ XVLOGDEFINES = $(subst -D,-d,$(BSVDEFINES))
 
 SVLOG = $(addprefix -svlog $(CONNECTALDIR)/verilog/, xsimtop.sv XsimDmaReadWrite.sv XsimLink.sv XsimSink.sv XsimSource.sv)
 
-xsim: verilog $(XSIM_OBJECTS)
-	-test -f xsim/vlog.prj && sed -i s/xil_defaultlib/work/ xsim/*.prj
-	-test -f xsim/vlog.prj && xvlog $(XVLOGFLAGS) -prj xsim/vlog.prj
-	-test -f xsim/vhdl.prj && xvhdl $(XVLOGFLAGS) -prj xsim/vhdl.prj
-	xvlog $(XVLOGFLAGS) $(XVLOGDEFINES) $(VERILOG_PATH:%=--sourcelibdir %) --sourcelibext .v verilog/*.v
-	#xvlog $(XVLOGDEFINES) --sv $(CONNECTALDIR)/verilog/*.sv ## not needed because these all get passed to xelab because they use DPI
-	#xsc -v -cc gcc -compile $(SOURCES)
+XCIDIRS = $(basename $(XCIFILES))
+VLOG_PRJ_FILE = $(wildcard $(addsuffix /xsim/vlog.prj, $(XCIDIRS)))
+VHDL_PRJ_FILE = $(wildcard $(addsuffix /xsim/vhdl.prj, $(XCIDIRS)))
+# phony targets to trigger calls to xvlog and xvhdl
+VLOG_PRJ_BLD  = $(addsuffix .bld, $(VLOG_PRJ_FILE))
+VHDL_PRJ_BLD  = $(addsuffix .bld, $(VHDL_PRJ_FILE))
+
+%/vlog.prj.bld: %/vlog.prj
+	sed -i s/xil_defaultlib/work/ $(*)/vlog.prj
+	xvlog $(XVLOGFLAGS) -prj $(*)/vlog.prj
+
+%/vhdl.prj.bld: %/vhdl.prj
+	sed -i s/xil_defaultlib/work/ $(*)/vhdl.prj
+	xvhdl $(XVLOGFLAGS) -prj $(*)/vhdl.prj
+
+xsim: verilog $(XSIM_OBJECTS) $(VLOG_PRJ_BLD) $(VHDL_PRJ_BLD)
+	echo XCIDIRS $(XCIDIRS)
+	echo $(VLOG_PRJ_FILE)
+	echo $(VLOG_PRJ_BLD)
+	echo $(VHDL_PRJ_BLD)
+	#-test -f xsim/vlog.prj && sed -i s/xil_defaultlib/work/ xsim/*.prj
+	#-test -f xsim/vlog.prj && xvlog $(XVLOGFLAGS) -prj xsim/vlog.prj
+	#-test -f xsim/vhdl.prj && xvhdl $(XVLOGFLAGS) -prj xsim/vhdl.prj
+	xvlog $(XVLOGFLAGS) $(XVLOGDEFINES) $(VERILOG_PATH:%=--sourcelibdir %) --sourcelibext .v verilog/*.v $(VERILOG_FILES)
+ifneq ($(VHDL_FILES),)
+	xvhdl $(XVHDLFLAGS) $(VHDL_FILES)
+endif
+	xvlog $(XVLOGDEFINES) --sv $(CONNECTALDIR)/verilog/*.sv ## not needed because these all get passed to xelab because they use DPI
 	xsc -cc gcc -link $(XSIM_OBJECTS) -o xsimtop
-	xelab -timescale 1ns/1ps --stats $(XVLOGDEFINES) -cc gcc $(SVLOG) --dpiheader XsimTop.h --debug wave -L unisim -L unifast -L unimacro work.xsimtop -sv_lib xsimtop
+	catchsegv xelab -timescale 1ns/1ps --stats $(XVLOGDEFINES) -cc gcc $(SVLOG) --dpiheader XsimTop.h --debug wave -L unisim -L unifast -L unimacro work.xsimtop -sv_lib xsimtop
 endif #VIVADO
 
 vlsim: $(DTOP)/obj_dir/vlsim
