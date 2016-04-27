@@ -156,8 +156,8 @@ int main(int argc, const char **argv)
   EchoRequestProxy   echoSerial(0, &transportSerialMux, &param);
   SimpleRequestProxy simpleSerial(1, &transportSerialMux, &param);
 
-  EchoIndication serialEchoIndication(0, &transportSerial, &param);
-  Simple         serialSimple(1, &transportSerial, &param);
+  EchoIndication serialEchoIndication(0, &transportSerialMux, &param);
+  Simple         serialSimple(1, &transportSerialMux, &param);
 
   device->setDivisor(134);
   sleep(2);
