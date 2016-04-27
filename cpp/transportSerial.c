@@ -176,6 +176,6 @@ int portal_serialmux_handler(struct PortalInternal *pint, unsigned int channel, 
     return -1;
 }
 PortalTransportFunctions transportSerialMux = {
-    init_serialmux, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_socket, mapchannel_req_generic,
+    init_serialmux, read_portal_memory, write_portal_memory, write_fd_portal_memory, mapchannel_serialInd, mapchannel_req_generic,
     send_serialmux, recv_serialmux, busy_portal_null, enableint_portal_null, event_null, notfull_null};
 
