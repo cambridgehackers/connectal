@@ -1,4 +1,4 @@
-// Copyright (c) 2014 Quanta Research Cambridge, Inc.
+// Copyright (c) 2016 Connectal Project
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -54,8 +54,8 @@ static int init_serial(struct PortalInternal *pint, void *aparam)
 	pint->map_base = (volatile unsigned int *)malloc(4096);
 	pint->client_fd[0] = serial_fd;
 	pint->client_fd_number = 1;
-	fprintf(stderr, "init_serial param=%p serial_fd=%d map_base=%p\n",
-		param, param->serial.serial_fd, pint->map_base);
+	fprintf(stderr, "init_serial param=%p pint=%p serial_fd=%d map_base=%p\n",
+		param, pint, param->serial.serial_fd, pint->map_base);
 
 	if (0) {
 	    struct termios terminfo;
@@ -87,22 +87,23 @@ static int busywait_serial(struct PortalInternal *pint, unsigned int v, const ch
 {
     return 0;
 }
-static void send_serial(struct PortalInternal *pint, volatile unsigned int *buff, unsigned int hdr, int sendFd)
+static void send_serial(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd)
 {
     int reqwords = hdr & 0xffff;
     int i;
 
-    pint->map_base[0] = hdr;
-    fprintf(stderr, "send_serial head=%d hdr=%08x reqwords=%d\n", pint->map_base[0], hdr, reqwords);
+    fprintf(stderr, "send_serial head=%d hdr=%08x reqwords=%d buffer=%p buffer[1]=%08x buffer[2]=%08x\n",
+	    buffer[0], hdr, reqwords, buffer, buffer[1], buffer[2]);
+    buffer[0] = hdr;
     if (0)
     for (i = 0; i < reqwords+1; i++)
-	pint->map_base[i] = htonl(pint->map_base[i]);
-    int nbytes = write(pint->client_fd[0], (void*)pint->map_base, 4*reqwords);
+	buffer[i] = htonl(buffer[i]);
+    int nbytes = write(pint->client_fd[0], (void*)buffer, 4*reqwords);
     if (nbytes != 4*reqwords) {
-	fprintf(stderr, "%s:%d nbytes=%d errno=%d:%s\n", __FUNCTION__, __LINE__, nbytes, errno, strerror(errno));
+	fprintf(stderr, "%s:%x pint=%p fd=%d nbytes=%d errno=%d:%s\n", __FUNCTION__, __LINE__, pint, pint->client_fd[0], nbytes, errno, strerror(errno));
     }
-    pint->map_base[0] = 0;
-    tcdrain(pint->client_fd[0]);
+    buffer[0] = 0;
+    //tcdrain(pint->client_fd[0]);
 }
 static int event_serial(struct PortalInternal *pint)
 {
@@ -138,6 +139,7 @@ PortalTransportFunctions transportSerial = {
 static int init_serialmux(struct PortalInternal *pint, void *aparam)
 {
     PortalMuxParam *param = (PortalMuxParam *)aparam;
+    fprintf(stderr, "%s:%d pint=%p client_fd=%d\n", __FUNCTION__, __LINE__, pint, pint->client_fd[0]);
     pint->mux = param->pint;
     pint->map_base = ((volatile unsigned int*)malloc(REQINFO_SIZE(pint->reqinfo) + sizeof(uint32_t))) + 1;
     memset((void *)(pint->map_base-1), 0, REQINFO_SIZE(pint->reqinfo) + sizeof(uint32_t));  // for valgrind
@@ -151,6 +153,7 @@ static void send_serialmux(struct PortalInternal *pint, volatile unsigned int *d
 {
     volatile unsigned int *buffer = data-1;
     buffer[0] = hdr;
+    fprintf(stderr, "%s:%d pint=%p mux=%p map_base=%p mux->map_base=%p buffer=%p\n", __FUNCTION__, __LINE__, pint, pint->mux, pint->map_base, pint->mux->map_base, buffer);
     pint->mux->request_index = pint->request_index;
     pint->mux->transport->send(pint->mux, buffer, (pint->fpga_number << 24) | hdr, sendFd);
 }
@@ -163,6 +166,7 @@ int portal_serialmux_handler(struct PortalInternal *pint, unsigned int channel, 
     int i;
     unsigned int fpga_number = (channel >> 8) & 0xFF;
     unsigned int msg_number  = (channel >> 0) & 0xFF;
+    fprintf(stderr, "%s:%d channel=%x\n", __FUNCTION__, __LINE__, channel);
     for (i = 0; i < pint->mux_ports_number; i++) {
         PortalInternal *p = pint->mux_ports[i].pint;
         if (fpga_number == p->fpga_number && p->handler) {
