@@ -169,6 +169,9 @@ int portal_serialmux_handler(struct PortalInternal *pint, unsigned int channel, 
     fprintf(stderr, "%s:%d channel=%x\n", __FUNCTION__, __LINE__, channel);
     for (i = 0; i < pint->mux_ports_number; i++) {
         PortalInternal *p = pint->mux_ports[i].pint;
+	int hdr = pint->map_base[128];
+	int reqwords = hdr & 0xffff;
+	memcpy((void *)&p->map_base[128], (void *)&pint->map_base[128], 4*reqwords);
         if (fpga_number == p->fpga_number && p->handler) {
             p->handler(p, msg_number, messageFd);
         }
