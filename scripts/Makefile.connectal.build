@@ -325,13 +325,13 @@ VSIM_OBJECTS = $(foreach c, $(VSIM_CFILES), vsim.dir/xsc/$(c).lnx64.o ) $(foreac
 
 vsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.c
 	mkdir -p vsim.dir/xsc
-	g++ -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
+	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
 vsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.cpp
 	mkdir -p vsim.dir/xsc
 	g++ -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
 vsim.dir/xsc/%.lnx64.o: jni/%.c
 	mkdir -p vsim.dir/xsc
-	g++ -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
+	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
 vsim.dir/xsc/%.lnx64.o: jni/%.cpp
 	mkdir -p vsim.dir/xsc
 	g++ -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
@@ -388,7 +388,7 @@ obj/Makefile: $(OBJMAKEFILE_DEP) syntax.timestamp
 
 $(DTOP)/bin/libconnectal-sim.so: $(SIM_CXX_COMMON) $(SIM_CXX_PROJECT) prepare_bin_target
 	$(Q)mkdir -p $(DTOP)/bin
-	g++ -O -g -I$(DTOP)/jni -shared -fpic -std=c++11 $(SIM_CXXFLAGS) -g -o $(DTOP)/bin/libconnectal-sim.so $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)
+	g++ -O -g -I$(DTOP)/jni -shared -fpic $(SIM_CXXFLAGS) -g -o $(DTOP)/bin/libconnectal-sim.so $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)
 
 bsim: prepare_bin_target $(DTOP)/bin/libconnectal-sim.so
 	$(Q)mkdir -p $(DTOP)/obj verilog
