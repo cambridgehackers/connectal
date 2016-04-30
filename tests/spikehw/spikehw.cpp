@@ -27,8 +27,17 @@ public:
     uint32_t buf[16];
     IrqCallback irqCallback;
 
+  void traceDmaRequest(DmaChannel chan, int write, uint16_t objId, uint32_t offset, uint16_t burstLen)
+  {
+    fprintf(stderr, "traceDmaRequest chan=%d write=%d objId=%d offset=%08x burstLen=%d\n", chan, write, objId, offset, burstLen);
+  }
+  void traceDmaData ( const DmaChannel chan, const int write, const uint32_t data, const int last )
+  {
+    fprintf(stderr, "traceDmaData chan=%d write=%d data=%08x last=%d\n", chan, write, data, last);
+  }
+
   void irqChanged( const uint8_t irq, const uint16_t intrSources ) {
-    if (intrSources & ~1) fprintf(stderr, "iic intr=%d %04x\n", irq, intrSources);
+    if (intrSources & 0xe) fprintf(stderr, "iic intr=%d %04x\n", irq, intrSources);
       if (verbose) fprintf(stderr, "SpikeHw::irqChanged %d intr sources %x\n", irq, intrSources);
       this->irq = irq;
       if (irqCallback)
@@ -95,7 +104,7 @@ SpikeHwRequestProxy *request;
 SpikeHwIndication *indication;
 
 SpikeHw::SpikeHw(IrqCallback callback)
-    : request(0), indication(0), dmaManager(0), didReset(false)
+    : request(0), indication(0), dmaManager(0), didReset(false), mainMemFd(0)
 {
     request = new SpikeHwRequestProxy(IfcNames_SpikeHwRequestS2H);
     indication = new SpikeHwIndication(IfcNames_SpikeHwIndicationH2S, callback);
@@ -214,6 +223,25 @@ bool SpikeHw::hasInterrupt()
 void SpikeHw::clearInterrupt()
 {
     indication->irq = 0;
+}
+
+char *SpikeHw::allocate_mem(size_t memsz)
+{
+    int memfd = portalAlloc(memsz, 1);
+    if (memfd < 0)
+	return 0;
+    char *buf = (char *)portalMmap(memfd, memsz);
+    if (buf == MAP_FAILED) {
+	close(memfd);
+	return 0;
+    }
+    fprintf(stderr, "SpikeHw::allocate_mem memsz=%lx memfd=%d buf=%p\n", memsz, memfd, buf);
+    if (!mainMemFd) {
+	setupDma(memfd);
+	mainMemFd = memfd;
+	fprintf(stderr, "SpikeHw::allocate_mem mainMemFd=%d\n", memfd);
+    }
+    return buf;
 }
 
 SpikeHw *spikeHw;
@@ -365,24 +393,7 @@ abstract_device_t *devicetree_device_t::make_device()
     return new devicetree_device_t();
 }
 
-char *SpikeHw::allocate_mem(size_t memsz)
-{
-    if (!spikeHw)
-	spikeHw = new SpikeHw();
-    int memfd = portalAlloc(memsz, 1);
-    if (memfd < 0)
-	return 0;
-    char *buf = (char *)portalMmap(memfd, memsz);
-    if (buf == MAP_FAILED) {
-	close(memfd);
-	return 0;
-    }
-    fprintf(stderr, "SpikeHw::allocate_mem memsz=%lx memfd=%d buf=%p\n", memsz, memfd, buf);
-    spikeHw->setupDma(memfd);
-    return buf;
-}
-
-REGISTER_MEM_ALLOCATOR(SpikeHw::allocate_mem);
+//REGISTER_MEM_ALLOCATOR(SpikeHw::allocate_mem);
 REGISTER_DEVICE(devicetree, 0x04080000, devicetree_device_t::make_device);
 REGISTER_DEVICE(spikehw,    0x04100000, spikehw_device_t::make_device);
 REGISTER_DEVICE(spikeflash, 0x08000000, spikeflash_device_t::make_device);
@@ -395,6 +406,7 @@ extern "C" {
 	uint64_t (*read)(uint64_t addr);
 	void (*write)(uint64_t addr, uint64_t value);
 	void (*close)();
+        void *(*alloc_mem)(size_t size);
     };
 
     uint64_t fpga_read(uint64_t addr)
@@ -412,6 +424,11 @@ extern "C" {
     {
     }
 
+    void *fpga_alloc_mem(size_t size)
+    {
+	return (void *)spikeHw->allocate_mem(size);;
+    }
+
     void *fpgadev_init(void (*irqCallback)(int irq)) {
 	fprintf(stderr, "connectal.so init called\n");
 	if (!spikeHw)
@@ -420,6 +437,7 @@ extern "C" {
 	ops->read = fpga_read;
 	ops->write = fpga_write;
 	ops->close = fpga_close;
+	ops->alloc_mem = fpga_alloc_mem;
 	return ops;
     }
 }

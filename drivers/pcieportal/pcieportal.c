@@ -152,7 +152,7 @@ static int pcieportal_release(struct inode *inode, struct file *filp)
         tPortal *this_portal = (tPortal *) filp->private_data;
         if (this_portal) {
 	struct list_head *pmlist;
-	PortalInternal devptr = {.map_base = this_portal->regs, .item = &kernelfunc};
+	PortalInternal devptr = {.map_base = this_portal->regs, .transport = &kernelfunc};
 
         /* decrement the open file count */
         init_waitqueue_head(&(this_portal->extra->wait_queue));
@@ -254,7 +254,7 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 /* pushd down allocated fd */
 		tSendFd sendFd;
 		struct pmentry *pmentry;
-                PortalInternal devptr = {.map_base = this_portal->regs, .item = &kernelfunc};
+                PortalInternal devptr = {.map_base = this_portal->regs, .transport = &kernelfunc};
 
                 err = copy_from_user(&sendFd, (void __user *) arg, sizeof(sendFd));
                 if (err)
@@ -274,7 +274,7 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
         case PCIE_DEREFERENCE: {
 		int id = arg;
 		struct list_head *pmlist, *n;
-		PortalInternal devptr = {.map_base = this_portal->regs, .item = &kernelfunc};
+		PortalInternal devptr = {.map_base = this_portal->regs, .transport = &kernelfunc};
 		err = -ENOENT;
 		MMURequest_idReturn(&devptr, id);
 		list_for_each_safe(pmlist, n, &this_portal->pmlist) {

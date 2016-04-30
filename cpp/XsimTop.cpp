@@ -81,9 +81,17 @@ static PortalHandlerTemplate xsim_handler = {
   xsim_disconnect
 };
 
-extern "C" int dpi_finish()
+long cycleCount;
+
+extern "C" int dpi_cycle()
 {
+  cycleCount++;
   return finish;
+}
+
+double sc_time_stamp()
+{
+  return (double)cycleCount;
 }
 
 extern "C" void dpi_init()

@@ -181,6 +181,28 @@
         "IOSTANDARD": "LVCMOS25"
         }
     },
+    "uart": {
+		"d_in": {
+			"LOC": "M19",
+			"IOSTANDARD": "LVCMOS25",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"d_out": {
+			"LOC": "K24",
+			"IOSTANDARD": "LVCMOS25",
+			"PIO_DIRECTION": "OUTPUT"
+		},
+		"rts": {
+			"LOC": "K23",
+			"IOSTANDARD": "LVCMOS25",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"cts": {
+			"LOC": "L27",
+			"IOSTANDARD": "LVCMOS25",
+			"PIO_DIRECTION": "OUTPUT"
+		}
+    },
     "pins": {
 	"userClk_p": {
 	    "PACKAGE_PIN": "K29",

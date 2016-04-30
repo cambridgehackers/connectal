@@ -123,10 +123,12 @@ interface GigEthPcsPmaBvi;
     interface GigethpcspmabviUserclk     userclk;
 endinterface
 import "BVI" gig_ethernet_pcs_pma_0 =
-module mkGigEthPcsPmaBvi#(Clock independent_clock_bufg, Reset reset)(GigEthPcsPmaBvi);
-   let invertedReset <- mkResetInverter(reset);
-    default_clock independent_clock_bufg(independent_clock_bufg) = independent_clock_bufg;
-    default_reset reset(reset) = invertedReset;
+module mkGigEthPcsPmaBvi#(Clock independent_clock_bufg, Reset reset_n)(GigEthPcsPmaBvi);
+   let invertedReset <- mkResetInverter(reset_n, clocked_by independent_clock_bufg);
+   default_clock clk();
+   default_reset rst_n();
+   input_clock independent_clock_bufg(independent_clock_bufg) = independent_clock_bufg;
+   input_reset reset(reset) clocked_by (independent_clock_bufg) = invertedReset;
     interface GigethpcspmabviAn     an;
         method adv_config_val(an_adv_config_val) enable((*inhigh*) EN_an_adv_config_val);
         method adv_config_vector(an_adv_config_vector) enable((*inhigh*) EN_an_adv_config_vector);
@@ -211,7 +213,6 @@ endinterface
 
 interface GigEthPcsPmaDebug;
     method Bit#(1)     locked_out();
-    method Action      detect(Bit#(1) v);
     method Bit#(16)    status();
     method Bit#(1)     resetdone();
 endinterface

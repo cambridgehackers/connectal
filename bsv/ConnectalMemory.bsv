@@ -51,7 +51,7 @@ typedef enum {
    DmaErrorOffsetOutOfRange,
    DmaErrorSGLIdInvalid,
    DmaErrorTileTagOutOfRange
-   } DmaErrorType deriving (Bits);
+   } DmaErrorType deriving (Bits,Eq,FShow);
 
 //
 // @brief Events sent from a Dma engine

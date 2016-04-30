@@ -67,7 +67,7 @@ static tBoard* tboard;
  * Initialize control data structure for portal
  */
 void init_portal_internal(PortalInternal *pint, int id, int tile,
-    PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *item, void *param, void *parent,
+    PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *transport, void *param, void *parent,
     uint32_t reqinfo)
 {
     int rc;
@@ -84,18 +84,18 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     pint->reqinfo = reqinfo;
     if(trace_portal)
         PORTAL_PRINTF("%s: **initialize portal_%d_%d handler %p cb %p parent %p\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number, handler, cb, parent);
-    if (!item) {
+    if (!transport) {
         // Use defaults for transport handling methods
 #ifdef BOARD_bluesim
-        item = &transportBsim;
+        transport = &transportBsim;
 #elif defined(BOARD_xsim) || defined(BOARD_verilator) || defined(BOARD_vsim)
-        item = &transportXsim;
+        transport = &transportXsim;
 #else
-        item = &transportHardware;
+        transport = &transportHardware;
 #endif
     }
-    pint->item = item;
-    rc = pint->item->init(pint, param);
+    pint->transport = transport;
+    rc = pint->transport->init(pint, param);
     if (rc != 0) {
         PORTAL_PRINTF("%s: failed to initialize Portal portal_%d_%d\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number);
 #ifndef __KERNEL__
@@ -119,6 +119,7 @@ int portal_disconnect(struct PortalInternal *pint)
 #define DEV_CONNECTAL_SIGNATURE PCIE_SIGNATURE
 #endif
 
+#ifndef SIMULATION
 /*
  * Check md5 signatures of Linux device drivers to be sure they are up to date
  */
@@ -169,6 +170,7 @@ static void checkSignature(const char *filename, int ioctlnum)
     }
     close(fd);
 }
+#endif
 
 char *getExecutionFilename(char *buf, int buflen)
 {
@@ -263,8 +265,8 @@ static void initPortalHardwareOnce(void)
 	  }
 	}
         checkSignature("/dev/connectal", DEV_CONNECTAL_SIGNATURE);
-#endif // !defined(SIMULATION)
         checkSignature("/dev/portalmem", PA_SIGNATURE);
+#endif // !defined(SIMULATION)
     }
     else {
 #define MAX_PATH 2000
@@ -287,6 +289,7 @@ static void initPortalHardwareOnce(void)
 	}
 #if defined(BOARD_bluesim)
 	const char *exetype = "bsim";
+	argv[ind++] = (char*)"-w"; // wait for license
 	if (simulator_dump_vcd) {
 	  argv[ind++] = (char*)"-V";
 	  argv[ind++] = (char*)simulator_vcd_name;
@@ -374,25 +377,49 @@ void initPortalMemory(void)
 {
 #ifndef __KERNEL__
     if (global_pa_fd == -1)
+#ifndef SIMULATION
         global_pa_fd = open("/dev/portalmem", O_RDWR);
     if (global_pa_fd < 0){
         PORTAL_PRINTF("Failed to open /dev/portalmem pa_fd=%d errno=%d\n", global_pa_fd, errno);
         exit(ENODEV);
     }
+#else
+        global_pa_fd = -1;
+#endif
 #endif
 }
+
+int portalmem_sizes[1024];
 
 int portalAlloc(size_t size, int cached)
 {
     int fd;
-    struct PortalAlloc portalAlloc;
-    portalAlloc.len = size;
-    portalAlloc.cached = cached;
     initPortalMemory();
 #ifdef __KERNEL__
     fd = portalmem_dmabuffer_create(size);
 #else
-    fd = ioctl(global_pa_fd, PA_MALLOC, &portalAlloc);
+#ifndef SIMULATION
+    {
+	    struct PortalAlloc portalAlloc;
+	    portalAlloc.len = size;
+	    portalAlloc.cached = cached;
+	    fd = ioctl(global_pa_fd, PA_MALLOC, &portalAlloc);
+    }
+#else
+    {
+      static int portalmem_number = 0;
+      char fname[128];
+      snprintf(fname, sizeof(fname), "/tmp/portalmem-%d-%d.bin", getpid(), portalmem_number++);
+      fd = open(fname, O_RDWR|O_CREAT, 0600);
+      fprintf(stderr, "%s:%d fname=%s fd=%d\n", __FUNCTION__, __LINE__, fname, fd);
+      unlink(fname);
+      lseek(fd, size, SEEK_SET);
+      size_t rc = write(fd, (void*)fname, size);
+      if (rc != size)
+	fprintf(stderr, "%s:%d fname=%s fd=%d wrote %ld bytes\n", __FUNCTION__, __LINE__, fname, fd, rc);
+      portalmem_sizes[fd] = size;
+    }
+#endif
 #endif
     if(trace_portal)
         PORTAL_PRINTF("alloc size=%ld fd=%d\n", (unsigned long)size, fd);

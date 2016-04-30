@@ -66,7 +66,7 @@ int main(int argc, char **argv, char **env)
       }
     }
 
-    if (dpi_finish())
+    if (dpi_cycle())
       vl_finish(__FILE__, __LINE__, "vlsim");
 
     if ((main_time % 2) == 1) {	// Toggle clock

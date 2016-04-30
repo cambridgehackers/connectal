@@ -115,7 +115,7 @@ typedef struct PortalInternal {
     PORTAL_INDFUNC         handler;
     uint32_t               reqinfo;
     int                    accept_finished;
-    PortalTransportFunctions    *item;
+    PortalTransportFunctions    *transport;
     PortalHandlerTemplate  *cb;
     struct PortalInternal  *mux;
     int                    muxid;
@@ -165,6 +165,9 @@ typedef struct {
         uint32_t reqinfo;
         SHARED_CONFIG_SETSGLID setSglId;
     } hardware;
+    struct {
+	int serial_fd;
+    } serial;
 } PortalSharedParam; /* for ITEMINIT function */
 
 typedef struct {
@@ -246,7 +249,7 @@ extern "C" {
 #endif
 // Initialize portal control structure. (called by constructor when creating a portal at runtime)
 void init_portal_internal(PortalInternal *pint, int id, int tile,
-    PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *item,
+    PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *transport,
     void *param, void *parent, uint32_t reqinfo);
 int portal_disconnect(struct PortalInternal *p);
 // Shared memory functions
@@ -282,6 +285,7 @@ int event_hardware(struct PortalInternal *pint);
 volatile unsigned int *mapchannel_hardware(struct PortalInternal *pint, unsigned int v);
 volatile unsigned int *mapchannel_socket(struct PortalInternal *pint, unsigned int v);
 int portal_mux_handler(struct PortalInternal *p, unsigned int channel, int messageFd);
+int portal_serialmux_handler(struct PortalInternal *p, unsigned int channel, int messageFd);
 
 // Json encode/decode functions called from generated code
 void connectalJsonEncode(char *json, void *data, ConnectalMethodJsonInfo *info);
@@ -311,6 +315,8 @@ extern PortalTransportFunctions transportBsim, // Transport for bsim
   transportSocketInit,  // Linux socket transport (Unix sockets and TCP); Initiator side
                    // (the 'connect()' call is on Initiator side; Responder does 'listen()'
   transportSocketResp,  // Linux socket transport (Unix sockets and TCP); Responder side
+  transportSerial,      // Serial port transport
+  transportSerialMux,   // Serial port mux
   transportShared,      // Shared memory transport
   transportMux,         // Multiplex transport (to use 1 transport for all methods or multiple portals)
   transportTrace,       // Trace transport tee
@@ -369,8 +375,8 @@ public:
         initPortal();
     };
     Portal(int id, int tile, uint32_t reqinfo, PORTAL_INDFUNC handler, void *cb,
-          PortalTransportFunctions *item, void *param, void *parent, PortalPoller *poller = 0) {
-        init_portal_internal(&pint, id, tile, handler, cb, item, param, parent, reqinfo); 
+          PortalTransportFunctions *transport, void *param, void *parent, PortalPoller *poller = 0) {
+        init_portal_internal(&pint, id, tile, handler, cb, transport, param, parent, reqinfo); 
         pint.poller = poller;
         initPortal();
     };

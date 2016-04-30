@@ -155,11 +155,6 @@ interface PciewrapCfg_req_pm_transition#(numeric type lanes);
     method Action      l23_ready(Bit#(1) v);
 endinterface
 (* always_ready, always_enabled *)
-interface PciewrapCommon#(numeric type lanes);
-    method Action      commands_in(Bit#(26) v);
-    method Bit#(17)     commands_out();
-endinterface
-(* always_ready, always_enabled *)
 interface PciewrapInt_pclk_sel#(numeric type lanes);
     method Action      slave(Bit#(8) v);
 endinterface
@@ -202,25 +197,6 @@ interface PciewrapPcie#(numeric type lanes);
     method Bit#(1)     rq_tag_vld();
 endinterface
 (* always_ready, always_enabled *)
-interface PciewrapPipe#(numeric type lanes);
-    method Action      rx_0_sigs(Bit#(84) v);
-    method Action      rx_1_sigs(Bit#(84) v);
-    method Action      rx_2_sigs(Bit#(84) v);
-    method Action      rx_3_sigs(Bit#(84) v);
-    method Action      rx_4_sigs(Bit#(84) v);
-    method Action      rx_5_sigs(Bit#(84) v);
-    method Action      rx_6_sigs(Bit#(84) v);
-    method Action      rx_7_sigs(Bit#(84) v);
-    method Bit#(70)     tx_0_sigs();
-    method Bit#(70)     tx_1_sigs();
-    method Bit#(70)     tx_2_sigs();
-    method Bit#(70)     tx_3_sigs();
-    method Bit#(70)     tx_4_sigs();
-    method Bit#(70)     tx_5_sigs();
-    method Bit#(70)     tx_6_sigs();
-    method Bit#(70)     tx_7_sigs();
-endinterface
-(* always_ready, always_enabled *)
 interface PciewrapS_axis_cc#(numeric type lanes);
     method Action      tdata(Bit#(256) v);
     method Action      tkeep(Bit#(8) v);
@@ -247,7 +223,6 @@ endinterface
 interface PcieWrap#(numeric type lanes);
     interface PciewrapCfg#(lanes)     cfg;
     interface PciewrapCfg_req_pm_transition#(lanes)     cfg_req_pm_transition;
-    interface PciewrapCommon#(lanes)     common;
     interface Clock     int_dclk_out;
     interface Clock     int_oobclk_out;
     interface Clock     int_pclk_out_slave;
@@ -263,7 +238,6 @@ interface PcieWrap#(numeric type lanes);
     interface PciewrapM_axis_rc#(lanes)     m_axis_rc;
     interface PciewrapPci_exp#(lanes)     pci_exp;
     interface PciewrapPcie#(lanes)     pcie;
-    interface PciewrapPipe#(lanes)     pipe;
     interface PciewrapS_axis_cc#(lanes)     s_axis_cc;
     interface PciewrapS_axis_rq#(lanes)     s_axis_rq;
     interface PciewrapUser#(lanes)     user;
@@ -340,10 +314,6 @@ module mkPcieWrap#(Clock sys_clk, Reset sys_reset)(PcieWrap#(lanes));
     interface PciewrapCfg_req_pm_transition     cfg_req_pm_transition;
         method l23_ready(cfg_req_pm_transition_l23_ready) enable((*inhigh*) EN_cfg_req_pm_transition_l23_ready) clocked_by (user_clk) reset_by (user_reset);
     endinterface
-    interface PciewrapCommon     common;
-        method commands_in(common_commands_in) enable((*inhigh*) EN_common_commands_in) clocked_by (user_clk) reset_by (user_reset);
-        method common_commands_out commands_out();
-    endinterface
     output_clock int_dclk_out(int_dclk_out);
     output_clock int_oobclk_out(int_oobclk_out);
     output_clock int_pclk_out_slave(int_pclk_out_slave);
@@ -389,24 +359,6 @@ module mkPcieWrap#(Clock sys_clk, Reset sys_reset)(PcieWrap#(lanes));
         method pcie_rq_tag rq_tag() clocked_by (user_clk) reset_by (user_reset);
         method pcie_rq_tag_vld rq_tag_vld() clocked_by (user_clk) reset_by (user_reset);
     endinterface
-    interface PciewrapPipe     pipe;
-        method rx_0_sigs(pipe_rx_0_sigs) enable((*inhigh*) EN_pipe_rx_0_sigs)  clocked_by (sys_clk) reset_by (sys_reset);
-        method rx_1_sigs(pipe_rx_1_sigs) enable((*inhigh*) EN_pipe_rx_1_sigs)  clocked_by (sys_clk) reset_by (sys_reset);
-        method rx_2_sigs(pipe_rx_2_sigs) enable((*inhigh*) EN_pipe_rx_2_sigs)  clocked_by (sys_clk) reset_by (sys_reset);
-        method rx_3_sigs(pipe_rx_3_sigs) enable((*inhigh*) EN_pipe_rx_3_sigs)  clocked_by (sys_clk) reset_by (sys_reset);
-        method rx_4_sigs(pipe_rx_4_sigs) enable((*inhigh*) EN_pipe_rx_4_sigs)  clocked_by (sys_clk) reset_by (sys_reset);
-        method rx_5_sigs(pipe_rx_5_sigs) enable((*inhigh*) EN_pipe_rx_5_sigs)  clocked_by (sys_clk) reset_by (sys_reset);
-        method rx_6_sigs(pipe_rx_6_sigs) enable((*inhigh*) EN_pipe_rx_6_sigs)  clocked_by (sys_clk) reset_by (sys_reset);
-        method rx_7_sigs(pipe_rx_7_sigs) enable((*inhigh*) EN_pipe_rx_7_sigs)  clocked_by (sys_clk) reset_by (sys_reset);
-        method pipe_tx_0_sigs tx_0_sigs();
-        method pipe_tx_1_sigs tx_1_sigs();
-        method pipe_tx_2_sigs tx_2_sigs();
-        method pipe_tx_3_sigs tx_3_sigs();
-        method pipe_tx_4_sigs tx_4_sigs();
-        method pipe_tx_5_sigs tx_5_sigs();
-        method pipe_tx_6_sigs tx_6_sigs();
-        method pipe_tx_7_sigs tx_7_sigs();
-    endinterface
     interface PciewrapS_axis_cc     s_axis_cc;
         method tdata(s_axis_cc_tdata) enable((*inhigh*) EN_s_axis_cc_tdata) clocked_by (user_clk) reset_by (user_reset);
         method tkeep(s_axis_cc_tkeep) enable((*inhigh*) EN_s_axis_cc_tkeep) clocked_by (user_clk) reset_by (user_reset);
@@ -429,5 +381,5 @@ module mkPcieWrap#(Clock sys_clk, Reset sys_reset)(PcieWrap#(lanes));
     endinterface
     
     
-    schedule (cfg.config_space_enable, cfg.current_speed, cfg.dpa_substate_change, cfg.ds_bus_number, cfg.ds_device_number, cfg.ds_function_number, cfg.ds_port_number, cfg.dsn, cfg.err_cor_in, cfg.err_cor_out, cfg.err_fatal_out, cfg.err_nonfatal_out, cfg.err_uncor_in, cfg.flr_done, cfg.flr_in_process, cfg.function_power_state, cfg.function_status, cfg.hot_reset_in, cfg.hot_reset_out, cfg.interrupt_int, cfg.interrupt_msix_address, cfg.interrupt_msix_data, cfg.interrupt_msix_enable, cfg.interrupt_msix_fail, cfg.interrupt_msix_int, cfg.interrupt_msix_mask, cfg.interrupt_msix_sent, cfg.interrupt_msix_vf_enable, cfg.interrupt_msix_vf_mask, cfg.interrupt_pending, cfg.interrupt_sent, cfg.link_power_state, cfg.link_training_enable, cfg.ltr_enable, cfg.ltssm_state, cfg.max_payload, cfg.max_read_req, cfg.negotiated_width, cfg.obff_enable, cfg.per_function_number, cfg.per_function_output_request, cfg.per_function_update_done, cfg.phy_link_down, cfg.phy_link_status, cfg.pl_status_change, cfg.power_state_change_ack, cfg.power_state_change_interrupt, cfg.rcb_status, cfg.subsys_vend_id, cfg.tph_requester_enable, cfg.tph_st_mode, cfg.vf_flr_done, cfg.vf_flr_in_process, cfg.vf_power_state, cfg.vf_status, cfg.vf_tph_requester_enable, cfg.vf_tph_st_mode, cfg_req_pm_transition.l23_ready, common.commands_in, common.commands_out, int_pclk_sel.slave, int_qplllock.out, m_axis_cq.tdata, m_axis_cq.tkeep, m_axis_cq.tlast, m_axis_cq.tready, m_axis_cq.tuser, m_axis_cq.tvalid, m_axis_rc.tdata, m_axis_rc.tkeep, m_axis_rc.tlast, m_axis_rc.tready, m_axis_rc.tuser, m_axis_rc.tvalid, pci_exp.rxn, pci_exp.rxp, pci_exp.txn, pci_exp.txp, pcie.cq_np_req, pcie.cq_np_req_count, pcie.rq_seq_num, pcie.rq_seq_num_vld, pcie.rq_tag, pcie.rq_tag_vld, pipe.rx_0_sigs, pipe.rx_1_sigs, pipe.rx_2_sigs, pipe.rx_3_sigs, pipe.rx_4_sigs, pipe.rx_5_sigs, pipe.rx_6_sigs, pipe.rx_7_sigs, pipe.tx_0_sigs, pipe.tx_1_sigs, pipe.tx_2_sigs, pipe.tx_3_sigs, pipe.tx_4_sigs, pipe.tx_5_sigs, pipe.tx_6_sigs, pipe.tx_7_sigs, s_axis_cc.tdata, s_axis_cc.tkeep, s_axis_cc.tlast, s_axis_cc.tready, s_axis_cc.tuser, s_axis_cc.tvalid, s_axis_rq.tdata, s_axis_rq.tkeep, s_axis_rq.tlast, s_axis_rq.tready, s_axis_rq.tuser, s_axis_rq.tvalid, user.app_rdy, user.lnk_up) CF (cfg.config_space_enable, cfg.current_speed, cfg.dpa_substate_change, cfg.ds_bus_number, cfg.ds_device_number, cfg.ds_function_number, cfg.ds_port_number, cfg.dsn, cfg.err_cor_in, cfg.err_cor_out, cfg.err_fatal_out, cfg.err_nonfatal_out, cfg.err_uncor_in, cfg.flr_done, cfg.flr_in_process, cfg.function_power_state, cfg.function_status, cfg.hot_reset_in, cfg.hot_reset_out, cfg.interrupt_int, cfg.interrupt_msix_address, cfg.interrupt_msix_data, cfg.interrupt_msix_enable, cfg.interrupt_msix_fail, cfg.interrupt_msix_int, cfg.interrupt_msix_mask, cfg.interrupt_msix_sent, cfg.interrupt_msix_vf_enable, cfg.interrupt_msix_vf_mask, cfg.interrupt_pending, cfg.interrupt_sent, cfg.link_power_state, cfg.link_training_enable, cfg.ltr_enable, cfg.ltssm_state, cfg.max_payload, cfg.max_read_req, cfg.negotiated_width, cfg.obff_enable, cfg.per_function_number, cfg.per_function_output_request, cfg.per_function_update_done, cfg.phy_link_down, cfg.phy_link_status, cfg.pl_status_change, cfg.power_state_change_ack, cfg.power_state_change_interrupt, cfg.rcb_status, cfg.subsys_vend_id, cfg.tph_requester_enable, cfg.tph_st_mode, cfg.vf_flr_done, cfg.vf_flr_in_process, cfg.vf_power_state, cfg.vf_status, cfg.vf_tph_requester_enable, cfg.vf_tph_st_mode, cfg_req_pm_transition.l23_ready, common.commands_in, common.commands_out, int_pclk_sel.slave, int_qplllock.out, m_axis_cq.tdata, m_axis_cq.tkeep, m_axis_cq.tlast, m_axis_cq.tready, m_axis_cq.tuser, m_axis_cq.tvalid, m_axis_rc.tdata, m_axis_rc.tkeep, m_axis_rc.tlast, m_axis_rc.tready, m_axis_rc.tuser, m_axis_rc.tvalid, pci_exp.rxn, pci_exp.rxp, pci_exp.txn, pci_exp.txp, pcie.cq_np_req, pcie.cq_np_req_count, pcie.rq_seq_num, pcie.rq_seq_num_vld, pcie.rq_tag, pcie.rq_tag_vld, pipe.rx_0_sigs, pipe.rx_1_sigs, pipe.rx_2_sigs, pipe.rx_3_sigs, pipe.rx_4_sigs, pipe.rx_5_sigs, pipe.rx_6_sigs, pipe.rx_7_sigs, pipe.tx_0_sigs, pipe.tx_1_sigs, pipe.tx_2_sigs, pipe.tx_3_sigs, pipe.tx_4_sigs, pipe.tx_5_sigs, pipe.tx_6_sigs, pipe.tx_7_sigs, s_axis_cc.tdata, s_axis_cc.tkeep, s_axis_cc.tlast, s_axis_cc.tready, s_axis_cc.tuser, s_axis_cc.tvalid, s_axis_rq.tdata, s_axis_rq.tkeep, s_axis_rq.tlast, s_axis_rq.tready, s_axis_rq.tuser, s_axis_rq.tvalid, user.app_rdy, user.lnk_up);
+    schedule (cfg.config_space_enable, cfg.current_speed, cfg.dpa_substate_change, cfg.ds_bus_number, cfg.ds_device_number, cfg.ds_function_number, cfg.ds_port_number, cfg.dsn, cfg.err_cor_in, cfg.err_cor_out, cfg.err_fatal_out, cfg.err_nonfatal_out, cfg.err_uncor_in, cfg.flr_done, cfg.flr_in_process, cfg.function_power_state, cfg.function_status, cfg.hot_reset_in, cfg.hot_reset_out, cfg.interrupt_int, cfg.interrupt_msix_address, cfg.interrupt_msix_data, cfg.interrupt_msix_enable, cfg.interrupt_msix_fail, cfg.interrupt_msix_int, cfg.interrupt_msix_mask, cfg.interrupt_msix_sent, cfg.interrupt_msix_vf_enable, cfg.interrupt_msix_vf_mask, cfg.interrupt_pending, cfg.interrupt_sent, cfg.link_power_state, cfg.link_training_enable, cfg.ltr_enable, cfg.ltssm_state, cfg.max_payload, cfg.max_read_req, cfg.negotiated_width, cfg.obff_enable, cfg.per_function_number, cfg.per_function_output_request, cfg.per_function_update_done, cfg.phy_link_down, cfg.phy_link_status, cfg.pl_status_change, cfg.power_state_change_ack, cfg.power_state_change_interrupt, cfg.rcb_status, cfg.subsys_vend_id, cfg.tph_requester_enable, cfg.tph_st_mode, cfg.vf_flr_done, cfg.vf_flr_in_process, cfg.vf_power_state, cfg.vf_status, cfg.vf_tph_requester_enable, cfg.vf_tph_st_mode, cfg_req_pm_transition.l23_ready, int_pclk_sel.slave, int_qplllock.out, m_axis_cq.tdata, m_axis_cq.tkeep, m_axis_cq.tlast, m_axis_cq.tready, m_axis_cq.tuser, m_axis_cq.tvalid, m_axis_rc.tdata, m_axis_rc.tkeep, m_axis_rc.tlast, m_axis_rc.tready, m_axis_rc.tuser, m_axis_rc.tvalid, pci_exp.rxn, pci_exp.rxp, pci_exp.txn, pci_exp.txp, pcie.cq_np_req, pcie.cq_np_req_count, pcie.rq_seq_num, pcie.rq_seq_num_vld, pcie.rq_tag, pcie.rq_tag_vld, s_axis_cc.tdata, s_axis_cc.tkeep, s_axis_cc.tlast, s_axis_cc.tready, s_axis_cc.tuser, s_axis_cc.tvalid, s_axis_rq.tdata, s_axis_rq.tkeep, s_axis_rq.tlast, s_axis_rq.tready, s_axis_rq.tuser, s_axis_rq.tvalid, user.app_rdy, user.lnk_up) CF (cfg.config_space_enable, cfg.current_speed, cfg.dpa_substate_change, cfg.ds_bus_number, cfg.ds_device_number, cfg.ds_function_number, cfg.ds_port_number, cfg.dsn, cfg.err_cor_in, cfg.err_cor_out, cfg.err_fatal_out, cfg.err_nonfatal_out, cfg.err_uncor_in, cfg.flr_done, cfg.flr_in_process, cfg.function_power_state, cfg.function_status, cfg.hot_reset_in, cfg.hot_reset_out, cfg.interrupt_int, cfg.interrupt_msix_address, cfg.interrupt_msix_data, cfg.interrupt_msix_enable, cfg.interrupt_msix_fail, cfg.interrupt_msix_int, cfg.interrupt_msix_mask, cfg.interrupt_msix_sent, cfg.interrupt_msix_vf_enable, cfg.interrupt_msix_vf_mask, cfg.interrupt_pending, cfg.interrupt_sent, cfg.link_power_state, cfg.link_training_enable, cfg.ltr_enable, cfg.ltssm_state, cfg.max_payload, cfg.max_read_req, cfg.negotiated_width, cfg.obff_enable, cfg.per_function_number, cfg.per_function_output_request, cfg.per_function_update_done, cfg.phy_link_down, cfg.phy_link_status, cfg.pl_status_change, cfg.power_state_change_ack, cfg.power_state_change_interrupt, cfg.rcb_status, cfg.subsys_vend_id, cfg.tph_requester_enable, cfg.tph_st_mode, cfg.vf_flr_done, cfg.vf_flr_in_process, cfg.vf_power_state, cfg.vf_status, cfg.vf_tph_requester_enable, cfg.vf_tph_st_mode, cfg_req_pm_transition.l23_ready, int_pclk_sel.slave, int_qplllock.out, m_axis_cq.tdata, m_axis_cq.tkeep, m_axis_cq.tlast, m_axis_cq.tready, m_axis_cq.tuser, m_axis_cq.tvalid, m_axis_rc.tdata, m_axis_rc.tkeep, m_axis_rc.tlast, m_axis_rc.tready, m_axis_rc.tuser, m_axis_rc.tvalid, pci_exp.rxn, pci_exp.rxp, pci_exp.txn, pci_exp.txp, pcie.cq_np_req, pcie.cq_np_req_count, pcie.rq_seq_num, pcie.rq_seq_num_vld, pcie.rq_tag, pcie.rq_tag_vld, s_axis_cc.tdata, s_axis_cc.tkeep, s_axis_cc.tlast, s_axis_cc.tready, s_axis_cc.tuser, s_axis_cc.tvalid, s_axis_rq.tdata, s_axis_rq.tkeep, s_axis_rq.tlast, s_axis_rq.tready, s_axis_rq.tuser, s_axis_rq.tvalid, user.app_rdy, user.lnk_up);
 endmodule

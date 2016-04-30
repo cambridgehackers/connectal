@@ -110,14 +110,23 @@ upload:
 	(cd ../obs/home:jameyhicks:connectal/connectal; sed -i "s/>v.....</>v$(VERSION)</" _service; osc commit -m "v$(VERSION)" )
 
 ## PLY's home is http://www.dabeaz.com/ply/
+install-dependencies: install-dependences
+
 install-dependences:
 ifeq ($(shell uname), Darwin)
 	port install asciidoc
 	easy_install ply
 else
-	apt-get install asciidoc python-dev python-setuptools python-ply libgmp10
-	ln -sf /usr/lib/x86_64-linux-gnu/libgmp.so /usr/lib/x86_64-linux-gnu/libgmp.so.3
+	if [ -f /usr/bin/yum ] ; then yum install gmp strace python-argparse python-ply python-gevent; else apt-get install libgmp10 strace python-ply python-gevent; fi
+	if [ -f /usr/lib/x86_64-linux-gnu/libgmp.so ] ; then ln -sf /usr/lib/x86_64-linux-gnu/libgmp.so /usr/lib/x86_64-linux-gnu/libgmp.so.3 ; fi
+	if [ -f /usr/lib64/libgmp.so.10 ] ; then ln -s /usr/lib64/libgmp.so.10 /usr/lib64/libgmp.so.3; fi
 endif
+
+install-python-example-dependences:
+	sudo apt-get install python-dev
+
+install-doc-dependences:
+	apt-get install asciidoc python-setuptools
 	easy_install blockdiag seqdiag actdiag nwdiag libusb1
         wget https://asciidoc-diag-filter.googlecode.com/files/diag_filter.zip
 	asciidoc --filter install diag_filter.zip

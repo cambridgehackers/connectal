@@ -99,7 +99,16 @@ Software Options
 
 .. option:: --stl=stltype
 
-   Specifies which C++ Standard Template Library to use for Android.
+   Specifies which C++ Standard Template Library to use for Android. The choices are:
+
+    * stlport_static: STLport runtime C++ exceptions and RTTI and Standard Template Library
+    * stlport_shared
+    * gnustl_static: GNU STL runtime C++ exceptions and RTTI and Standard Template Library
+    * gnustl_shared
+    * c++_static: LLVM libc++ runtime C++ exceptions and RTTI and Standard Template Library
+    * c++_shared
+    * gabi++_static: GAbi++ runtime C++ exceptions and RTTI
+    * gabi++_shared
 
 Hardware Options
 ----------------

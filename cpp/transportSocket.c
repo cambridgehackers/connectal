@@ -259,11 +259,11 @@ static void send_mux(struct PortalInternal *pint, volatile unsigned int *data, u
         fprintf(stderr, "[%s:%d] hdr %x fpga %x\n", __FUNCTION__, __LINE__, hdr, pint->fpga_number);
     buffer[0] = hdr;
     pint->mux->request_index = pint->request_index;
-    pint->mux->item->send(pint->mux, buffer, (pint->fpga_number << 16) | ((hdr + 1) & 0xffff), sendFd);
+    pint->mux->transport->send(pint->mux, buffer, (pint->fpga_number << 16) | ((hdr + 1) & 0xffff), sendFd);
 }
 static int recv_mux(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
 {
-    return pint->mux->item->recv(pint->mux, buffer, len, recvfd);
+    return pint->mux->transport->recv(pint->mux, buffer, len, recvfd);
 }
 int portal_mux_handler(struct PortalInternal *pint, unsigned int channel, int messageFd)
 {
@@ -271,7 +271,7 @@ int portal_mux_handler(struct PortalInternal *pint, unsigned int channel, int me
     for (i = 0; i < pint->mux_ports_number; i++) {
         PortalInternal *p = pint->mux_ports[i].pint;
         if (channel == p->fpga_number && p->handler) {
-            p->item->recv(p, p->map_base, 1, &dummy);
+            p->transport->recv(p, p->map_base, 1, &dummy);
             p->handler(p, *p->map_base >> 16, messageFd);
         }
     }
@@ -502,7 +502,7 @@ static int init_bsim(struct PortalInternal *pint, void *param)
     assert(found);
 #endif
     pint->map_base = (volatile unsigned int*)(long)((pint->fpga_tile * TILE_BASE_OFFSET)+(pint->fpga_number * PORTAL_BASE_OFFSET));
-    pint->item->enableint(pint, 1);
+    pint->transport->enableint(pint, 1);
 #endif
     return 0;
 }

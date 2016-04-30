@@ -34,6 +34,7 @@ import json
 import re
 
 supported_os = ['android', 'ubuntu']
+supported_stl = ['stlport_static', 'stlport_shared', 'gnustl_static', 'gnustl_shared', 'c++_static', 'c++_shared', 'gabi++_static', 'gabi++_shared']
 
 argparser = argparse.ArgumentParser("Generate C++/BSV/Xilinx stubs for an interface.")
 argparser.add_argument('bsvfile', help='BSV files to parse', nargs='+')
@@ -74,7 +75,7 @@ argparser.add_argument('--xelabflags', help='Options to pass to the xelab compil
 argparser.add_argument('--xsimflags', help='Options to pass to the xsim simulator', action='append', default=[])
 argparser.add_argument('--ipdir', help='Directory in which to store generated IP')
 argparser.add_argument('-q', '--qtused', help='Qt used in simulator test application', action='store_true')
-argparser.add_argument('--stl', help='STL implementation to use for Android builds', default=None)
+argparser.add_argument('--stl', help='STL implementation to use for Android builds', default=None, choices=supported_stl)
 argparser.add_argument('--android-platform', help='Android platform to use for Android builds', type=int, default=None)
 argparser.add_argument('--floorplan', help='Floorplan XDC', default=None)
 argparser.add_argument('-P', '--partition-module', help='Modules to separately synthesize/place/route', action='append', default=[])
@@ -161,6 +162,7 @@ DUT=%(dut)s
 
 export INTERFACES = %(interfaces)s
 BSVFILES = %(bsvfiles)s
+XCIFILES = %(xcifiles)s
 
 BSCFLAGS_PROJECT = %(bscflags)s
 SIM_CXX_PROJECT = %(bsimsource)s
@@ -462,21 +464,29 @@ if __name__=='__main__':
     substs['FPGAMAKE_DEFINE'] = '-D BSV_POSITIVE_RESET' if 'BSV_POSITIVE_RESET' in options.bsvdefine else ''
     bitsmake=fpgamakeRuleTemplate % substs
 
+    ## make list of unique bsvpaths, in the order they were given
+    unique_bsvpaths = []
+    for l in [[os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in (options.bsvfile + [project_dir])],
+              [os.path.abspath(bsvpath) for bsvpath in options.bsvpath],
+              [os.path.join(connectaldir, 'bsv')],
+              [os.path.join(connectaldir, 'lib/bsv')],
+              [os.path.join(connectaldir, 'generated/xilinx')],
+              [os.path.join(connectaldir, 'generated/altera')]]:
+        for p in l:
+            if p not in unique_bsvpaths:
+                unique_bsvpaths.append(p)
+
     if options.protobuf:
         protolist = [os.path.abspath(fn) for fn in options.protobuf]
     make.write(makefileTemplate % {'connectaldir': connectaldir,
-                                   'bsvpath': ':'.join(list(set([os.path.dirname(os.path.abspath(bsvfile)) for bsvfile in (options.bsvfile + [project_dir])])
-                                                            | set([os.path.abspath(bsvpath) for bsvpath in options.bsvpath])
-                                                            | set([os.path.join(connectaldir, 'bsv')])
-                                                            | set([os.path.join(connectaldir, 'lib/bsv')])
-                                                            | set([os.path.join(connectaldir, 'generated/xilinx')])
-                                                            | set([os.path.join(connectaldir, 'generated/altera')]))),
+                                   'bsvpath': ':'.join(unique_bsvpaths),
                                    'bsvdefines': util.foldl((lambda e,a: e+' -D '+a), '', bsvdefines),
                                    'boardname': boardname,
                                    'OS': options.os,
                                    'qtused': 'cd jni; qmake ../..; make' if options.qtused else '',
                                    'interfaces': ' '.join(options.interfaces),
                                    'bsvfiles': ' '.join([ os.path.abspath(bsvfile) for bsvfile in options.bsvfile]),
+                                   'xcifiles': ' '.join([ os.path.abspath(xci) for xci in options.xci]),
                                    'bsimsource': ' '.join([os.path.abspath(bsimsource) for bsimsource in options.bsimsource]) if options.bsimsource else '',
                                    'includepath': ' '.join(['-I%s' % os.path.dirname(os.path.abspath(source)) for source in options.source]) if options.source else '',
                                    'runsource2': 'RUNSOURCE2=1' if options.source2 else '',

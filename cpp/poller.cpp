@@ -117,7 +117,7 @@ int PortalPoller::registerInstance(Portal *portal)
         addFd(portal->pint.fpga_fd);
     for (int i = 0; i < portal->pint.client_fd_number; i++)
         addFd(portal->pint.client_fd[i]);
-    portal->pint.item->enableint(&portal->pint, 1);
+    portal->pint.transport->enableint(&portal->pint, 1);
     pthread_mutex_unlock(&mutex);
     start();
     return 0;
@@ -154,7 +154,7 @@ void PortalPoller::end(void)
     for (int i = 0; i < numWrappers; i++) {
         Portal *instance = portal_wrappers[i];
         fprintf(stderr, "Poller::disabling interrupts portal %d fpga%d\n", i, instance->pint.fpga_number);
-        instance->pint.item->enableint(&instance->pint, 0);
+        instance->pint.transport->enableint(&instance->pint, 0);
     }
     pthread_mutex_unlock(&mutex);
 }
@@ -190,10 +190,10 @@ void* PortalPoller::event(void)
         if (trace_poller)
             fprintf(stderr, "Poller: event tile %d fpga%d fd %d handler %p parent %p\n",
                 instance->pint.fpga_tile, instance->pint.fpga_number, instance->pint.fpga_fd, instance->pint.handler, instance->pint.parent);
-        instance->pint.item->event(&instance->pint);
+        instance->pint.transport->event(&instance->pint);
         if (instance->pint.handler) {
             // re-enable interrupt which was disabled by portal_isr
-            instance->pint.item->enableint(&instance->pint, 1);
+            instance->pint.transport->enableint(&instance->pint, 1);
         }
     }
     pthread_mutex_unlock(&mutex);

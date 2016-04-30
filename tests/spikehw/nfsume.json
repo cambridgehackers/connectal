@@ -50,6 +50,18 @@
     "iic_mux_reset": {
 	"i2c_main": "mux_reset"
     },
+    "spi_sck": {
+	"sdio": "clk"
+    },
+    "spi_ss": {
+	"sdio": "d3"
+    },
+    "spi_mosi": {
+	"sdio": "cmd"
+    },
+    "spi_miso": {
+	"sdio": "d0"
+    },
     "eth_mgt_clk_clk_p_v": {
 	"pins": "si5324_clk_p",
 	"DIFF_TERM": "TRUE",
