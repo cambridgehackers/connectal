@@ -3,8 +3,8 @@
         "os" : "ubuntu",
         "partname" : "xc7z020clg484-1",
         "rewireclockstring" : "tclzynqrewireclock",
-        "TOP" : "BsimTop",
-	"bsvdefines": ["BsimHostInterface", "PhysAddrWidth=40", "SIMULATION"],
+        "TOP" : "XsimTop",
+	"bsvdefines": ["CnocTop", "XsimHostInterface", "PhysAddrWidth=40", "SIMULATION"],
         "CONNECTALFLAGS" : ["--mainclockperiod=20", "--derivedclockperiod=10"],
         "need_pcie" : "unused"
     },

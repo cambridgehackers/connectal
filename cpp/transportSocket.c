@@ -27,57 +27,6 @@
 
 static int trace_socket; // = 1;
 
-static unsigned int tag_counter;
-#define MAX_SIMULATOR_TILES     4
-typedef struct bsim_fpga_map_entry{
-  uint32_t name;
-  int offset;
-  int valid;
-} bsim_fpga_map_entry;
-static bsim_fpga_map_entry bsim_fpga_map[MAX_SIMULATOR_TILES][MAX_SIMULATOR_PORTAL_ID];
-
-static uint32_t read_bsim(uint32_t portal_index, long base, uint32_t offset)
-{
-    static PortalInternal p;
-    p.fpga_number = portal_index;
-    volatile unsigned int *ptemp = &((volatile unsigned int *)base)[offset];
-    return transportBsim.read(&p, &ptemp);
-}
-static void initialize_bsim_map(void)
-{
-  long base_tile = 0;
-  uint32_t tile_index = 0;
-  uint32_t num_tiles = read_bsim(0, base_tile, PORTAL_CTRL_NUM_TILES);
-  if (num_tiles >= MAX_SIMULATOR_TILES) {
-      PORTAL_PRINTF("%s: Number of tiles %d exceeds max allowed %d\n", num_tiles, MAX_SIMULATOR_TILES);
-      exit(-1);
-  }
-  do{
-    uint32_t portal_index = 0;
-    long base_ptr = base_tile;
-    uint32_t num_portals = read_bsim(portal_index, base_ptr, PORTAL_CTRL_NUM_PORTALS);
-    do{
-      uint32_t id = read_bsim(portal_index, base_ptr, PORTAL_CTRL_PORTAL_ID);
-      assert(num_portals == read_bsim(portal_index, base_ptr, PORTAL_CTRL_NUM_PORTALS));
-      assert(num_tiles   == read_bsim(portal_index, base_ptr, PORTAL_CTRL_NUM_TILES));
-      if (id >= MAX_SIMULATOR_PORTAL_ID) {
-	PORTAL_PRINTF("%s: [%d] readid too large %d\n", __FUNCTION__, portal_index, id);
-	break;
-      }
-      bsim_fpga_map[tile_index][portal_index].name = id;
-      bsim_fpga_map[tile_index][portal_index].offset = portal_index;
-      bsim_fpga_map[tile_index][portal_index].valid = 1;
-      if (trace_socket)
-	PORTAL_PRINTF("%s: bsim_fpga_map[%d/%d][%d/%d]=%d (%d)\n", __FUNCTION__, tile_index, num_tiles, portal_index, num_portals,
-		      bsim_fpga_map[tile_index][portal_index].name, (portal_index+1==num_portals));
-      portal_index++;
-      base_ptr += PORTAL_BASE_OFFSET;
-    } while (portal_index < num_portals && portal_index < 32);
-    tile_index++;
-    base_tile += TILE_BASE_OFFSET;
-  } while (tile_index < num_tiles && tile_index < MAX_SIMULATOR_TILES);
-}
-
 #ifndef __KERNEL__
 #include <stdio.h>
 #include <stdlib.h>
@@ -112,15 +61,6 @@ int i;
 
 static pthread_mutex_t socket_mutex;
 int global_sockfd = -1;
-
-void connect_to_bsim(void)
-{
-  if (global_sockfd != -1)
-    return;
-  global_sockfd = init_connecting(SOCKET_NAME, NULL);
-  pthread_mutex_init(&socket_mutex, NULL);
-  initialize_bsim_map();
-}
 
 static int init_socketResp(struct PortalInternal *pint, void *aparam)
 {
@@ -309,37 +249,6 @@ unsigned int bsim_poll_interrupt(void)
   pthread_mutex_unlock(&socket_mutex);
   return interrupt_value;
 }
-/* functions called by READL() and WRITEL() macros in application software */
-static unsigned int read_portal_bsim(PortalInternal *pint, volatile unsigned int **addr)
-{
-  struct memrequest foo = {pint->fpga_number, 0,*addr,0};
-
-  pthread_mutex_lock(&socket_mutex);
-  foo.data_or_tag = tag_counter++;
-  portalSendFd(global_sockfd, &foo, sizeof(foo), -1);
-  while (!poll_response(pint->fpga_number)) {
-      struct timeval tv = {};
-      tv.tv_usec = 10000;
-      select(0, NULL, NULL, NULL, &tv);
-  }
-  unsigned int rc = shared_response.data;
-  shared_response_valid = 0;
-  pthread_mutex_unlock(&socket_mutex);
-  return rc;
-}
-
-static void write_portal_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
-{
-  struct memrequest foo = {pint->fpga_number, 1,*addr,v};
-
-  portalSendFd(global_sockfd, &foo, sizeof(foo), -1);
-}
-static void write_fd_portal_bsim(PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
-{
-  struct memrequest foo = {pint->fpga_number, 1,*addr,v};
-
-  portalSendFd(global_sockfd, &foo, sizeof(foo), v);
-}
 #else // __KERNEL__
 
 /*
@@ -423,97 +332,5 @@ static int poll_response(int id)
   }
   return shared_response_valid && shared_response.portal == id;
 }
-unsigned int bsim_poll_interrupt(void)
-{
-  if (global_sockfd == -1)
-      return 0;
-  //pthread_mutex_lock(&socket_mutex);
-  poll_response(-1);
-  //pthread_mutex_unlock(&socket_mutex);
-  return interrupt_value;
-}
+#endif
 
-static unsigned int read_portal_bsim(PortalInternal *pint, volatile unsigned int **addr)
-{
-  struct memrequest foo = {pint->fpga_number, 0,*addr,0};
-
-    if (main_program_finished)
-        return 0;
-    foo.data_or_tag = tag_counter++;
-    down_interruptible(&bsim_avail);
-    memcpy(&upreq, &foo, sizeof(upreq));
-    have_request = 1;
-    down_interruptible(&bsim_have_response);
-    return downresp.data;
-}
-
-static void write_portal_bsim(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
-{
-    struct memrequest foo = {pint->fpga_number, 1,*addr,v};
-    //printk("[%s:%d]\n", __FUNCTION__, __LINE__);
-    if (main_program_finished)
-        return;
-    down_interruptible(&bsim_avail);
-    memcpy(&upreq, &foo, sizeof(upreq));
-    have_request = 1;
-}
-void write_fd_portal_bsim(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v)
-{
-    struct memrequest foo = {pint->fpga_number, MAGIC_PORTAL_FOR_SENDING_FD,*addr,v};
-    struct file *fmem;
-
-    if (main_program_finished)
-        return;
-    fmem = fget(v);
-    foo.addr = fmem->private_data;
-    //printk("[%s:%d] fd %x dmabuf %p\n", __FUNCTION__, __LINE__, v, foo.addr);
-    fput(fmem);
-    down_interruptible(&bsim_avail);
-    memcpy(&upreq, &foo, sizeof(upreq));
-    have_request = 1;
-    down_interruptible(&bsim_have_response);
-}
-#endif
-static int init_bsim(struct PortalInternal *pint, void *param)
-{
-#ifdef BOARD_bluesim
-    int found = 0;
-    int i;
-    initPortalHardware();
-    connect_to_bsim();
-#ifndef __KERNEL__
-    assert(pint->fpga_number < MAX_SIMULATOR_PORTAL_ID);
-#endif
-    struct bsim_fpga_map_entry* entry = bsim_fpga_map[pint->fpga_tile];
-    for (i = 0; entry[i].valid; i++)
-      if (entry[i].name == pint->fpga_number) {
-	found = 1;
-	pint->fpga_number = entry[i].offset;
-	break;
-      }
-    if (!found) {
-      PORTAL_PRINTF( "Error: init_bsim: did not find fpga_number %d in tile %d\n", pint->fpga_number, pint->fpga_tile);
-      PORTAL_PRINTF( "    Found fpga numbers:");
-      for (i = 0; entry[i].valid; i++)
-	PORTAL_PRINTF( " %d", entry[i].name);
-      PORTAL_PRINTF( "\n");
-    }
-#ifndef __KERNEL__
-    assert(found);
-#endif
-    pint->map_base = (volatile unsigned int*)(long)((pint->fpga_tile * TILE_BASE_OFFSET)+(pint->fpga_number * PORTAL_BASE_OFFSET));
-    pint->transport->enableint(pint, 1);
-#endif
-    return 0;
-}
-int event_portal_bsim(struct PortalInternal *pint)
-{
-#ifdef BOARD_bluesim
-    if (pint->fpga_fd == -1 && !bsim_poll_interrupt())
-        return -1;
-#endif
-    return event_hardware(pint);
-}
-PortalTransportFunctions transportBsim = {
-    init_bsim, read_portal_bsim, write_portal_bsim, write_fd_portal_bsim, mapchannel_hardware, mapchannel_req_generic,
-    send_portal_null, recv_portal_null, busy_hardware, enableint_hardware, event_portal_bsim, notfull_hardware};

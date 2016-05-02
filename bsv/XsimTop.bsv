@@ -50,6 +50,11 @@ typedef `PinType PinType;
 typedef Empty PinType;
 `endif
 
+`ifndef SVDPI
+import "BDPI" function Action dpi_init();
+import "BDPI" function ActionValue#(Bool) dpi_cycle(); // returns non-zero if verilog should $finish().
+`endif
+
 interface XsimTop;
    interface PinType pins;
 endinterface
@@ -57,6 +62,7 @@ endinterface
 interface XsimSource;
     method Action beat(Bit#(32) v);
 endinterface
+`ifdef SVDPI
 import "BVI" XsimSource =
 module mkXsimSourceBVI#(Bit#(32) portal)(XsimSource);
     port portal = portal;
@@ -70,11 +76,21 @@ module mkXsimSource#(PortalMsgIndication indication)(Empty);
       tmp.beat(indication.message.first());
    endrule
 endmodule
+`else
+import "BDPI" function Action dpi_msgSource_beat(Bit#(32)  portal, Bit#(32)  beat);
+module mkXsimSource#(PortalMsgIndication indication)(Empty);
+   rule ind_dst_rdy;
+      indication.message.deq();
+      dpi_msgSource_beat(indication.id, indication.message.first());
+   endrule
+endmodule
+`endif
 
 interface MsgSinkR#(numeric type bytes_per_beat);
    method ActionValue#(Bit#(32)) beat();
 endinterface
 
+`ifdef SVDPI
 import "BVI" XsimSink =
 module mkXsimSinkBVI#(Bit#(32) portal)(MsgSinkR#(4));
    port portal = portal;
@@ -89,6 +105,16 @@ module mkXsimSink#(PortalMsgRequest request)(Empty);
       request.message.enq(beat);
    endrule
 endmodule
+`else
+import "BDPI" function ActionValue#(Bit#(33)) dpi_msgSink_beat(Bit#(32) portal);
+module mkXsimSink#(PortalMsgRequest request)(Empty);
+   rule req_src_rdy;
+      let beat <- dpi_msgSink_beat(request.id);
+      if (unpack(beat[32]))
+	 request.message.enq(beat[31:0]);
+   endrule
+endmodule
+`endif
 
 module mkXsimMemoryConnection#(PhysMemMaster#(addrWidth, dataWidth) master)(Empty)
    provisos (Mul#(TDiv#(dataWidth, 8), 8, dataWidth),
@@ -120,6 +146,21 @@ module mkXsimTop#(Clock derivedClock, Reset derivedReset, Clock sys_clk)(XsimTop
 `endif
 `endif
        );
+
+`ifndef SVDPI
+   Reg#(Bool) initCalled <- mkReg(False);
+   rule call_init if (!initCalled);
+      dpi_init();
+      initCalled <= True;
+   endrule
+   rule finish;
+      let doFinish <- dpi_cycle();
+      if (doFinish) begin
+	 $display("simulator calling $finish");
+	 $finish();
+      end
+   endrule
+`endif
 
    MMUIndicationOutput lMMUIndicationOutput <- mkMMUIndicationOutput;
    MMURequestInput lMMURequestInput <- mkMMURequestInput;

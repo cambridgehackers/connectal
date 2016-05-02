@@ -86,9 +86,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
         PORTAL_PRINTF("%s: **initialize portal_%d_%d handler %p cb %p parent %p\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number, handler, cb, parent);
     if (!transport) {
         // Use defaults for transport handling methods
-#ifdef BOARD_bluesim
-        transport = &transportBsim;
-#elif defined(BOARD_xsim) || defined(BOARD_verilator) || defined(BOARD_vsim)
+#ifdef SIMULATION
         transport = &transportXsim;
 #else
         transport = &transportHardware;
