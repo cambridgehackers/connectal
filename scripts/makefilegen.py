@@ -166,6 +166,8 @@ XCIFILES = %(xcifiles)s
 
 BSCFLAGS_PROJECT = %(bscflags)s
 SIM_CXX_PROJECT = %(bsimsource)s
+CFLAGS_PROJECT = %(cflags)s
+CXXFLAGS_PROJECT = %(cxxflags)s
 XELABFLAGS = %(xelabflags)s
 XSIMFLAGS  = %(xsimflags)s
 TOPBSVFILE = %(topbsvfile)s
@@ -502,6 +504,8 @@ if __name__=='__main__':
                                    'bscflags': ' '.join(options.bscflags),
                                    'xelabflags': ' '.join(options.xelabflags),
                                    'xsimflags': ' '.join(options.xsimflags),
+                                   'cflags': ' ' .join(options.cflags),
+                                   'cxxflags': ' ' .join(options.cxxflags),
                                    'bsvdefines_list': ' '.join(bsvdefines),
                                    'shared': 'CONNECTAL_SHARED=1' if options.shared else '',
                                    'nohardware': 'CONNECTAL_NOHARDWARE=1' if options.nohardware else '',
