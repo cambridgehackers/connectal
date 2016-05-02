@@ -353,13 +353,13 @@ vsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.c
 	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
 vsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.cpp
 	mkdir -p vsim.dir/xsc
-	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
+	g++ -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
 vsim.dir/xsc/%.lnx64.o: jni/%.c
 	mkdir -p vsim.dir/xsc
 	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
 vsim.dir/xsc/%.lnx64.o: jni/%.cpp
 	mkdir -p vsim.dir/xsc
-	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
+	g++ -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
 
 VSIM_DEFINES = $(subst -D ,+define+,$(BSVDEFINES))
 VSIM_SV = $(addprefix -sv $(CONNECTALDIR)/verilog/, xsimtop.sv XsimDmaReadWrite.sv XsimLink.sv XsimSink.sv XsimSource.sv)
