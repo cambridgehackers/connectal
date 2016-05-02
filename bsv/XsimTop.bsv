@@ -169,7 +169,7 @@ module mkXsimTop#(Clock derivedClock, Reset derivedReset, Clock sys_clk)(XsimTop
 
    MemServerIndicationOutput lMemServerIndicationOutput <- mkMemServerIndicationOutput;
    MemServerRequestInput lMemServerRequestInput <- mkMemServerRequestInput;
-   MemServer#(PhysAddrWidth,DataBusWidth,NumberOfMasters) lMemServer <- mkMemServer(top.readers, top.writers, cons(lMMU,nil), lMemServerIndicationOutput.ifc);
+   MemServer::MemServer#(PhysAddrWidth,DataBusWidth,NumberOfMasters) lMemServer <- mkMemServer(top.readers, top.writers, cons(lMMU,nil), lMemServerIndicationOutput.ifc);
    mkConnection(lMemServerRequestInput.pipes, lMemServer.request);
 
    let lMMUIndicationOutputNoc <- mkPortalMsgIndication(extend(pack(PlatformIfcNames_MMUIndicationH2S)), lMMUIndicationOutput.portalIfc.indications, lMMUIndicationOutput.portalIfc.messageSize);
