@@ -275,6 +275,7 @@ ifneq ($(VIVADO), )
 VIVADODIR=$(realpath $(shell dirname $(VIVADO))/..)
 XSC_CFLAGS= -Wa,-W -fPIC -m64  -I"$(VIVADODIR)/data/xsim/include" -DSYSTEM_VERILOG -DBOARD_xsim -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -Ijni
 
+## would like to remove this, xsc -link below does nothing if handed "libconnectal-sim.so" instead of .o files
 XSIM_GENERATED_CFILES = XsimMsgIndication XsimMsgRequest GeneratedCppCallbacks
 XSIM_CFILES = transportSocket transportHardware transportXsim XsimTop poller sock_utils portalPrintf portal BsimDma
 XSIM_OBJECTS = $(foreach c, $(XSIM_CFILES), xsim.dir/xsc/$(c).lnx64.o ) $(foreach c, $(XSIM_GENERATED_CFILES), xsim.dir/xsc/$(c).lnx64.o)
