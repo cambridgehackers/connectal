@@ -134,15 +134,17 @@ module mkMemReadChannel#(Integer bufferSizeBytes, Integer channelNumber, PipeOut
       let last_burst = clientNext.last;
       let cond0 <- clientAvail.maybeDecrement(unpack(extend(cmd_len>>beatShift)));
       serverCheckAvail.enq(tuple3(cond0,last_burst,cmd_len));
-      if (verbose) $display("mkMemReadEngineBuff::%d rule_checkAvail avail %d burstLen %d cond0 %d last_burst %d", counter, clientAvail.read(), cmd_len>>beatShift, cond0, last_burst);
+      if (verbose) $display("mkMemReadEngineBuff::%d chan=%d rule_checkAvail avail %d burstLen %d cond0 %d last_burst %d", counter, channelNumber, clientAvail.read(), cmd_len>>beatShift, cond0, last_burst);
    endrule
 
    rule rule_requestServer if (clientInFlight);
       match {.cond0,.last_burst,.cmd_len} <- toGet(serverCheckAvail).get;
       if  (cond0) begin
-	 if (verbose) $display("mkMemReadEngineBuff::%d rule_requestServer clientLen %d cond0 %d last_burst %d", counter, clientLen, cond0, last_burst);
+	 if (verbose) $display("mkMemReadEngineBuff::%d chan=%d rule_requestServer clientLen %d cond0 %d last_burst %d",
+			       counter, channelNumber, clientLen, cond0, last_burst);
 	 serverProcessing.enq(tuple3(truncate(cmd_len>>beatShift), clientCommand.tag, last_burst));
-	 if (verbose) $display("MemReadEngine::%d readReq idx %d offset %h burstLenBytes %h last %d", counter, 0, clientBase, cmd_len, last_burst);
+	 if (verbose) $display("MemReadEngine::%d chan=%d readReq idx %d offset %h burstLenBytes %h last %d", 
+	    counter, channelNumber, 0, clientBase, cmd_len, last_burst);
 
 	 dmaRequest.enq(MemRequest { sglId: clientCommand.sglId, offset: extend(clientBase),
 	    burstLen:cmd_len, tag: fromInteger(channelNumber)
@@ -154,7 +156,7 @@ module mkMemReadChannel#(Integer bufferSizeBytes, Integer channelNumber, PipeOut
          clientLen <= clientLen - extend(cmd_len);
          clientNext <= getNext(clientLen, clientCommand.burstLen);
 	 if (last_burst) begin
-	    if (verbose) $display("mkMemReadEngineBuff::%d rule_requestServer last_burst %d", counter, last_burst);
+	    if (verbose) $display("mkMemReadEngineBuff::%d chan=%d rule_requestServer last_burst %d", counter, channelNumber, last_burst);
 	    clientInFlight <= False;
 	    `ifdef MEMENGINE_REQUEST_CYCLES
 	    $display("clientCycles = %d", clientCycles);
@@ -169,7 +171,8 @@ module mkMemReadChannel#(Integer bufferSizeBytes, Integer channelNumber, PipeOut
       match {.rc, .tag, .last_burst} = serverProcessing.first;
       let new_respCnt = respCnt+1;
       let l = False;
-      if (verbose) $display("mkMemReadEngineBuff::%d data %h new_respCnt %d rc %d last_burst %d tag %d clientInFlight %d eob %d", counter, d.data, new_respCnt, rc, last_burst, tag, clientInFlight, d.last);
+      if (verbose) $display("mkMemReadEngineBuff::%d chan=%d data %h new_respCnt %d rc %d last_burst %d tag %d clientInFlight %d eob %d",
+	 counter, channelNumber, d.data, new_respCnt, rc, last_burst, tag, clientInFlight, d.last);
       if (new_respCnt == rc) begin
 	 respCnt <= 0;
 	 serverProcessing.deq;
@@ -207,7 +210,8 @@ module mkMemReadChannel#(Integer bufferSizeBytes, Integer channelNumber, PipeOut
 	                return clientDataFifo.first;
 	             endmethod
 	             method Action deq;
-	                if (verbose) $display("mkMemReadEngineBuff::check_out: data %h clientAvail %d eob %d", clientDataFifo.first.data, clientAvail.read(), clientDataFifo.first.last);
+	                if (verbose) $display("mkMemReadEngineBuff::check_out: chan=%d data %h clientAvail %d eob %d", 
+					      channelNumber, clientDataFifo.first.data, clientAvail.read(), clientDataFifo.first.last);
 	                clientDataFifo.deq;
 	                clientAvail.increment(1);
 	             endmethod
