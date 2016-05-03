@@ -59,7 +59,7 @@ module mkFramedMessagePipe#(Integer portalNumber,
    Bit#(32) hdr = (fromInteger(portalNumber) << 24) | (fromInteger(i) << 16) | extend(numWords + 1);
    let sendHeader <- mkReg(True);
    Reg#(Bit#(16)) burstLenReg <- mkReg(0);
-   return (interface PipeOut;
+   PipeOut#(Bit#(32)) framedPipe = (interface PipeOut;
 	      method Bit#(32) first() if (pipeOut.notEmpty());
 	         if (sendHeader)
 		    return hdr;
@@ -80,6 +80,14 @@ module mkFramedMessagePipe#(Integer portalNumber,
 	      endmethod
 	      method Bool notEmpty(); return pipeOut.notEmpty(); endmethod
 	   endinterface);
+   if (False) begin // optional pipeline stage
+      FIFOF#(Bit#(32)) framedFifo <- mkFIFOF();
+      mkConnection(framedPipe, toPipeIn(framedFifo));
+      return toPipeOut(framedFifo);
+   end
+   else begin
+      return framedPipe;
+   end
 endmodule
 
 module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests,numIndications,32) pipePortal,
