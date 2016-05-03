@@ -223,6 +223,19 @@ module mkMemReadChannel#(Integer bufferSizeBytes, Integer channelNumber, PipeOut
    interface PipeOut readReq = toPipeOut(dmaRequest);
 endmodule
 
+module mkUnfunnelDataPipes#(PipeOut#(MemData#(busWidth)) inPipe)(Vector#(numServers, PipeOut#(MemData#(busWidth))))
+   provisos (Log#(numServers,serverIndexSize),
+	     Add#(serverIndexSize,a__,MemTagSize));
+   Vector#(numServers, FIFOF#(MemData#(busWidth))) dataFifos <- replicateM(mkFIFOF());
+   rule unfunnel;
+      let md <- toGet(inPipe).get();
+      let tag = md.tag;
+      Bit#(serverIndexSize) fifoNumber = truncate(tag);
+      dataFifos[fifoNumber].enq(md);
+   endrule
+   return map(toPipeOut, dataFifos);
+endmodule
+
 module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, userWidth, cmdQDepth, numServers))
    provisos (Div#(busWidth,8,busWidthBytes),
 	     Mul#(busWidthBytes,8,busWidth),
@@ -241,10 +254,7 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
    Integer bufferSizeBeats = bufferSizeBytes/valueOf(busWidthBytes);
 
    FIFOF#(MemData#(busWidth)) readDataFifo <- mkFIFOF();
-   function Tuple2#(Bit#(TLog#(numServers)),MemData#(userWidth)) tagData(MemData#(userWidth) md);
-      return tuple2(truncate(md.tag), md);
-   endfunction
-   UnFunnelPipe#(1,numServers,MemData#(userWidth),bpc) dataPipes <- mkUnFunnelPipesPipelined(vec(mapPipe(tagData, toPipeOut(readDataFifo))));
+   Vector#(numServers, PipeOut#(MemData#(busWidth))) dataPipes <- mkUnfunnelDataPipes(toPipeOut(readDataFifo));
 
    Vector#(numServers, MemReadChannel#(busWidth,userWidth,cmdQDepth)) readChannels <- zipWithM(mkMemReadChannel(bufferSizeBytes),
 											       genVector(), dataPipes);
