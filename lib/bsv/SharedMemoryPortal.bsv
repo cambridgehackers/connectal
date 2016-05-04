@@ -97,7 +97,9 @@ module mkSharedMemoryIndicationPortal#(PipePortal#(numRequests,numIndications,32
 
    Vector#(numIndications, PipeOut#(Bit#(32))) indicationPipes <- genWithM(mkFramedMessagePipe(0,pipePortal,messageSize));
 
-   SharedMemoryPipeIn#(64) pipeIn <- mkSharedMemoryPipeIn(indicationPipes, readEngines, writeEngines);
+   SerialPortalMux#(numIndications) serialPortalMux <- mkSerialPortalMux();
+   mkConnection(indicationPipes, serialPortalMux.data);
+   SharedMemoryPipeIn#(64) pipeIn <- mkSharedMemoryPipeIn(serialPortalMux.outputPipe, readEngines, writeEngines);
    interface SharedMemoryPortalConfig cfg = pipeIn.cfg;
 endmodule
 

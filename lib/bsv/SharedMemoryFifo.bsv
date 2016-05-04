@@ -209,7 +209,7 @@ module mkSharedMemoryPipeOut#(Vector#(2, MemReadEngineServer#(64)) readEngine, V
    interface data = map(toPipeOut, dataFifo);
 endmodule
 
-module mkSharedMemoryPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes,
+module mkSharedMemoryPipeIn#(PipeOut#(Bit#(32)) pipe,
     Vector#(2,MemReadEngineServer#(64)) readEngine, Vector#(2, MemWriteEngineServer#(64)) writeEngine)(SharedMemoryPipeIn#(64));
    let defaultClock <- exposeCurrentClock;
    let defaultReset <- exposeCurrentReset;
@@ -223,20 +223,10 @@ module mkSharedMemoryPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes,
    Reg#(SharedMemoryPortalState) state <- mkReg(Idle);
    Reg#(Bit#(32)) sglIdReg <- mkReg(0);
    Reg#(Bool)     readyReg   <- mkReg(False);
-   Vector#(numIndications, Bool) readyBits = map(pipeOutNotEmpty, pipes);
-   Bool      interruptStatus = False;
-   Bit#(16)  readyChannel = -1;
    function Bool pipeOutNotEmpty(PipeOut#(a) po); return po.notEmpty(); endfunction
    Gearbox#(1,2,Bit#(32)) gb <- mk1toNGearbox(defaultClock, defaultReset, defaultClock, defaultReset);
 
    let verbose = False;
-
-   for (Integer i = valueOf(numIndications) - 1; i >= 0; i = i - 1) begin
-      if (readyBits[i]) begin
-         interruptStatus = True;
-         readyChannel = fromInteger(i);
-      end
-   end
 
    rule updateIndRdWrPtr if (state == Idle && readyReg);
       readEngine[0].request.put(
@@ -278,8 +268,8 @@ module mkSharedMemoryPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes,
       writeEngine[0].data.enq(pack(v));
    endrule
 
-   rule sendHeader if (state == SendHeader && interruptStatus);
-      Bit#(32) hdr <- toGet(pipes[readyChannel]).get();
+   rule sendHeader if (state == SendHeader);
+      Bit#(32) hdr <- toGet(pipe).get();
       Bit#(16) totalWords = hdr[15:0];
       let messageWords = totalWords-1;
       let padding      = totalWords[0] == 1;
@@ -294,7 +284,6 @@ module mkSharedMemoryPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes,
       wrPtrReg <= wrPtr;
       messageWordsReg <= messageWords;
       paddingReg      <= padding;
-      methodIdReg <= readyChannel;
       gb.enq(vec(hdr));
       writeEngine[0].request.put( MemengineCmd
           {sglId: sglIdReg, base: extend(wrPtrReg) << 2, burstLen: 8, len: extend(paddedWords) << 2, tag: 0});
@@ -303,7 +292,7 @@ module mkSharedMemoryPipeIn#(Vector#(numIndications, PipeOut#(Bit#(32))) pipes,
 
    rule sendMessage if (state == SendMessage);
       messageWordsReg <= messageWordsReg - 1;
-      let v <- toGet(pipes[methodIdReg]).get();
+      let v <- toGet(pipe).get();
       gb.enq(vec(v));
       $display("sendMessage v=%h messageWords=%d paddingReg=%d", v, messageWordsReg, paddingReg);
       if (messageWordsReg == 1) begin
