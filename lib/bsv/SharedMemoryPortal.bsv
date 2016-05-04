@@ -40,7 +40,9 @@ module mkSharedMemoryRequestPortal#(PipePortal#(numRequests, numIndications, 32)
    function Bit#(16) messageSize(Bit#(16) methodNumber),
    Vector#(2, MemReadEngineServer#(64)) readEngine, Vector#(2, MemWriteEngineServer#(64)) writeEngine)(SharedMemoryPortal#(64));
    SharedMemoryPipeOut#(64,numRequests) pipeOut <- mkSharedMemoryPipeOut(readEngine, writeEngine);
-   mapM_(uncurry(mkConnection), zip(pipeOut.data, portal.requests));
+   SerialPortalDemux#(numRequests) demux <- mkSerialPortalDemux(Method);
+   mkConnection(pipeOut.data, demux.inputPipe);
+   mapM_(uncurry(mkConnection), zip(demux.data, portal.requests));
 
    interface SharedMemoryPortalConfig cfg = pipeOut.cfg;
 endmodule

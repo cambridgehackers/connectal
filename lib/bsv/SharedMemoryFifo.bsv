@@ -35,7 +35,7 @@ import ConnectalMemory::*;
 
 interface SharedMemoryPipeOut#(numeric type dataBusWidth, numeric type pipeCount);
    interface SharedMemoryPortalConfig cfg;
-   interface Vector#(pipeCount, PipeOut#(Bit#(32))) data;
+   interface PipeOut#(Bit#(32)) data;
 endinterface
 interface SharedMemoryPipeIn#(numeric type dataBusWidth);
    interface SharedMemoryPortalConfig cfg;
@@ -73,7 +73,7 @@ module mkSharedMemoryPipeOut#(Vector#(2, MemReadEngineServer#(64)) readEngine, V
    Reg#(Bool)     readyReg   <- mkReg(False);
    MIMOConfiguration mimoConfig = defaultValue;
    MIMO#(2,1,2,Bit#(32)) readMimo <- mkMIMO(mimoConfig);
-   Vector#(pipeCount, FIFOF#(Bit#(32))) dataFifo <- replicateM(mkFIFOF);
+   FIFOF#(Bit#(32)) dataFifo <- mkFIFOF();
 
    let verbose = False;
 
@@ -143,11 +143,15 @@ module mkSharedMemoryPipeOut#(Vector#(2, MemReadEngineServer#(64)) readEngine, V
       let hdr = vec[0];
       let methodId = hdr[31:16];
       let messageWords = hdr[15:0];
-      methodIdReg <= methodId;
+
       if (verbose)
          $display("receiveMessageHeader hdr=%x methodId=%x messageWords=%d wordCount=%d", hdr, methodId, messageWords, countReg);
+
+      methodIdReg <= methodId;
       countReg <= countReg - 1;
       messageWordsReg <= messageWords - 1;
+      dataFifo.enq(hdr);
+
       if (hdr == 0) begin
          if (countReg == 1)
             state <= UpdateRdPtr;
@@ -175,7 +179,7 @@ module mkSharedMemoryPipeOut#(Vector#(2, MemReadEngineServer#(64)) readEngine, V
       if (verbose)
          $display("receiveMessage data=%x messageWords=%d wordCount=%d", data, messageWordsReg, countReg);
       if (methodIdReg != 16'hFFFF)
-         dataFifo[methodIdReg].enq(data);
+         dataFifo.enq(data);
       messageWordsReg <= messageWordsReg - 1;
       countReg <= countReg - 1;
       if (countReg <= 1)
@@ -206,7 +210,7 @@ module mkSharedMemoryPipeOut#(Vector#(2, MemReadEngineServer#(64)) readEngine, V
          readyReg <= True;
       endmethod
    endinterface
-   interface data = map(toPipeOut, dataFifo);
+   interface data = toPipeOut(dataFifo);
 endmodule
 
 module mkSharedMemoryPipeIn#(PipeOut#(Bit#(32)) pipe,
