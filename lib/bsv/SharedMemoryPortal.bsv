@@ -176,7 +176,8 @@ module mkSerialPortalMux(SerialPortalMux#(pipeCount));
    let clock <- exposeCurrentClock;
    let reset <- exposeCurrentReset;
    Reg#(Bit#(16)) messageWordsReg <- mkReg(0);
-   Reg#(Bit#(16)) methodIdReg <- mkReg(0);
+   Reg#(Bit#(16)) readyChannelReg <- mkReg(0);
+   Reg#(Bool)     interruptStatusReg <- mkReg(False);
    Reg#(Bool) paddingReg <- mkReg(False);
    Reg#(SerialPortalState) state <- mkReg(Idle);
    Reg#(Bit#(32)) sglIdReg <- mkReg(0);
@@ -203,18 +204,23 @@ module mkSerialPortalMux(SerialPortalMux#(pipeCount));
    end
 
    rule idle if (state == Idle);
-      state <= MessageHeader;
-      stateProbe <= MessageHeader;
+      readyChannelReg <= readyChannel;
+      interruptStatusReg <= interruptStatus;
+      SerialPortalState nextState = Idle;
+      if (interruptStatus)
+	 nextState = MessageHeader;
+
+      state <= nextState;
+      stateProbe <= nextState;
    endrule
 
-   rule sendHeader if (state == MessageHeader && interruptStatus);
-      Bit#(32) hdr <- toGet(inputFifos[readyChannel]).get();
+   rule sendHeader if (state == MessageHeader && interruptStatusReg);
+      Bit#(32) hdr <- toGet(inputFifos[readyChannelReg]).get();
       Bit#(16) totalWords = hdr[15:0];
       let messageWords = totalWords-1;
       messageWordsProbe <= messageWords;
 
       messageWordsReg <= messageWords;
-      methodIdReg <= readyChannel;
       outputFifo.enq(hdr);
       state <= MessageBody;
       stateProbe <= MessageBody;
@@ -223,12 +229,12 @@ module mkSerialPortalMux(SerialPortalMux#(pipeCount));
 
    rule sendMessage if (state == MessageBody);
       messageWordsReg <= messageWordsReg - 1;
-      let v <- toGet(inputFifos[methodIdReg]).get();
+      let v <- toGet(inputFifos[readyChannelReg]).get();
       outputFifo.enq(v);
       $display("sendMessage v=%h messageWords=%d paddingReg=%d", v, messageWordsReg, paddingReg);
       if (messageWordsReg == 1) begin
-         state <= MessageHeader;
-	 stateProbe <= MessageHeader;
+         state <= Idle;
+	 stateProbe <= Idle;
       end
       messageDataProbe <= v;
    endrule
