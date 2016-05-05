@@ -70,6 +70,7 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
       long len = sg->length;
 #elif defined(SIMULATION)
   long object_len = portalmem_sizes[fd];
+  object_len = ((object_len + 4095) & ~4095l);
   for (i = 0; object_len > 0; i++) {
     long addr = size_accum;
     long len = object_len;
