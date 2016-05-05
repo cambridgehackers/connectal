@@ -409,12 +409,13 @@ int portalAlloc(size_t size, int cached)
       char fname[128];
       snprintf(fname, sizeof(fname), "/tmp/portalmem-%d-%d.bin", getpid(), portalmem_number++);
       fd = open(fname, O_RDWR|O_CREAT, 0600);
-      fprintf(stderr, "%s:%d fname=%s fd=%d\n", __FUNCTION__, __LINE__, fname, fd);
+      if (fd < 0)
+	fprintf(stderr, "ERROR %s:%d fname=%s fd=%d\n", __FUNCTION__, __LINE__, fname, fd);
       unlink(fname);
       lseek(fd, size, SEEK_SET);
-      size_t rc = write(fd, (void*)fname, size);
-      if (rc != size)
-	fprintf(stderr, "%s:%d fname=%s fd=%d wrote %ld bytes\n", __FUNCTION__, __LINE__, fname, fd, rc);
+      size_t bytesWritten = write(fd, (void*)fname, 512);
+      if (bytesWritten != size)
+	fprintf(stderr, "ERROR %s:%d fname=%s fd=%d wrote %ld bytes\n", __FUNCTION__, __LINE__, fname, fd, bytesWritten);
       portalmem_sizes[fd] = size;
     }
 #endif
@@ -436,7 +437,10 @@ void *portalMmap(int fd, size_t size)
     fput(fmem);
     return retptr;
 #else      ///////////////////////// userspace version
-    return mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
+    void *mapped = mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
+    if (mapped == MAP_FAILED)
+      fprintf(stderr, "ERROR: portalMmap fd=%d size=%ld mapped=%p\n", fd, size, mapped);
+    return mapped;
 #endif
 }
 int portalMunmap(void *addr, size_t size)
