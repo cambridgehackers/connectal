@@ -23,7 +23,7 @@
 #define PAGE_SHIFT4 16
 #define PAGE_SHIFT8 20
 #define PAGE_SHIFT12 24
-static int shifts[] = {PAGE_SHIFT12, PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0};
+static int shifts[] = {PAGE_SHIFT12, PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0};
 
 #include "dmaManager.h"
 #include "drivers/portalmem/portalmem.h" // PortalAlloc
