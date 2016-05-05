@@ -273,19 +273,19 @@ endif # bluesim
 endif # connectal_shared
 
 
-$(DTOP)/lib/%.o: $(CONNECTALDIR)/cpp/%.c
-	mkdir -p $(DTOP)/lib
-	gcc -c $(SIM_CFLAGS) -O1 -o $(DTOP)/lib/$(*).o $<
-$(DTOP)/lib/%.o: $(CONNECTALDIR)/cpp/%.cpp
-	mkdir -p $(DTOP)/lib
-	g++ -c $(SIM_CXXFLAGS) -O1 -o $(DTOP)/lib/$(*).o $<
-$(DTOP)/lib/%.o: jni/%.c
-	mkdir -p $(DTOP)/lib
-	gcc -c $(SIM_CFLAGS) -O1 -o $(DTOP)/lib/$(*).o $<
-$(DTOP)/lib/%.o: jni/%.cpp
-	mkdir -p $(DTOP)/lib
-	g++ -c $(SIM_CXXFLAGS) -O1 -o $(DTOP)/lib/$(*).o $<
+define SIM_C_RULE
+$1/$(notdir $(basename $2)).o: $2
+	mkdir -p $1
+	gcc -c $(SIM_CFLAGS) -O1 -o $1/$(notdir $(basename $2)).o $2
+endef
+define SIM_CXX_RULE
+$1/$(notdir $(basename $2)).o: $2
+	mkdir -p $1
+	g++ -c $(SIM_CXXFLAGS) -O1 -o $1/$(notdir $(basename $2)).o $2
+endef
 
+$(foreach src, $(filter %.c, $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)), $(eval $(call SIM_C_RULE, $(DTOP)/lib, $(src))))
+$(foreach src, $(filter %.cpp, $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)), $(eval $(call SIM_CXX_RULE, $(DTOP)/lib, $(src))))
 SIM_OBJECTS = $(addprefix $(DTOP)/lib/, $(addsuffix .o, $(basename $(notdir $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)))))
 
 ifneq ($(VIVADO), )
