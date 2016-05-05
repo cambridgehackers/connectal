@@ -30,6 +30,19 @@
 int main(int argc, const char **argv)
 {
   fprintf(stderr, "%s %s\n", __DATE__, __TIME__);
+  const char *charMapFilename = "../jregexp.charMap";
+  const char *stateMapFilename = "../jregexp.stateMap";
+  const char *stateTransitionsFilename = "../jregexp.stateTransitions";
+  const char *testFilename = "../test.bin";
+  if (argc >= 4) {
+    charMapFilename = argv[1];
+    stateMapFilename = argv[2];
+    stateTransitionsFilename = argv[3];
+    testFilename = argv[4];
+  }
+  fprintf(stderr, "Using charMap %s stateMap %s stateTransitions %s test %s\n",
+	  charMapFilename, stateMapFilename, stateTransitionsFilename, testFilename);
+
   RegexpRequestProxy *device = new RegexpRequestProxy(IfcNames_RegexpRequestS2H);
   DmaManager *hostDma = platformInit();
   RegexpIndication *deviceIndication = new RegexpIndication(IfcNames_RegexpIndicationH2S);
@@ -52,9 +65,9 @@ int main(int argc, const char **argv)
     P stateMapP;
     P stateTransitionsP;
     
-    readfile("../jregexp.charMap", &charMapP);
-    readfile("../jregexp.stateMap", &stateMapP);
-    readfile("../jregexp.stateTransitions", &stateTransitionsP);
+    readfile(charMapFilename, &charMapP);
+    readfile(stateMapFilename, &stateMapP);
+    readfile(stateTransitionsFilename, &stateTransitionsP);
 
     portalCacheFlush(charMapP.alloc, charMapP.mem, charMapP.length, 1);
     portalCacheFlush(stateMapP.alloc, stateMapP.mem, stateMapP.length, 1);
@@ -65,7 +78,7 @@ int main(int argc, const char **argv)
       device->setup(stateMapP.ref, stateMapP.length);
       device->setup(stateTransitionsP.ref, stateTransitionsP.length);
 
-      readfile("../test.bin", &haystackP[i]);
+      readfile(testFilename, &haystackP[i]);
       portalCacheFlush(haystackP[i].alloc, haystackP[i].mem, haystackP[i].length, 1);
 
       if(i==0)
