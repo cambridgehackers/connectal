@@ -52,9 +52,9 @@ int main(int argc, const char **argv)
     P stateMapP;
     P stateTransitionsP;
     
-    readfile("jregexp.charMap", &charMapP);
-    readfile("jregexp.stateMap", &stateMapP);
-    readfile("jregexp.stateTransitions", &stateTransitionsP);
+    readfile("../jregexp.charMap", &charMapP);
+    readfile("../jregexp.stateMap", &stateMapP);
+    readfile("../jregexp.stateTransitions", &stateTransitionsP);
 
     portalCacheFlush(charMapP.alloc, charMapP.mem, charMapP.length, 1);
     portalCacheFlush(stateMapP.alloc, stateMapP.mem, stateMapP.length, 1);
