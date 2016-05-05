@@ -23,7 +23,8 @@
 #define PAGE_SHIFT4 16
 #define PAGE_SHIFT8 20
 #define PAGE_SHIFT12 24
-static int shifts[] = {PAGE_SHIFT12, PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0};
+#define NUM_SHIFTS 4
+static int shifts[NUM_SHIFTS+1] = {PAGE_SHIFT12, PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0 /* needed for border computation */};
 
 #include "dmaManager.h"
 #include "drivers/portalmem/portalmem.h" // PortalAlloc
@@ -78,7 +79,7 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
         goto retlab;
     if (!len)
         break;
-    for (j = 0; (unsigned)j < sizeof(shifts)/sizeof(shifts[0]); j++) {
+    for (j = 0; (unsigned)j < NUM_SHIFTS; j++) {
       long size = 1 << shifts[j];
       if (object_len >= size) {
 	len = size;
@@ -93,7 +94,7 @@ int send_fd_to_portal(PortalInternal *device, int fd, int id, int pa_fd)
 #error
 #endif
 
-    for(j = 0; j < 4; j++)
+    for(j = 0; j < NUM_SHIFTS; j++)
         if (len == 1<<shifts[j]) {
           regions[j]++;
           if (addr & ((1L<<shifts[j]) - 1))
