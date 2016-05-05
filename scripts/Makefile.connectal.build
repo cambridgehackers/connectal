@@ -340,22 +340,10 @@ ifneq ($(MODELSIM), )
 MODELSIMDIR=$(realpath $(shell dirname $(MODELSIM))/..)
 VSIM_CFLAGS= $(CFLAGS_PROJECT) -Wa,-W -fPIC -m64 -I"$(MODELSIMDIR)/include" -DSYSTEM_VERILOG -DBOARD_vsim -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -Ijni
 VSIM_CXXFLAGS= $(CXXFLAGS_PROJECT) -Wa,-W -fPIC -m64 -I"$(MODELSIMDIR)/include" -DSYSTEM_VERILOG -DBOARD_vsim -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -Ijni
-VSIM_GENERATED_CFILES = XsimMsgIndication XsimMsgRequest GeneratedCppCallbacks
-VSIM_CFILES = transportSocket transportHardware transportXsim XsimTop poller sock_utils portalPrintf portal BsimDma
-VSIM_OBJECTS = $(foreach c, $(VSIM_CFILES), vsim.dir/xsc/$(c).lnx64.o ) $(foreach c, $(VSIM_GENERATED_CFILES), vsim.dir/xsc/$(c).lnx64.o)
 
-vsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.c
-	mkdir -p vsim.dir/xsc
-	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
-vsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.cpp
-	mkdir -p vsim.dir/xsc
-	g++ -c $(VSIM_CXXFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
-vsim.dir/xsc/%.lnx64.o: jni/%.c
-	mkdir -p vsim.dir/xsc
-	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
-vsim.dir/xsc/%.lnx64.o: jni/%.cpp
-	mkdir -p vsim.dir/xsc
-	g++ -c $(VSIM_CXXFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
+$(foreach src, $(filter %.c, $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)), $(eval $(call SIM_C_RULE, vsim.dir/xsc, $(VSIM_CFLAGS), $(src))))
+$(foreach src, $(filter %.cpp, $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)), $(eval $(call SIM_CXX_RULE, vsim.dir/xsc, $(VSIM_CXXFLAGS), $(src))))
+VSIM_OBJECTS = $(addprefix vsim.dir/xsc, $(addsuffix .o, $(basename $(notdir $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)))))
 
 VSIM_DEFINES = $(subst -D ,+define+,$(BSVDEFINES))
 VSIM_SV = $(addprefix -sv $(CONNECTALDIR)/verilog/, xsimtop.sv XsimDmaReadWrite.sv XsimLink.sv XsimSink.sv XsimSource.sv)
