@@ -113,8 +113,8 @@ void platformInitOnce(void)
     hostMemServerIndication = new MemServerIndication(hostMemServerRequest, PlatformIfcNames_MemServerIndicationH2S, PLATFORM_TILE);
     mmuIndication = new MMUIndication(dma, PlatformIfcNames_MMUIndicationH2S, PLATFORM_TILE);
 
-#ifdef FPGA0_CLOCK_FREQ
-    long req_freq = FPGA0_CLOCK_FREQ;
+#ifdef MainClockPeriod
+    long req_freq = (long)(1e9 / MainClockPeriod);
     long freq = 0;
     setClockFrequency(0, req_freq, &freq);
     fprintf(stderr, "Requested FCLK[0]=%ld actually %ld\n", req_freq, freq);
