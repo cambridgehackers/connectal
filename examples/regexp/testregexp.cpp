@@ -65,7 +65,7 @@ int main(int argc, const char **argv)
       device->setup(stateMapP.ref, stateMapP.length);
       device->setup(stateTransitionsP.ref, stateTransitionsP.length);
 
-      readfile("test.bin", &haystackP[i]);
+      readfile("../test.bin", &haystackP[i]);
       portalCacheFlush(haystackP[i].alloc, haystackP[i].mem, haystackP[i].length, 1);
 
       if(i==0)
