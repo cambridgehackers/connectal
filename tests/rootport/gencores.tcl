@@ -80,4 +80,5 @@ proc fpgamake_ipcore {core_name core_version ip_name params} {
     }
 }
 
-fpgamake_ipcore axi_pcie 2.7 axi_pcie_rp [list CONFIG.INCLUDE_RC {Root_Port_of_PCI_Express_Root_Complex} CONFIG.NO_OF_LANES {X4} CONFIG.MAX_LINK_SPEED {2.5_GT/s} CONFIG.BAR0_SCALE {Gigabytes} CONFIG.S_AXI_DATA_WIDTH {64} CONFIG.M_AXI_DATA_WIDTH {64} CONFIG.DEVICE_ID {0x7022} CONFIG.BASE_CLASS_MENU {Bridge_device} CONFIG.SUB_CLASS_INTERFACE_MENU {InfiniBand_to_PCI_host_bridge} CONFIG.BAR0_SIZE {1}]
+fpgamake_ipcore axi_pcie 2.7 axi_pcie_rp [list CONFIG.INCLUDE_RC {Root_Port_of_PCI_Express_Root_Complex} CONFIG.NO_OF_LANES {X4} CONFIG.MAX_LINK_SPEED {2.5_GT/s} CONFIG.BAR0_SCALE {Gigabytes} CONFIG.S_AXI_DATA_WIDTH {64} CONFIG.M_AXI_DATA_WIDTH {64} CONFIG.DEVICE_ID {0x7022} CONFIG.BASE_CLASS_MENU {Bridge_device} CONFIG.SUB_CLASS_INTERFACE_MENU {InfiniBand_to_PCI_host_bridge} CONFIG.BAR0_SIZE {1} CONFIG.NUM_MSI_REQ {5}]
+
