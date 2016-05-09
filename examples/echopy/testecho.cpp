@@ -29,7 +29,7 @@ static PortalInternal dummy;
 
 #define STUB \
 { \
-    printf("[%s:%d]\n", __FUNCTION__, __LINE__); \
+    fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);	\
     exit(-1); \
 }
 static volatile unsigned int *dummyMAPCHANNELIND(struct PortalInternal *pint, unsigned int v)
