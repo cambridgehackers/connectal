@@ -24,11 +24,14 @@
 #include "portal.h"
 
 static int trace_json;// = 1;
-void connectalJsonEncode(char *datap, void *binarydata, ConnectalMethodJsonInfo *info)
+void connectalJsonEncode(char *datap, void *binarydata, ConnectalMethodJsonInfo *info, int json_arg_vector)
 {
     ConnectalParamJsonInfo *iparam = info->param;
     char *data = (char *)datap;
-    data += sprintf(data, "{\"name\":\"%s\"", info->name);
+    if (!json_arg_vector)
+	data += sprintf(data, "{\"name\":\"%s\"", info->name);
+    else
+	data += sprintf(data, "[\"%s\"", info->name);
     while(iparam->name) {
         uint8_t  tmp8;
         uint16_t tmp16;
@@ -39,7 +42,10 @@ void connectalJsonEncode(char *datap, void *binarydata, ConnectalMethodJsonInfo 
 	int32_t stmp32;
 	int64_t stmp64;
         int      tmpint;
-        data += sprintf(data, ",\"%s\":", iparam->name);
+	if (!json_arg_vector)
+	    data += sprintf(data, ",\"%s\":", iparam->name);
+	else
+	    data += sprintf(data, ", ");
         switch(iparam->itype) {
 	case ITYPE_int8_t:
             stmp8 = *(int8_t *)((unsigned long)binarydata + iparam->offset);
@@ -83,7 +89,10 @@ void connectalJsonEncode(char *datap, void *binarydata, ConnectalMethodJsonInfo 
         }
         iparam++;
     }
-    data += sprintf(data, "}");
+    if (!json_arg_vector)
+	data += sprintf(data, "}");
+    else
+	data += sprintf(data, "]");
     if (trace_json)
         fprintf(stderr, "[%s] num %d message '%s'\n", __FUNCTION__, iparam->offset, (char *)datap);
     int slength = strlen(datap);
@@ -97,7 +106,7 @@ void connectalJsonEncodeAndSend(PortalInternal *pint, void *binarydata, Connecta
 {
     ConnectalParamJsonInfo *iparam = info->param;
     char *jsonp = (char *)pint->transport->mapchannelInd(pint, 0);
-    connectalJsonEncode(jsonp, binarydata, info); 
+    connectalJsonEncode(jsonp, binarydata, info, pint->json_arg_vector);
     int rounded_size = strlen(jsonp);
     pint->transport->send(pint, (volatile unsigned int*)jsonp, (iparam->offset << 16) | (1 + rounded_size), -1);
 }

@@ -137,6 +137,7 @@ typedef struct PortalInternal {
     void                   *shared_dma;
     struct PortalInternal  *shared_cfg;
     int                    poller_register;
+    int                    json_arg_vector;
 } PortalInternal;
 
 typedef struct PortalMuxHandler {
