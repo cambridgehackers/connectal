@@ -29,10 +29,11 @@ def call_say(a):
 
 def call_say2(a, b):
     connectal.EchoRequest_say2(ctypes.c_void_p(treq), a, b)
+    sem_heard2.acquire()
 
 def heard(v):
     print 'heard called!!!', v
-    call_say2(v, 2*v);
+    sem_heard2.release()
 
 def heard2(a, b):
     print 'heard2 called!!!', a, b
@@ -40,7 +41,7 @@ def heard2(a, b):
 
 def callback(a):
     dict = json.loads(a.strip())
-    #print 'callback called!!!', a, dict
+    print 'callback called!!!', a, dict
     if dict['name'] == 'heard':
         heard(dict['v'])
     elif dict['name'] == 'heard2':
@@ -48,7 +49,8 @@ def callback(a):
 
 def worker():
     while not stopPolling:
-        connectal.event_hardware(ctypes.c_void_p(tind))
+        #connectal.event_hardware(ctypes.c_void_p(tind))
+        connectal.event_xsim(ctypes.c_void_p(tind))
 
 stopPolling = False
 connectal.set_callback(ctypes.py_object(callback))
