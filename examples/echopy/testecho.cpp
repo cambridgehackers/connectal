@@ -94,6 +94,8 @@ void *tindication()
   void *parent = NULL;
     init_portal_internal(&eindication, IfcNames_EchoIndicationH2S, DEFAULT_TILE,
 			 (PORTAL_INDFUNC) EchoIndication_handleMessage, &EchoInd_cbTable, NULL, NULL, parent, EchoIndication_reqinfo);
+    // encode message as vector ["methodname", arg0, arg1, ...]
+    dummy.json_arg_vector = 1;
     return &eindication;
 }
 } // extern "C"

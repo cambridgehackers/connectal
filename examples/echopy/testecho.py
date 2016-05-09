@@ -58,12 +58,10 @@ class Echo:
         self.sem_heard2.release()
 
     def callback(self, a):
-        dict = json.loads(a.strip())
-        print 'callback called!!!', a, dict
-        if dict['name'] == 'heard':
-            self.heard(dict['v'])
-        elif dict['name'] == 'heard2':
-            self.heard2(dict['a'], dict['b'])
+        vec = json.loads(a.strip())
+        print 'callback called!!!', a, vec
+        if hasattr(self, vec[0]):
+            getattr(self, vec[0])(*vec[1:])
 
     def worker(self):
         while not self.stopPolling:
