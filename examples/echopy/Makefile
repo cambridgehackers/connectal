@@ -1,7 +1,8 @@
 CONNECTALDIR?=../..
-INTERFACES = EchoRequest EchoIndication
+S2H_INTERFACES = EchoRequest:Echo.request
+H2S_INTERFACES = Echo:EchoIndication
 
-BSVFILES = Echo.bsv Top.bsv
+BSVFILES = Echo.bsv
 CPPFILES = testecho.cpp
 CONNECTALFLAGS += --shared
 
