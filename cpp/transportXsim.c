@@ -93,7 +93,7 @@ static volatile unsigned int *mapchannel_req_xsim(struct PortalInternal *pint, u
     return pint->transport->mapchannelInd(pint, v);
 }
 
-static int event_xsim(struct PortalInternal *pint)
+int event_xsim(struct PortalInternal *pint)
 {
     mcommon.transport->event(&mcommon);
     return -1;
