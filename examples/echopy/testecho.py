@@ -64,8 +64,7 @@ class Echo:
 
     def worker(self):
         while not self.stopPolling:
-            #connectal.event_hardware(ctypes.c_void_p(self.tind))
-            connectal.event_xsim(ctypes.c_void_p(self.tind))
+            connectal.portal_event(ctypes.c_void_p(self.tind))
 
 echo = Echo()
 
