@@ -21,7 +21,10 @@
 #
 
 import ctypes, json, os, sys, threading, time
-connectal = ctypes.CDLL('./connectal.so')
+if os.environ.has_key('LD_LIBRARY_PATH'):
+    connectal = ctypes.CDLL('connectal.so')
+else:
+    connectal = ctypes.CDLL('./connectal.so')
 
 class Echo:
     def __init__(self):

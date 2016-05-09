@@ -4,6 +4,7 @@ H2S_INTERFACES = Echo:EchoIndication
 
 BSVFILES = Echo.bsv
 CPPFILES = testecho.cpp
+CPPFILES2= runechopy.cpp
 CONNECTALFLAGS += --shared
 
 include $(CONNECTALDIR)/Makefile.connectal
