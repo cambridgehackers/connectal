@@ -84,14 +84,16 @@ void set_callback(PyObject *param)
 
 void *trequest()
 {
-    init_portal_internal(&erequest, IfcNames_EchoRequest, DEFAULT_TILE, NULL, NULL, NULL, NULL, EchoRequest_reqinfo);
+  void *parent = NULL;
+  init_portal_internal(&erequest, IfcNames_EchoRequestS2H, DEFAULT_TILE, NULL, NULL, NULL, NULL, parent, EchoRequest_reqinfo);
 //void init_portal_internal(PortalInternal *pint, int id, int tile, PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *transport, void *param, uint32_t reqinfo);
     return &erequest;
 }
 void *tindication()
 {
-    init_portal_internal(&eindication, IfcNames_EchoIndication, DEFAULT_TILE,
-        (PORTAL_INDFUNC) EchoIndication_handleMessage, &EchoInd_cbTable, NULL, NULL, EchoIndication_reqinfo);
+  void *parent = NULL;
+    init_portal_internal(&eindication, IfcNames_EchoIndicationH2S, DEFAULT_TILE,
+			 (PORTAL_INDFUNC) EchoIndication_handleMessage, &EchoInd_cbTable, NULL, NULL, parent, EchoIndication_reqinfo);
     return &eindication;
 }
 } // extern "C"
