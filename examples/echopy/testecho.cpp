@@ -60,14 +60,14 @@ PortalTransportFunctions callbackTransport = {
 static int heard_cb(struct PortalInternal *p,uint32_t v) {
     EchoIndicationJson_heard (&dummy, v);
     PyGILState_STATE gstate = PyGILState_Ensure();
-    PyEval_CallFunction(callbackFunction, "(s)", dummy.map_base, NULL);
+    PyEval_CallMethod(callbackFunction, "callback", "(s)", dummy.map_base, NULL);
     PyGILState_Release(gstate);
     return 0;
 }
 static int heard2_cb(struct PortalInternal *p,uint16_t a, uint16_t b) {
     EchoIndicationJson_heard2 (&dummy, a, b);
     PyGILState_STATE gstate = PyGILState_Ensure();
-    PyEval_CallFunction(callbackFunction, "(s)", dummy.map_base, NULL);
+    PyEval_CallMethod(callbackFunction, "callback", "(s)", dummy.map_base, NULL);
     PyGILState_Release(gstate);
     return 0;
 }
