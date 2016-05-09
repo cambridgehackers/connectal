@@ -282,6 +282,7 @@ void enableint_hardware(struct PortalInternal *pint, int val);
 int busy_hardware(struct PortalInternal *pint, unsigned int v, const char *str);
 int notfull_hardware(PortalInternal *pint, unsigned int v);
 int event_hardware(struct PortalInternal *pint);
+int event_xsim(struct PortalInternal *pint);
 volatile unsigned int *mapchannel_hardware(struct PortalInternal *pint, unsigned int v);
 volatile unsigned int *mapchannel_socket(struct PortalInternal *pint, unsigned int v);
 int portal_mux_handler(struct PortalInternal *p, unsigned int channel, int messageFd);
