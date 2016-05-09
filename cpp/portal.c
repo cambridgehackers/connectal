@@ -111,6 +111,15 @@ int portal_disconnect(struct PortalInternal *pint)
     return 0;
 }
 
+int portal_event(struct PortalInternal *pint)
+{
+#ifdef SIMULATION
+    return event_xsim(pint);
+#else
+    return event_hardware(pint);
+#endif
+}
+
 #ifdef ZYNQ
 #define DEV_CONNECTAL_SIGNATURE PORTAL_SIGNATURE
 #else
