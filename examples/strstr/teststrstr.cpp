@@ -43,7 +43,7 @@ int main(int argc, const char **argv)
     int needleAlloc;
     int haystackAlloc;
     int mpNextAlloc;
-    unsigned int alloc_len = 16 << 8;
+    unsigned int alloc_len = 4096;
     
     needleAlloc = portalAlloc(alloc_len, 0);
     mpNextAlloc = portalAlloc(alloc_len, 0);
@@ -86,14 +86,15 @@ int main(int argc, const char **argv)
     portalCacheFlush(needleAlloc, needle, alloc_len, 1);
     portalCacheFlush(mpNextAlloc, mpNext, alloc_len, 1);
 
-    unsigned int ref_needleAlloc = dma->reference(needleAlloc);
-    unsigned int ref_mpNextAlloc = dma->reference(mpNextAlloc);
-    unsigned int ref_haystackAlloc = dma->reference(haystackAlloc);
+    unsigned int ref_needle = dma->reference(needleAlloc);
+    unsigned int ref_mpNext = dma->reference(mpNextAlloc);
+    unsigned int ref_haystack = dma->reference(haystackAlloc);
 
-    fprintf(stderr, "about to invoke device\n");
-    device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
+    fprintf(stderr, "about to invoke device ref_needle=%d ref_mpNext=%d ref_haystack=%d\n",
+	    ref_needle, ref_mpNext, ref_haystack);
+    device->setup(ref_needle, ref_mpNext, needle_len);
     portalTimerStart(0);
-    device->search(ref_haystackAlloc, haystack_len);
+    device->search(ref_haystack, haystack_len);
     deviceIndication->wait();
     //uint64_t cycles = portalTimerLap(0);
     //uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);
@@ -110,13 +111,13 @@ int main(int argc, const char **argv)
     int haystackAlloc;
     int mpNextAlloc;
     const char *needle_text = "I have control\n";
-#ifndef SIMULATION
-    int BENCHMARK_INPUT_SIZE = 16 << 18;
-#else
+#ifdef SIMULATION
     int BENCHMARK_INPUT_SIZE = 16 << 15;
+#else
+    int BENCHMARK_INPUT_SIZE = 16 << 18;
 #endif
     int haystack_alloc_len = BENCHMARK_INPUT_SIZE;
-    int needle_alloc_len = strlen(needle_text);
+    int needle_alloc_len = (strlen(needle_text)+4095)&~4095l;
     int mpNext_alloc_len = needle_alloc_len*4;
     
     needleAlloc = portalAlloc(needle_alloc_len, 0);
@@ -127,9 +128,9 @@ int main(int argc, const char **argv)
     char *haystack = (char *)portalMmap(haystackAlloc, haystack_alloc_len);
     int *mpNext = (int *)portalMmap(mpNextAlloc, mpNext_alloc_len);
 
-    int ref_needleAlloc = dma->reference(needleAlloc);
-    int ref_haystackAlloc = dma->reference(haystackAlloc);
-    int ref_mpNextAlloc = dma->reference(mpNextAlloc);
+    int ref_needle = dma->reference(needleAlloc);
+    int ref_haystack = dma->reference(haystackAlloc);
+    int ref_mpNext = dma->reference(mpNextAlloc);
 
     int fp = open("/dev/urandom", O_RDONLY);
     int rv = read(fp, haystack, BENCHMARK_INPUT_SIZE);
@@ -150,6 +151,9 @@ int main(int argc, const char **argv)
     for(int i = 2; i < needle_len+1; i++)
       assert(mpNext[i] == border[i-1]+1);
 
+    fprintf(stderr, "about to invoke device ref_needle=%d ref_mpNext=%d ref_haystack=%d needle_len=%d needle_alloc_len=%d haystack_len=%d\n",
+	    ref_needle, ref_mpNext, ref_haystack, needle_len, needle_alloc_len, haystack_len);
+
     portalTimerStart(0);
     MP(needle, haystack, mpNext, needle_len, haystack_len, &sw_match_cnt);
     uint64_t sw_cycles = portalTimerLap(0);
@@ -158,10 +162,9 @@ int main(int argc, const char **argv)
     portalCacheFlush(needleAlloc, needle, needle_alloc_len, 1);
     portalCacheFlush(mpNextAlloc, mpNext, mpNext_alloc_len, 1);
 
-    fprintf(stderr, "about to invoke device\n");
-    device->setup(ref_needleAlloc, ref_mpNextAlloc, needle_len);
+    device->setup(ref_needle, ref_mpNext, needle_len);
     portalTimerStart(0);
-    device->search(ref_haystackAlloc, haystack_len);
+    device->search(ref_haystack, haystack_len);
     deviceIndication->wait();
     //uint64_t hw_cycles = portalTimerLap(0);
     //uint64_t beats = hostMemServerIndication->getMemoryTraffic(ChannelType_Read);

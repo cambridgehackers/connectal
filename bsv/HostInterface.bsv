@@ -101,9 +101,8 @@ import Pcie2EndpointX7 :: *;
 import PCIEWRAPPER3      :: *;
 import Pcie3EndpointX7   :: *;
 `endif
-`elsif ALTERA
-import PcieEndpointS5    :: *;
-`elsif VSIM
+`endif
+`ifdef ALTERA
 import PcieEndpointS5    :: *;
 `endif
 `endif
@@ -140,9 +139,8 @@ interface PcieHostTop;
 `endif
    interface Clock tpci_clk_100mhz_buf;
    interface PcieEndpointX7#(PcieLanes) tep7;
-`elsif ALTERA
-   interface PcieEndpointS5#(PcieLanes) tep7;
-`elsif VSIM
+`endif
+`ifdef ALTERA
    interface PcieEndpointS5#(PcieLanes) tep7;
 `endif
    interface Clock pcieClock;

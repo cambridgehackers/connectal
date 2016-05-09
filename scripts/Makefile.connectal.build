@@ -68,8 +68,9 @@ BSCOPTFLAGS= -show-schedule -aggressive-conditions -show-method-bvi
 BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj
 BSCFLAGS_COMMON += $(BSCWARNFLAGS) $(BSCOPTFLAGS) $(BSCPATHFLAGS) --wait-for-license
 PROF_FLAGS= #-pg
-export SIM_CXXFLAGS= -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -D SIMULATION $(BSVDEFINES) -O $(PROF_FLAGS)
-SIM_CXX_COMMON = $(foreach f, TlpReplay.cpp BsimCtrl.cpp BsimDma.cpp sock_utils.c portalPrintf.c XsimTop.cpp poller.cpp transportSocket.c transportHardware.c transportXsim.c portal.c, $(CONNECTALDIR)/cpp/$f)
+export SIM_CFLAGS= $(CFLAGS_PROJECT) -fPIC -Ijni -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -D SIMULATION $(BSVDEFINES) -O $(PROF_FLAGS)
+export SIM_CXXFLAGS= $(CXXFLAGS_PROJECT) -fPIC -Ijni -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -D SIMULATION $(BSVDEFINES) -O $(PROF_FLAGS)
+SIM_CXX_COMMON = $(addprefix $(CONNECTALDIR)/cpp/, TlpReplay.cpp BsimDma.cpp sock_utils.c portalPrintf.c XsimTop.cpp poller.cpp transportSocket.c transportHardware.c transportXsim.c portal.c)
 SIM_CXX_LOCAL = $(SIM_CXX_COMMON) $(DTOP)/jni/XsimMsgRequest.c $(DTOP)/jni/XsimMsgIndication.c $(DTOP)/jni/GeneratedCppCallbacks.cpp
 
 ifneq ($(ALTERA),)
@@ -271,40 +272,55 @@ endif
 endif # bluesim
 endif # connectal_shared
 
+
+define SIM_C_RULE
+$1/$(notdir $(basename $3)).o: $3
+	mkdir -p $1
+	gcc -c $2 -O1 -o $1/$(notdir $(basename $3)).o $3
+endef
+define SIM_CXX_RULE
+$1/$(notdir $(basename $3)).o: $3
+	mkdir -p $1
+	g++ -c $2 -O1 -o $1/$(notdir $(basename $3)).o $3
+endef
+
+$(foreach src, $(filter %.c, $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)), $(eval $(call SIM_C_RULE, $(DTOP)/lib, $(SIM_CFLAGS), $(src))))
+$(foreach src, $(filter %.cpp, $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)), $(eval $(call SIM_CXX_RULE, $(DTOP)/lib, $(SIM_CXXFLAGS), $(src))))
+SIM_OBJECTS = $(addprefix $(DTOP)/lib/, $(addsuffix .o, $(basename $(notdir $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)))))
+
 ifneq ($(VIVADO), )
 VIVADODIR=$(realpath $(shell dirname $(VIVADO))/..)
 XSC_CFLAGS= -Wa,-W -fPIC -m64  -I"$(VIVADODIR)/data/xsim/include" -DSYSTEM_VERILOG -DBOARD_xsim -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -Ijni
-
-XSIM_GENERATED_CFILES = XsimMsgIndication XsimMsgRequest GeneratedCppCallbacks
-XSIM_CFILES = transportSocket transportHardware transportXsim XsimTop poller sock_utils portalPrintf portal BsimDma BsimCtrl
-XSIM_OBJECTS = $(foreach c, $(XSIM_CFILES), xsim.dir/xsc/$(c).lnx64.o ) $(foreach c, $(XSIM_GENERATED_CFILES), xsim.dir/xsc/$(c).lnx64.o)
-
-xsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.c
-	mkdir -p xsim.dir/xsc
-	gcc -c $(XSC_CFLAGS) -O1 -o xsim.dir/xsc/$(*).lnx64.o $<
-xsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.cpp
-	mkdir -p xsim.dir/xsc
-	gcc -c $(XSC_CFLAGS) -O1 -o xsim.dir/xsc/$(*).lnx64.o $<
-xsim.dir/xsc/%.lnx64.o: jni/%.c
-	mkdir -p xsim.dir/xsc
-	gcc -c $(XSC_CFLAGS) -O1 -o xsim.dir/xsc/$(*).lnx64.o $<
-xsim.dir/xsc/%.lnx64.o: jni/%.cpp
-	mkdir -p xsim.dir/xsc
-	gcc -c $(XSC_CFLAGS) -O1 -o xsim.dir/xsc/$(*).lnx64.o $<
 
 XVLOGDEFINES = $(subst -D,-d,$(BSVDEFINES))
 
 SVLOG = $(addprefix -svlog $(CONNECTALDIR)/verilog/, xsimtop.sv XsimDmaReadWrite.sv XsimLink.sv XsimSink.sv XsimSource.sv)
 
-xsim: verilog $(XSIM_OBJECTS)
-	-test -f xsim/vlog.prj && sed -i s/xil_defaultlib/work/ xsim/*.prj
-	-test -f xsim/vlog.prj && xvlog $(XVLOGFLAGS) -prj xsim/vlog.prj
-	-test -f xsim/vhdl.prj && xvhdl $(XVLOGFLAGS) -prj xsim/vhdl.prj
-	xvlog $(XVLOGFLAGS) $(XVLOGDEFINES) $(VERILOG_PATH:%=--sourcelibdir %) --sourcelibext .v verilog/*.v
-	#xvlog $(XVLOGDEFINES) --sv $(CONNECTALDIR)/verilog/*.sv ## not needed because these all get passed to xelab because they use DPI
-	#xsc -v -cc gcc -compile $(SOURCES)
-	xsc -cc gcc -link $(XSIM_OBJECTS) -o xsimtop
-	xelab -timescale 1ns/1ps --stats $(XVLOGDEFINES) -cc gcc $(SVLOG) --dpiheader XsimTop.h --debug wave -L unisim -L unifast -L unimacro work.xsimtop -sv_lib xsimtop
+XCIDIRS = $(basename $(XCIFILES))
+VLOG_PRJ_FILE = $(wildcard $(addsuffix /xsim/vlog.prj, $(XCIDIRS)))
+VHDL_PRJ_FILE = $(wildcard $(addsuffix /xsim/vhdl.prj, $(XCIDIRS)))
+# phony targets to trigger calls to xvlog and xvhdl
+VLOG_PRJ_BLD  = $(addsuffix .bld, $(VLOG_PRJ_FILE))
+VHDL_PRJ_BLD  = $(addsuffix .bld, $(VHDL_PRJ_FILE))
+
+%/vlog.prj.bld: %/vlog.prj
+	sed -i s/xil_defaultlib/work/ $(*)/vlog.prj
+	xvlog $(XVLOGFLAGS) -prj $(*)/vlog.prj
+
+%/vhdl.prj.bld: %/vhdl.prj
+	sed -i s/xil_defaultlib/work/ $(*)/vhdl.prj
+	xvhdl $(XVLOGFLAGS) -prj $(*)/vhdl.prj
+
+xsim: verilog $(SIM_OBJECTS) $(VLOG_PRJ_BLD) $(VHDL_PRJ_BLD)
+	xvlog $(XVLOGFLAGS) $(XVLOGDEFINES) $(VERILOG_PATH:%=--sourcelibdir %) --sourcelibext .v verilog/*.v $(VERILOG_FILES)
+ifneq ($(VHDL_FILES),)
+	xvhdl $(XVHDLFLAGS) $(VHDL_FILES)
+endif
+	xvlog $(XVLOGDEFINES) --sv $(CONNECTALDIR)/verilog/*.sv ## not needed because these all get passed to xelab because they use DPI
+	ls -l $(SIM_OBJECTS)
+	xsc -v  -cc gcc -link $(SIM_OBJECTS) -o xsimtop || echo xsc failed
+	xelab -timescale 1ns/1ps --stats $(XVLOGDEFINES) -cc gcc $(SVLOG) --dpiheader XsimTop.h --debug wave -L unisim -L unifast -L unimacro work.xsimtop -sv_lib xsimtop || echo xelab failed
+	true
 endif #VIVADO
 
 vlsim: $(DTOP)/obj_dir/vlsim
@@ -322,23 +338,12 @@ $(DTOP)/obj_dir/vlsim: $(DTOP)/obj_dir/vlsim.mk
 
 ifneq ($(MODELSIM), )
 MODELSIMDIR=$(realpath $(shell dirname $(MODELSIM))/..)
-VSIM_CFLAGS= -Wa,-W -fPIC -m64 -I"$(MODELSIMDIR)/include" -DSYSTEM_VERILOG -DBOARD_vsim -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -Ijni
-VSIM_GENERATED_CFILES = XsimMsgIndication XsimMsgRequest GeneratedCppCallbacks
-VSIM_CFILES = transportSocket transportHardware transportXsim XsimTop poller sock_utils portalPrintf portal BsimDma BsimCtrl
-VSIM_OBJECTS = $(foreach c, $(VSIM_CFILES), vsim.dir/xsc/$(c).lnx64.o ) $(foreach c, $(VSIM_GENERATED_CFILES), vsim.dir/xsc/$(c).lnx64.o)
+VSIM_CFLAGS= $(CFLAGS_PROJECT) -Wa,-W -fPIC -m64 -I"$(MODELSIMDIR)/include" -DSYSTEM_VERILOG -DBOARD_vsim -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -Ijni
+VSIM_CXXFLAGS= $(CXXFLAGS_PROJECT) -Wa,-W -fPIC -m64 -I"$(MODELSIMDIR)/include" -DSYSTEM_VERILOG -DBOARD_vsim -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -Ijni
 
-vsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.c
-	mkdir -p vsim.dir/xsc
-	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
-vsim.dir/xsc/%.lnx64.o: $(CONNECTALDIR)/cpp/%.cpp
-	mkdir -p vsim.dir/xsc
-	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
-vsim.dir/xsc/%.lnx64.o: jni/%.c
-	mkdir -p vsim.dir/xsc
-	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
-vsim.dir/xsc/%.lnx64.o: jni/%.cpp
-	mkdir -p vsim.dir/xsc
-	gcc -c $(VSIM_CFLAGS) -O1 -o vsim.dir/xsc/$(*).lnx64.o $<
+$(foreach src, $(filter %.c, $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)), $(eval $(call SIM_C_RULE, vsim.dir/xsc, $(VSIM_CFLAGS), $(src))))
+$(foreach src, $(filter %.cpp, $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)), $(eval $(call SIM_CXX_RULE, vsim.dir/xsc, $(VSIM_CXXFLAGS), $(src))))
+VSIM_OBJECTS = $(addprefix vsim.dir/xsc, $(addsuffix .o, $(basename $(notdir $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)))))
 
 VSIM_DEFINES = $(subst -D ,+define+,$(BSVDEFINES))
 VSIM_SV = $(addprefix -sv $(CONNECTALDIR)/verilog/, xsimtop.sv XsimDmaReadWrite.sv XsimLink.sv XsimSink.sv XsimSource.sv)
@@ -353,7 +358,7 @@ vsim: verilog $(VSIM_OBJECTS)
 	rm -rf work
 	vlib work
 	vlog -timescale 1ns/1ps -dpiheader XsimTop.h $(VSIM_DEFINES) $(VSIM_SV) $(VSIM_LIBRARY_FILES) $(VSIM_MISC_FILES) +libext+.sv+.v $(SV_SEARCH_PATH) $(VERILOG_PATH:%=-y %) -sv verilog/*.v
-	g++ -O -g -I$(DTOP)/jni -shared -fPIC -g -o xsimtop.so $(VSIM_OBJECTS)
+	g++ $(CXXFLAGS_PROJECT) -O -g -I$(DTOP)/jni -shared -fPIC -g -o xsimtop.so $(VSIM_OBJECTS)
 endif #MODELSIM
 
 obj/%.bvi: verilog/%.v
@@ -384,6 +389,7 @@ $(VFILE): $(addprefix obj/, $(patsubst %.bsv, %.bo, $(notdir $(TOPBSVFILE))))
 	@echo BSCVERILOG [$(VFILE)]
 	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -verilog -remove-dollar -g $(MKTOP) $(TOPBSVFILE)
 	$(Q)sed -i 's|// On .*|// timestamp removed|' verilog/*.v
+	$(Q)sed -i 's|  reg.*PROBE[,;]|(* mark_debug="true" *)&|' verilog/*.v 
 	$(Q)sed -i 's|  wire.*PROBE[,;]|(* mark_debug="true" *)&|' verilog/*.v 
 	$(Q)sed -i 's|  wire.*PROBE_VALID[,;]|(* mark_debug="true" *)&|' verilog/*.v 
 
@@ -391,15 +397,15 @@ obj/Makefile: $(OBJMAKEFILE_DEP) syntax.timestamp
 	@mkdir -p obj
 	$(CONNECTALDIR)/scripts/bsvdepend.py -o obj/Makefile $(BSVDEFINES) --bsvpath=$(BSVPATH) --all $(TOPBSVFILE)
 
-$(DTOP)/bin/libconnectal-sim.so: $(SIM_CXX_COMMON) $(SIM_CXX_PROJECT) prepare_bin_target
+$(DTOP)/bin/libconnectal-sim.so: $(SIM_OBJECTS) prepare_bin_target
 	$(Q)mkdir -p $(DTOP)/bin
-	g++ -O -g -I$(DTOP)/jni -shared -fpic $(SIM_CXXFLAGS) -g -o $(DTOP)/bin/libconnectal-sim.so $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)
+	g++ -O -g -I$(DTOP)/jni -shared -fpic $(SIM_CXXFLAGS) -g -o $(DTOP)/bin/libconnectal-sim.so $(SIM_OBJECTS)
 
 bsim: prepare_bin_target $(DTOP)/bin/libconnectal-sim.so
 	$(Q)mkdir -p $(DTOP)/obj verilog
 	@echo BSCBSIM [$(DTOP)]
 	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -D SIMULATION -sim -u -g $(MKTOP) $(TOPBSVFILE)
-	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) $(SIM_CXXFLAGS) -L $(DTOP)/bin  -l connectal-sim -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba
+	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -O -L $(DTOP)/bin  -l connectal-sim -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba
 	$(Q)cp -v generatedbsv/bsim* bin
 
 syntax.timestamp: $(BSVFILES)

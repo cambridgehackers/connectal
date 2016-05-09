@@ -546,7 +546,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       return toPipeOut(changeFifo);
    endmodule
 
-`ifndef FOO
+`ifdef DebugPcieStateMachine
    Vector#(21,Tuple2#(Pcie3CfgType,Bit#(24))) changeValues = vec(
       tuple2(Pcie3Cfg_rq_backpressure, extend(rqBackpressureCount)),
       tuple2(Pcie3Cfg_current_speed, extend(pcie_ep.cfg.current_speed)),
@@ -577,7 +577,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    mkConnection(changePipe[0], toPipeIn(changeFifo), clocked_by pcie_ep.user_clk, reset_by user_reset_n);
 `else
    let cs <- mkChangeSource(tuple2(Pcie3Cfg_rq_backpressure, extend(rqBackpressureCount)), clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   FIFOF#(RegChange) changeFifo <- mkSizedBRAMFIFOF(128, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   FIFOF#(RegChange) changeFifo <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
    mkConnection(cs, toPipeIn(changeFifo), clocked_by pcie_ep.user_clk, reset_by user_reset_n);
 `endif
 

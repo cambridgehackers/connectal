@@ -55,3 +55,6 @@ zc706
 *.png
 *.bit
 *.prm
+zedboard
+miniitx100
+*.pb

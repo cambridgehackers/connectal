@@ -86,9 +86,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
         PORTAL_PRINTF("%s: **initialize portal_%d_%d handler %p cb %p parent %p\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number, handler, cb, parent);
     if (!transport) {
         // Use defaults for transport handling methods
-#ifdef BOARD_bluesim
-        transport = &transportBsim;
-#elif defined(BOARD_xsim) || defined(BOARD_verilator) || defined(BOARD_vsim)
+#ifdef SIMULATION
         transport = &transportXsim;
 #else
         transport = &transportHardware;
@@ -111,6 +109,15 @@ int portal_disconnect(struct PortalInternal *pint)
     if (pint->client_fd_number > 0)
         close(pint->client_fd[--pint->client_fd_number]);
     return 0;
+}
+
+int portal_event(struct PortalInternal *pint)
+{
+#ifdef SIMULATION
+    return event_xsim(pint);
+#else
+    return event_hardware(pint);
+#endif
 }
 
 #ifdef ZYNQ
@@ -411,12 +418,13 @@ int portalAlloc(size_t size, int cached)
       char fname[128];
       snprintf(fname, sizeof(fname), "/tmp/portalmem-%d-%d.bin", getpid(), portalmem_number++);
       fd = open(fname, O_RDWR|O_CREAT, 0600);
-      fprintf(stderr, "%s:%d fname=%s fd=%d\n", __FUNCTION__, __LINE__, fname, fd);
+      if (fd < 0)
+	fprintf(stderr, "ERROR %s:%d fname=%s fd=%d\n", __FUNCTION__, __LINE__, fname, fd);
       unlink(fname);
       lseek(fd, size, SEEK_SET);
-      size_t rc = write(fd, (void*)fname, size);
-      if (rc != size)
-	fprintf(stderr, "%s:%d fname=%s fd=%d wrote %ld bytes\n", __FUNCTION__, __LINE__, fname, fd, rc);
+      size_t bytesWritten = write(fd, (void*)fname, 512);
+      if (bytesWritten != size)
+	fprintf(stderr, "ERROR %s:%d fname=%s fd=%d wrote %ld bytes\n", __FUNCTION__, __LINE__, fname, fd, bytesWritten);
       portalmem_sizes[fd] = size;
     }
 #endif
@@ -438,7 +446,10 @@ void *portalMmap(int fd, size_t size)
     fput(fmem);
     return retptr;
 #else      ///////////////////////// userspace version
-    return mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
+    void *mapped = mmap(0, size, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_SHARED, fd, 0);
+    if (mapped == MAP_FAILED)
+      fprintf(stderr, "ERROR: portalMmap fd=%d size=%ld mapped=%p\n", fd, (long)size, mapped);
+    return mapped;
 #endif
 }
 int portalMunmap(void *addr, size_t size)

@@ -91,6 +91,7 @@ argparser.add_argument('--bsvpath', help='directories to add to bsc search path'
 argparser.add_argument('--mainclockperiod', help='Clock period of default clock, in nanoseconds', type=int, default=10)
 argparser.add_argument('--derivedclockperiod', help='Clock period of derivedClock, in nanoseconds', type=float, default=5.0)
 argparser.add_argument('--pcieclockperiod', help='Clock period of PCIE clock, in nanoseconds', type=int, default=None)
+argparser.add_argument('--run-args', help='Argument to pass via RUN_ARGS when running application', action='append', default=[])
 
 noisyFlag=False
 
@@ -148,7 +149,7 @@ makefileTemplate='''
 
 ##    run: run the program
 ##         pass parameters to software via 'make RUN_ARGS= run'
-#RUN_ARGS=
+RUN_ARGS?=%(run_args)s
 
 export DTOP=%(project_dir)s
 CONNECTALDIR=%(connectaldir)s
@@ -166,6 +167,8 @@ XCIFILES = %(xcifiles)s
 
 BSCFLAGS_PROJECT = %(bscflags)s
 SIM_CXX_PROJECT = %(bsimsource)s
+CFLAGS_PROJECT = %(cflags)s
+CXXFLAGS_PROJECT = %(cxxflags)s
 XELABFLAGS = %(xelabflags)s
 XSIMFLAGS  = %(xsimflags)s
 TOPBSVFILE = %(topbsvfile)s
@@ -502,11 +505,14 @@ if __name__=='__main__':
                                    'bscflags': ' '.join(options.bscflags),
                                    'xelabflags': ' '.join(options.xelabflags),
                                    'xsimflags': ' '.join(options.xsimflags),
+                                   'cflags': ' ' .join(options.cflags),
+                                   'cxxflags': ' ' .join(options.cxxflags),
                                    'bsvdefines_list': ' '.join(bsvdefines),
                                    'shared': 'CONNECTAL_SHARED=1' if options.shared else '',
                                    'nohardware': 'CONNECTAL_NOHARDWARE=1' if options.nohardware else '',
                                    'protobuf': ('export PROTODEBUG=%s' % ' '.join(protolist)) if options.protobuf else '',
-                                   'bitsmake': bitsmake
+                                   'bitsmake': bitsmake,
+                                   'run_args': ' '.join(options.run_args)
                                    })
     if not options.prtop:
         for name in options.prvariant:

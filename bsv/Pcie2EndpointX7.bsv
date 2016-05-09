@@ -158,6 +158,11 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       pcie_ep.pl.upstream_prefer_deemph(1);
    endrule
 
+   Reg#(Bit#(32)) cyclesReg <- mkReg(0, clocked_by user_clk, reset_by user_reset_n);
+   rule rl_cycles;
+      cyclesReg <= cyclesReg + 1;
+   endrule
+`ifdef DebugPcieStateMachine
    Vector#(17,Tuple2#(PcieCfgType,Bit#(24))) changeValues = vec(
       //tuple2(PcieCfg_initial_link_width, extend(pcie_ep.pl.initial_link_width)),
       //tuple2(PcieCfg_lane_reversal_mode, extend(pcie_ep.pl.lane_reversal_mode)),
@@ -181,16 +186,13 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       tuple2(unpack(57), extend(pcie_ep.cfg_pmcsr.pme_en)),
       tuple2(unpack(58), extend(pcie_ep.cfg_pmcsr.pme_status)),
       tuple2(unpack(59), extend(pcie_ep.cfg_pmcsr.powerstate)));
-
-   Reg#(Bit#(32)) cyclesReg <- mkReg(0, clocked_by user_clk, reset_by user_reset_n);
-   rule rl_cycles;
-      cyclesReg <= cyclesReg + 1;
-   endrule
    let change_pipes <- mapM(mkChangeSource(cyclesReg), changeValues, clocked_by user_clk, reset_by user_reset_n);
-
    FunnelPipe#(1,17,RegChange,3) changePipe <- mkFunnelPipesPipelined(change_pipes, clocked_by user_clk, reset_by user_reset_n);
    FIFOF#(RegChange) changeFifo <- mkSizedBRAMFIFOF(128, clocked_by user_clk, reset_by user_reset_n);
    mkConnection(changePipe[0], toPipeIn(changeFifo), clocked_by user_clk, reset_by user_reset_n);
+`else
+   FIFOF#(RegChange) changeFifo <- mkFIFOF(clocked_by user_clk, reset_by user_reset_n);
+`endif
 
    let txready = (pcie_ep.s_axis_tx.tready == 1 && fAxiTx.notEmpty);
 

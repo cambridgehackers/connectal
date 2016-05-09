@@ -21,52 +21,61 @@
 #
 
 import ctypes, json, os, sys, threading, time
-connectal = ctypes.CDLL('./connectal.so')
+if os.environ.has_key('LD_LIBRARY_PATH'):
+    connectal = ctypes.CDLL('connectal.so')
+else:
+    connectal = ctypes.CDLL('./connectal.so')
 
-def call_say(a):
-    connectal.EchoRequest_say(ctypes.c_void_p(treq), a)
-    sem_heard2.acquire()
+class Echo:
+    def __init__(self):
+        self.sem_heard2 = threading.Semaphore(0)
+        self.stopPolling = False
+        connectal.set_callback(ctypes.py_object(self))
+        tr = connectal.trequest
+        tr.restype = ctypes.c_void_p
+        ti = connectal.tindication
+        ti.restype = ctypes.c_void_p
+        self.treq = tr()
+        self.tind = ti()
+        print 'JJ', '%x' % self.treq, '%x' % self.tind
+        self.t1 = threading.Thread(target=self.worker)
+        self.t1.start()
 
-def call_say2(a, b):
-    connectal.EchoRequest_say2(ctypes.c_void_p(treq), a, b)
+    def call_say(self, a):
+        connectal.EchoRequest_say(ctypes.c_void_p(self.treq), a)
+        self.sem_heard2.acquire()
 
-def heard(v):
-    print 'heard called!!!', v
-    call_say2(v, 2*v);
+    def call_say2(self, a, b):
+        connectal.EchoRequest_say2(ctypes.c_void_p(self.treq), a, b)
+        self.sem_heard2.acquire()
 
-def heard2(a, b):
-    print 'heard2 called!!!', a, b
-    sem_heard2.release()
+    def heard(self, v):
+        print 'heard called!!!', v
+        self.sem_heard2.release()
 
-def callback(a):
-    dict = json.loads(a.strip())
-    #print 'callback called!!!', a, dict
-    if dict['name'] == 'heard':
-        heard(dict['v'])
-    elif dict['name'] == 'heard2':
-        heard2(dict['a'], dict['b'])
+    def heard2(self, a, b):
+        print 'heard2 called!!!', a, b
+        self.sem_heard2.release()
 
-def worker():
-    while not stopPolling:
-        connectal.event_hardware(ctypes.c_void_p(tind))
+    def callback(self, a):
+        dict = json.loads(a.strip())
+        print 'callback called!!!', a, dict
+        if dict['name'] == 'heard':
+            self.heard(dict['v'])
+        elif dict['name'] == 'heard2':
+            self.heard2(dict['a'], dict['b'])
 
-stopPolling = False
-connectal.set_callback(ctypes.py_object(callback))
-sem_heard2 = threading.Semaphore(0)
-tr = connectal.trequest
-tr.restype = ctypes.c_void_p
-ti = connectal.tindication
-ti.restype = ctypes.c_void_p
-treq = tr()
-tind = ti()
-print 'JJ', '%x' % treq, '%x' % tind
-t1 = threading.Thread(target=worker)
-t1.start()
+    def worker(self):
+        while not self.stopPolling:
+            connectal.portal_event(ctypes.c_void_p(self.tind))
+
+echo = Echo()
+
 v = 42
 print "Saying %d" % v
-call_say(v);
-call_say(v*5);
-call_say(v*17);
-call_say(v*93);
-call_say2(v, v*3);
-stopPolling = True
+echo.call_say(v);
+echo.call_say(v*5);
+echo.call_say(v*17);
+echo.call_say(v*93);
+echo.call_say2(v, v*3);
+echo.stopPolling = True

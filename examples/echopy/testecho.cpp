@@ -29,7 +29,7 @@ static PortalInternal dummy;
 
 #define STUB \
 { \
-    printf("[%s:%d]\n", __FUNCTION__, __LINE__); \
+    fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);	\
     exit(-1); \
 }
 static volatile unsigned int *dummyMAPCHANNELIND(struct PortalInternal *pint, unsigned int v)
@@ -43,7 +43,7 @@ static volatile unsigned int *dummyMAPCHANNELREQ(struct PortalInternal *pint, un
 static void dummySENDMSG(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd)
 {
 }
-static int dummyITEMINIT(struct PortalInternal *pint, void *param) STUB
+static int dummyTRANSPORTINIT(struct PortalInternal *pint, void *param) STUB
 static unsigned int dummyREADWORD(struct PortalInternal *pint, volatile unsigned int **addr) STUB
 static void dummyWRITEWORD(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v) STUB
 static void dummyWRITEFDWORD(struct PortalInternal *pint, volatile unsigned int **addr, unsigned int v) STUB
@@ -52,22 +52,22 @@ static int dummyBUSYWAIT(struct PortalInternal *pint, unsigned int v, const char
 static void dummyENABLEINT(struct PortalInternal *pint, int val) STUB
 static int dummyEVENT(struct PortalInternal *pint) STUB
 static int dummyNOTFULL(struct PortalInternal *pint, unsigned int v) STUB
-PortalTransportFunctions callbackItem = {
-    dummyITEMINIT, dummyREADWORD, dummyWRITEWORD, dummyWRITEFDWORD,
+PortalTransportFunctions callbackTransport = {
+    dummyTRANSPORTINIT, dummyREADWORD, dummyWRITEWORD, dummyWRITEFDWORD,
     dummyMAPCHANNELIND, dummyMAPCHANNELREQ, dummySENDMSG, dummyRECVMSG,
     dummyBUSYWAIT, dummyENABLEINT, dummyEVENT, dummyNOTFULL};
 
 static int heard_cb(struct PortalInternal *p,uint32_t v) {
     EchoIndicationJson_heard (&dummy, v);
     PyGILState_STATE gstate = PyGILState_Ensure();
-    PyEval_CallFunction(callbackFunction, "(s)", dummy.map_base, NULL);
+    PyEval_CallMethod(callbackFunction, "callback", "(s)", dummy.map_base, NULL);
     PyGILState_Release(gstate);
     return 0;
 }
 static int heard2_cb(struct PortalInternal *p,uint16_t a, uint16_t b) {
     EchoIndicationJson_heard2 (&dummy, a, b);
     PyGILState_STATE gstate = PyGILState_Ensure();
-    PyEval_CallFunction(callbackFunction, "(s)", dummy.map_base, NULL);
+    PyEval_CallMethod(callbackFunction, "callback", "(s)", dummy.map_base, NULL);
     PyGILState_Release(gstate);
     return 0;
 }
@@ -78,20 +78,22 @@ void set_callback(PyObject *param)
 {
     Py_INCREF(param);
     callbackFunction = param;
-    dummy.item = &callbackItem;
+    dummy.transport = &callbackTransport;
     dummy.map_base = (volatile unsigned int *)malloc(1000);
 }
 
 void *trequest()
 {
-    init_portal_internal(&erequest, IfcNames_EchoRequest, DEFAULT_TILE, NULL, NULL, NULL, NULL, EchoRequest_reqinfo);
-//void init_portal_internal(PortalInternal *pint, int id, int tile, PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *item, void *param, uint32_t reqinfo);
+  void *parent = NULL;
+  init_portal_internal(&erequest, IfcNames_EchoRequestS2H, DEFAULT_TILE, NULL, NULL, NULL, NULL, parent, EchoRequest_reqinfo);
+//void init_portal_internal(PortalInternal *pint, int id, int tile, PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *transport, void *param, uint32_t reqinfo);
     return &erequest;
 }
 void *tindication()
 {
-    init_portal_internal(&eindication, IfcNames_EchoIndication, DEFAULT_TILE,
-        (PORTAL_INDFUNC) EchoIndication_handleMessage, &EchoInd_cbTable, NULL, NULL, EchoIndication_reqinfo);
+  void *parent = NULL;
+    init_portal_internal(&eindication, IfcNames_EchoIndicationH2S, DEFAULT_TILE,
+			 (PORTAL_INDFUNC) EchoIndication_handleMessage, &EchoInd_cbTable, NULL, NULL, parent, EchoIndication_reqinfo);
     return &eindication;
 }
 } // extern "C"

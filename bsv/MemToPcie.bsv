@@ -299,6 +299,9 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
                completionMimo.enq(1, vec);
                completionTagMimo.enq(1, replicate(tuple2(tag,tlp.eof)));
             end
+            else begin
+               wordCount = hdr_3dw.length;
+            end
 	    handled = True;
       end
       wordCountReg <= wordCount;

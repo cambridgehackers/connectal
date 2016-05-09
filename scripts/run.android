@@ -76,7 +76,8 @@ identity file for rsync, add the  following lines to ~/.ssh/config:
 argparser = argparse.ArgumentParser("Run Connectal apps on Android Zynq boards.",
                                     epilog=epilog, formatter_class=RawTextHelpFormatter)
 argparser.add_argument('androidexe', help='Android executable for the Zynq', nargs='?')
-argparser.add_argument('file', help='Additional files to transfer to the target', nargs='*', default=[])
+argparser.add_argument('push', help='Additional files to push to the target before execution', nargs='*', default=[])
+argparser.add_argument('--pull', help='Additional files to pull from the target after execution', nargs='*', default=[])
 argparser.add_argument('-t', '--timelimit', type=int, default=timelimit, help='Time limit for jobs running on the zedboard. Defaults to value of environment variable RUNTIMELIMIT or 600 seconds.')
 argparser.add_argument('-a', '--ipaddr', default=ipaddr, help='IP address of target board')
 argparser.add_argument('-u', '--buildbot-url', default=buildbot_url, help='Base URL of buildbot.')
@@ -86,7 +87,7 @@ argparser.add_argument('-n', '--board-name', help='String in \'hostname\' on the
 argparser.add_argument('-r', '--rsync-path', help='rsync path to android.exe (hostname:/home/.../zedboard/bin/)')
 
 
-def run_android(androidexe, additional_files):
+def run_android(androidexe, pushFiles, pullFiles=[]):
     ipaddr = options.ipaddr
 
     if ipaddr:
@@ -135,7 +136,7 @@ def run_android(androidexe, additional_files):
     params = { 'time': options.timelimit,
                'env': '',
                'exe': os.path.basename(androidexe),
-               'args': ' '.join([os.path.basename(f) for f in additional_files]),
+               'args': ' '.join([os.path.basename(f) for f in pushFiles]),
              }
     nofpgajtag = os.environ.get('NOFPGAJTAG')
     if nofpgajtag != None:
@@ -143,7 +144,7 @@ def run_android(androidexe, additional_files):
     print('Sending files to the zedboard')
     connection.Push(androidexe, '/mnt/sdcard/tmp/%(exe)s' % params)
     connection.Shell('chmod agu+rx /mnt/sdcard/tmp/%(exe)s' % params)
-    for f in additional_files:
+    for f in pushFiles:
         connection.Push(f, '/mnt/sdcard/tmp/%s' % os.path.basename(f))
     connection.Shell("touch /mnt/sdcard/tmp/perf.monkit")
     print('Running android.exe with timelimit %(time)d' % params)
@@ -153,7 +154,10 @@ def run_android(androidexe, additional_files):
         sys.stdout.write(line)
     connection.Pull('/mnt/sdcard/tmp/exit.status', 'exit.status')
     connection.Pull('/mnt/sdcard/tmp/perf.monkit', 'perf.monkit')
-    connection.Shell('rm -vf %s' % ' '.join([os.path.basename(f) for f in [androidexe] + additional_files]))
+    for f in pullFiles:
+        print('pulling %s' % f)
+        connection.Pull('/mnt/sdcard/tmp/%s' % f, f)
+    connection.Shell('rm -vf %s' % ' '.join([os.path.basename(f) for f in [androidexe] + pushFiles]))
     status = int(open('exit.status').read())
     print('status=%d' % status)
     sys.exit(status)
@@ -177,4 +181,4 @@ if __name__ == '__main__':
     if not options.androidexe:
         argparser.print_help()
         sys.exit(1)
-    run_android(options.androidexe, options.file)
+    run_android(options.androidexe, options.push, options.pull)

@@ -33,7 +33,44 @@
 #include "EchoRequest.h"
 #include "EchoIndication.h"
 #include "SimpleRequest.h"
-#include "simple.h"
+
+#include <assert.h>
+
+#if 1
+#define TEST_ASSERT(A) assert(A)
+#else
+#define TEST_ASSERT(A) {}
+#endif
+
+#define NUMBER_OF_TESTS 12
+
+uint32_t v1a = 42;
+uint32_t v2a = 2;
+uint32_t v2b = 4;
+
+class Simple : public SimpleRequestWrapper
+{  
+public:
+  uint32_t cnt;
+  uint32_t times;
+  void incr_cnt(){
+    if (++cnt == NUMBER_OF_TESTS)
+      exit(0);
+  }
+  void say1(uint32_t a) {
+    fprintf(stderr, "received Simple.say1(%d)\n", a);
+    TEST_ASSERT(a == v1a);
+    incr_cnt();
+  }
+  void say2(uint16_t a, uint16_t b) {
+    fprintf(stderr, "received Simple.say2(%d %d)\n", a, b);
+    TEST_ASSERT(a == v2a);
+    TEST_ASSERT(b == v2b);
+    incr_cnt();
+  }
+  Simple(unsigned int id, PortalTransportFunctions *transport = 0, void *param = 0, PortalPoller *poller = 0)
+    : SimpleRequestWrapper(id, transport, param, poller), cnt(0){}
+};
 
 class SerialPortalIndication : public SerialPortalIndicationWrapper
 {  
@@ -48,10 +85,10 @@ class EchoRequest : public EchoRequestWrapper
 {
 public:
     virtual void say(uint32_t v) {
-      fprintf(stderr, "received say: %x\n", v);
+      fprintf(stderr, "received EchoRequest.say: %x\n", v);
     }
     virtual void say2(uint16_t a, uint16_t b) {
-      fprintf(stderr, "received say2: %d %d\n", a, b);
+      fprintf(stderr, "received EchoRequest.say2: %d %d\n", a, b);
     }
     virtual void setLeds ( const uint8_t v ) {}
     EchoRequest(unsigned int id) : EchoRequestWrapper(id) {}
@@ -61,10 +98,10 @@ class EchoIndication : public EchoIndicationWrapper
 {
 public:
     virtual void heard ( const uint32_t v ) {
-	fprintf(stderr, "EchoIndication::heard v=%x\n", v);
+	fprintf(stderr, "EchoIndication.heard v=%x\n", v);
     }
     virtual void heard2 ( const uint16_t a, const uint16_t b ) {
-	fprintf(stderr, "EchoIndication::heard2 a=%#x b=%#x\n", a, b);
+	fprintf(stderr, "EchoIndication.heard2 a=%#x b=%#x\n", a, b);
     }
     EchoIndication(int id, PortalTransportFunctions *item = 0, void *param = 0, PortalPoller *poller = 0)
 	: EchoIndicationWrapper(id, item, param, poller) {
@@ -96,8 +133,11 @@ int main(int argc, const char **argv)
 {
   SerialPortalIndication indication(IfcNames_SerialPortalIndicationH2S);
   EchoRequest echo(IfcNames_EchoRequestH2S);
+  Simple simple(IfcNames_SimpleRequestH2S);
+
   SerialPortalRequestProxy *device = new SerialPortalRequestProxy(IfcNames_SerialPortalRequestS2H);
   EchoIndicationProxy *echoIndication = new EchoIndicationProxy(IfcNames_EchoIndicationS2H);
+  SimpleRequestProxy *simpleRequest = new SimpleRequestProxy(IfcNames_SimpleRequestS2H);
 
   if (!argv[1]) {
       //realpath("/sys/class/tty/ttyUSB0/device/driver/");
@@ -106,12 +146,18 @@ int main(int argc, const char **argv)
   }
 
   int serial_fd = initSerial(argv[1]);
-  PortalSharedParam param;
-  param.serial.serial_fd = serial_fd;
-  EchoRequestProxy   echoSerial(0, &transportSerial, &param);
-  //SimpleRequestProxy simpleSerial(1, &transportSerial, &param); // need to mux
-  EchoIndication serialEchoIndication(0, &transportSerial, &param);
-  Simple         serialSimple(1, &transportSerial, &param);       // need to mux
+  PortalSharedParam paramSerial;
+  paramSerial.serial.serial_fd = serial_fd;
+
+  Portal *mcommon = new Portal(0, 0, sizeof(uint32_t), portal_serialmux_handler, NULL, &transportSerial, &paramSerial, 0);
+  PortalMuxParam param = {};
+  param.pint = &mcommon->pint;
+
+  EchoRequestProxy   echoSerial(0, &transportSerialMux, &param);
+  SimpleRequestProxy simpleSerial(1, &transportSerialMux, &param);
+
+  EchoIndication serialEchoIndication(0, &transportSerialMux, &param);
+  Simple         serialSimple(1, &transportSerialMux, &param);
 
   device->setDivisor(134);
   sleep(2);
@@ -120,8 +166,15 @@ int main(int argc, const char **argv)
   echoSerial.say2(0x22, 0x23);
 
   sleep(2);
-  echoIndication->heard2(68,47);
-  echoIndication->heard(22);
+  simpleSerial.say1(v1a);
+  simpleSerial.say2(v2a, v2b);
+
+  sleep(2);
+  echoIndication->heard2(0x68,0x47);
+  echoIndication->heard(0x22);
+
+  sleep(2);
+  simpleRequest->say1(19);
 
   while (1) {
     // wait

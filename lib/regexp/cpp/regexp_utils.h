@@ -81,9 +81,10 @@ public:
 int readfile(const char *fname, P* pP)
 {
   int rc = 0;
-  char buff[128];
-  sprintf(buff, "../%s", fname);
-  ifstream binFile(buff, ios::in|ios::binary|ios::ate);
+  ifstream binFile(fname, ios::in|ios::binary|ios::ate);
+  if (!binFile.good()) {
+    fprintf(stderr, "%s: error opening %s\n", __FUNCTION__, fname);
+  }
   pP->length = binFile.tellg();
   pP->alloc = portalAlloc(pP->length, 0);
   pP->mem = (char *)portalMmap(pP->alloc, pP->length);

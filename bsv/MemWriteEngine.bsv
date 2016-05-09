@@ -105,8 +105,14 @@ module mkMemWriteChannel#(Integer bufferSizeBytes, Integer channelNumber,
       if (clientBursts) begin
 	 load_in_progress <= True;
 	 let cmd = clientStart;
-	 let cond0 <- clientAvail.maybeDecrement(unpack(extend(cmd.burstLen>>beat_shift)));
 	 let cond1 = cmd.len <= extend(cmd.burstLen);
+         Bool cond0 = False;
+         if (cond1) begin
+            cond0 <- clientAvail.maybeDecrement(unpack(truncate(cmd.len>>beat_shift)));
+         end
+         else begin
+            cond0 <- clientAvail.maybeDecrement(unpack(extend(cmd.burstLen>>beat_shift)));
+         end
 	 serverCond.enq(tuple3(cmd,cond0,cond1));
       end
    endrule
