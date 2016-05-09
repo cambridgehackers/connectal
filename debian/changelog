@@ -1,3 +1,9 @@
+connectal (16.05.1-3precise3) precise; urgency=medium
+
+  * rebuild to check signature
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 09 May 2016 15:32:38 -0400
+
 connectal (16.05.1-2precise2) precise; urgency=medium
 
   * remove dependence on python-support
