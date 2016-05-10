@@ -27,9 +27,12 @@ else:
     connectal = ctypes.CDLL('./connectal.so')
 
 class NativeProxy:
-    def __init__(self, interfaceName, handler):
-        self.interfaceName
+    def __init__(self, interfaceName, handler, rpc=False):
+        self.interfaceName = interfaceName
         self.handler = handler
+        self.rpc = rpc
+        if rpc:
+            self.sem_response = threading.Semaphore(0)
         self.stopPolling = False
         self.methods = {}
         connectal.set_callback(ctypes.py_object(self))
@@ -45,56 +48,56 @@ class NativeProxy:
 
     def callback(self, a):
         vec = json.loads(a.strip())
-        print 'callback called!!!', a, vec
+        #print 'callback called!!!', a, vec
         if hasattr(self.handler, vec[0]):
             getattr(self.handler, vec[0])(*vec[1:])
+            if self.rpc:
+                self.sem_response.release()
 
     def worker(self):
         while not self.stopPolling:
             connectal.portal_event(ctypes.c_void_p(self.tind))
 
-    def __hasattr__(self, name):
-        print '__hasattr__', name
-        return (name in methods) or hasattr(connectal, '%s_%s' % (self.interfaceName, name))
     def __getattr__(self, name, default=None):
-        print '__getattr__', name, default
+        #print '__getattr__', name, default
         if name in self.methods:
             return self.methods[name]
-        m = getattr(connectal, '%s_%s' % ('EchoRequest', name), None)
+        m = getattr(connectal, '%s_%s' % (self.interfaceName, name), None)
         if m:
-            print m
             def fcn (*args):
                 treq = ctypes.c_void_p(self.treq)
-                print m, args
+                #print m, args
                 if len(args) == 1:
                     m(treq, args[0])
                 elif len(args) == 2:
                     m(treq, args[0], args[1])
-            #self.methods[name] = fcn
+                if self.rpc:
+                    self.sem_response.acquire()
+            self.methods[name] = fcn
             return fcn
         else:
             return default
 
 class Echo:
     def __init__(self):
-        self.sem_heard2 = threading.Semaphore(0)
-        self.proxy = NativeProxy('EchoRequest', self)
+        #self.sem_heard2 = threading.Semaphore(0)
+        self.proxy = NativeProxy('EchoRequest', self, rpc=True)
 
     def call_say(self, a):
         self.proxy.say(a)
-        self.sem_heard2.acquire()
+        #self.sem_heard2.acquire()
 
     def call_say2(self, a, b):
         self.proxy.say2(a, b)
-        self.sem_heard2.acquire()
+        #self.sem_heard2.acquire()
 
     def heard(self, v):
         print 'heard called!!!', v
-        self.sem_heard2.release()
+        #self.sem_heard2.release()
 
     def heard2(self, a, b):
         print 'heard2 called!!!', a, b
-        self.sem_heard2.release()
+        #self.sem_heard2.release()
 
 echo = Echo()
 
