@@ -27,7 +27,7 @@ else:
     connectal = ctypes.CDLL('./connectal.so')
 
 class NativeProxy:
-    def __init__(self, interfaceName, handler, rpc=False):
+    def __init__(self, interfaceName, handler, responseinfo=None, rpc=False):
         self.interfaceName = interfaceName
         self.handler = handler
         self.rpc = rpc
@@ -40,7 +40,9 @@ class NativeProxy:
         tr.restype = ctypes.c_void_p
         ti = connectal.tindication
         ti.restype = ctypes.c_void_p
-        self.treq = tr()
+        ifcname = getattr(connectal, 'ifcNames_%sS2H' % interfaceName)
+        reqinfo = getattr(connectal, '%s_reqinfo' % interfaceName)
+        self.treq = tr(ifcname, reqinfo)
         self.tind = ti()
         print 'JJ', '%x' % self.treq, '%x' % self.tind
         self.t1 = threading.Thread(target=self.worker)
@@ -81,7 +83,7 @@ class NativeProxy:
 class Echo:
     def __init__(self):
         #self.sem_heard2 = threading.Semaphore(0)
-        self.proxy = NativeProxy('EchoRequest', self, rpc=True)
+        self.proxy = NativeProxy('EchoRequest', self, 'EchoRequest_reqinfo', rpc=True)
 
     def call_say(self, a):
         self.proxy.say(a)

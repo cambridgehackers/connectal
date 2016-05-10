@@ -98,11 +98,10 @@ void set_callback(PyObject *param)
     pythonTransport.map_base = (volatile unsigned int *)malloc(1000);
 }
 
-void *trequest()
+void *trequest(int ifcname, int reqinfo)
 {
-  void *parent = NULL;
-  init_portal_internal(&erequest, IfcNames_EchoRequestS2H, DEFAULT_TILE, NULL, NULL, NULL, NULL, parent, EchoRequest_reqinfo);
-//void init_portal_internal(PortalInternal *pint, int id, int tile, PORTAL_INDFUNC handler, void *cb, PortalTransportFunctions *transport, void *param, uint32_t reqinfo);
+    void *parent = NULL;
+    init_portal_internal(&erequest, ifcname, DEFAULT_TILE, NULL, NULL, NULL, NULL, parent, reqinfo);
     return &erequest;
 }
 void *tindication()
