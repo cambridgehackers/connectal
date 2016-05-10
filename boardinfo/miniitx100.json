@@ -40,6 +40,23 @@
             "LOC": "F20"
         }
     },
+    "pcie": {
+        "sys_clk_p": {
+            "IOSTANDARD": "DIFF_SSTL15",
+            "PIO_DIRECTION": "OUTPUT",
+            "LOC": "N8"
+        },
+        "sys_clk_n": {
+            "IOSTANDARD": "DIFF_SSTL15",
+            "PIO_DIRECTION": "OUTPUT",
+            "LOC": "N7"
+        },
+        "sys_reset_n": {
+            "IOSTANDARD": "LVCMOS25",
+            "PIO_DIRECTION": "OUTPUT",
+            "LOC": "AC18"
+        }
+    },
     "sfp1": {
         "mod_def0": {
             "IOSTANDARD": "LVCMOS25",
