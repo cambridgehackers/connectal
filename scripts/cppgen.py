@@ -790,6 +790,11 @@ def generate_cpp(project_dir, noisyFlag, jsondata):
     generated_cpp = create_cpp_file(cppname)
     generatedCFiles.append(cppname)
     generated_cpp.write('\n#ifndef NO_CPP_PORTAL_CODE\n')
+    for decl in jsondata['globaldecls']:
+        if decl['tname'] == 'IfcNames':
+            ifcnames = decl['tdtype']['elements']
+            for (ifcname,ifcvalue) in ifcnames:
+                generated_cpp.write('extern const int %s = %s;\n' % (util.decapitalize(ifcname), ifcname))
     for item in jsondata['interfaces']:
         if verbose:
             print 'generateclass', item
