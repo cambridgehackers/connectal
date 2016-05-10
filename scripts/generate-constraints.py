@@ -117,7 +117,7 @@ if __name__=='__main__':
             try:
                 out.write(template % pinInfo)
             except:
-                print('missing bindings for pin ', pinName)
+                print('missing attributes for pin ', pinName)
                 print(template)
                 print(pinInfo)
             for k in pinInfo:
