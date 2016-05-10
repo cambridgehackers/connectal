@@ -29,15 +29,6 @@
   `define BSV_RESET_EDGE negedge
 `endif
 
-import "DPI-C" function int  bsimLinkUp(input int linknumber, input bit listening);
-import "DPI-C" function void bsimLinkOpen(input int linknumber, input bit listening);
-import "DPI-C" function int bsimLinkCanReceive(input int linknumber, input bit listening);
-import "DPI-C" function int bsimLinkCanTransmit(input int linknumber, input bit listening);
-import "DPI-C" function int bsimLinkReceive32(input int linknumber, input bit listening);
-import "DPI-C" function void bsimLinkTransmit32(input int linknumber, input bit listening, input int val);
-import "DPI-C" function longint bsimLinkReceive64(input int linknumber, input bit listening);
-import "DPI-C" function void bsimLinkTransmit64(input int linknumber, input bit listening, input longint val);
-
 module XsimLink #(parameter DATAWIDTH=32) (
 		 input RST,
 		 input CLK,
@@ -67,6 +58,15 @@ module XsimLink #(parameter DATAWIDTH=32) (
    reg 			[DATAWIDTH-1:0] tx_reg;
    int   		       rx_val;
    longint   		       rx_val64;
+
+   import "DPI-C" function int  bsimLinkUp(input int linknumber, input bit listening);
+   import "DPI-C" function void bsimLinkOpen(input int linknumber, input bit listening);
+   import "DPI-C" function int bsimLinkCanReceive(input int linknumber, input bit listening);
+   import "DPI-C" function int bsimLinkCanTransmit(input int linknumber, input bit listening);
+   import "DPI-C" function int bsimLinkReceive32(input int linknumber, input bit listening);
+   import "DPI-C" function void bsimLinkTransmit32(input int linknumber, input bit listening, input int val);
+   import "DPI-C" function longint bsimLinkReceive64(input int linknumber, input bit listening);
+   import "DPI-C" function void bsimLinkTransmit64(input int linknumber, input bit listening, input longint val);
 
    assign rx_first     = rx_reg;
    assign rdy_rx_first = rx_valid && started;

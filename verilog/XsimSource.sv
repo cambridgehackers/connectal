@@ -29,8 +29,10 @@
   `define BSV_RESET_EDGE negedge
 `endif
 
-import "DPI-C" function void dpi_msgSource_beat(input int portal, input int beat);
 module XsimSource( input CLK, input CLK_GATE, input RST, input [31:0] portal, input en_beat, input [31:0] beat);
+
+   import "DPI-C" function void dpi_msgSource_beat(input int portal, input int beat);
+
    always @(posedge CLK) begin
       if (en_beat)
           dpi_msgSource_beat(portal, beat);

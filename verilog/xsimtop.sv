@@ -21,8 +21,6 @@
 // SOFTWARE.
 `timescale 1ns / 1ps
 
-import "DPI-C" function void dpi_init();
-import "DPI-C" function bit dpi_cycle(); // returns non-zero if verilog should $finish().
 
 `ifdef BSV_POSITIVE_RESET
   `define BSV_RESET_VALUE 1'b1
@@ -58,6 +56,9 @@ module xsimtop(
    reg DERIVED_RST_N;
    reg [31:0] count;
    reg finish;
+
+   import "DPI-C" function void dpi_init();
+   import "DPI-C" function bit dpi_cycle(); // returns non-zero if verilog should $finish().
 
    mkXsimTop xsimtop(.CLK(CLK), .RST_N(RST_N),
 		     .CLK_derivedClock(DERIVED_CLK), .RST_N_derivedReset(DERIVED_RST_N),
