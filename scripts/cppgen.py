@@ -610,7 +610,9 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         subs['handleStartup'] = 'channel = connnectalJsonDecode(p, channel, &tempdata, %(classNameOrig)sInfo);' % subs
     else:
         subs['handleStartup'] = 'volatile unsigned int* temp_working_addr = p->transport->mapchannelInd(p, channel);'
-        generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqinfo %(reqInfo)s\n' % subs)
+        generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n' % subs)
+        generated_hpp.write('extern const int %(className)s_reqinfo;\n' % subs)
+        cpp.write('\nconst int %(className)s_reqinfo = %(reqInfo)s;\n' % subs)
         hpp.write(proxyClassPrefixTemplate % subs)
         for mitem in declList:
             emitMethodDeclaration(mitem['dname'], mitem['dparams'], hpp, classCName)
