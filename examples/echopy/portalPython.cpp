@@ -80,10 +80,10 @@ static int handleIndicationMessage(struct PortalInternal *pint, unsigned int cha
     if (tracePython) fprintf(stderr, "handleIndicationMessage: json=%s\n", jsonp);
     if (ppython->callbackFunction) {
 	PyEval_CallMethod(ppython->callbackFunction, "callback", "(s)", jsonp, NULL);
-	PyGILState_Release(gstate);
     } else {
 	fprintf(stderr, "%s:%d no callback for portal\n", __FUNCTION__, __LINE__);
     }
+    PyGILState_Release(gstate);
     return value;
 }
 
