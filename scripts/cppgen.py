@@ -119,7 +119,8 @@ static ConnectalMethodJsonInfo %(classNameOrig)sInfo[] = {'''
 proxyMethodTableDecl='''
 %(classNameOrig)sCb %(className)sProxyReq = {
     %(methodTable)s
-};'''
+};
+%(classNameOrig)sCb *p%(className)sProxyReq = &%(className)sProxyReq;'''
 
 proxyMethodTemplateDecl='''
 int %(className)s_%(methodName)s (%(paramProxyDeclarations)s )'''
