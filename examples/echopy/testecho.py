@@ -24,7 +24,7 @@ import ctypes, json, os, sys, threading, time, portal
 
 class Echo:
     def __init__(self):
-        self.proxy = portal.NativeProxy('EchoRequest', self, responseInterface='EchoIndication', rpc=True)
+        self.proxy = portal.NativeProxy('EchoRequest', self, responseInterface='EchoResponse', rpc=True)
         self.response = None
 
     def call_say(self, a):

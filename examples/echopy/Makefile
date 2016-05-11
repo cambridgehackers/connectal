@@ -1,8 +1,8 @@
 CONNECTALDIR?=../..
 S2H_INTERFACES = EchoRequest:Echo.request
-H2S_INTERFACES = Echo:EchoIndication
+H2S_INTERFACES = Echo:EchoResponse
 
-BSVFILES = Echo.bsv
+BSVFILES = EchoInterface.bsv
 CPPFILES = portalPython.cpp
 CPPFILES2= runechopy.cpp
 CONNECTALFLAGS += --shared

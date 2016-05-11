@@ -1,6 +1,4 @@
-
-// Copyright (c) 2013 Nokia, Inc.
-// Copyright (c) 2013 Quanta Research Cambridge, Inc.
+// Copyright (c) 2016 Connectal Project
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -22,43 +20,12 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import FIFO::*;
-import Vector::*;
-import EchoInterface::*;
-
-interface Echo;
-   interface EchoRequest request;
+interface EchoResponse;
+    method Action heard(Bit#(32) v);
+    method Action heard2(Bit#(16) a, Bit#(16) b);
 endinterface
 
-typedef struct {
-	Bit#(16) a;
-	Bit#(16) b;
-} EchoPair deriving (Bits);
-
-module mkEcho#(EchoResponse indication)(Echo);
-
-    FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
-    FIFO#(EchoPair) delay2 <- mkSizedFIFO(8);
-
-    rule heard;
-        delay.deq;
-        indication.heard(delay.first);
-    endrule
-
-    rule heard2;
-        delay2.deq;
-        indication.heard2(delay2.first.b, delay2.first.a);
-    endrule
-   
-   interface EchoRequest request;
-      method Action say(Bit#(32) v);
-   $display("say %h", v);
-	 delay.enq(v);
-      endmethod
-      
-      method Action say2(Bit#(16) a, Bit#(16) b);
-   $display("say2 %h %h", a, b);
-	 delay2.enq(EchoPair { a: a, b: b});
-      endmethod
-   endinterface
-endmodule
+interface EchoRequest;
+   method Action say(Bit#(32) v);
+   method Action say2(Bit#(16) a, Bit#(16) b);
+endinterface
