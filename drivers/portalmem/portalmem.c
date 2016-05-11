@@ -341,10 +341,6 @@ int portalmem_dmabuffer_destroy(int fd)
 
 int portalmem_dmabuffer_create(PortalAlloc portalAlloc)
 {
-        static unsigned int high_order_gfp_flags = (GFP_HIGHUSER | __GFP_ZERO |
-                                                    __GFP_NOWARN | __GFP_NORETRY | __GFP_NO_KSWAPD) & ~__GFP_WAIT;
-        static unsigned int low_order_gfp_flags  = (GFP_HIGHUSER | __GFP_ZERO |
-                                                    __GFP_NOWARN);
         static const unsigned int orders[] = {8, 4, 0};
         unsigned int allocated_orders[] = {0,0,0};
         struct pa_buffer *buffer;
@@ -362,6 +358,14 @@ int portalmem_dmabuffer_create(PortalAlloc portalAlloc)
         size_t align = 4096;
         size_t len = portalAlloc.len;
         int return_fd;
+	unsigned int high_order_gfp_flags = (GFP_HIGHUSER | __GFP_ZERO | __GFP_NOWARN | __GFP_NORETRY );
+	unsigned int low_order_gfp_flags  = (GFP_HIGHUSER | __GFP_ZERO | __GFP_NOWARN);
+#ifdef __GFP_NO_KSWAPD
+	high_order_gfp_flags |= __GFP_NO_KSWAPD;
+#endif
+#ifdef __GFP_WAIT
+	high_order_gfp_flags &= ~__GFP_WAIT;
+#endif
 
         printk("%s, size=%ld cached=%d\n", __FUNCTION__, (long)portalAlloc.len, portalAlloc.cached);
         len = PAGE_ALIGN(round_up(len, align));
@@ -413,6 +417,12 @@ int portalmem_dmabuffer_create(PortalAlloc portalAlloc)
                 int ret = sg_alloc_table(table, infocount, GFP_KERNEL);
                 if (!ret) {
                         struct dma_buf *dmabuf;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0))
+			struct dma_buf_export_info export_info = {
+				.exp_name = "portalmem",
+				.owner    = THIS_MODULE
+			};
+#endif
                         sg = table->sgl;
                         list_for_each_entry_safe(info, tmp_info, &pages, list) {
                                 struct page *page = info->page;
@@ -446,11 +456,19 @@ int portalmem_dmabuffer_create(PortalAlloc portalAlloc)
 #endif
                                 sg_dma_address(sg) = sg_phys(sg);
                         }
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0))
+			export_info.ops = &dma_buf_ops;
+			export_info.size = len;
+			export_info.flags = O_RDWR;
+			export_info.priv = buffer;
+			dmabuf = dma_buf_export(&export_info);
+#else
                         dmabuf = dma_buf_export(buffer, &dma_buf_ops, len, O_RDWR
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0))
                                                 , NULL
 #endif
                                 );
+#endif
                         if (IS_ERR(dmabuf))
                                 pa_buffer_free(buffer);
                         printk("pa_get_dma_buf fmem=%p count=%zd\n", dmabuf->file, dmabuf->file->f_count.counter);
