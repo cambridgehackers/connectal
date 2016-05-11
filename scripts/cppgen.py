@@ -612,8 +612,8 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
     else:
         subs['handleStartup'] = 'volatile unsigned int* temp_working_addr = p->transport->mapchannelInd(p, channel);'
         generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n' % subs)
-        generated_hpp.write('extern const int %(className)s_reqinfo;\n' % subs)
-        cpp.write('\nconst int %(className)s_reqinfo = %(reqInfo)s;\n' % subs)
+        generated_hpp.write('extern const uint32_t %(className)s_reqinfo;\n' % subs)
+        cpp.write('\nconst uint32_t %(className)s_reqinfo = %(reqInfo)s;\n' % subs)
         hpp.write(proxyClassPrefixTemplate % subs)
         for mitem in declList:
             emitMethodDeclaration(mitem['dname'], mitem['dparams'], hpp, classCName)
@@ -798,7 +798,7 @@ def generate_cpp(project_dir, noisyFlag, jsondata):
         if decl['tname'] == 'IfcNames':
             ifcnames = decl['tdtype']['elements']
             for (ifcname,ifcvalue) in ifcnames:
-                generated_cpp.write('extern const int %s = %s;\n' % (util.decapitalize(ifcname), ifcname))
+                generated_cpp.write('extern const uint32_t %s = %s;\n' % (util.decapitalize(ifcname), ifcname))
     for item in jsondata['interfaces']:
         if verbose:
             print 'generateclass', item
