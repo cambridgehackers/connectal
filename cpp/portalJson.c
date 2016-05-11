@@ -107,8 +107,10 @@ void connectalJsonEncodeAndSend(PortalInternal *pint, void *binarydata, Connecta
     ConnectalParamJsonInfo *iparam = info->param;
     char *jsonp = (char *)pint->transport->mapchannelInd(pint, 0);
     connectalJsonEncode(jsonp, binarydata, info, pint->json_arg_vector);
-    int rounded_size = strlen(jsonp);
-    pint->transport->send(pint, (volatile unsigned int*)jsonp, (iparam->offset << 16) | (1 + rounded_size), -1);
+    if (!pint->json_arg_vector) {
+	int rounded_size = strlen(jsonp);
+	pint->transport->send(pint, (volatile unsigned int*)jsonp, (iparam->offset << 16) | (1 + rounded_size), -1);
+    }
 }
 
 int connnectalJsonDecode(PortalInternal *pint, int _unused_channel, void *binarydata, ConnectalMethodJsonInfo *infoa)
