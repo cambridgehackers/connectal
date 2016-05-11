@@ -75,18 +75,19 @@ PortalTransportFunctions callbackTransport = {
 //static EchoIndicationCb EchoInd_cbTable = { portal_disconnect, heard_cb, heard2_cb};
 
 extern "C" {
+
+typedef int (*HandleMessage)(struct PortalInternal *pint, unsigned int channel, int messageFd);
+
 static int handleIndicationMessage(struct PortalInternal *pint, unsigned int channel, int messageFd)
 {
-  SENDMSG send = pint->transport->send;
+  HandleMessage handleMessage = (HandleMessage)pint->parent;
   pint->json_arg_vector = 1;
-  pint->transport->send = pythonTransportSENDMSG;
-  int value = EchoIndication_handleMessage(pint, channel, messageFd);
+  int value = handleMessage(pint, channel, messageFd);
   PyGILState_STATE gstate = PyGILState_Ensure();
   const char *jsonp = (const char *)pint->transport->mapchannelInd(pint, 0);
   fprintf(stderr, "handleIndicationMessage: json=%s\n", jsonp);
   PyEval_CallMethod(callbackFunction, "callback", "(s)", jsonp, NULL);
   PyGILState_Release(gstate);
-  pint->transport->send = send;
   return value;
 }
 
@@ -101,14 +102,19 @@ void set_callback(PyObject *param)
 void *trequest(int ifcname, int reqinfo)
 {
     void *parent = NULL;
+  fprintf(stderr, "%s:%d ifcname=%x reqinfo=%08x\n", __FUNCTION__, __LINE__, ifcname, reqinfo);
     init_portal_internal(&erequest, ifcname, DEFAULT_TILE, NULL, NULL, NULL, NULL, parent, reqinfo);
     return &erequest;
 }
-void *tindication()
+
+extern EchoIndicationCb *pEchoIndicationJsonProxyReq;
+void *tindication(int ifcname, int reqinfo, HandleMessage handleMessage, void *proxyreq)
 {
-  void *parent = NULL;
-    init_portal_internal(&eindication, IfcNames_EchoIndicationH2S, DEFAULT_TILE,
-			 (PORTAL_INDFUNC) handleIndicationMessage, &EchoIndicationJsonProxyReq, NULL, NULL, parent, EchoIndication_reqinfo);
+  void *parent = (void *)handleMessage;
+  fprintf(stderr, "%s:%d ifcname=%x reqinfo=%08x handleMessage=%p proxyreq=%p (%p)\n",
+	  __FUNCTION__, __LINE__, ifcname, reqinfo, handleMessage, proxyreq, EchoRequest_handleMessage);
+    init_portal_internal(&eindication, ifcname, DEFAULT_TILE,
+			 (PORTAL_INDFUNC) handleIndicationMessage, proxyreq, NULL, NULL, parent, reqinfo);
     // encode message as vector ["methodname", arg0, arg1, ...]
     pythonTransport.json_arg_vector = 1;
     return &eindication;
