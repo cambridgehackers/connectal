@@ -22,7 +22,7 @@
 ## CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ## SOFTWARE.
 
-import functools, math, os, re, sys, util
+import functools, json, math, os, re, sys, util
 
 verbose = False
 sizeofUint32_t = 4
@@ -618,6 +618,9 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         for mitem in declList:
             emitMethodDeclaration(mitem['dname'], mitem['dparams'], hpp, classCName)
         hpp.write('};\n')
+    cpp.write('const char * %(className)s_methodSignatures()\n{\n' % subs)
+    signatures = dict([(mitem['dname'], ['long' for param in mitem['dparams']]) for mitem in declList])
+    cpp.write('    return %s;\n}\n' % json.dumps(json.dumps(signatures)))
     cpp.write((handleMessageTemplateDecl % subs))
     cpp.write(handleMessageTemplate1 % subs)
     for mitem in declList:
