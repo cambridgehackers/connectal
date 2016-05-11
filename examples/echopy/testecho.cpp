@@ -24,7 +24,6 @@
 #include <python2.7/Python.h>
 
 static PyObject *callbackFunction;
-static PortalInternal erequest, eindication;
 static PortalInternal pythonTransport;
 
 #define STUB \
@@ -99,24 +98,26 @@ void set_callback(PyObject *param)
     pythonTransport.map_base = (volatile unsigned int *)malloc(1000);
 }
 
-void *trequest(int ifcname, int reqinfo)
+void *newRequestPortal(int ifcname, int reqinfo)
 {
+    struct PortalInternal *pint = (struct PortalInternal *)calloc(1, sizeof(struct PortalInternal));
     void *parent = NULL;
-  fprintf(stderr, "%s:%d ifcname=%x reqinfo=%08x\n", __FUNCTION__, __LINE__, ifcname, reqinfo);
-    init_portal_internal(&erequest, ifcname, DEFAULT_TILE, NULL, NULL, NULL, NULL, parent, reqinfo);
-    return &erequest;
+    fprintf(stderr, "%s:%d ifcname=%x reqinfo=%08x\n", __FUNCTION__, __LINE__, ifcname, reqinfo);
+    init_portal_internal(pint, ifcname, DEFAULT_TILE, NULL, NULL, NULL, NULL, parent, reqinfo);
+    return pint;
 }
 
 extern EchoIndicationCb *pEchoIndicationJsonProxyReq;
-void *tindication(int ifcname, int reqinfo, HandleMessage handleMessage, void *proxyreq)
+void *newIndicationPortal(int ifcname, int reqinfo, HandleMessage handleMessage, void *proxyreq)
 {
-  void *parent = (void *)handleMessage;
-  fprintf(stderr, "%s:%d ifcname=%x reqinfo=%08x handleMessage=%p proxyreq=%p (%p)\n",
-	  __FUNCTION__, __LINE__, ifcname, reqinfo, handleMessage, proxyreq, EchoRequest_handleMessage);
-    init_portal_internal(&eindication, ifcname, DEFAULT_TILE,
+    struct PortalInternal *pint = (struct PortalInternal *)calloc(1, sizeof(struct PortalInternal));
+    void *parent = (void *)handleMessage;
+    fprintf(stderr, "%s:%d ifcname=%x reqinfo=%08x handleMessage=%p proxyreq=%p (%p)\n",
+	    __FUNCTION__, __LINE__, ifcname, reqinfo, handleMessage, proxyreq, EchoRequest_handleMessage);
+    init_portal_internal(pint, ifcname, DEFAULT_TILE,
 			 (PORTAL_INDFUNC) handleIndicationMessage, proxyreq, NULL, NULL, parent, reqinfo);
     // encode message as vector ["methodname", arg0, arg1, ...]
     pythonTransport.json_arg_vector = 1;
-    return &eindication;
+    return pint;
 }
 } // extern "C"

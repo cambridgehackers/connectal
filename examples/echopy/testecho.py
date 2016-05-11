@@ -27,7 +27,7 @@ else:
     connectal = ctypes.CDLL('./connectal.so')
 
 class NativeProxy:
-    def __init__(self, interfaceName, handler, responseinfo=None, rpc=False):
+    def __init__(self, interfaceName, handler, responseInterface=None, rpc=False):
         self.interfaceName = interfaceName
         self.handler = handler
         self.rpc = rpc
@@ -36,15 +36,21 @@ class NativeProxy:
         self.stopPolling = False
         self.methods = {}
         connectal.set_callback(ctypes.py_object(self))
-        tr = connectal.trequest
-        tr.restype = ctypes.c_void_p
-        ti = connectal.tindication
-        ti.restype = ctypes.c_void_p
-        ifcname = getattr(connectal, 'ifcNames_%sS2H' % interfaceName)
-        reqinfo = getattr(connectal, '%s_reqinfo' % interfaceName)
-        self.treq = tr(ifcname, reqinfo)
-        self.tind = ti()
-        print 'JJ', '%x' % self.treq, '%x' % self.tind
+        newRequestPortal = connectal.newRequestPortal
+        newRequestPortal.restype = ctypes.c_void_p
+        newIndicationPortal = connectal.newIndicationPortal
+        newIndicationPortal.restype = ctypes.c_void_p
+        reqifcname = ctypes.c_int.in_dll(connectal, 'ifcNames_%sS2H' % interfaceName)
+        reqinfo = ctypes.c_int.in_dll(connectal, '%s_reqinfo' % interfaceName)
+        print('reqifcname=', reqifcname, ' reqinfo=', reqinfo)
+        self.requestPortal = newRequestPortal(reqifcname, reqinfo)
+        respifcname = ctypes.c_int.in_dll(connectal, 'ifcNames_%sH2S' % responseInterface)
+        respinfo = ctypes.c_int.in_dll(connectal, '%s_reqinfo' % responseInterface)
+        resphandlemessage = getattr(connectal, '%s_handleMessage' % responseInterface)
+        respproxyreq = ctypes.c_long.in_dll(connectal, 'p%sJsonProxyReq' % responseInterface)
+        print 'respproxyreq=', respproxyreq
+        self.responsePortal = newIndicationPortal(respifcname, respinfo, resphandlemessage, respproxyreq)
+        print 'JJ', '%x' % self.requestPortal, '%x' % self.responsePortal
         self.t1 = threading.Thread(target=self.worker)
         self.t1.start()
 
@@ -58,7 +64,7 @@ class NativeProxy:
 
     def worker(self):
         while not self.stopPolling:
-            connectal.portal_event(ctypes.c_void_p(self.tind))
+            connectal.portal_event(ctypes.c_void_p(self.responsePortal))
 
     def __getattr__(self, name, default=None):
         #print '__getattr__', name, default
@@ -67,12 +73,12 @@ class NativeProxy:
         m = getattr(connectal, '%s_%s' % (self.interfaceName, name), None)
         if m:
             def fcn (*args):
-                treq = ctypes.c_void_p(self.treq)
+                requestPortal = ctypes.c_void_p(self.requestPortal)
                 #print m, args
                 if len(args) == 1:
-                    m(treq, args[0])
+                    m(requestPortal, args[0])
                 elif len(args) == 2:
-                    m(treq, args[0], args[1])
+                    m(requestPortal, args[0], args[1])
                 if self.rpc:
                     self.sem_response.acquire()
             self.methods[name] = fcn
@@ -83,7 +89,7 @@ class NativeProxy:
 class Echo:
     def __init__(self):
         #self.sem_heard2 = threading.Semaphore(0)
-        self.proxy = NativeProxy('EchoRequest', self, 'EchoRequest_reqinfo', rpc=True)
+        self.proxy = NativeProxy('EchoRequest', self, responseInterface='EchoIndication', rpc=True)
 
     def call_say(self, a):
         self.proxy.say(a)
