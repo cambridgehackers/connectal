@@ -25,7 +25,6 @@
 #include <python2.7/Python.h>
 
 static int tracePython;// = 1;
-static PyObject *callbackFunction;
 static PortalInternal pythonTransport;
 
 #define STUB \
@@ -64,23 +63,34 @@ extern "C" {
 
 typedef int (*HandleMessage)(struct PortalInternal *pint, unsigned int channel, int messageFd);
 
+struct PortalPython {
+    struct PortalInternal pint;
+    HandleMessage handleMessage;
+    PyObject *callbackFunction;
+};
+
 static int handleIndicationMessage(struct PortalInternal *pint, unsigned int channel, int messageFd)
 {
-  HandleMessage handleMessage = (HandleMessage)pint->parent;
-  pint->json_arg_vector = 1;
-  int value = handleMessage(pint, channel, messageFd);
-  PyGILState_STATE gstate = PyGILState_Ensure();
-  const char *jsonp = (const char *)pint->transport->mapchannelInd(pint, 0);
-  if (tracePython) fprintf(stderr, "handleIndicationMessage: json=%s\n", jsonp);
-  PyEval_CallMethod(callbackFunction, "callback", "(s)", jsonp, NULL);
-  PyGILState_Release(gstate);
-  return value;
+    struct PortalPython *ppython = (struct PortalPython *)pint;
+    HandleMessage handleMessage = ppython->handleMessage;
+    pint->json_arg_vector = 1;
+    int value = handleMessage(pint, channel, messageFd);
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    const char *jsonp = (const char *)pint->transport->mapchannelInd(pint, 0);
+    if (tracePython) fprintf(stderr, "handleIndicationMessage: json=%s\n", jsonp);
+    if (ppython->callbackFunction) {
+	PyEval_CallMethod(ppython->callbackFunction, "callback", "(s)", jsonp, NULL);
+	PyGILState_Release(gstate);
+    } else {
+	fprintf(stderr, "%s:%d no callback for portal\n", __FUNCTION__, __LINE__);
+    }
+    return value;
 }
 
-void set_callback(PyObject *param)
+void set_callback(struct PortalPython *ppython, PyObject *param)
 {
     Py_INCREF(param);
-    callbackFunction = param;
+    ppython->callbackFunction = param;
     pythonTransport.transport = &callbackTransport;
     pythonTransport.map_base = (volatile unsigned int *)malloc(1000);
 }
@@ -97,15 +107,16 @@ void *newRequestPortal(int ifcname, int reqinfo)
 extern EchoIndicationCb *pEchoIndicationJsonProxyReq;
 void *newIndicationPortal(int ifcname, int reqinfo, HandleMessage handleMessage, void *proxyreq)
 {
-    struct PortalInternal *pint = (struct PortalInternal *)calloc(1, sizeof(struct PortalInternal));
-    void *parent = (void *)handleMessage;
+    void *parent = NULL;
+    struct PortalPython *ppython = (struct PortalPython *)calloc(1, sizeof(struct PortalPython));
+    ppython->handleMessage = handleMessage;
     if (tracePython)
     fprintf(stderr, "%s:%d ifcname=%x reqinfo=%08x handleMessage=%p proxyreq=%p\n",
 	    __FUNCTION__, __LINE__, ifcname, reqinfo, handleMessage, proxyreq);
-    init_portal_internal(pint, ifcname, DEFAULT_TILE,
+    init_portal_internal(&ppython->pint, ifcname, DEFAULT_TILE,
 			 (PORTAL_INDFUNC) handleIndicationMessage, proxyreq, NULL, NULL, parent, reqinfo);
     // encode message as vector ["methodname", arg0, arg1, ...]
     pythonTransport.json_arg_vector = 1;
-    return pint;
+    return ppython;
 }
 } // extern "C"

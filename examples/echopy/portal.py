@@ -36,7 +36,6 @@ class NativeProxy:
             self.sem_response = threading.Semaphore(0)
         self.stopPolling = False
         self.methods = {}
-        connectal.set_callback(ctypes.py_object(self))
         newRequestPortal = connectal.newRequestPortal
         newRequestPortal.restype = ctypes.c_void_p
         newIndicationPortal = connectal.newIndicationPortal
@@ -51,6 +50,7 @@ class NativeProxy:
         respproxyreq = ctypes.c_long.in_dll(connectal, 'p%sJsonProxyReq' % responseInterface)
         print 'respproxyreq=', respproxyreq
         self.responsePortal = newIndicationPortal(respifcname, respinfo, resphandlemessage, respproxyreq)
+        connectal.set_callback(self.responsePortal, ctypes.py_object(self))
         print 'JJ', '%x' % self.requestPortal, '%x' % self.responsePortal
         self.t1 = threading.Thread(target=self.worker)
         self.t1.start()
