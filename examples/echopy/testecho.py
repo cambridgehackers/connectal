@@ -24,24 +24,24 @@ import ctypes, json, os, sys, threading, time, portal
 
 class Echo:
     def __init__(self):
-        #self.sem_heard2 = threading.Semaphore(0)
         self.proxy = portal.NativeProxy('EchoRequest', self, responseInterface='EchoIndication', rpc=True)
+        self.response = None
 
     def call_say(self, a):
         self.proxy.say(a)
-        #self.sem_heard2.acquire()
+        print 'say response:', self.response
 
     def call_say2(self, a, b):
         self.proxy.say2(a, b)
-        #self.sem_heard2.acquire()
+        print 'say2 response:', self.response
 
     def heard(self, v):
         print 'heard called!!!', v
-        #self.sem_heard2.release()
+        self.response = v
 
     def heard2(self, a, b):
         print 'heard2 called!!!', a, b
-        #self.sem_heard2.release()
+        self.response = (a,b)
 
 echo = Echo()
 
