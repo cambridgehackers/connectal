@@ -106,6 +106,8 @@ void connectalJsonEncodeAndSend(PortalInternal *pint, void *binarydata, Connecta
 {
     ConnectalParamJsonInfo *iparam = info->param;
     char *jsonp = (char *)pint->transport->mapchannelInd(pint, 0);
+    if (pint->json_arg_vector)
+	jsonp = pint->parent;
     connectalJsonEncode(jsonp, binarydata, info, pint->json_arg_vector);
     if (!pint->json_arg_vector) {
 	int rounded_size = strlen(jsonp);

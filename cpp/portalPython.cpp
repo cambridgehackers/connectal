@@ -76,7 +76,7 @@ static int handleIndicationMessage(struct PortalInternal *pint, unsigned int cha
     pint->json_arg_vector = 1;
     int value = handleMessage(pint, channel, messageFd);
     PyGILState_STATE gstate = PyGILState_Ensure();
-    const char *jsonp = (const char *)pint->transport->mapchannelInd(pint, 0);
+    const char *jsonp = (const char *)pint->parent;
     if (tracePython) fprintf(stderr, "handleIndicationMessage: json=%s\n", jsonp);
     if (ppython->callbackFunction) {
 	PyEval_CallMethod(ppython->callbackFunction, "callback", "(s)", jsonp, NULL);
@@ -98,20 +98,20 @@ void set_callback(struct PortalPython *ppython, PyObject *param)
 void *newRequestPortal(int ifcname, int reqinfo)
 {
     struct PortalInternal *pint = (struct PortalInternal *)calloc(1, sizeof(struct PortalInternal));
-    void *parent = NULL;
-    if (tracePython) fprintf(stderr, "%s:%d ifcname=%x reqinfo=%08x\n", __FUNCTION__, __LINE__, ifcname, reqinfo);
+    void *parent = NULL;;
+    if (tracePython) fprintf(stderr, "%s:%d ifcname=%x reqinfo=%08x pint=%p\n", __FUNCTION__, __LINE__, ifcname, reqinfo, pint);
     init_portal_internal(pint, ifcname, DEFAULT_TILE, NULL, NULL, NULL, NULL, parent, reqinfo);
     return pint;
 }
 
 void *newIndicationPortal(int ifcname, int reqinfo, HandleMessage handleMessage, void *proxyreq)
 {
-    void *parent = NULL;
+    void *parent = malloc(4096);
     struct PortalPython *ppython = (struct PortalPython *)calloc(1, sizeof(struct PortalPython));
     ppython->handleMessage = handleMessage;
     if (tracePython)
-    fprintf(stderr, "%s:%d ifcname=%x reqinfo=%08x handleMessage=%p proxyreq=%p\n",
-	    __FUNCTION__, __LINE__, ifcname, reqinfo, handleMessage, proxyreq);
+    fprintf(stderr, "%s:%d ifcname=%x reqinfo=%08x handleMessage=%p proxyreq=%p pint=%p\n",
+	    __FUNCTION__, __LINE__, ifcname, reqinfo, handleMessage, proxyreq, ppython);
     init_portal_internal(&ppython->pint, ifcname, DEFAULT_TILE,
 			 (PORTAL_INDFUNC) handleIndicationMessage, proxyreq, NULL, NULL, parent, reqinfo);
     // encode message as vector ["methodname", arg0, arg1, ...]
