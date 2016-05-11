@@ -24,6 +24,7 @@
 #include "GeneratedTypes.h"
 #include <python2.7/Python.h>
 
+static int tracePython;// = 1;
 static PyObject *callbackFunction;
 static PortalInternal pythonTransport;
 
@@ -42,7 +43,8 @@ static volatile unsigned int *pythonTransportMAPCHANNELREQ(struct PortalInternal
 }
 static void pythonTransportSENDMSG(struct PortalInternal *pint, volatile unsigned int *buffer, unsigned int hdr, int sendFd)
 {
-  fprintf(stderr, "%s:%d %s\n", __FUNCTION__, __LINE__, (const char *)buffer);
+    if (tracePython)
+	fprintf(stderr, "%s:%d %s\n", __FUNCTION__, __LINE__, (const char *)buffer);
 }
 static int pythonTransportTRANSPORTINIT(struct PortalInternal *pint, void *param) STUB
 static unsigned int pythonTransportREADWORD(struct PortalInternal *pint, volatile unsigned int **addr) STUB
@@ -58,22 +60,6 @@ PortalTransportFunctions callbackTransport = {
     pythonTransportMAPCHANNELIND, pythonTransportMAPCHANNELREQ, pythonTransportSENDMSG, pythonTransportRECVMSG,
     pythonTransportBUSYWAIT, pythonTransportENABLEINT, pythonTransportEVENT, pythonTransportNOTFULL};
 
-// static int heard_cb(struct PortalInternal *p,uint32_t v) {
-//     EchoIndicationJson_heard (&pythonTransport, v);
-//     PyGILState_STATE gstate = PyGILState_Ensure();
-//     PyEval_CallMethod(callbackFunction, "callback", "(s)", pythonTransport.map_base, NULL);
-//     PyGILState_Release(gstate);
-//     return 0;
-// }
-// static int heard2_cb(struct PortalInternal *p,uint16_t a, uint16_t b) {
-//     EchoIndicationJson_heard2 (&pythonTransport, a, b);
-//     PyGILState_STATE gstate = PyGILState_Ensure();
-//     PyEval_CallMethod(callbackFunction, "callback", "(s)", pythonTransport.map_base, NULL);
-//     PyGILState_Release(gstate);
-//     return 0;
-// }
-//static EchoIndicationCb EchoInd_cbTable = { portal_disconnect, heard_cb, heard2_cb};
-
 extern "C" {
 
 typedef int (*HandleMessage)(struct PortalInternal *pint, unsigned int channel, int messageFd);
@@ -85,7 +71,7 @@ static int handleIndicationMessage(struct PortalInternal *pint, unsigned int cha
   int value = handleMessage(pint, channel, messageFd);
   PyGILState_STATE gstate = PyGILState_Ensure();
   const char *jsonp = (const char *)pint->transport->mapchannelInd(pint, 0);
-  fprintf(stderr, "handleIndicationMessage: json=%s\n", jsonp);
+  if (tracePython) fprintf(stderr, "handleIndicationMessage: json=%s\n", jsonp);
   PyEval_CallMethod(callbackFunction, "callback", "(s)", jsonp, NULL);
   PyGILState_Release(gstate);
   return value;
@@ -103,7 +89,7 @@ void *newRequestPortal(int ifcname, int reqinfo)
 {
     struct PortalInternal *pint = (struct PortalInternal *)calloc(1, sizeof(struct PortalInternal));
     void *parent = NULL;
-    fprintf(stderr, "%s:%d ifcname=%x reqinfo=%08x\n", __FUNCTION__, __LINE__, ifcname, reqinfo);
+    if (tracePython) fprintf(stderr, "%s:%d ifcname=%x reqinfo=%08x\n", __FUNCTION__, __LINE__, ifcname, reqinfo);
     init_portal_internal(pint, ifcname, DEFAULT_TILE, NULL, NULL, NULL, NULL, parent, reqinfo);
     return pint;
 }
@@ -113,8 +99,9 @@ void *newIndicationPortal(int ifcname, int reqinfo, HandleMessage handleMessage,
 {
     struct PortalInternal *pint = (struct PortalInternal *)calloc(1, sizeof(struct PortalInternal));
     void *parent = (void *)handleMessage;
-    fprintf(stderr, "%s:%d ifcname=%x reqinfo=%08x handleMessage=%p proxyreq=%p (%p)\n",
-	    __FUNCTION__, __LINE__, ifcname, reqinfo, handleMessage, proxyreq, EchoRequest_handleMessage);
+    if (tracePython)
+    fprintf(stderr, "%s:%d ifcname=%x reqinfo=%08x handleMessage=%p proxyreq=%p\n",
+	    __FUNCTION__, __LINE__, ifcname, reqinfo, handleMessage, proxyreq);
     init_portal_internal(pint, ifcname, DEFAULT_TILE,
 			 (PORTAL_INDFUNC) handleIndicationMessage, proxyreq, NULL, NULL, parent, reqinfo);
     // encode message as vector ["methodname", arg0, arg1, ...]
