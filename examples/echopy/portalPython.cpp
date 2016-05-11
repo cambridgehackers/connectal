@@ -104,7 +104,6 @@ void *newRequestPortal(int ifcname, int reqinfo)
     return pint;
 }
 
-extern EchoIndicationCb *pEchoIndicationJsonProxyReq;
 void *newIndicationPortal(int ifcname, int reqinfo, HandleMessage handleMessage, void *proxyreq)
 {
     void *parent = NULL;
