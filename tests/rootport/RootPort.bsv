@@ -48,7 +48,7 @@ module mkRootPort#(HostInterface host, RootPortIndication ind)(RootPort);
    let reset <- exposeCurrentReset;
    let refclk_p <- mkB2C1();
    let refclk_n <- mkB2C1();
-   let pcie_clk_100mhs_buf <- mkClockIBUFDS_GTE2(
+   let pcie_clk_100mhz_buf <- mkClockIBUFDS_GTE2(
 `ifdef ClockDefaultParam
        defaultValue,
 `endif
@@ -60,7 +60,7 @@ module mkRootPort#(HostInterface host, RootPortIndication ind)(RootPort);
    let axiReset <- mkSyncReset(10, reset, axiClock);
    let axiCtlReset <- mkSyncReset(10, reset, axiCtlClock);
 
-   let axiRootPort <- mkAPRP(pcie_clk_100mhs_buf, reset, axiClock, axiReset, axiCtlClock, axiCtlReset);
+   let axiRootPort <- mkAPRP(pcie_clk_100mhz_buf, reset, axiClock, axiReset, axiCtlClock, axiCtlReset);
    let axiClockC2B <- mkC2B(axiRootPort.axi.aclk_out);
    let axiCtlClockC2B <- mkC2B(axiRootPort.axi.ctl_aclk_out);
    rule rl_connect_clocks;
@@ -70,13 +70,13 @@ module mkRootPort#(HostInterface host, RootPortIndication ind)(RootPort);
 
 
    FIFOF#(Bit#(32)) dfifoCtl <- mkFIFOF();
-   Axi4SlaveBits#(16,64,4,Empty) axiRootPortSlave    = toAxi4SlaveBits(axiRootPort.s_axi);
-   Axi4SlaveLiteBits#(16,32)     axiRootPortSlaveCtl = toAxi4SlaveBits(axiRootPort.s_axi_ctl);
-   PhysMemSlave#(16,64)          axiRootPortMemSlave    <- mkPhysMemSlave(axiRootPortSlave, clocked_by axiClock, reset_by axiReset);
-   PhysMemSlave#(16,32)          axiRootPortMemSlaveCtl <- mkPhysMemSlave(axiRootPortSlaveCtl, clocked_by axiCtlClock, reset_by axiCtlReset);
+   Axi4SlaveBits#(32,64,4,Empty) axiRootPortSlave    = toAxi4SlaveBits(axiRootPort.s_axi);
+   Axi4SlaveLiteBits#(32,32)     axiRootPortSlaveCtl = toAxi4SlaveBits(axiRootPort.s_axi_ctl);
+   PhysMemSlave#(32,64)          axiRootPortMemSlave    <- mkPhysMemSlave(axiRootPortSlave, clocked_by axiClock, reset_by axiReset);
+   PhysMemSlave#(32,32)          axiRootPortMemSlaveCtl <- mkPhysMemSlave(axiRootPortSlaveCtl, clocked_by axiCtlClock, reset_by axiCtlReset);
 
-   FIFOF#(PhysMemRequest#(16,64)) araddrFifo <- mkDualClockBramFIFOF(clock, reset, axiClock, axiReset);
-   FIFOF#(PhysMemRequest#(16,64)) awaddrFifo <- mkDualClockBramFIFOF(clock, reset, axiClock, axiReset);
+   FIFOF#(PhysMemRequest#(32,64)) araddrFifo <- mkDualClockBramFIFOF(clock, reset, axiClock, axiReset);
+   FIFOF#(PhysMemRequest#(32,64)) awaddrFifo <- mkDualClockBramFIFOF(clock, reset, axiClock, axiReset);
    FIFOF#(MemData#(64))           rdataFifo <- mkDualClockBramFIFOF(axiClock, axiReset, clock, reset);
    FIFOF#(MemData#(64))           wdataFifo <- mkDualClockBramFIFOF(clock, reset, axiClock, axiReset);
    FIFOF#(Bit#(6))                doneFifo <- mkDualClockBramFIFOF(axiClock, axiReset, clock, reset);
@@ -97,16 +97,16 @@ module mkRootPort#(HostInterface host, RootPortIndication ind)(RootPort);
       ind.writeDone();
    endrule
 
-   FIFOF#(PhysMemRequest#(16,64)) araddrFifoCtl <- mkDualClockBramFIFOF(clock, reset, axiCtlClock, axiCtlReset);
-   FIFOF#(PhysMemRequest#(16,64)) awaddrFifoCtl <- mkDualClockBramFIFOF(clock, reset, axiCtlClock, axiCtlReset);
-   FIFOF#(MemData#(64))           rdataFifoCtl <- mkDualClockBramFIFOF(axiCtlClock, axiCtlReset, clock, reset);
-   FIFOF#(MemData#(64))           wdataFifoCtl <- mkDualClockBramFIFOF(clock, reset, axiCtlClock, axiCtlReset);
+   FIFOF#(PhysMemRequest#(32,32)) araddrFifoCtl <- mkDualClockBramFIFOF(clock, reset, axiCtlClock, axiCtlReset);
+   FIFOF#(PhysMemRequest#(32,32)) awaddrFifoCtl <- mkDualClockBramFIFOF(clock, reset, axiCtlClock, axiCtlReset);
+   FIFOF#(MemData#(32))           rdataFifoCtl <- mkDualClockBramFIFOF(axiCtlClock, axiCtlReset, clock, reset);
+   FIFOF#(MemData#(32))           wdataFifoCtl <- mkDualClockBramFIFOF(clock, reset, axiCtlClock, axiCtlReset);
    FIFOF#(Bit#(6))                doneFifoCtl <- mkDualClockBramFIFOF(axiCtlClock, axiCtlReset, clock, reset);
 
-   let araddrCtlCnx <- mkConnection(toGet(araddrFifo), axiRootPortMemSlave.read_server.readReq);
-   let awaddrCtlCnx <- mkConnection(toGet(awaddrFifo), axiRootPortMemSlave.write_server.writeReq);
-   let rdataCtlCnx  <- mkConnection(axiRootPortMemSlave.read_server.readData, toPut(rdataFifo));
-   let wdataCtlCnx  <- mkConnection(toGet(wdataFifo), axiRootPortMemSlave.write_server.writeData);
+   let araddrCtlCnx <- mkConnection(toGet(araddrFifoCtl), axiRootPortMemSlaveCtl.read_server.readReq);
+   let awaddrCtlCnx <- mkConnection(toGet(awaddrFifoCtl), axiRootPortMemSlaveCtl.write_server.writeReq);
+   let rdataCtlCnx  <- mkConnection(axiRootPortMemSlaveCtl.read_server.readData, toPut(rdataFifoCtl));
+   let wdataCtlCnx  <- mkConnection(toGet(wdataFifoCtl), axiRootPortMemSlaveCtl.write_server.writeData);
    let doneCtlCnx   <- mkConnection(axiRootPortMemSlaveCtl.write_server.writeDone, toPut(doneFifoCtl));
 
    rule rl_rdata_ctl;
@@ -125,18 +125,18 @@ module mkRootPort#(HostInterface host, RootPortIndication ind)(RootPort);
       endmethod
 
       method Action read(Bit#(32) addr);
-	 araddrFifo.enq(PhysMemRequest { addr: truncate(addr), burstLen: 4, tag: 0 });
+	 araddrFifo.enq(PhysMemRequest { addr: addr, burstLen: 4, tag: 0 });
       endmethod
       method Action write(Bit#(32) addr, Bit#(64) value);
-	 awaddrFifo.enq(PhysMemRequest { addr: truncate(addr), burstLen: 4, tag: 0 });
+	 awaddrFifo.enq(PhysMemRequest { addr: addr, burstLen: 4, tag: 0 });
 	 wdataFifo.enq(MemData {data: value, tag: 0, last: True});
       endmethod
 
       method Action readCtl(Bit#(32) addr);
-	 araddrFifoCtl.enq(PhysMemRequest { addr: truncate(addr), burstLen: 4, tag: 0 });
+	 araddrFifoCtl.enq(PhysMemRequest { addr: addr, burstLen: 4, tag: 0 });
       endmethod
       method Action writeCtl(Bit#(32) addr, Bit#(64) value);
-	 araddrFifoCtl.enq(PhysMemRequest { addr: truncate(addr), burstLen: 4, tag: 0 });
+	 awaddrFifoCtl.enq(PhysMemRequest { addr: addr, burstLen: 4, tag: 0 });
 	 wdataFifoCtl.enq(MemData {data: truncate(value), tag: 0, last: True});
       endmethod
    endinterface
@@ -152,9 +152,9 @@ module mkRootPort#(HostInterface host, RootPortIndication ind)(RootPort);
 
 endmodule
 
-instance ToAxi4SlaveBits#(Axi4SlaveBits#(16,64,4,Empty), AprpS_axi);
-   function Axi4SlaveBits#(16,64,4,Empty) toAxi4SlaveBits(AprpS_axi s);
-      return (interface Axi4SlaveBits#(16,64,4,Empty);
+instance ToAxi4SlaveBits#(Axi4SlaveBits#(32,64,4,Empty), AprpS_axi);
+   function Axi4SlaveBits#(32,64,4,Empty) toAxi4SlaveBits(AprpS_axi s);
+      return (interface Axi4SlaveBits#(32,64,4,Empty);
 	 method araddr = compose(s.araddr, extend);
 	 method arburst = s.arburst;
 	 //method arcache = s.arcache;
@@ -200,9 +200,9 @@ instance ToAxi4SlaveBits#(Axi4SlaveBits#(16,64,4,Empty), AprpS_axi);
    endfunction
 endinstance
 
-instance ToAxi4SlaveBits#(Axi4SlaveLiteBits#(16,32), AprpS_axi_ctl);
-   function Axi4SlaveLiteBits#(16,32) toAxi4SlaveBits(AprpS_axi_ctl s);
-      return (interface Axi4SlaveLiteBits#(16,32);
+instance ToAxi4SlaveBits#(Axi4SlaveLiteBits#(32,32), AprpS_axi_ctl);
+   function Axi4SlaveLiteBits#(32,32) toAxi4SlaveBits(AprpS_axi_ctl s);
+      return (interface Axi4SlaveLiteBits#(32,32);
 	 method araddr = compose(s.araddr, extend);
 	 method arready = s.arready;
 	 method arvalid = s.arvalid;
