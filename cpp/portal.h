@@ -152,17 +152,17 @@ typedef int (*SHARED_MMUINDICATION_POLL)(PortalInternal *p, uint32_t *arg_id);
 typedef struct {
     struct {
         struct DmaManager *manager;
-        int reqport;
-        int reqinfo;
-        int indport;
-        int indinfo;
+        uint32_t reqport;
+        uint32_t reqinfo;
+        uint32_t indport;
+        uint32_t indinfo;
         PORTAL_INDFUNC     handler;
         void              *callbackFunctions;
         SHARED_MMUINDICATION_POLL poll;
     } dma;
     uint32_t    size;
     struct {
-        int port;
+        uint32_t port;
         uint32_t reqinfo;
         SHARED_CONFIG_SETSGLID setSglId;
     } hardware;
