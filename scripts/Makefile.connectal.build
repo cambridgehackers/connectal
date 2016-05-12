@@ -148,8 +148,13 @@ ubuntu.exe2: prepare_bin_target
 	@cp -v jni/ubuntu.exe2 bin
 
 connectal.so: prepare_bin_target
+ifneq ($(OS),android)
 	$(Q)cd jni; $(MAKE) --no-print-directory -f Ubuntu.mk connectal.so
 	@cp -v jni/connectal.so bin
+else
+	+ndk-build $(CONNECTAL_NDK_PARAM)
+	@cp -v libs/armeabi/libconnectal.so bin/connectal.so
+endif
 ifneq ($(OS),android)
 	$(Q)[ ! -f bin/mkTop.bin.gz ] || objcopy --remove-section fpgadata bin/connectal.so
 	$(Q)[ ! -f bin/mkTop.bin.gz ] || objcopy --add-section fpgadata=bin/mkTop.bin.gz bin/connectal.so
@@ -343,7 +348,7 @@ VSIM_CXXFLAGS= $(CXXFLAGS_PROJECT) -Wa,-W -fPIC -m64 -I"$(MODELSIMDIR)/include" 
 
 $(foreach src, $(filter %.c, $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)), $(eval $(call SIM_C_RULE, vsim.dir/xsc, $(VSIM_CFLAGS), $(src))))
 $(foreach src, $(filter %.cpp, $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)), $(eval $(call SIM_CXX_RULE, vsim.dir/xsc, $(VSIM_CXXFLAGS), $(src))))
-VSIM_OBJECTS = $(addprefix vsim.dir/xsc, $(addsuffix .o, $(basename $(notdir $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)))))
+VSIM_OBJECTS = $(addprefix vsim.dir/xsc/, $(addsuffix .o, $(basename $(notdir $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)))))
 
 VSIM_DEFINES = $(subst -D ,+define+,$(BSVDEFINES))
 VSIM_SV = $(addprefix -sv $(CONNECTALDIR)/verilog/, xsimtop.sv XsimDmaReadWrite.sv XsimLink.sv XsimSink.sv XsimSource.sv)

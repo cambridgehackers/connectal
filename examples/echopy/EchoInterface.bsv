@@ -1,4 +1,4 @@
-// Copyright (c) 2015 The Connectal Project
+// Copyright (c) 2016 Connectal Project
 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -19,22 +19,13 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-//`timescale 1ns / 1ps
 
-`ifdef BSV_POSITIVE_RESET
-  `define BSV_RESET_VALUE 1'b1
-  `define BSV_RESET_EDGE posedge
-`else
-  `define BSV_RESET_VALUE 1'b0
-  `define BSV_RESET_EDGE negedge
-`endif
+interface EchoResponse;
+    method Action heard(Bit#(32) v);
+    method Action heard2(Bit#(16) a, Bit#(16) b);
+endinterface
 
-module XsimSource( input CLK, input CLK_GATE, input RST, input [31:0] portal, input en_beat, input [31:0] beat);
-
-   import "DPI-C" function void dpi_msgSource_beat(input int portal, input int beat);
-
-   always @(posedge CLK) begin
-      if (en_beat)
-          dpi_msgSource_beat(portal, beat);
-   end
-endmodule
+interface EchoRequest;
+   method Action say(Bit#(32) v);
+   method Action say2(Bit#(16) a, Bit#(16) b);
+endinterface

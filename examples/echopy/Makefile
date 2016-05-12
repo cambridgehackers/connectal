@@ -1,10 +1,16 @@
 CONNECTALDIR?=../..
 S2H_INTERFACES = EchoRequest:Echo.request
-H2S_INTERFACES = Echo:EchoIndication
+H2S_INTERFACES = Echo:EchoResponse
 
-BSVFILES = Echo.bsv
-CPPFILES = testecho.cpp
+BSVFILES = EchoInterface.bsv
+CPPFILES = $(CONNECTALDIR)/cpp/portalPython.cpp
 CPPFILES2= runechopy.cpp
 CONNECTALFLAGS += --shared
+ifeq ($(BOARD),zedboard)
+## git clone git://github.com/cambridgehackers/python-for-android-sdk
+PYTHON_FOR_ANDROID ?= $(CONNECTALDIR)/../python-for-android-sdk
+CONNECTALFLAGS += -I$(PYTHON_FOR_ANDROID)/include/
+CONNECTALFLAGS += -L$(PYTHON_FOR_ANDROID)/lib -lpython2.7
+endif
 
 include $(CONNECTALDIR)/Makefile.connectal

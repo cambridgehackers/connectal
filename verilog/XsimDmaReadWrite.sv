@@ -29,12 +29,6 @@
   `define BSV_RESET_EDGE negedge
 `endif
 
-import "DPI-C" function void simDma_init(input int id, input int handle, input int size);
-import "DPI-C" function void simDma_initfd(input int id, input int fd);
-import "DPI-C" function void simDma_idreturn(input int aid);
-import "DPI-C" function void write_simDma32(input int handle, input int addr, input int data, input int byteenable);
-import "DPI-C" function int read_simDma32(input int handle, input int addr);
-
 module XsimDmaReadWrite(input CLK,
 			input 		  CLK_GATE,
 			input 		  RST,
@@ -70,6 +64,12 @@ module XsimDmaReadWrite(input CLK,
    reg 					  readresponse_valid_reg;
    reg [31:0] 				  readresponse_data_reg;
 				  
+   import "DPI-C" function void simDma_init(input int id, input int handle, input int size);
+   import "DPI-C" function void simDma_initfd(input int id, input int fd);
+   import "DPI-C" function void simDma_idreturn(input int aid);
+   import "DPI-C" function void write_simDma32(input int handle, input int addr, input int data, input int byteenable);
+   import "DPI-C" function int read_simDma32(input int handle, input int addr);
+
    assign rdy_readresponse = readresponse_valid_reg;
    assign rdy_readrequest = !readresponse_valid_reg || en_readresponse;
    assign readresponse_data = readresponse_data_reg;

@@ -203,7 +203,7 @@ include $(CONNECTALDIR)/scripts/Makefile.connectal.application
 LOCAL_SRC_FILES := %(source)s $(PORTAL_SRC_FILES)
 
 LOCAL_PATH :=
-LOCAL_MODULE := android.exe
+LOCAL_MODULE := %(android_local_module)s
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog %(clibdirs)s %(clibs)s %(clibfiles)s
 LOCAL_CPPFLAGS := "-march=armv7-a"
@@ -211,7 +211,7 @@ LOCAL_CFLAGS := -DZYNQ %(cflags)s %(werr)s
 LOCAL_CXXFLAGS := -DZYNQ %(cxxflags)s %(werr)s
 LOCAL_CFLAGS2 := $(cdefines2)s
 
-include $(BUILD_EXECUTABLE)
+include $(%(android_build_type)s)
 '''
 
 genxdc_template='''
@@ -387,6 +387,8 @@ if __name__=='__main__':
                    '%(cincludes)s', '%(cdefines)s']
     substs['cflags'] = util.escapequotes('%s %s' % ((' '.join(includelist) % substs), ' '.join(options.cflags)))
     substs['cxxflags'] = util.escapequotes('%s %s' % ((' '.join(includelist) % substs), ' '.join(options.cxxflags)))
+    substs['android_build_type'] = 'BUILD_SHARED_LIBRARY' if options.shared else 'BUILD_EXECUTABLE'
+    substs['android_local_module'] = 'connectal' if options.shared else 'android.exe'
     f = util.createDirAndOpen(androidmkname, 'w')
     f.write(androidmk_template % substs)
     f.close()

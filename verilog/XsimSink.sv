@@ -29,11 +29,12 @@
   `define BSV_RESET_EDGE negedge
 `endif
 
-import "DPI-C" function longint dpi_msgSink_beat(input int portal);
 module XsimSink(input CLK, input CLK_GATE, input RST, input [31:0] portal, output RDY_beat, input EN_beat, output [31:0] beat);
    reg     valid_reg;
    reg 	   [31:0] beat_reg;
    
+   import "DPI-C" function longint dpi_msgSink_beat(input int portal);
+
    assign RDY_beat = valid_reg;
    assign beat = beat_reg;
    

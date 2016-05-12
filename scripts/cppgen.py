@@ -22,7 +22,7 @@
 ## CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ## SOFTWARE.
 
-import functools, math, os, re, sys, util
+import functools, json, math, os, re, sys, util
 
 verbose = False
 sizeofUint32_t = 4
@@ -119,7 +119,8 @@ static ConnectalMethodJsonInfo %(classNameOrig)sInfo[] = {'''
 proxyMethodTableDecl='''
 %(classNameOrig)sCb %(className)sProxyReq = {
     %(methodTable)s
-};'''
+};
+%(classNameOrig)sCb *p%(className)sProxyReq = &%(className)sProxyReq;'''
 
 proxyMethodTemplateDecl='''
 int %(className)s_%(methodName)s (%(paramProxyDeclarations)s )'''
@@ -610,11 +611,16 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         subs['handleStartup'] = 'channel = connnectalJsonDecode(p, channel, &tempdata, %(classNameOrig)sInfo);' % subs
     else:
         subs['handleStartup'] = 'volatile unsigned int* temp_working_addr = p->transport->mapchannelInd(p, channel);'
-        generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n#define %(className)s_reqinfo %(reqInfo)s\n' % subs)
+        generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n' % subs)
+        generated_hpp.write('extern const uint32_t %(className)s_reqinfo;\n' % subs)
+        cpp.write('\nconst uint32_t %(className)s_reqinfo = %(reqInfo)s;\n' % subs)
         hpp.write(proxyClassPrefixTemplate % subs)
         for mitem in declList:
             emitMethodDeclaration(mitem['dname'], mitem['dparams'], hpp, classCName)
         hpp.write('};\n')
+    cpp.write('const char * %(className)s_methodSignatures()\n{\n' % subs)
+    signatures = dict([(mitem['dname'], ['long' for param in mitem['dparams']]) for mitem in declList])
+    cpp.write('    return %s;\n}\n' % json.dumps(json.dumps(signatures)))
     cpp.write((handleMessageTemplateDecl % subs))
     cpp.write(handleMessageTemplate1 % subs)
     for mitem in declList:
@@ -788,6 +794,11 @@ def generate_cpp(project_dir, noisyFlag, jsondata):
     generated_cpp = create_cpp_file(cppname)
     generatedCFiles.append(cppname)
     generated_cpp.write('\n#ifndef NO_CPP_PORTAL_CODE\n')
+    for decl in jsondata['globaldecls']:
+        if decl['tname'] == 'IfcNames':
+            ifcnames = decl['tdtype']['elements']
+            for (ifcname,ifcvalue) in ifcnames:
+                generated_cpp.write('extern const uint32_t %s = %s;\n' % (util.decapitalize(ifcname), ifcname))
     for item in jsondata['interfaces']:
         if verbose:
             print 'generateclass', item

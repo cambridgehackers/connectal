@@ -104,20 +104,22 @@ INTERFACES += MemServerRequest MMURequest MemServerIndication MMUIndication
 BSVFILES += $(CONNECTALDIR)/bsv/ConnectalMemory.bsv
 ifneq ($(NUMBER_OF_MASTERS), 0)
 CPPFILES += $(CONNECTALDIR)/cpp/dmaManager.c $(CONNECTALDIR)/cpp/platformMemory.cpp
-ifneq ($(CPPFILES2),)
-CPPFILES2 += $(CONNECTALDIR)/cpp/dmaManager.c $(CONNECTALDIR)/cpp/platformMemory.cpp
-endif
+CPPFILES2_dma = $(CONNECTALDIR)/cpp/dmaManager.c $(CONNECTALDIR)/cpp/platformMemory.cpp
 endif
 
 INTERFACES_cnoc = XsimMsgRequest XsimMsgIndication
-CPPFILES_cnoc   = 
+CPPFILES_cnoc   = $(CONNECTALDIR)/cpp/transportXsim.c
 BSVFILES_cnoc   = $(CONNECTALDIR)/bsv/XsimIF.bsv
-CPPFILES2_cnoc  = 
+CPPFILES2_cnoc  = $(CONNECTALDIR)/cpp/transportXsim.c
 
 INTERFACES += $(INTERFACES_$(USE_CNOC))
 CPPFILES   += $(CPPFILES_$(USE_CNOC))
 BSVFILES   += $(BSVFILES_$(USE_CNOC))
-#CPPFILES2  += $(CPPFILES2_$(USE_CNOC))
+
+
+ifneq ($(CPPFILES2),)
+ALL_CPPFILES2 = $(CPPFILES2) $(CPPFILES2_$(USE_CNOC)) $(CPPFILES2_dma)
+endif
 
 all bits verilog implementation bsim xsim vsim xsimrun: gentarget prebuild
 	+make -C $(PROJECTDIR) --no-print-directory $@
@@ -204,7 +206,7 @@ endif
 	$(Q)$(CONNECTALDIR)/scripts/makefilegen.py -B$(BOARD) --project-dir $(PROJECTDIR) \
 	$(foreach interfaces, $(INTERFACES), -interfaces $(interfaces)) \
 	$(foreach f, $(CPPFILES), --source $f) \
-	$(foreach f, $(CPPFILES2), --source2 $f) \
+	$(foreach f, $(ALL_CPPFILES2), --source2 $f) \
 	$(foreach f, $(PINOUT_FILE), --pinout $f) \
 	$(foreach f, $(PIN_BINDINGS), --pin-binding $f) \
 	$(foreach f, $(PRTOP_FILE), --prtop $f) \

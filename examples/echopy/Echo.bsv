@@ -24,17 +24,7 @@
 
 import FIFO::*;
 import Vector::*;
-
-interface EchoIndication;
-    method Action heard(Bit#(32) v);
-    method Action heard2(Bit#(16) a, Bit#(16) b);
-endinterface
-
-interface EchoRequest;
-   method Action say(Bit#(32) v);
-   method Action say2(Bit#(16) a, Bit#(16) b);
-   method Action setLeds(Bit#(8) v);
-endinterface
+import EchoInterface::*;
 
 interface Echo;
    interface EchoRequest request;
@@ -45,7 +35,7 @@ typedef struct {
 	Bit#(16) b;
 } EchoPair deriving (Bits);
 
-module mkEcho#(EchoIndication indication)(Echo);
+module mkEcho#(EchoResponse indication)(Echo);
 
     FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
     FIFO#(EchoPair) delay2 <- mkSizedFIFO(8);
@@ -69,9 +59,6 @@ module mkEcho#(EchoIndication indication)(Echo);
       method Action say2(Bit#(16) a, Bit#(16) b);
    $display("say2 %h %h", a, b);
 	 delay2.enq(EchoPair { a: a, b: b});
-      endmethod
-      
-      method Action setLeds(Bit#(8) v);
       endmethod
    endinterface
 endmodule
