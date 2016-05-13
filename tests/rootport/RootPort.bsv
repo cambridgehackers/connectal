@@ -27,7 +27,6 @@ import GetPut::*;
 import Vector::*;
 
 import ConnectalClocks::*;
-import ConnectalBramFifo::*;
 import DefaultValue::*;
 import HostInterface::*;
 import XilinxCells::*;
@@ -37,6 +36,17 @@ import AxiBits::*;
 import AxiPcieRootPort::*;
 import RootPortIfc::*;
 import RootPortPins::*;
+
+`ifndef TOP_SOURCES_PORTAL_CLOCK
+import ConnectalBramFifo::*;
+`else
+import BRAMFIFO::*;
+module mkDualClockBramFIFOF#(Clock clock1, Reset reset1, Clock clock2, Reset reset2)(FIFOF#(a))
+   provisos (Bits#(a, asz), Add#(1, a__, asz));
+   FIFOF#(a) fifo <- mkSizedBRAMFIFOF(512, clocked_by clock1, reset_by reset1);
+   return fifo;
+endmodule
+`endif
 
 
 interface RootPort;
@@ -57,20 +67,29 @@ module mkRootPort#(HostInterface host, RootPortIndication ind)(RootPort);
        defaultValue,
 `endif
       True, refclk_p.c, refclk_n.c);
+`ifndef TOP_SOURCES_PORTAL_CLOCK
    let axiClockB2C    <- mkB2C1();
    let axiCtlClockB2C <- mkB2C1();
    let axiClock = axiClockB2C.c;
    let axiCtlClock = axiCtlClockB2C.c;
    let axiReset <- mkSyncReset(10, reset, axiClock);
    let axiCtlReset <- mkSyncReset(10, reset, axiCtlClock);
+`else
+   let axiClock = clock;
+   let axiCtlClock = clock;
+   let axiReset = reset;
+   let axiCtlReset = reset;
+`endif
 
    let axiRootPort <- mkAPRP(pcie_clk_100mhz_buf, reset, axiClock, axiReset, axiCtlClock, axiCtlReset);
+`ifndef TOP_SOURCES_PORTAL_CLOCK
    let axiClockC2B <- mkC2B(axiRootPort.axi.aclk_out);
    let axiCtlClockC2B <- mkC2B(axiRootPort.axi.ctl_aclk_out);
    rule rl_connect_clocks;
       axiClockB2C.inputclock(axiClockC2B.o);
       axiCtlClockB2C.inputclock(axiClockC2B.o);
    endrule
+`endif
 
 
    FIFOF#(Bit#(32)) dfifoCtl <- mkFIFOF();
