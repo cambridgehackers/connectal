@@ -38,9 +38,13 @@ import AxiPcieRootPort::*;
 import RootPortIfc::*;
 import RootPortPins::*;
 
+
 interface RootPort;
    interface RootPortRequest request;
    interface RootPortPins pins;
+`ifdef TOP_SOURCES_PORTAL_CLOCK
+   interface Clock portalClockSource;
+`endif
 endinterface
 
 module mkRootPort#(HostInterface host, RootPortIndication ind)(RootPort);
@@ -140,6 +144,7 @@ module mkRootPort#(HostInterface host, RootPortIndication ind)(RootPort);
 	 wdataFifoCtl.enq(MemData {data: truncate(value), tag: 0, last: True});
       endmethod
    endinterface
+   interface Clock portalClockSource = axiRootPort.axi.aclk_out;
    interface RootPortPins pins;
       interface deleteme_unused_clock = clock;
       interface pcie_sys_reset_n = reset;

@@ -11,7 +11,10 @@ PIN_TYPE = RootPortPins
 PIN_TYPE_INCLUDE = RootPortPins
 AUTOTOP = --interface pins:RootPort.pins
 
-CONNECTALFLAGS +=  -D IMPORT_HOSTIF
-CONNECTALFLAGS +=  --xci=$(BOARD)/cores/$(BOARD)/axi_pcie_rp/axi_pcie_rp.xci
+AUTOTOP += --portalclock=lRootPort.portalClockSource
+CONNECTALFLAGS += -D TOP_SOURCES_PORTAL_CLOCK --mainclockperiod=8
+
+CONNECTALFLAGS += -D IMPORT_HOSTIF
+CONNECTALFLAGS += --xci=$(BOARD)/cores/$(BOARD)/axi_pcie_rp/axi_pcie_rp.xci
 
 include $(CONNECTALDIR)/Makefile.connectal
