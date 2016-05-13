@@ -106,10 +106,10 @@ module mkMemReadChannel#(Integer bufferSizeBytes, Integer channelNumber, PipeOut
    
    FIFO#(Tuple3#(Bool,Bool,Bit#(BurstLenSize))) serverCheckAvail <- mkSizedFIFO(1);
    FIFOF#(MemRequest)                          dmaRequest <- mkSizedFIFOF(valueOf(cmdQDepth));
-   FIFO#(Tuple3#(Bit#(8),Bit#(MemTagSize),Bool)) serverProcessing <- mkSizedFIFO(valueOf(cmdQDepth));
+   FIFO#(Tuple3#(Bit#(BurstLenSize),Bit#(MemTagSize),Bool)) serverProcessing <- mkSizedFIFO(valueOf(cmdQDepth));
    FIFOF#(MemData#(busWidth))                       serverDataFifo <- mkFIFOF;
 
-   Reg#(Bit#(8))                    respCnt <- mkReg(0);
+   Reg#(Bit#(BurstLenSize))                    respCnt <- mkReg(0);
    Reg#(Bit#(32)) counter <- mkReg(0);
 
    rule incCounter;

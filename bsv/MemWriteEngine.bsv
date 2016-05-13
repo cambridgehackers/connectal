@@ -67,7 +67,7 @@ module mkMemWriteChannel#(Integer bufferSizeBytes, Integer channelNumber,
    Reg#(Bool) load_in_progress <- mkReg(False);
    FIFO#(Tuple3#(MemengineCmd,Bool,Bool))       serverCond <- mkFIFO1();
    FIFO#(Tuple2#(Bit#(MemTagSize),MemengineCmd)) serverReq <- mkSizedFIFO(valueOf(cmdQDepth));
-   FIFO#(Tuple3#(Bit#(8),Bit#(MemTagSize),Bool))inProgress <- mkSizedFIFO(valueOf(cmdQDepth));
+   FIFO#(Tuple3#(Bit#(BurstLenSize),Bit#(MemTagSize),Bool))inProgress <- mkSizedFIFO(valueOf(cmdQDepth));
    FIFO#(Tuple3#(Bit#(MemTagSize),Bit#(MemTagSize),Bool)) serverDone <- mkSizedFIFO(valueOf(cmdQDepth));
    FIFOF#(MemRequest)           writeReqFifo <- mkFIFOF();
    FIFOF#(MemData#(userWidth)) writeDataFifo <- mkFIFOF();
@@ -86,7 +86,7 @@ module mkMemWriteChannel#(Integer bufferSizeBytes, Integer channelNumber,
       cycles <= cycles + 1;
    endrule
    
-   Reg#(Bit#(8))                    respCnt <- mkReg(0);
+   Reg#(Bit#(BurstLenSize))                    respCnt <- mkReg(0);
    let beat_shift = fromInteger(valueOf(beatShift));
 
    rule store_cmd if (!clientInFlight);
