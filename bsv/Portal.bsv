@@ -85,5 +85,8 @@ interface ConnectalTop;
    interface Vector#(MaxNumberOfPortals,ReadOnly#(Bool)) interrupt;
    interface Vector#(NumReadClients,MemReadClient#(DataBusWidth)) readers;
    interface Vector#(NumWriteClients,MemWriteClient#(DataBusWidth)) writers;
+`ifdef TOP_SOURCES_PORTAL_CLOCK
+   interface Clock portalClockSource;
+`endif
    interface `PinType pins;
 endinterface

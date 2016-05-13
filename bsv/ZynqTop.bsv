@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 import ConnectalConfig::*;
+import ConnectalClocks::*;
 import Clocks :: *;
 import DefaultValue      :: *;
 import Vector            :: *;
@@ -74,9 +75,15 @@ interface ZynqTop;
 endinterface
 
 module mkZynqTop `SYS_CLK_PARAM (ZynqTop);
-   PS7 ps7 <- mkPS7();
-   Clock mainclock = ps7.fclkclk[0];
-   Reset mainreset = ps7.fclkreset[0];
+`ifndef TOP_SOURCES_PORTAL_CLOCK
+   let axiClock <- exposeCurrentClock();
+`else
+   B2C axiClockB2C <- mkB2C();
+   let axiClock = axiClockB2C.c;
+`endif
+   PS7 ps7 <- mkPS7(axiClock);
+   Clock mainclock = ps7.portalClock;
+   Reset mainreset = ps7.portalReset;
 
 `ifdef XILINX_SYS_CLK
    Clock sys_clk_200mhz <- mkClockIBUFDS(
@@ -127,6 +134,14 @@ module mkZynqTop `SYS_CLK_PARAM (ZynqTop);
 `endif
 `endif
       clocked_by mainclock, reset_by mainreset));
+
+`ifdef TOP_SOURCES_PORTAL_CLOCK
+   C2B portalClockC2B <- mkC2B(ts[0].portalClockSource, clocked_by axiClockB2C.c);
+   rule rl_portal_clock_source;
+      axiClockB2C.inputclock(portalClockC2B.o);
+   endrule
+`endif
+
    Platform top <- mkPlatform(ts, clocked_by mainclock, reset_by mainreset);
    mkConnectionWithTrace(ps7, top, lbscan.loc[1], clocked_by mainclock, reset_by mainreset);
 
