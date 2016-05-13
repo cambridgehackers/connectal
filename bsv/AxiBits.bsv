@@ -26,6 +26,7 @@ import CFFIFO::*;
 import GetPut::*;
 import MemTypes::*;
 import EHRM::*;
+import Axi4MasterSlave::*;
 
 interface AxiMasterBits#(numeric type addrWidth, numeric type dataWidth, numeric type tagWidth, type extraType);
     method Bit#(addrWidth)     araddr();
@@ -437,7 +438,8 @@ endinstance
 
 //FIXME burst transfers
 instance MkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,dataWidth,tagWidth,Empty),addrWidth,dataWidth)
-      provisos (Add#(axiAddrWidth,a__,addrWidth));
+      provisos (Add#(axiAddrWidth,a__,addrWidth),
+		Add#(b__, tagWidth, 6));
    module mkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,dataWidth,tagWidth,Empty) axiSlave)(PhysMemSlave#(addrWidth,dataWidth));
       FIFOF#(PhysMemRequest#(addrWidth,dataWidth)) arfifo <- mkAxiFifoF();
       FIFOF#(MemData#(dataWidth)) rfifo <- mkAxiFifoF();
@@ -449,10 +451,18 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,dataWidth,tagWidth,Empty),a
 
       rule rl_arvalid_araddr;
 	 axiSlave.arvalid(pack(arfifo.notEmpty && rtagfifo.notFull));
-	 let addr = 0;
-	 if (arfifo.notEmpty)
+	 Bit#(axiAddrWidth) addr = 0;
+	 Bit#(tagWidth) id = 0;
+	 if (arfifo.notEmpty) begin
 	    addr = truncate(arfifo.first.addr);
+	    id = truncate(arfifo.first.tag);
+	 end
 	 axiSlave.araddr(addr);
+	 axiSlave.arid(id);
+	 axiSlave.arsize(axiBusSize(valueOf(dataWidth)));
+	 axiSlave.arburst(2'b01);
+	 axiSlave.arprot(3'b000);
+	 axiSlave.arcache(4'b0011);
       endrule
       rule rl_arfifo if (axiSlave.arready() == 1);
 	 let req <- toGet(arfifo).get();
@@ -468,10 +478,18 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,dataWidth,tagWidth,Empty),a
 
       rule rl_awvalid_awaddr;
 	 axiSlave.awvalid(pack(awfifo.notEmpty && wtagfifo.notFull));
-	 let addr = 0;
-	 if (awfifo.notEmpty)
+	 Bit#(axiAddrWidth) addr = 0;
+	 Bit#(tagWidth) id = 0;
+	 if (awfifo.notEmpty) begin
 	    addr = truncate(awfifo.first.addr);
+	    id = truncate(awfifo.first.tag);
+	 end
 	 axiSlave.awaddr(addr);
+	 axiSlave.awid(id);
+	 axiSlave.awsize(axiBusSize(valueOf(dataWidth)));
+	 axiSlave.awburst(2'b01);
+	 axiSlave.awprot(3'b000);
+	 axiSlave.awcache(4'b0011);
       endrule   
       rule rl_awfifo if (axiSlave.awready() == 1);
 	 let req <- toGet(awfifo).get();
