@@ -71,51 +71,51 @@ int main(int argc, const char **argv)
 {
     RootPort rootPort;
 
-    if (0) {
+    sleep(1);
+    fprintf(stderr, "Enabling I/O and Memory, bus master, parity and SERR\n");
+    rootPort.writeCtl(0x004, 0x147);
+    rootPort.readCtl(0x004);
+    rootPort.readCtl(0x130);
+    rootPort.readCtl(0x134);
+    rootPort.readCtl(0x18);
+    // required
+    rootPort.writeCtl(0x18, 0x00070100);
+    rootPort.readCtl(0x18);
+    fprintf(stderr, "Enabling card I/O and Memory, bus master, parity and SERR\n");
+    rootPort.writeCtl((1 << 20) + 4, 0x147);
+    fprintf(stderr, "reading config regs\n");
+    rootPort.readCtl((1 << 20) + 0);
+    rootPort.readCtl((1 << 20) + 4);
+    rootPort.readCtl((1 << 20) + 8);
+    rootPort.readCtl((1 << 20) + 0x10);
+    fprintf(stderr, "reading AXI BAR\n");
+    rootPort.readCtl(0x208);
+    rootPort.readCtl(0x20C);
+    rootPort.readCtl(0x210);
+    fprintf(stderr, "writing card BAR0\n");
+    rootPort.writeCtl((1 << 20) + 0x10, 0x220000);
+    rootPort.writeCtl((1 << 20) + 0x14, 0x0000);
+    rootPort.readCtl((1 << 20) + 0x10);
+    rootPort.readCtl((1 << 20) + 0x14);
+    fprintf(stderr, "Enabling bridge\n");
+    rootPort.readCtl(0x148);
+    rootPort.writeCtl(0x148, 1);
+    rootPort.readCtl(0x148);
+    rootPort.readCtl(0x140);
+    rootPort.writeCtl(0x140, 0x00010000);
+    rootPort.readCtl(0x140);
+    if (1) {
       // pause for vivado to connect
       fprintf(stderr, "type enter to continue:");
       char line[100];
       fgets(line, sizeof(line), stdin);
     }
 
-    sleep(1);
-    rootPort.readCtl(0x130);
-    rootPort.readCtl(0x134);
-    rootPort.readCtl(0x18);
-    rootPort.writeCtl(0x18, 0x00070100);
-    rootPort.readCtl(0x18);
-    rootPort.readCtl(0x148);
-    rootPort.writeCtl(0x148, 1);
-    rootPort.readCtl(148);
-    fprintf(stderr, "reading 0x1020\n");
-    rootPort.read(0x1020);
-    fprintf(stderr, "reading 0x40000000\n");
-    rootPort.read(1 << 20);
-    rootPort.readCtl(0);
-    rootPort.readCtl(0);
+    fprintf(stderr, "Reading card memory space\n");
+    for (int i = 0; i < 16; i++)
+      rootPort.read(0x220000 + i*4);
     for (int i = 0; i < 10; i++)
       sleep(1);
-    return 0;
-
-    rootPort.writeCtl(0x148, 0);
-    rootPort.readCtl(148);
-    rootPort.writeCtl(0x0010, 0xfffff000);
-    rootPort.readCtl(0x0010);
-    rootPort.writeCtl(0x1010, 0xfffff000);
-    rootPort.readCtl(0x1010);
-
-
-    rootPort.readCtl(0x0000 + (0 << 20) + 0);
-
-
-    fprintf(stderr, "reading at offset 0x0000\n");
-    for (int i = 0; i < 32; i++) {
-	rootPort.readCtl(0x0000 + (0 << 20) + 4*i);
-    }
-    fprintf(stderr, "reading at offset 0x1000\n");
-    for (int i = 0; i < 32; i++) {
-	rootPort.readCtl(0x1000 + (0 << 20) + 4*i);
-    }
     return 0;
 }
 
