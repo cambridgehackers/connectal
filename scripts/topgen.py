@@ -29,6 +29,7 @@ def newArgparser():
     argparser.add_argument('--project-dir', help='project directory')
     argparser.add_argument('--interface', default=[], help='exported interface declaration', action='append')
     argparser.add_argument('--board', help='Board type')
+    argparser.add_argument('--portalclock', help='Portal clock source', default=None)
     argparser.add_argument('--importfiles', default=[], help='added imports', action='append')
     argparser.add_argument('--portname', default=[], help='added portal names to enum list', action='append')
     argparser.add_argument('--wrapper', default=[], help='exported wrapper interfaces', action='append')
@@ -92,6 +93,9 @@ module mkConnectalTop
    interface slave = ctrl_mux;
    interface readers = take(%(portalReaders)s);
    interface writers = take(%(portalWriters)s);
+`ifdef TOP_SOURCES_PORTAL_CLOCK
+   interface portalClockSource = %(portalclock)s;
+`endif
 %(pinsInterface)s
 %(exportedInterfaces)s
 endmodule : mkConnectalTop
@@ -151,6 +155,10 @@ module mkCnocTop
    interface indications = %(indicationList)s;
    interface readers = take(%(portalReaders)s);
    interface writers = take(%(portalWriters)s);
+`ifdef TOP_SOURCES_PORTAL_CLOCK
+   interface portalClockSource = %(portalclock)s;
+`endif
+%(pinsInterface)s
 %(exportedInterfaces)s
 endmodule : mkCnocTop
 %(exportedNames)s
@@ -403,7 +411,8 @@ if __name__=='__main__':
 #Use e.g., --interface pins:Ddr3Test.ddr3
                  'pinsInterface' : '    interface pins = l%(usermod)s.pins;\n' % pmap if False else '',
                  'moduleParam' : 'ConnectalTop' if not options.cnoc \
-                     else 'CnocTop#(NumberOfRequests,NumberOfIndications,PhysAddrWidth,DataBusWidth,`PinType,NumberOfMasters)'
+                     else 'CnocTop#(NumberOfRequests,NumberOfIndications,PhysAddrWidth,DataBusWidth,`PinType,NumberOfMasters)',
+                 'portalclock': options.portalclock
                  }
     topFilename = project_dir + '/Top.bsv'
     print 'Writing:', topFilename
