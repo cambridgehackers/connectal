@@ -174,8 +174,8 @@ else
 	@cp -v libs/armeabi/libconnectal.so bin/connectal.so
 	@[ -f libs/armeabi/android.exe2 ] && cp -fv libs/armeabi/android.exe2 bin
 endif
-	$(Q)[ ! -f $(BINFILE) ] || $(OBJCOPY) --remove-section fpgadata bin/connectal.so
-	$(Q)[ ! -f $(BINFILE) ] || $(OBJCOPY) --add-section fpgadata=$(BINFILE) bin/connectal.so
+	$(Q)[ -f $(BINFILE) ] && $(OBJCOPY) --remove-section fpgadata bin/connectal.so
+	$(Q)[ -f $(BINFILE) ] && $(OBJCOPY) --add-section fpgadata=$(BINFILE) bin/connectal.so
 
 ifneq ($(BOARD),bluesim)
 ifneq ($(OS),android)
@@ -209,10 +209,10 @@ ifneq ($(ALTERA),)
 	gzip -c $(MKTOP).sof > bin/$(MKTOP).sof.gz
 endif #
 endif #!xilinx
-	$(Q)[ ! -f bin/$(EXENAME) ] || $(OBJCOPY) --remove-section fpgadata bin/$(EXENAME)
-	$(Q)[ ! -f bin/$(EXENAME) ] || $(OBJCOPY) --add-section fpgadata=$(BINFILE) bin/$(EXENAME)
-	$(Q)[ ! -f bin/connectal.so ] || $(OBJCOPY) --remove-section fpgadata bin/connectal.so
-	$(Q)[ ! -f bin/connectal.so ] || $(OBJCOPY) --add-section fpgadata=$(BINFILE) bin/connectal.so
+	$(Q)[ -f bin/$(EXENAME) ] && $(OBJCOPY) --remove-section fpgadata bin/$(EXENAME)
+	$(Q)[ -f bin/$(EXENAME) ] && $(OBJCOPY) --add-section fpgadata=$(BINFILE) bin/$(EXENAME)
+	$(Q)[ -f bin/connectal.so ] && $(OBJCOPY) --remove-section fpgadata bin/connectal.so
+	$(Q)[ -f bin/connectal.so ] && $(OBJCOPY) --add-section fpgadata=$(BINFILE) bin/connectal.so
 	if [ -f Impl/TopDown/top-post-route.dcp ]; then cp -f Impl/TopDown/top-post-route.dcp bin; fi
 	if [ -f Impl/TopDown/top-post-route-timing-summary.rpt ]; then $(CONNECTALDIR)/scripts/check-timing.py Impl/TopDown/top-post-route-timing-summary.rpt; fi
 	if [ -f Impl/TopDown/top-post-route-timing-summary.txt ]; then $(CONNECTALDIR)/scripts/check-timing.py Impl/TopDown/top-post-route-timing-summary.txt; fi
@@ -220,14 +220,14 @@ endif #!xilinx
 android.exe: prepare_bin_target
 	+ndk-build $(CONNECTAL_NDK_PARAM)
 	@cp -fv libs/armeabi/android.exe bin
-	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || $(NDK_OBJCOPY) --remove-section fpgadata bin/android.exe
-	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
+	$(Q)[ -f bin/mkTop.xdevcfg.bin.gz ] && $(NDK_OBJCOPY) --remove-section fpgadata bin/android.exe
+	$(Q)[ -f bin/mkTop.xdevcfg.bin.gz ] && $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
 
 android.debug.exe: prepare_bin_target
 	+ndk-build $(CONNECTAL_NDK_PARAM) -B V=1 NDK_DEBUG=1
 	@cp -v libs/armeabi/android.exe bin
-	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || $(NDK_OBJCOPY) --remove-section fpgadata bin/android.exe
-	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
+	$(Q)[ -f bin/mkTop.xdevcfg.bin.gz ] && $(NDK_OBJCOPY) --remove-section fpgadata bin/android.exe
+	$(Q)[ -f bin/mkTop.xdevcfg.bin.gz ] && $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
 
 # ifeq ($(OS),android)
 #     RUN_SCRIPT?=$(CONNECTALDIR)/scripts/run.android
