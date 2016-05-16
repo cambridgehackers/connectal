@@ -23,6 +23,7 @@ import MemTypes::*;
 import Pipe::*;
 import AxiBits::*;
 import PhysMemToBram::*;
+import TraceMemClient::*;
 
 import BpiFlash::*;
 import AxiIntcBvi::*;
@@ -63,56 +64,6 @@ module mkBramBootRom(Server#(BRAMRequest#(Bit#(TLog#(BootRomEntries)),Bit#(32)),
 
    BRAM1Port#(Bit#(TLog#(BootRomEntries)), Bit#(32)) bram <- mkBRAM1Server(cfg);
    return bram.portA;
-endmodule
-
-module mkTraceReadClient#(PipeIn#(Tuple3#(DmaChannel,Bool,MemRequest)) tracePipe,
-			  PipeIn#(Tuple3#(DmaChannel,Bool,MemData#(dataWidth))) traceDataPipe,
-			  DmaChannel chan,
-			  MemReadClient#(dataWidth) m)
-   (MemReadClient#(dataWidth));
-
-   let reqFifo  <- mkFIFOF();
-   let dataFifo <- mkFIFOF();
-
-   rule rl_req;
-      let mr <- m.readReq.get();
-      tracePipe.enq(tuple3(chan, False, mr));
-      reqFifo.enq(mr);
-   endrule
-
-   rule rl_data;
-      let md <- toGet(dataFifo).get();
-      traceDataPipe.enq(tuple3(chan, False, md));
-      m.readData.put(md);
-   endrule
-
-   interface Get readReq = toGet(reqFifo);
-   interface Put readData = toPut(dataFifo);
-endmodule
-
-module mkTraceWriteClient#(PipeIn#(Tuple3#(DmaChannel,Bool,MemRequest)) tracePipe,
-			   PipeIn#(Tuple3#(DmaChannel,Bool,MemData#(dataWidth))) traceDataPipe,
-			   DmaChannel chan, MemWriteClient#(dataWidth) m)
-   (MemWriteClient#(dataWidth));
-
-   let reqFifo <- mkFIFOF();
-   let dataFifo <- mkFIFOF();
-
-   rule rl_req;
-      let mr <- m.writeReq.get();
-      tracePipe.enq(tuple3(chan, True, mr));
-      reqFifo.enq(mr);
-   endrule
-
-   rule rl_data;
-      let md <- m.writeData.get();
-      traceDataPipe.enq(tuple3(chan, True, md));
-      dataFifo.enq(md);
-   endrule
-
-   interface Get writeReq = toGet(reqFifo);
-   interface Get writeData = toGet(dataFifo);
-   interface Put writeDone = m.writeDone;
 endmodule
 
 module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
