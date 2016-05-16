@@ -194,16 +194,18 @@ endif #hw/mkTop.bit prepare_bin_target
 
 bits: $(BITS_DEPENDENCES) prepare_bin_target
 ifneq ($(XILINX),)
-ifeq ($(BOARD_xsim),)
 ifeq ($(OS),android)
 	@echo "zipping android"
 	$(CONNECTALDIR)/scripts/reorderbytes.py hw/mkTop.bin bin/mkTop.xdevcfg.bin
 	gzip -f bin/mkTop.xdevcfg.bin
 else
+ifneq ($(SIMULATION),)
+	@echo "not zipping xilinx"
+else
 	@echo "zipping xilinx"
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
-endif #android
 endif #xsim
+endif #android
 else #!xilinx
 ifneq ($(ALTERA),)
 	gzip -c $(MKTOP).sof > bin/$(MKTOP).sof.gz
