@@ -36,6 +36,24 @@ else
 endif
 NDK_OBJCOPY=$(shell $(NDKPATH)ndk-which objcopy)
 
+ifneq ($(XILINX),)
+ifeq ($(OS),android)
+OBJCOPY?=$(NDK_OBJCOPY)
+BINFILE?=bin/mkTop.xdevcfg.bin.gz
+else #!android
+OBJCOPY?=objcopy
+BINFILE?=bin/mkTop.bin.gz
+endif #!android
+else
+OBJCOPY?= objcopy
+BINFILE?=bin/mkTop.sof.gz
+endif
+
+CONNECTAL_EXENAME?=ubuntu.exe
+CONNECTAL_EXENAME2?=ubuntu.exe2
+EXENAME=$(CONNECTAL_EXENAME)
+EXENAME2=$(CONNECTAL_EXENAME2)
+
 ifeq ($(CONNECTAL_DEBUG),1)
 GDB=gdb
 GDB2=gdb
@@ -155,13 +173,8 @@ else
 	+ndk-build $(CONNECTAL_NDK_PARAM)
 	@cp -v libs/armeabi/libconnectal.so bin/connectal.so
 endif
-ifneq ($(OS),android)
-	$(Q)[ ! -f bin/mkTop.bin.gz ] || objcopy --remove-section fpgadata bin/connectal.so
-	$(Q)[ ! -f bin/mkTop.bin.gz ] || objcopy --add-section fpgadata=bin/mkTop.bin.gz bin/connectal.so
-else
-	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || $(NDK_OBJCOPY) --remove-section fpgadata bin/connectal.so
-	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/connectal.so
-endif
+	$(Q)[ ! -f $(BINFILE) ] || $(OBJCOPY) --remove-section fpgadata bin/connectal.so
+	$(Q)[ ! -f $(BINFILE) ] || $(OBJCOPY) --add-section fpgadata=$(BINFILE) bin/connectal.so
 
 ifneq ($(BOARD),bluesim)
 ifneq ($(OS),android)
@@ -174,55 +187,34 @@ programflash:
 endif
 endif
 
-ifeq ($(CONNECTAL_NOHARDWARE),1)
-bits:
-else
-ifeq ($(BOARD),bluesim)
-bits: bsim
-else
-ifeq ($(BOARD),xsim)
-bits: xsim
-else
-ifeq ($(BOARD),vsim)
-bits: vsim
-else
-ifeq ($(BOARD),verilator)
-bits: vlsim
-else
-bits: hw/mkTop.bit prepare_bin_target
+ifneq ($(CONNECTAL_NOHARDWARE),1)
+BITS_DEPENDENCES ?= $(CONNECTAL_BITS_DEPENDENCES)
+endif #hw/mkTop.bit prepare_bin_target
+
+bits: $(BITS_DEPENDENCES) prepare_bin_target
+ifneq ($(XILINX),)
+ifneq ($(BOARD_xsim),)
 ifeq ($(OS),android)
 	@echo "zipping android"
 	$(CONNECTALDIR)/scripts/reorderbytes.py hw/mkTop.bin bin/mkTop.xdevcfg.bin
 	gzip -f bin/mkTop.xdevcfg.bin
-	$(Q)[ ! -f bin/android.exe ] || $(NDK_OBJCOPY) --remove-section fpgadata bin/android.exe
-	$(Q)[ ! -f bin/android.exe ] || $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
-	$(Q)[ ! -f bin/connectal.so ] || $(NDK_OBJCOPY) --remove-section fpgadata bin/connectal.so
-	$(Q)[ ! -f bin/connectal.so ] || $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/connectal.so
-else ifneq ($(XILINX),)
+else
 	@echo "zipping xilinx"
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
-	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --remove-section fpgadata bin/ubuntu.exe
-	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --add-section fpgadata=bin/mkTop.bin.gz bin/ubuntu.exe
-	$(Q)[ ! -f bin/connectal.so ] || objcopy --remove-section fpgadata bin/connectal.so
-	$(Q)[ ! -f bin/connectal.so ] || objcopy --add-section fpgadata=bin/mkTop.bin.gz bin/connectal.so
+endif #android
+endif #xsim
+else #!xilinx
+ifneq ($(ALTERA),)
+	gzip -c $(MKTOP).sof > bin/$(MKTOP).sof.gz
+endif #
+endif #!xilinx
+	$(Q)[ ! -f bin/$(EXENAME) ] || $(OBJCOPY) --remove-section fpgadata bin/$(EXENAME)
+	$(Q)[ ! -f bin/$(EXENAME) ] || $(OBJCOPY) --add-section fpgadata=$(BINFILE) bin/$(EXENAME)
+	$(Q)[ ! -f bin/connectal.so ] || $(OBJCOPY) --remove-section fpgadata bin/connectal.so
+	$(Q)[ ! -f bin/connectal.so ] || $(OBJCOPY) --add-section fpgadata=$(BINFILE) bin/connectal.so
 	if [ -f Impl/TopDown/top-post-route.dcp ]; then cp -f Impl/TopDown/top-post-route.dcp bin; fi
 	if [ -f Impl/TopDown/top-post-route-timing-summary.rpt ]; then $(CONNECTALDIR)/scripts/check-timing.py Impl/TopDown/top-post-route-timing-summary.rpt; fi
 	if [ -f Impl/TopDown/top-post-route-timing-summary.txt ]; then $(CONNECTALDIR)/scripts/check-timing.py Impl/TopDown/top-post-route-timing-summary.txt; fi
-else
-	@echo "not zipping xilinx"
-endif # XILINX
-ifneq ($(ALTERA),)
-	gzip -c $(MKTOP).sof > bin/$(MKTOP).sof.gz
-	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --remove-section fpgadata bin/ubuntu.exe
-	$(Q)[ ! -f bin/ubuntu.exe ] || objcopy --add-section fpgadata=bin/$(MKTOP).sof.gz bin/ubuntu.exe
-	$(Q)[ ! -f bin/connectal.so ] || objcopy --remove-section fpgadata bin/connectal.so
-	$(Q)[ ! -f bin/connectal.so ] || objcopy --add-section fpgadata=bin/$(MKTOP).sof.gz bin/connectal.so
-endif # ALTERA
-
-endif # android
-endif # verilator
-endif # xsim
-endif # vsim
 
 android.exe: prepare_bin_target
 	+ndk-build $(CONNECTAL_NDK_PARAM)
@@ -236,46 +228,28 @@ android.debug.exe: prepare_bin_target
 	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || $(NDK_OBJCOPY) --remove-section fpgadata bin/android.exe
 	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
 
+# ifeq ($(OS),android)
+#     RUN_SCRIPT?=$(CONNECTALDIR)/scripts/run.android
+# else
+#     ifeq ($(XILINX),1)
+#         RUN_SCRIPT?=$(CONNECTALDIR)/scripts/run.pcietest
+#     endif
+#     ifeq ($(ALTERA),1)
+#         RUN_SCRIPT?=$(CONNECTALDIR)/scripts/run.pcietest.altera
+#     endif
+# endif
+    
+RUN_SCRIPT?=$(CONNECTAL_RUN_SCRIPT)
 run:
 ifeq ($(CONNECTAL_SHARED),1)
-	$(RUN_BSC_LM_LICENSE_FILE) $(GDB) ./bin/ubuntu.exe2 $(RUN_ARGS); retcode=$$?; exit $$retcode
+	$(RUN_BSC_LM_LICENSE_FILE) $(GDB) $(RUN_SCRIPT) ./bin/$(EXENAME2) $(RUN_ARGS); retcode=$$?; exit $$retcode
 else
-ifeq ($(BOARD),bluesim)
     ifeq ($(RUNSOURCE2),)
-	$(RUN_BSC_LM_LICENSE_FILE) $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; exit $$retcode
+	$(RUN_BSC_LM_LICENSE_FILE) $(GDB) $(RUN_SCRIPT) ./bin/$(EXENAME) $(RUN_ARGS); retcode=$$?; exit $$retcode
     else
-	$(RUN_BSC_LM_LICENSE_FILE) $(GDB2) ./bin/ubuntu.exe2& bsim2pid=$$!; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; kill $$bsim2pid; exit $$retcode
+	$(RUN_BSC_LM_LICENSE_FILE) $(GDB2) $(RUN_SCRIPT) ./bin/$(EXENAME2)& bsim2pid=$$!; $(RUN_SCRIPT) $(GDB) ./bin/$(EXENAME) $(RUN_ARGS); retcode=$$?; kill $$bsim2pid; exit $$retcode
     endif
-else
-  ifeq ($(BOARD),xsim)
-    ifeq ($(RUNSOURCE2),)
-	$(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; exit $$retcode
-    else
-	$(GDB2) ./bin/ubuntu.exe2& xsim2pid=$$!; $(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; $$xsim2pid; exit $$retcode
-    endif
-  else
-    ifeq ($(BOARD),verilator)
-	$(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; exit $$retcode
-    else
-    ifeq ($(OS),android)
-	$(CONNECTALDIR)/scripts/run.android bin/android.exe $(RUN_ARGS)
-    else
-    ifeq ($(BOARD), vsim)
-	$(GDB) ./bin/ubuntu.exe $(RUN_ARGS); retcode=$$?; exit $$retcode
-    else
-ifeq ($(XILINX),"1")
-	$(CONNECTALDIR)/scripts/run.pcietest bin/ubuntu.exe $(RUN_ARGS)
-endif
-ifeq ($(ALTERA),"1")
-	$(CONNECTALDIR)/scripts/run.pcietest.altera bin/mk*.sof bin/ubuntu.exe $(RUN_ARGS)
-endif
-endif
-    endif # vsim
-    endif # android
-    endif # verilator
-  endif # xsim
-endif # bluesim
-endif # connectal_shared
+endif # CONNECTAL_SHARED
 
 
 define SIM_C_RULE
@@ -335,10 +309,10 @@ VERILATOR_ARGS += $(VERILATOR_PROJECT_ARGS)
 
 $(DTOP)/obj_dir/vlsim.mk: $(DTOP)/bin/libconnectal-sim.so verilog
 	rm -fr $(DTOP)/obj_dir
-	verilator -o vlsim --prefix vlsim $(VERILATOR_ARGS) -cc -exe $(DTOP)/verilog/mkXsimTop.v -DMainClockPeriod=4 -DDerivedClockPeriod=4 --top-module mkXsimTop $(VERILOG_PATH:%=-y %) -Wno-fatal $(CONNECTALDIR)/cpp/verilatortop.cpp $(DTOP)/bin/libconnectal-sim.so -LDFLAGS -lpthread
+	verilator -o vlsim --prefix vlsim $(VERILATOR_ARGS) -cc -exe $(DTOP)/verilog/mkXsimTop.v -DMainClockPeriod=4 -DDerivedClockPeriod=4 --top-module mkXsimTop $(VERILOG_PATH:%=-y %) -Wno-fatal $(CONNECTALDIR)/cpp/verilatortop.cpp -LDFLAGS -L$(DTOP)/bin
 
 $(DTOP)/obj_dir/vlsim: $(DTOP)/obj_dir/vlsim.mk
-	+$(MAKE) VM_PARALLEL_BUILDS=1 -C obj_dir -f vlsim.mk
+	+$(MAKE) USER_LDLIBS="-lconnectal-sim -lpthread" VM_PARALLEL_BUILDS=1 -C obj_dir -f vlsim.mk
 	cp obj_dir/vlsim bin/vlsim
 
 ifneq ($(MODELSIM), )

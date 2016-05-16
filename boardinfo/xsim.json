@@ -4,7 +4,8 @@
         "partname" : "xc7z020clg484-1",
         "rewireclockstring" : "tclzynqrewireclock",
         "TOP" : "XsimTop",
-	"bsvdefines": ["XILINX=1", "CnocTop", "XsimHostInterface", "PhysAddrWidth=40", "XSIM", "SIMULATION", "SVDPI", "PcieLanes=8"],
+	"bsvdefines": ["XILINX=1", "CnocTop", "XsimHostInterface", "PhysAddrWidth=40", "XSIM", "SIMULATION", "SVDPI", "PcieLanes=8",
+		       	"CONNECTAL_BITS_DEPENDENCES=xsim"],
         "CONNECTALFLAGS" : ["--mainclockperiod=20", "--derivedclockperiod=10"],
         "need_pcie" : "unused"
     }
