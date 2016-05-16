@@ -20,18 +20,22 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import BuildVector::*;
 import Clocks::*;
 import Connectable::*;
 import FIFOF::*;
 import GetPut::*;
 import Vector::*;
 
+import AxiBits::*;
 import ConnectalClocks::*;
+import ConnectalConfig::*;
 import DefaultValue::*;
 import HostInterface::*;
-import XilinxCells::*;
 import MemTypes::*;
-import AxiBits::*;
+import Pipe::*;
+import TraceMemClient::*;
+import XilinxCells::*;
 
 import AxiPcieRootPort::*;
 import RootPortIfc::*;
@@ -51,13 +55,16 @@ endmodule
 
 interface RootPort;
    interface RootPortRequest request;
+   interface RootPortTrace trace;
    interface RootPortPins pins;
+   interface Vector#(1, MemReadClient#(DataBusWidth)) dmaReadClient;
+   interface Vector#(1, MemWriteClient#(DataBusWidth)) dmaWriteClient;
 `ifdef TOP_SOURCES_PORTAL_CLOCK
    interface Clock portalClockSource;
 `endif
 endinterface
 
-module mkRootPort#(HostInterface host, RootPortIndication ind)(RootPort);
+module mkRootPort#(HostInterface host, RootPortIndication ind, RootPortTrace trace)(RootPort);
    let clock <- exposeCurrentClock;
    let reset <- exposeCurrentReset;
    let refclk_p <- mkB2C1();
@@ -91,17 +98,18 @@ module mkRootPort#(HostInterface host, RootPortIndication ind)(RootPort);
    endrule
 `endif
 
+   Reg#(Bit#(32)) objId <- mkReg(0);
 
    FIFOF#(Bit#(32)) dfifoCtl <- mkFIFOF();
-   Axi4SlaveBits#(32,64,4,Empty) axiRootPortSlave    = toAxi4SlaveBits(axiRootPort.s_axi);
+   Axi4SlaveBits#(32,DataBusWidth,4,Empty) axiRootPortSlave    = toAxi4SlaveBits(axiRootPort.s_axi);
    Axi4SlaveLiteBits#(32,32)     axiRootPortSlaveCtl = toAxi4SlaveBits(axiRootPort.s_axi_ctl);
-   PhysMemSlave#(32,64)          axiRootPortMemSlave    <- mkPhysMemSlave(axiRootPortSlave, clocked_by axiClock, reset_by axiReset);
+   PhysMemSlave#(32,DataBusWidth)          axiRootPortMemSlave    <- mkPhysMemSlave(axiRootPortSlave, clocked_by axiClock, reset_by axiReset);
    PhysMemSlave#(32,32)          axiRootPortMemSlaveCtl <- mkPhysMemSlave(axiRootPortSlaveCtl, clocked_by axiCtlClock, reset_by axiCtlReset);
 
-   FIFOF#(PhysMemRequest#(32,64)) araddrFifo <- mkDualClockBramFIFOF(clock, reset, axiClock, axiReset);
-   FIFOF#(PhysMemRequest#(32,64)) awaddrFifo <- mkDualClockBramFIFOF(clock, reset, axiClock, axiReset);
-   FIFOF#(MemData#(64))           rdataFifo <- mkDualClockBramFIFOF(axiClock, axiReset, clock, reset);
-   FIFOF#(MemData#(64))           wdataFifo <- mkDualClockBramFIFOF(clock, reset, axiClock, axiReset);
+   FIFOF#(PhysMemRequest#(32,DataBusWidth)) araddrFifo <- mkDualClockBramFIFOF(clock, reset, axiClock, axiReset);
+   FIFOF#(PhysMemRequest#(32,DataBusWidth)) awaddrFifo <- mkDualClockBramFIFOF(clock, reset, axiClock, axiReset);
+   FIFOF#(MemData#(DataBusWidth))           rdataFifo <- mkDualClockBramFIFOF(axiClock, axiReset, clock, reset);
+   FIFOF#(MemData#(DataBusWidth))           wdataFifo <- mkDualClockBramFIFOF(clock, reset, axiClock, axiReset);
    FIFOF#(Bit#(6))                doneFifo <- mkDualClockBramFIFOF(axiClock, axiReset, clock, reset);
 
    let araddrCnx <- mkConnection(toGet(araddrFifo), axiRootPortMemSlave.read_server.readReq);
@@ -142,6 +150,38 @@ module mkRootPort#(HostInterface host, RootPortIndication ind)(RootPort);
       ind.writeDone();
    endrule
 
+   Axi4MasterBits#(32,DataBusWidth,MemTagSize,Empty) m_axi_mm = toAxi4MasterBits(axiRootPort.m_axi);
+   let memReadClients  <- mapM(mkMemReadClient(objId), vec(m_axi_mm));
+   let memWriteClients <- mapM(mkMemWriteClient(objId), vec(m_axi_mm));
+
+   FIFOF#(Tuple3#(DmaChannel,Bool,MemRequest)) traceFifo <- mkDualClockBramFIFOF(clock, reset, clock, reset);
+   FIFOF#(Tuple3#(DmaChannel,Bool,MemRequest)) traceFifo0 <- mkFIFOF();
+   FIFOF#(Tuple3#(DmaChannel,Bool,MemRequest)) traceFifo1 <- mkFIFOF();
+   PipeIn#(Tuple3#(DmaChannel,Bool,MemRequest)) tracePipe = toPipeIn(traceFifo0);
+   FIFOF#(Tuple3#(DmaChannel,Bool,MemData#(DataBusWidth))) traceDataFifo <- mkDualClockBramFIFOF(clock, reset, clock, reset);
+   FIFOF#(Tuple3#(DmaChannel,Bool,MemData#(DataBusWidth))) traceDataFifo0 <- mkFIFOF();
+   FIFOF#(Tuple3#(DmaChannel,Bool,MemData#(DataBusWidth))) traceDataFifo1 <- mkFIFOF();
+   PipeIn#(Tuple3#(DmaChannel,Bool,MemData#(DataBusWidth))) traceDataPipe = toPipeIn(traceDataFifo0);
+   let trace0Cnx <- mkConnection(toGet(traceFifo0), toPut(traceFifo));
+   let trace1Cnx <- mkConnection(toGet(traceFifo), toPut(traceFifo1));
+   rule rl_trace1;
+      match { .chan, .write, .req } <- toGet(traceFifo1).get();
+      trace.traceDmaRequest(chan, write, truncate(req.sglId), extend(req.offset), extend(req.burstLen));
+   endrule
+   let traceData0Cnx <- mkConnection(toGet(traceDataFifo0), toPut(traceDataFifo));
+   let traceData1Cnx <- mkConnection(toGet(traceDataFifo), toPut(traceDataFifo1));
+   rule rl_trace_data;
+      match { .chan, .write, .md } <- toGet(traceDataFifo1).get();
+      trace.traceDmaData(chan, write, md.data, md.last);
+   endrule
+
+   let traceReadClients <- mapM(uncurry(mkTraceReadClient(tracePipe,traceDataPipe)),
+				zip(vec(DMA_TX),
+				    memReadClients));
+   let traceWriteClients <- mapM(uncurry(mkTraceWriteClient(tracePipe,traceDataPipe)),
+				 zip(vec(DMA_RX),
+				     memWriteClients));
+
    interface RootPortRequest request;
       method Action status();
         ind.status(axiRootPort.mmcm.lock());
@@ -150,7 +190,7 @@ module mkRootPort#(HostInterface host, RootPortIndication ind)(RootPort);
       method Action read(Bit#(32) addr);
 	 araddrFifo.enq(PhysMemRequest { addr: addr, burstLen: 4, tag: 0 });
       endmethod
-      method Action write(Bit#(32) addr, Bit#(64) value);
+      method Action write(Bit#(32) addr, Bit#(DataBusWidth) value);
 	 awaddrFifo.enq(PhysMemRequest { addr: addr, burstLen: 4, tag: 0 });
 	 wdataFifo.enq(MemData {data: value, tag: 0, last: True});
       endmethod
@@ -158,7 +198,7 @@ module mkRootPort#(HostInterface host, RootPortIndication ind)(RootPort);
       method Action readCtl(Bit#(32) addr);
 	 araddrFifoCtl.enq(PhysMemRequest { addr: addr, burstLen: 4, tag: 0 });
       endmethod
-      method Action writeCtl(Bit#(32) addr, Bit#(64) value);
+      method Action writeCtl(Bit#(32) addr, Bit#(DataBusWidth) value);
 	 awaddrFifoCtl.enq(PhysMemRequest { addr: addr, burstLen: 4, tag: 0 });
 	 wdataFifoCtl.enq(MemData {data: truncate(value), tag: 0, last: True});
       endmethod
@@ -173,12 +213,13 @@ module mkRootPort#(HostInterface host, RootPortIndication ind)(RootPort);
          refclk_n.inputclock(n);
       endmethod
    endinterface
-
+   interface Vector dmaReadClient = traceReadClients;
+   interface Vector dmaWriteClient = traceWriteClients;
 endmodule
 
-instance ToAxi4SlaveBits#(Axi4SlaveBits#(32,64,4,Empty), AprpS_axi);
-   function Axi4SlaveBits#(32,64,4,Empty) toAxi4SlaveBits(AprpS_axi s);
-      return (interface Axi4SlaveBits#(32,64,4,Empty);
+instance ToAxi4SlaveBits#(Axi4SlaveBits#(32,DataBusWidth,4,Empty), AprpS_axi);
+   function Axi4SlaveBits#(32,DataBusWidth,4,Empty) toAxi4SlaveBits(AprpS_axi s);
+      return (interface Axi4SlaveBits#(32,DataBusWidth,4,Empty);
 	 method araddr = compose(s.araddr, extend);
 	 method arburst = s.arburst;
 	 //method arcache = s.arcache;
@@ -248,6 +289,53 @@ instance ToAxi4SlaveBits#(Axi4SlaveLiteBits#(32,32), AprpS_axi_ctl);
 	    s.wvalid(v);
 	    s.wstrb(pack(replicate(v)));
 	 endmethod
+	 endinterface);
+   endfunction
+endinstance
+
+instance ToAxi4MasterBits#(Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty), AprpM_axi);
+function Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty) toAxi4MasterBits(AprpM_axi m);
+   return (interface Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty);
+	   method araddr = m.araddr;
+	   method arburst = m.arburst;
+	   method arcache = m.arcache;
+	   method arlen = m.arlen;
+	   method arlock = extend(m.arlock);
+	   method arready = m.arready;
+	   method arsize = m.arsize;
+	   method arvalid = m.arvalid;
+	   method Bit#(1) aresetn(); return 1; endmethod
+	   method Bit#(tagWidth)     arid(); return 0; endmethod
+	   method arprot = m.arprot;
+	   method arqos = 0;
+	   method awaddr = m.awaddr;
+	   method awburst = m.awburst;
+	   method awcache = m.awcache;
+	   method Bit#(tagWidth)     awid(); return 0; endmethod
+	   method awlen = m.awlen;
+	   method awlock = extend(m.awlock);
+	   method awprot = m.awprot;
+	   method awready = m.awready;
+	   method Bit#(4)     awqos(); return 0; endmethod
+	   method awsize = m.awsize;
+	   method awvalid = m.awvalid;
+	   method Action      bid(Bit#(tagWidth) v); endmethod
+	   method bready = m.bready;
+	   method bresp = m.bresp;
+	   method bvalid = m.bvalid;
+	   method rdata = m.rdata;
+	   method Action      rid(Bit#(tagWidth) v); endmethod
+	   method rlast = m.rlast;
+	   method rready = m.rready;
+	   method rresp = m.rresp;
+	   method rvalid = m.rvalid;
+	   method wdata = m.wdata;
+	   method Bit#(tagWidth)     wid(); return 0; endmethod
+	   method wlast = m.wlast;
+	   method wready = m.wready;
+	   method wstrb = m.wstrb;
+	   method wvalid = m.wvalid;
+	 interface extra = ?;   
 	 endinterface);
    endfunction
 endinstance
