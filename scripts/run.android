@@ -145,9 +145,10 @@ def run_android(androidexe, pushFiles, pullFiles=[]):
     connection.Push(androidexe, '/mnt/sdcard/tmp/%(exe)s' % params)
     connection.Shell('chmod agu+rx /mnt/sdcard/tmp/%(exe)s' % params)
     for f in pushFiles:
+        print('Pushing file %s' % f)
         connection.Push(f, '/mnt/sdcard/tmp/%s' % os.path.basename(f))
     connection.Shell("touch /mnt/sdcard/tmp/perf.monkit")
-    print('Running android.exe with timelimit %(time)d' % params)
+    print('Running %(exe)s with timelimit %(time)d' % params)
     cmd = ("cd /mnt/sdcard/tmp/; rm -f /mnt/sdcard/tmp/exit.status; %(env)s /mnt/sdcard/timelimit -t %(time)d ./%(exe)s %(args)s; echo $? > /mnt/sdcard/tmp/exit.status"
            % params)
     for line in connection.StreamingShell(cmd):
