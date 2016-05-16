@@ -93,7 +93,12 @@ int main(int argc, const char **argv)
     rootPort.readCtl(0x20C);
     rootPort.readCtl(0x210);
     fprintf(stderr, "writing card BAR0\n");
-    rootPort.writeCtl((1 << 20) + 0x10, 0x220000);
+    for (int i = 0; i < 6; i++) {
+	rootPort.writeCtl((1 << 20) + 0x10 + 4*i, 0xffffffff);
+	rootPort.readCtl((1 << 20) + 0x10 + 4*i);
+    }
+    rootPort.writeCtl((1 << 20) + 0x10, 0x2200000);
+    rootPort.writeCtl((1 << 20) + 0x10+5*4, 0x2200000); // sata card
     rootPort.writeCtl((1 << 20) + 0x14, 0x0000);
     rootPort.readCtl((1 << 20) + 0x10);
     rootPort.readCtl((1 << 20) + 0x14);
@@ -104,7 +109,7 @@ int main(int argc, const char **argv)
     rootPort.readCtl(0x140);
     rootPort.writeCtl(0x140, 0x00010000);
     rootPort.readCtl(0x140);
-    if (1) {
+    if (0) {
       // pause for vivado to connect
       fprintf(stderr, "type enter to continue:");
       char line[100];
@@ -113,7 +118,7 @@ int main(int argc, const char **argv)
 
     fprintf(stderr, "Reading card memory space\n");
     for (int i = 0; i < 16; i++)
-      rootPort.read(0x220000 + i*4);
+      rootPort.read(0x2200000 + i*8);
     for (int i = 0; i < 10; i++)
       sleep(1);
     return 0;
