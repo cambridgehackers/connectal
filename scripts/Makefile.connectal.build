@@ -172,6 +172,7 @@ ifneq ($(OS),android)
 else
 	+ndk-build $(CONNECTAL_NDK_PARAM)
 	@cp -v libs/armeabi/libconnectal.so bin/connectal.so
+	@[ -f libs/armeabi/android.exe2 ] && cp -fv libs/armeabi/android.exe2 bin
 endif
 	$(Q)[ ! -f $(BINFILE) ] || $(OBJCOPY) --remove-section fpgadata bin/connectal.so
 	$(Q)[ ! -f $(BINFILE) ] || $(OBJCOPY) --add-section fpgadata=$(BINFILE) bin/connectal.so
@@ -218,7 +219,7 @@ endif #!xilinx
 
 android.exe: prepare_bin_target
 	+ndk-build $(CONNECTAL_NDK_PARAM)
-	@cp -v libs/armeabi/android.exe bin
+	@cp -fv libs/armeabi/android.exe bin
 	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || $(NDK_OBJCOPY) --remove-section fpgadata bin/android.exe
 	$(Q)[ ! -f bin/mkTop.xdevcfg.bin.gz ] || $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe
 
