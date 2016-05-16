@@ -502,7 +502,7 @@ if __name__=='__main__':
                                    'Dut': dutname,
                                    'clibs': ' '.join(['-l%s' % l for l in options.clib]),
                                    'cdefines': ' '.join([ '-D%s' % d for d in bsvdefines ]),
-                                   'mdefines': '\n'.join(['%s="%s"' % (var,val) for (var,val) in map(util.splitBinding, bsvdefines)]),
+                                   'mdefines': '\n'.join(['%s=%s' % (var,val) for (var,val) in map(util.splitBinding, bsvdefines)]),
                                    'dump_map': ('export PORTAL_DUMP_MAP=' + options.dump_map + '\n') if options.dump_map else '',
                                    'bscflags': ' '.join(options.bscflags),
                                    'xelabflags': ' '.join(options.xelabflags),
