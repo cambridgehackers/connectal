@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 
 int main(int argc, char * const *argv)
 {
@@ -14,9 +15,10 @@ int main(int argc, char * const *argv)
 #else
     strncpy(library_path, "./bin", sizeof(library_path));
 #endif
-    if (getenv("LD_LIBRARY_PATH")) {
-        strncat(library_path, ":", sizeof(library_path));
-        strncat(library_path, getenv("LD_LIBRARY_PATH"), sizeof(library_path));
+    
+    if (getenv("LD_LIBRARY_PATH") != 0) {
+        strncat(library_path, ":", sizeof(library_path)-strlen(library_path)-1);
+        strncat(library_path, getenv("LD_LIBRARY_PATH"), sizeof(library_path)-strlen(library_path)-1);
     }
     fprintf(stderr, "LD_LIBRARY_PATH: %s\n", library_path);
     setenv("LD_LIBRARY_PATH", library_path, 1);
