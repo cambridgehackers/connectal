@@ -194,7 +194,7 @@ endif #hw/mkTop.bit prepare_bin_target
 
 bits: $(BITS_DEPENDENCES) prepare_bin_target
 ifneq ($(XILINX),)
-ifneq ($(BOARD_xsim),)
+ifeq ($(BOARD_xsim),)
 ifeq ($(OS),android)
 	@echo "zipping android"
 	$(CONNECTALDIR)/scripts/reorderbytes.py hw/mkTop.bin bin/mkTop.xdevcfg.bin
