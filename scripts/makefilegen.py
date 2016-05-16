@@ -214,6 +214,16 @@ LOCAL_CFLAGS2 := $(cdefines2)s
 include $(%(android_build_type)s)
 '''
 
+androidmk2_template='''
+include $(CLEAR_VARS)
+LOCAL_CPPFLAGS := "-march=armv7-a"
+LOCAL_CFLAGS := -DZYNQ %(cflags)s %(werr)s
+LOCAL_CXXFLAGS := -DZYNQ %(cxxflags)s %(werr)s
+LOCAL_SRC_FILES= %(source2)s
+LOCAL_MODULE := android.exe2
+include $(BUILD_EXECUTABLE)
+'''
+
 genxdc_template='''
 
 PIN_BINDING=%(pin_binding)s
@@ -391,6 +401,8 @@ if __name__=='__main__':
     substs['android_local_module'] = 'connectal' if options.shared else 'android.exe'
     f = util.createDirAndOpen(androidmkname, 'w')
     f.write(androidmk_template % substs)
+    if options.source2:
+        f.write(androidmk2_template % substs)
     f.close()
     f = util.createDirAndOpen(linuxmkname, 'w')
     f.write(linuxmakefile_template % substs)
