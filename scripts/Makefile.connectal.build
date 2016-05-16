@@ -221,13 +221,13 @@ android.exe: prepare_bin_target
 	+ndk-build $(CONNECTAL_NDK_PARAM)
 	@cp -fv libs/armeabi/android.exe bin
 	$(Q)if [ -f bin/mkTop.xdevcfg.bin.gz ]; then $(NDK_OBJCOPY) --remove-section fpgadata bin/android.exe; fi
-	$(Q)if [ -f bin/mkTop.xdevcfg.bin.gz ] && $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe; fi
+	$(Q)if [ -f bin/mkTop.xdevcfg.bin.gz ]; then $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe; fi
 
 android.debug.exe: prepare_bin_target
 	+ndk-build $(CONNECTAL_NDK_PARAM) -B V=1 NDK_DEBUG=1
 	@cp -v libs/armeabi/android.exe bin
 	$(Q)if [ -f bin/mkTop.xdevcfg.bin.gz ]; then $(NDK_OBJCOPY) --remove-section fpgadata bin/android.exe; fi
-	$(Q)if [ -f bin/mkTop.xdevcfg.bin.gz ] && $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe; fi
+	$(Q)if [ -f bin/mkTop.xdevcfg.bin.gz ]; then $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe; fi
     
 RUN_SCRIPT?=$(CONNECTAL_RUN_SCRIPT)
 
