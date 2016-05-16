@@ -51,7 +51,11 @@ endif
 
 CONNECTAL_EXENAME?=ubuntu.exe
 CONNECTAL_EXENAME2?=ubuntu.exe2
+ifneq ($(CONNECTAL_SHARED),)
+EXENAME=connectal.so
+else
 EXENAME=$(CONNECTAL_EXENAME)
+endif
 EXENAME2=$(CONNECTAL_EXENAME2)
 
 ifeq ($(CONNECTAL_DEBUG),1)
@@ -133,27 +137,11 @@ all: exe bits extratarget
 extratarget::
 # placeholder for variant targets
 
-ifeq ($(CONNECTAL_SHARED),1)
-  ifeq ($(RUNSOURCE2),)
-    exe: connectal.so
-  else
-    exe: connectal.so ubuntu.exe2
-  endif
+ifeq ($(RUNSOURCE2),)
+    exe: $(EXENAME)
 else
-    ifneq ($(OS),android)
-      ifeq ($(RUNSOURCE2),)
-        exe: ubuntu.exe
-      else
-        exe: ubuntu.exe ubuntu.exe2
-      endif
-    else # android
-      ifeq ($(CONNECTAL_DEBUG),1)
-        exe: android.debug.exe
-      else
-        exe: android.exe
-      endif
-    endif # android
-endif # !shared
+    exe: $(EXENAME) $(EXENAME2)
+endif
 
 ubuntu.exe: prepare_bin_target
 	@echo "ubuntu.exe"
@@ -213,8 +201,6 @@ endif #
 endif #!xilinx
 	$(Q)if [ -f bin/$(EXENAME) -a -f "$(BINFILE)" ]; then $(OBJCOPY) --remove-section fpgadata bin/$(EXENAME); fi
 	$(Q)if [ -f bin/$(EXENAME) -a -f "$(BINFILE)" ]; then $(OBJCOPY) --add-section fpgadata=$(BINFILE) bin/$(EXENAME); fi
-	$(Q)if [ -f bin/connectal.so -a -f "$(BINFILE)" ]; then $(OBJCOPY) --remove-section fpgadata bin/connectal.so; fi
-	$(Q)if [ -f bin/connectal.so -a -f "$(BINFILE)" ]; then $(OBJCOPY) --add-section fpgadata=$(BINFILE) bin/connectal.so; fi
 	$(Q)if [ -f Impl/TopDown/top-post-route.dcp ]; then cp -f Impl/TopDown/top-post-route.dcp bin; fi
 	$(Q)if [ -f Impl/TopDown/top-post-route-timing-summary.rpt ]; then $(CONNECTALDIR)/scripts/check-timing.py Impl/TopDown/top-post-route-timing-summary.rpt; fi
 	$(Q)if [ -f Impl/TopDown/top-post-route-timing-summary.txt ]; then $(CONNECTALDIR)/scripts/check-timing.py Impl/TopDown/top-post-route-timing-summary.txt; fi
