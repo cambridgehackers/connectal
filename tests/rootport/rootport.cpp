@@ -106,6 +106,7 @@ public:
 	, indication(IfcNames_RootPortIndicationH2S)
 	, dmaBuffer(1024*1024) {
 	device.status();
+	device.setupSharedMemory(dmaBuffer.reference());
 	indication.wait();
     }
     uint32_t readCtl(uint32_t addr);
