@@ -160,7 +160,6 @@ ifneq ($(OS),android)
 else
 	+ndk-build $(CONNECTAL_NDK_PARAM)
 	@cp -v libs/armeabi/libconnectal.so bin/connectal.so
-	@[ -f libs/armeabi/android.exe2 ] && cp -fv libs/armeabi/android.exe2 bin
 endif
 	$(Q)if [ -f $(BINFILE) ] ; then $(OBJCOPY) --remove-section fpgadata bin/connectal.so; fi
 	$(Q)if [ -f $(BINFILE) ] ; then $(OBJCOPY) --add-section fpgadata=$(BINFILE) bin/connectal.so; fi
@@ -217,6 +216,10 @@ android.debug.exe: prepare_bin_target
 	$(Q)if [ -f bin/mkTop.xdevcfg.bin.gz ]; then $(NDK_OBJCOPY) --remove-section fpgadata bin/android.exe; fi
 	$(Q)if [ -f bin/mkTop.xdevcfg.bin.gz ]; then $(NDK_OBJCOPY) --add-section fpgadata=bin/mkTop.xdevcfg.bin.gz bin/android.exe; fi
     
+android.exe2: prepare_bin_target
+	+ndk-build $(CONNECTAL_NDK_PARAM)
+	@cp -fv libs/armeabi/android.exe2 bin
+
 RUN_SCRIPT?=$(CONNECTAL_RUN_SCRIPT)
 
 run:
