@@ -19,5 +19,6 @@ CONNECTALFLAGS += -D TOP_SOURCES_PORTAL_CLOCK --mainclockperiod=8
 
 CONNECTALFLAGS += -D IMPORT_HOSTIF --bsvpath=../spikehw
 CONNECTALFLAGS += --xci=$(BOARD)/cores/$(BOARD)/axi_pcie_rp/axi_pcie_rp.xci
+CONNECTALFLAGS += --implconstraint=rootport.xdc
 
 include $(CONNECTALDIR)/Makefile.connectal
