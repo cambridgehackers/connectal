@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "portal.h"
+#include "dmaManager.h"
 #include "RootPortIndication.h"
 #include "RootPortRequest.h"
 
@@ -31,14 +32,79 @@ public:
   
 };
 
+class DmaBuffer {
+    const int size;
+    int fd;
+    char *buf;
+    int ref;
+    static DmaManager *mgr;
+    static void initDmaManager();
+public:
+    // Allocates a portal memory object of specified size and maps it into user process
+    DmaBuffer(int size);
+    // Dereferences and deallocates the portal memory object
+    // if destructor is not called, the object is automatically
+    // unreferenced and freed when the process exits
+    ~DmaBuffer();
+    // returns the address of the mapped buffer
+    char *buffer() {
+	return buf;
+    }
+    // returns the reference to the object
+    //
+    // Sends the address translation table to hardware MMU if necessary.
+    uint32_t reference();
+    // Removes the address translation table from the hardware MMU
+    void dereference();
+};
+
+DmaManager *DmaBuffer::mgr;
+
+void DmaBuffer::initDmaManager()
+{
+    if (!mgr)
+	mgr = platformInit();
+}
+
+
+DmaBuffer::DmaBuffer(int size)
+  : size(size), ref(-1)
+{
+    fd = portalAlloc(size, 1);
+    buf = (char *)portalMmap(fd, size);
+}
+
+DmaBuffer::~DmaBuffer()
+{
+    dereference();
+    portalMunmap(buf, size);
+    close(fd);
+}
+
+uint32_t DmaBuffer::reference()
+{
+    initDmaManager();
+    if (ref == -1)
+	ref = mgr->reference(fd);
+    return ref;
+}
+
+void DmaBuffer::dereference()
+{
+    if (ref != -1 && mgr)
+	mgr->dereference(ref);
+    ref = -1;
+}
+
 class RootPort {
     RootPortRequestProxy device;
     RootPortIndication  indication;
+    DmaBuffer dmaBuffer;
 public:
     RootPort()
 	: device(IfcNames_RootPortRequestS2H)
-	, indication(IfcNames_RootPortIndicationH2S) {
-	sleep(1);
+	, indication(IfcNames_RootPortIndicationH2S)
+	, dmaBuffer(1024*1024) {
 	device.status();
 	indication.wait();
     }
