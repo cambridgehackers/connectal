@@ -183,6 +183,11 @@ module mkRootPort#(HostInterface host, RootPortIndication ind, RootPortTrace tra
 				     memWriteClients));
 
    interface RootPortRequest request;
+
+      method Action setupSharedMemory(Bit#(32) _objId);
+	 objId <= _objId;
+      endmethod
+
       method Action status();
         ind.status(axiRootPort.mmcm.lock());
       endmethod
