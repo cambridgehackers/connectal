@@ -7,8 +7,10 @@
 class RootPortIndication : public RootPortIndicationWrapper {
   sem_t sem;
 public:
+    uint64_t value;
     virtual void readDone ( const uint64_t data ) {
 	fprintf(stderr, "%s:%d data=%08llx\n", __FUNCTION__, __LINE__, (long long)data);
+	value = data;
 	sem_post(&sem);
     }
     virtual void writeDone (  ) {
@@ -40,26 +42,28 @@ public:
 	device.status();
 	indication.wait();
     }
-    void readCtl(uint32_t addr);
+    uint32_t readCtl(uint32_t addr);
     void writeCtl(uint32_t addr, uint32_t data);
-    void read(uint32_t addr);
+    uint64_t read(uint32_t addr);
     void write(uint32_t addr, uint64_t data);
 };
 
-void RootPort::readCtl(uint32_t addr)
+uint32_t RootPort::readCtl(uint32_t addr)
 {
     device.readCtl(addr);
     indication.wait();
+    return (uint32_t)indication.value;
 }
 void RootPort::writeCtl(uint32_t addr, uint32_t data)
 {
     device.writeCtl(addr, data);
     indication.wait();
 }
-void RootPort::read(uint32_t addr)
+uint64_t RootPort::read(uint32_t addr)
 {
     device.read(addr);
     indication.wait();
+    return indication.value;
 }
 void RootPort::write(uint32_t addr, uint64_t data)
 {
