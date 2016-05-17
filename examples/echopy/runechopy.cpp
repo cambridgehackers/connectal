@@ -27,6 +27,7 @@ int main(int argc, char * const *argv)
 	exename = "../bin/python";
     } else {
 	strncpy(library_path, libdir, sizeof(library_path));
+        strncat(library_path, ":./bin", sizeof(library_path)-strlen(":./bin")-1);
     }
     
     if (getenv("LD_LIBRARY_PATH") != 0) {
