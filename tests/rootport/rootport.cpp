@@ -4,6 +4,22 @@
 #include "dmaManager.h"
 #include "RootPortIndication.h"
 #include "RootPortRequest.h"
+#include "RootPortTrace.h"
+
+class RootPortTrace : public RootPortTraceWrapper {
+public:
+    void traceDmaRequest(const DmaChannel chan, const int write, const uint16_t objId, const uint64_t offset, const uint16_t burstLen)
+    {
+	fprintf(stderr, "traceDmaRequest chan=%d write=%d objId=%d offset=%08lx burstLen=%d\n", chan, write, objId, (long)offset, burstLen);
+    }
+    void traceDmaData ( const DmaChannel chan, const int write, const uint64_t data, const int last )
+    {
+	fprintf(stderr, "traceDmaData chan=%d write=%d data=%08llx last=%d\n", chan, write, (long long)data, last);
+    }
+
+    RootPortTrace(int id, PortalPoller *poller = 0) : RootPortTraceWrapper(id, poller) {
+    }
+};
 
 class RootPortIndication : public RootPortIndicationWrapper {
   sem_t sem;
@@ -99,14 +115,17 @@ void DmaBuffer::dereference()
 class RootPort {
     RootPortRequestProxy device;
     RootPortIndication  indication;
-    DmaBuffer dmaBuffer;
+    RootPortTrace       trace;
+    DmaBuffer adminSubmissionQueue;
+    DmaBuffer adminCompletionQueue;
 public:
     RootPort()
 	: device(IfcNames_RootPortRequestS2H)
 	, indication(IfcNames_RootPortIndicationH2S)
-	, dmaBuffer(1024*1024) {
+	, trace(IfcNames_RootPortTraceH2S)
+	, adminSubmissionQueue(64*64)
+	, adminCompletionQueue(4096) {
 	device.status();
-	device.setupSharedMemory(dmaBuffer.reference());
 	indication.wait();
     }
     uint32_t readCtl(uint32_t addr);
@@ -190,6 +209,7 @@ int main(int argc, const char **argv)
     fprintf(stderr, "Reading card memory space\n");
     for (int i = 0; i < 16; i++)
       rootPort.read(0x2200000 + i*8);
+    fprintf(stderr, "Setting up Admin submission and completion queues\n");
     for (int i = 0; i < 10; i++)
       sleep(1);
     return 0;
