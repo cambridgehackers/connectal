@@ -151,8 +151,11 @@ module mkRootPort#(HostInterface host, RootPortIndication ind, RootPortTrace tra
    endrule
 
    Axi4MasterBits#(32,DataBusWidth,MemTagSize,Empty) m_axi_mm = toAxi4MasterBits(axiRootPort.m_axi);
-   let memReadClients  <- mapM(mkMemReadClient(objId), vec(m_axi_mm));
-   let memWriteClients <- mapM(mkMemWriteClient(objId), vec(m_axi_mm));
+   let getObjId = (interface GetObjId;
+		   method SGLId objId(Bit#(32) addr); return extend(addr[31:24]); endmethod
+		   endinterface);
+   let memReadClients  <- mapM(mkMemReadClient(getObjId), vec(m_axi_mm));
+   let memWriteClients <- mapM(mkMemWriteClient(getObjId), vec(m_axi_mm));
 
    FIFOF#(Tuple3#(DmaChannel,Bool,MemRequest)) traceFifo <- mkDualClockBramFIFOF(clock, reset, clock, reset);
    FIFOF#(Tuple3#(DmaChannel,Bool,MemRequest)) traceFifo0 <- mkFIFOF();
