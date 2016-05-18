@@ -39,6 +39,7 @@ if [ "$RUNPARAM" != "" ]; then
     TEMPDIR=/tmp/`uname -n`-$PPID-pcie
     ssh $SSHPARAM -p $RUNPORT $RUNIP "rm -rf $TEMPDIR; mkdir -p $TEMPDIR"
     scp -P $RUNPORT $* $RUNIP:$TEMPDIR
+    EXE=$1
     EXENAME=`basename $1`
     ARGS=""
     shift
@@ -46,7 +47,7 @@ if [ "$RUNPARAM" != "" ]; then
     for arg in $*; do arg_basename=`basename $arg`; ARGS="$ARGS $TEMPDIR/$arg_basename"; done
     ssh $SSHPARAM -p $RUNPORT $RUNIP "$BOARD_SERIAL $ENV timeout $TIMELIMIT catchsegv $TEMPDIR/$EXENAME $ARGS"
     ssh $SSHPARAM -p $RUNPORT $RUNIP "pcieflat > $TEMPDIR/pcieflat.txt"
-    scp -P $RUNPORT $RUNIP:$TEMPDIR/pcieflat.txt `dirname $1`
+    scp -P $RUNPORT $RUNIP:$TEMPDIR/pcieflat.txt `dirname $EXE`
     ssh $SSHPARAM -p $RUNPORT $RUNIP "rm -rf $TEMPDIR"
 else
     timeout 3m catchsegv $1
