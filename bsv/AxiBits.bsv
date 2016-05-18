@@ -617,11 +617,12 @@ instance AxiToMemReadClient#(Bit#(32),32,dataWidth);
    endmodule
 endinstance
 
-interface GetObjId;
-   method SGLId objId(Bit#(32) addr);
+interface GetObjId#(numeric type addrWidth);
+   method SGLId objId(Bit#(addrWidth) axiAddr);
+   method Bit#(MemOffsetSize) addr(Bit#(addrWidth) axiAddr);
 endinterface
-instance AxiToMemReadClient#(GetObjId,32,dataWidth);
-   module mkMemReadClient#(GetObjId objId, Axi4MasterBits#(32,dataWidth,MemTagSize,Empty) m)(MemReadClient#(dataWidth));
+instance AxiToMemReadClient#(GetObjId#(32),32,dataWidth);
+   module mkMemReadClient#(GetObjId#(32) objId, Axi4MasterBits#(32,dataWidth,MemTagSize,Empty) m)(MemReadClient#(dataWidth));
 
       Wire#(Bit#(1)) arready <- mkDWire(0);
       Wire#(Bit#(1)) rvalid <- mkDWire(0);
@@ -636,7 +637,7 @@ instance AxiToMemReadClient#(GetObjId,32,dataWidth);
       rule rl_araddr if (m.arvalid() == 1);
 	 let addr = m.araddr();
 	 let burstLenBytes = (extend(m.arlen())+1)*fromInteger(valueOf(TDiv#(dataWidth,8)));
-	 arfifo.enq(MemRequest { sglId: objId.objId(addr), offset: extend(addr), burstLen: burstLenBytes, tag: extend(m.arid()) });
+	 arfifo.enq(MemRequest { sglId: objId.objId(addr), offset: objId.addr(addr), burstLen: burstLenBytes, tag: extend(m.arid()) });
       endrule
       rule handshake_ar;
 	   m.arready(pack(arfifo.notFull()));
@@ -661,7 +662,7 @@ instance AxiToMemReadClient#(GetObjId,32,dataWidth);
       interface Put readData = toPut(rfifo);
    endmodule
 
-   module mkMemWriteClient#(GetObjId objId, Axi4MasterBits#(32,dataWidth,MemTagSize,Empty) m)(MemWriteClient#(dataWidth));
+   module mkMemWriteClient#(GetObjId#(32) objId, Axi4MasterBits#(32,dataWidth,MemTagSize,Empty) m)(MemWriteClient#(dataWidth));
 
       Wire#(Bit#(1)) awready <- mkDWire(0);
       Wire#(Bit#(1)) wready <- mkDWire(0);
@@ -676,7 +677,7 @@ instance AxiToMemReadClient#(GetObjId,32,dataWidth);
       rule rl_awaddr if (m.awvalid() == 1);
 	 let addr = m.awaddr();
 	 let burstLenBytes = (extend(m.awlen())+1)*fromInteger(valueOf(TDiv#(dataWidth,8)));
-	 awfifo.enq(MemRequest { sglId: objId.objId(addr), offset: extend(addr), burstLen: burstLenBytes, tag: extend(m.awid()) });
+	 awfifo.enq(MemRequest { sglId: objId.objId(addr), offset: objId.addr(addr), burstLen: burstLenBytes, tag: extend(m.awid()) });
       endrule
       rule handshake_awaddr;
 	 m.awready(pack(awfifo.notFull()));
