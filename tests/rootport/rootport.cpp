@@ -116,15 +116,23 @@ class RootPort {
     RootPortRequestProxy device;
     RootPortIndication  indication;
     RootPortTrace       trace;
+public:
     DmaBuffer adminSubmissionQueue;
     DmaBuffer adminCompletionQueue;
-public:
+    int adminSubmissionQueueRef;
+    int adminCompletionQueueRef;
+
     RootPort()
 	: device(IfcNames_RootPortRequestS2H)
 	, indication(IfcNames_RootPortIndicationH2S)
 	, trace(IfcNames_RootPortTraceH2S)
 	, adminSubmissionQueue(64*64)
 	, adminCompletionQueue(4096) {
+	
+	adminSubmissionQueueRef = adminSubmissionQueue.reference();
+	adminCompletionQueueRef = adminCompletionQueue.reference();
+	fprintf(stderr, "adminSubmissionQueue %d\n", adminSubmissionQueue.reference());
+	fprintf(stderr, "adminCompletionQueue %d\n", adminCompletionQueue.reference());
 	device.status();
 	indication.wait();
     }
@@ -210,6 +218,14 @@ int main(int argc, const char **argv)
     for (int i = 0; i < 16; i++)
       rootPort.read(0x2200000 + i*8);
     fprintf(stderr, "Setting up Admin submission and completion queues\n");
+    uint64_t adminCompletionBaseAddress = rootPort.adminCompletionQueueRef << 24;
+    rootPort.write(0x28, adminCompletionBaseAddress);
+    rootPort.read(0x28);
+    uint64_t adminSubmissionBaseAddress = rootPort.adminSubmissionQueueRef << 24;
+    rootPort.write(0x30, adminSubmissionBaseAddress);
+    rootPort.read(0x30);
+    rootPort.write(0x20, 0x003f003fll<<32);
+    rootPort.read(0x20);
     for (int i = 0; i < 10; i++)
       sleep(1);
     return 0;
