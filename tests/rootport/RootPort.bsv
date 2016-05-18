@@ -98,8 +98,6 @@ module mkRootPort#(HostInterface host, RootPortIndication ind, RootPortTrace tra
    endrule
 `endif
 
-   Reg#(Bit#(32)) objId <- mkReg(0);
-
    FIFOF#(Bit#(32)) dfifoCtl <- mkFIFOF();
    Axi4SlaveBits#(32,DataBusWidth,4,Empty) axiRootPortSlave    = toAxi4SlaveBits(axiRootPort.s_axi);
    Axi4SlaveLiteBits#(32,32)     axiRootPortSlaveCtl = toAxi4SlaveBits(axiRootPort.s_axi_ctl);
@@ -153,6 +151,7 @@ module mkRootPort#(HostInterface host, RootPortIndication ind, RootPortTrace tra
    Axi4MasterBits#(32,DataBusWidth,MemTagSize,Empty) m_axi_mm = toAxi4MasterBits(axiRootPort.m_axi);
    let getObjId = (interface GetObjId;
 		   method SGLId objId(Bit#(32) addr); return extend(addr[31:24]); endmethod
+		   method Bit#(MemOffsetSize) addr(Bit#(32) axiAddr); return extend(axiAddr[23:0]); endmethod
 		   endinterface);
    let memReadClients  <- mapM(mkMemReadClient(getObjId), vec(m_axi_mm));
    let memWriteClients <- mapM(mkMemWriteClient(getObjId), vec(m_axi_mm));
@@ -186,10 +185,6 @@ module mkRootPort#(HostInterface host, RootPortIndication ind, RootPortTrace tra
 				     memWriteClients));
 
    interface RootPortRequest request;
-
-      method Action setupSharedMemory(Bit#(32) _objId);
-	 objId <= _objId;
-      endmethod
 
       method Action status();
         ind.status(axiRootPort.mmcm.lock());

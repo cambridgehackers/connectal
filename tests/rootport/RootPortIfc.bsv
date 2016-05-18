@@ -30,7 +30,6 @@ interface RootPortRequest;
    method Action readCtl(Bit#(32) addr);
    method Action writeCtl(Bit#(32) addr, Bit#(DataBusWidth) data);
    method Action status();
-   method Action setupSharedMemory(Bit#(32) objectId);
 endinterface
 
 interface RootPortIndication;
