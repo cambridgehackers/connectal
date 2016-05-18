@@ -497,13 +497,13 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,dataWidth,tagWidth,Empty),a
       endrule
       rule rl_wvalid;
 	 axiSlave.wvalid(pack(wfifo.notEmpty));
-	 let wdata = 0;
-	 if (wfifo.notEmpty)
-	    wdata = wfifo.first.data;
-	 axiSlave.wdata(wdata);
-      endrule   
+      endrule
       rule rl_wdata if (axiSlave.wready() == 1);
 	 let md <- toGet(wfifo).get();
+	 let wdata = md.data;
+	 axiSlave.wdata(wdata);
+	 axiSlave.wlast(pack(wfifo.first.last));
+	 axiSlave.wstrb(maxBound);
       endrule
       rule rl_bready;
 	 axiSlave.bready(pack(wtagfifo.notEmpty && bfifo.notFull));
