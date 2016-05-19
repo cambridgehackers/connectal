@@ -245,30 +245,6 @@
 	    "slew": "SLOW",
 	    "PIO_DIRECTION": "OUTPUT"
 	},
-	"GPIO_leds[4]": {
-	    "PACKAGE_PIN": "",
-	    "IOSTANDARD": "LVCMOS25",
-	    "slew": "SLOW",
-	    "PIO_DIRECTION": "OUTPUT"
-	},
-	"GPIO_leds[5]": {
-	    "PACKAGE_PIN": "",
-	    "IOSTANDARD": "LVCMOS25",
-	    "slew": "SLOW",
-	    "PIO_DIRECTION": "OUTPUT"
-	},
-	"GPIO_leds[6]": {
-	    "PACKAGE_PIN": "",
-	    "IOSTANDARD": "LVCMOS25",
-	    "slew": "SLOW",
-	    "PIO_DIRECTION": "OUTPUT"
-	},
-	"GPIO_leds[7]": {
-	    "PACKAGE_PIN": "",
-	    "IOSTANDARD": "LVCMOS25",
-	    "slew": "SLOW",
-	    "PIO_DIRECTION": "OUTPUT"
-	},
 	"GPIO_sw_left": {
 	    "PACKAGE_PIN": "AK25",
 	    "IOSTANDARD": "LVCMOS18",
