@@ -223,7 +223,7 @@
     "pins": {
 	"GPIO_leds[0]": {
 	    "PACKAGE_PIN": "A17",
-	    "IOSTANDARD": "LVCMOS25",
+	    "IOSTANDARD": "LVCMOS15",
 	    "slew": "SLOW",
 	    "PIO_DIRECTION": "OUTPUT"
 	},
@@ -235,7 +235,7 @@
 	},
 	"GPIO_leds[2]": {
 	    "PACKAGE_PIN": "G2",
-	    "IOSTANDARD": "LVCMOS25",
+	    "IOSTANDARD": "LVCMOS15",
 	    "slew": "SLOW",
 	    "PIO_DIRECTION": "OUTPUT"
 	},
@@ -260,6 +260,12 @@
 	"GPIO_sw_right": {
 	    "PACKAGE_PIN": "R27",
 	    "IOSTANDARD": "LVCMOS18",
+	    "slew": "SLOW",
+	    "PIO_DIRECTION": "INPUT"
+	},
+	"pl_cpu_reset": {
+	    "PACKAGE_PIN": "A8",
+	    "IOSTANDARD": "LVCMOS15",
 	    "slew": "SLOW",
 	    "PIO_DIRECTION": "INPUT"
 	},
