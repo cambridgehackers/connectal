@@ -29,6 +29,7 @@ import GetPut::*;
 import Connectable::*;
 import BRAMFIFO::*;
 import BRAM::*;
+import Probe::*;
 
 import ConnectalBram::*;
 import MemTypes::*;
@@ -64,6 +65,53 @@ interface MMU#(numeric type addrWidth);
    interface MMURequest request;
    interface Vector#(2,Server#(AddrTransRequest,AddrTransResponse#(addrWidth))) addr;
 endinterface
+
+module mkSimpleMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(addrWidth))
+   provisos (Add#(b__,8,addrWidth)
+	     ,Add#(c__,24,addrWidth)
+	     ,Bits#(AddrTransResponse#(addrWidth),d__)
+	     );
+   Vector#(2,FIFOF#(AddrTransRequest)) reqFifos <- replicateM(mkFIFOF());
+   Vector#(2,FIFOF#(AddrTransResponse#(addrWidth))) respFifos <- replicateM(mkFIFOF());
+
+   let probePhysAddr <- mkProbe();
+
+   for (Integer i = 0; i < 2; i = i + 1) begin
+      rule rl_process_req;
+	 let req <- toGet(reqFifos[i]).get();
+	 Bit#(addrWidth) physAddr = extend(req.off[23:0]);
+	 physAddr[31:24] = extend(req.id);
+	 probePhysAddr <= physAddr;
+	 respFifos[i].enq(AddrTransResponse { error: DmaErrorNone, physAddr: physAddr });
+      endrule
+   end
+
+   function Server#(AddrTransRequest,AddrTransResponse#(addrWidth)) genServer(Integer i);
+      return (interface Server#(AddrTransRequest,AddrTransResponse#(addrWidth));
+		 interface request = toPut(reqFifos[i]);
+	 interface response = toGet(respFifos[i]);
+	 endinterface);
+   endfunction
+
+   interface MMURequest request;
+      method Action idRequest(SpecialTypeForSendingFd fd);
+	 mmuIndication.idResponse(0);
+      endmethod
+      method Action idReturn(Bit#(32) sglId);
+	 mmuIndication.idResponse(sglId);
+      endmethod
+      method Action region(Bit#(32) pointer, Bit#(64) barr12, Bit#(32) index12, Bit#(64) barr8, Bit#(32) index8, Bit#(64) barr4, Bit#(32) index4, Bit#(64) barr0, Bit#(32) index0);
+	 mmuIndication.configResp(extend(pointer));
+      endmethod
+      method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
+	 // no response
+      endmethod
+      method Action setInterface(Bit#(32) interfaceId, Bit#(32) sglId);
+	 /* this method is only implemented in s/w responders */
+      endmethod
+   endinterface
+   interface Vector addr = genWith(genServer);
+endmodule
 
 typedef struct {
    DmaErrorType error;
