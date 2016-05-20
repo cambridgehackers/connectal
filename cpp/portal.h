@@ -37,7 +37,9 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
 #include <string.h> // memcpy
 #include <stdio.h>   // printf()
 #include <stdlib.h>  // exit()
+#ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
+#endif
 #include <inttypes.h>
 #ifdef __cplusplus
 #include <semaphore.h>
