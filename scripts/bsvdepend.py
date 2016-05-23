@@ -81,6 +81,10 @@ if __name__=='__main__':
     for f in options.bsvfile:
         abspaths[os.path.basename(f)] = f
 
+    for d in bsvpath:
+        for f in glob.glob('%s/*' % d):
+            abspaths[os.path.basename(f)] = f
+
     makef = open(options.output, 'w')
     makef.write('# BSV dependences\n')
     makef.write('OBJMAKEFILE_DEP = %s\n' % ' '.join(['$(wildcard %s/*.bsv)' % path for path in bsvpath]))
