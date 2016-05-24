@@ -19,6 +19,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include "GeneratedTypes.h"
+#include <sys/types.h>
+#include <unistd.h>
 
 static int trace_xsim; // = 1;
 
