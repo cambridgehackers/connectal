@@ -500,12 +500,15 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
     }
 #endif
 #elif defined(__i386__) || defined(__x86_64__)
-    // not sure any of this is necessary (mdk)
-    for(i = 0; i < size; i++){
-        char foo = *(((volatile char *)__p)+i);
-        asm volatile("clflush %0" :: "m" (foo));
+    {
+	int i;
+	// not sure any of this is necessary (mdk)
+	for(i = 0; i < size; i++){
+	    char foo = *(((volatile char *)__p)+i);
+	    asm volatile("clflush %0" :: "m" (foo));
+	}
+	asm volatile("mfence");
     }
-    asm volatile("mfence");
 #else
 #error("dCAcheFlush not defined for unspecified architecture")
 #endif
