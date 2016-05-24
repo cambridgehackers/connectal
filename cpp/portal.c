@@ -354,13 +354,15 @@ if (trace_portal) fprintf(stderr, "[%s:%d] LD_LIBRARY_PATH %s *******\n", __FUNC
             argv[ind++] = strdup(serial);
         }
         {
-#ifdef __arm__
+#ifdef __android__
 	  // on zynq android, fpgajtag is in the initramdisk in the root directory
 	  const char *fpgajtag = "/fpgajtag";
-	  argv[ind++] = (char *)"-x"; // program via /dev/xdevcfg
 #else
 	  const char *fpgajtag = "fpgajtag";
 #endif // !__arm__
+#ifdef __arm__
+	  argv[ind++] = (char *)"-x"; // program via /dev/xdevcfg
+#endif
 	  argv[ind++] = filename;
           errno = 0;
           if (filename) // only run fpgajtag if filename was found
@@ -387,7 +389,7 @@ void initPortalMemory(void)
 #ifndef SIMULATION
         global_pa_fd = open("/dev/portalmem", O_RDWR);
     if (global_pa_fd < 0){
-        PORTAL_PRINTF("Failed to open /dev/portalmem pa_fd=%d errno=%d\n", global_pa_fd, errno);
+	PORTAL_PRINTF("Failed to open /dev/portalmem pa_fd=%d errno=%d:%s\n", global_pa_fd, errno, strerror(errno));
         exit(ENODEV);
     }
 #else
@@ -463,9 +465,9 @@ int portalMunmap(void *addr, size_t size)
 
 int portalCacheFlush(int fd, void *__p, long size, int flush)
 {
-    int i;
 #if defined(__arm__)
 #ifdef __KERNEL__
+    int i;
     struct scatterlist *sg;
     struct file *fmem = fget(fd);
     struct sg_table *sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
