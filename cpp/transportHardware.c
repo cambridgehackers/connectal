@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <unistd.h>
 #endif
 
 static int trace_hardware;//=1;
