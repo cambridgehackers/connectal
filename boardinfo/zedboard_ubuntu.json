@@ -12,7 +12,7 @@
         "constraints": [],
         "implconstraints": ["constraints/xilinx/zc7z020clg484.xdc"],
         "TOP" : "ZynqTop",
-        "runscript" : "run.android",
+        "runscript" : "run.pcietest",
         "CONNECTALFLAGS" : ["--mainclockperiod=10", "--derivedclockperiod=5"],
         "need_pcie" : "unused"
     },
