@@ -161,11 +161,19 @@ static int init_hardware(struct PortalInternal *pint, void *param)
     }
 #else
     char buff[128];
+    int i;
     snprintf(buff, sizeof(buff), "/dev/portal_%d_%d", pint->fpga_tile, pint->fpga_number);
-    pint->fpga_fd = open(buff, O_RDWR);
-    if (pint->fpga_fd < 0) {
-	PORTAL_PRINTF("Failed to open %s fd=%d errno=%d\n", buff, pint->fpga_fd, errno);
-	return -errno;
+    //FIXME: race condition on Zynq between cat /dev/connectal and here
+    for (i = 0; i < 5; i++) {
+	pint->fpga_fd = open(buff, O_RDWR);
+	if (pint->fpga_fd < 0) {
+	    if (errno == EACCES && i != 4) {
+		sleep(1);
+		continue;
+	    }
+	    PORTAL_PRINTF("Failed to open %s fd=%d errno=%d:%s\n", buff, pint->fpga_fd, errno, strerror(errno));
+	    return -errno;
+	}
     }
     pint->map_base = (volatile unsigned int*)portalMmap(pint->fpga_fd, PORTAL_BASE_OFFSET);
     if (pint->map_base == MAP_FAILED) {
