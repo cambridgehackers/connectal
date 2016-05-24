@@ -159,6 +159,7 @@ BOARD=%(boardname)s
 PROJECTDIR=%(project_dir)s
 MKTOP=%(topbsvmod)s
 OS=%(OS)s
+TOOLCHAIN=%(toolchain)s
 DUT=%(dut)s
 
 export INTERFACES = %(interfaces)s
@@ -237,6 +238,9 @@ linuxmakefile_template='''
 CONNECTALDIR?=%(connectaldir)s
 DTOP?=%(project_dir)s
 
+TOOLCHAIN=%(toolchain)s
+CC=$(TOOLCHAIN)gcc
+CXX=$(TOOLCHAIN)g++
 CFLAGS_COMMON = -O -g %(cflags)s -Wall %(werr)s
 CFLAGS = $(CFLAGS_COMMON)
 CFLAGS2 = %(cdefines2)s
@@ -249,17 +253,17 @@ XSOURCES = $(CONNECTALDIR)/cpp/XsimTop.cpp $(PORTAL_SRC_FILES)
 LDLIBS := %(clibdirs)s %(clibs)s %(clibfiles)s -pthread 
 
 ubuntu.exe: $(SOURCES)
-	$(Q)g++ $(CFLAGS) -o ubuntu.exe $(SOURCES) $(LDLIBS)
-	$(Q)[ ! -f ../bin/mkTop.bin.gz ] || objcopy --add-section fpgadata=../bin/mkTop.bin.gz ubuntu.exe
+	$(Q)$(CXX) $(CFLAGS) -o ubuntu.exe $(SOURCES) $(LDLIBS)
+	$(Q)[ ! -f ../bin/mkTop.bin.gz ] || $(TOOLCHAIN)objcopy --add-section fpgadata=../bin/mkTop.bin.gz ubuntu.exe
 
 connectal.so: $(SOURCES)
-	$(Q)g++ -shared -fpic $(CFLAGS) -o connectal.so $(SOURCES) $(LDLIBS)
+	$(Q)$(CXX) -shared -fpic $(CFLAGS) -o connectal.so $(SOURCES) $(LDLIBS)
 
 ubuntu.exe2: $(SOURCES2)
-	$(Q)g++ $(CFLAGS) $(CFLAGS2) -o ubuntu.exe2 $(SOURCES2) $(LDLIBS)
+	$(Q)$(CXX) $(CFLAGS) $(CFLAGS2) -o ubuntu.exe2 $(SOURCES2) $(LDLIBS)
 
 xsim: $(XSOURCES)
-	g++ $(CFLAGS) -o xsim $(XSOURCES)
+	$(CXX) $(CFLAGS) -o xsim $(XSOURCES)
 '''
 
 if __name__=='__main__':
@@ -395,6 +399,7 @@ if __name__=='__main__':
                    '-I$(CONNECTALDIR)/cpp', '-I$(CONNECTALDIR)/lib/cpp', \
                    #'%(sourceincludes)s',
                    '%(cincludes)s', '%(cdefines)s']
+    substs['toolchain'] = option_info['toolchain'] if 'toolchain' in option_info else ''
     substs['cflags'] = util.escapequotes('%s %s' % ((' '.join(includelist) % substs), ' '.join(options.cflags)))
     substs['cxxflags'] = util.escapequotes('%s %s' % ((' '.join(includelist) % substs), ' '.join(options.cxxflags)))
     substs['android_build_type'] = 'BUILD_SHARED_LIBRARY' if options.shared else 'BUILD_EXECUTABLE'
@@ -526,7 +531,8 @@ if __name__=='__main__':
                                    'nohardware': 'CONNECTAL_NOHARDWARE=1' if options.nohardware else '',
                                    'protobuf': ('export PROTODEBUG=%s' % ' '.join(protolist)) if options.protobuf else '',
                                    'bitsmake': bitsmake,
-                                   'run_args': ' '.join(options.run_args)
+                                   'run_args': ' '.join(options.run_args),
+                                   'toolchain': option_info['toolchain'] if 'toolchain' in option_info else ''
                                    })
     if not options.prtop:
         for name in options.prvariant:
