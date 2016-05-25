@@ -25,6 +25,8 @@ import ConnectalConfig::*;
 typedef enum { DMA_RX, DMA_TX, DMA_SG } DmaChannel deriving (Bits,Eq);
 
 interface RootPortRequest;
+   method Action read32(Bit#(32) addr);
+   method Action write32(Bit#(32) addr, Bit#(32) data);
    method Action read(Bit#(32) addr);
    method Action write(Bit#(32) addr, Bit#(DataBusWidth) data);
    method Action readCtl(Bit#(32) addr);

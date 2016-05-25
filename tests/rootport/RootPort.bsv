@@ -190,11 +190,18 @@ module mkRootPort#(HostInterface host, RootPortIndication ind, RootPortTrace tra
         ind.status(axiRootPort.mmcm.lock());
       endmethod
 
-      method Action read(Bit#(32) addr);
+      method Action read32(Bit#(32) addr);
 	 araddrFifo.enq(PhysMemRequest { addr: addr, burstLen: 4, tag: 0 });
       endmethod
-      method Action write(Bit#(32) addr, Bit#(DataBusWidth) value);
+      method Action write32(Bit#(32) addr, Bit#(32) value);
 	 awaddrFifo.enq(PhysMemRequest { addr: addr, burstLen: 4, tag: 0 });
+	 wdataFifo.enq(MemData {data: extend(value), tag: 0, last: True});
+      endmethod
+      method Action read(Bit#(32) addr);
+	 araddrFifo.enq(PhysMemRequest { addr: addr, burstLen: fromInteger(valueOf(TDiv#(DataBusWidth,8))), tag: 0 });
+      endmethod
+      method Action write(Bit#(32) addr, Bit#(DataBusWidth) value);
+	 awaddrFifo.enq(PhysMemRequest { addr: addr, burstLen: fromInteger(valueOf(TDiv#(DataBusWidth,8))), tag: 0 });
 	 wdataFifo.enq(MemData {data: value, tag: 0, last: True});
       endmethod
 
