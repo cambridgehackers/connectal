@@ -260,10 +260,8 @@ instance ToAxi4SlaveBits#(Axi4SlaveBits#(32,DataBusWidth,4,Empty), AprpS_axi);
 	 method wdata = s.wdata;
 	 method wlast = s.wlast;
 	 method wready = s.wready;
-	 method Action      wvalid(Bit#(1) v);
-	    s.wvalid(v);
-	    s.wstrb(pack(replicate(v)));
-	 endmethod
+	 method wvalid = s.wvalid;
+	 method wstrb = s.wstrb;
 	 endinterface);
    endfunction
 endinstance
