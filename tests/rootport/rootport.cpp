@@ -122,6 +122,7 @@ class RootPort {
     RootPortIndication  indication;
     RootPortTrace       trace;
 public:
+    DmaBuffer dummy;
     DmaBuffer adminSubmissionQueue;
     DmaBuffer adminCompletionQueue;
     int adminSubmissionQueueRef;
@@ -131,9 +132,11 @@ public:
 	: device(IfcNames_RootPortRequestS2H)
 	, indication(IfcNames_RootPortIndicationH2S)
 	, trace(IfcNames_RootPortTraceH2S)
+	, dummy(64*64)
 	, adminSubmissionQueue(64*64)
 	, adminCompletionQueue(4096) {
 	
+	dummy.reference();
 	adminSubmissionQueueRef = adminSubmissionQueue.reference();
 	adminCompletionQueueRef = adminCompletionQueue.reference();
 	fprintf(stderr, "adminSubmissionQueue %d\n", adminSubmissionQueue.reference());
@@ -186,6 +189,43 @@ void RootPort::write32(uint32_t addr, uint32_t data)
     //device.write(addr & ~7, v << ((addr & 4) ? 32 : 0));
     device.write32(addr, v);
     //indication.wait();
+}
+
+void memserverWrite(RootPort *rootPort)
+{
+    // identify portals
+    int numTiles = rootPort->read32(0x02200000 + 0x08);
+    int numPortals = rootPort->read32(0x02200000 + 0x14);
+    fprintf(stderr, "numTiles=%x numPortals=%x\n", numTiles, numPortals);
+    for (int p = 0; p < numPortals; p++) {
+	fprintf(stderr, "Platform Portal[%d].id=%x\n", p, rootPort->read32(0x02200000 + p*0x1000 + 0x10));
+    }
+
+    numTiles = rootPort->read32(0x02200000 + 0x40000 + 0x08);
+    numPortals = rootPort->read32(0x02200000 + 0x40000 + 0x14);
+    fprintf(stderr, "numTiles=%x numPortals=%x\n", numTiles, numPortals);
+    for (int p = 0; p < numPortals; p++) {
+	fprintf(stderr, "Portal[%d].id=%x\n", p, rootPort->read32(0x02200000 + 0x40000 + p*0x1000 + 0x10));
+    }
+
+    if (1) {
+	// pause for vivado to connect
+	fprintf(stderr, "type enter to continue:\n");
+	char line[100];
+	fgets(line, sizeof(line), stdin);
+    }
+
+    // start write test
+    int pointer = 1;
+    int numWords = 0x1000;
+    int burstLen = 64;
+    int numReqs = numWords / burstLen;
+    int byteEnable = 0xff;
+    rootPort->write32(0x02200000 + 0x41000 + 0x20, (pointer>>24));
+    rootPort->write32(0x02200000 + 0x41000 + 0x20, (numWords>>24)|(((unsigned long)pointer)<<8));
+    rootPort->write32(0x02200000 + 0x41000 + 0x20, (numReqs>>24)|(((unsigned long)numWords)<<8));
+    rootPort->write32(0x02200000 + 0x41000 + 0x20, (burstLen>>24)|(((unsigned long)numReqs)<<8));
+    rootPort->write32(0x02200000 + 0x41000 + 0x20, byteEnable|(((unsigned long)burstLen)<<8));
 }
 
 int main(int argc, const char **argv)
@@ -249,69 +289,38 @@ int main(int argc, const char **argv)
 	for (int i = 0; i < 8; i++)
 	    fprintf(stderr, "BAR0[%02x]=%08x\n", i*4, rootPort.read32(0 + i*8));
     }
-    fprintf(stderr, "Reading card memory space BAR1\n");
-    for (int i = 0; i < 8; i++)
+    if (0) {
+	fprintf(stderr, "Reading card memory space BAR2\n");
+	for (int i = 0; i < 8; i++)
 	    fprintf(stderr, "BAR1[%02x]=%08x\n", i*4, rootPort.read32(0x02200000 + i*4));
-
-    if (1) {
-      // identify portals
-      int numTiles = rootPort.read32(0x02200000 + 0x08);
-      int numPortals = rootPort.read32(0x02200000 + 0x14);
-      fprintf(stderr, "numTiles=%x numPortals=%x\n", numTiles, numPortals);
-      for (int p = 0; p < numPortals; p++) {
-	fprintf(stderr, "Platform Portal[%d].id=%x\n", p, rootPort.read32(0x02200000 + p*0x1000 + 0x10));
-      }
-
-      numTiles = rootPort.read32(0x02200000 + 0x40000 + 0x08);
-      numPortals = rootPort.read32(0x02200000 + 0x40000 + 0x14);
-      fprintf(stderr, "numTiles=%x numPortals=%x\n", numTiles, numPortals);
-      for (int p = 0; p < numPortals; p++) {
-	fprintf(stderr, "Portal[%d].id=%x\n", p, rootPort.read32(0x02200000 + 0x40000 + p*0x1000 + 0x10));
-      }
-
-    if (1) {
-      // pause for vivado to connect
-      fprintf(stderr, "type enter to continue:\n");
-      char line[100];
-      fgets(line, sizeof(line), stdin);
     }
 
-    // start write test
-    int pointer = 1;
-    int numWords = 0x1000;
-    int burstLen = 64;
-    int numReqs = numWords / burstLen;
-    int byteEnable = 0xff;
-    rootPort.write32(0x02200000 + 0x41000 + 0x20, (pointer>>24));
-    rootPort.write32(0x02200000 + 0x41000 + 0x20, (numWords>>24)|(((unsigned long)pointer)<<8));
-    rootPort.write32(0x02200000 + 0x41000 + 0x20, (numReqs>>24)|(((unsigned long)numWords)<<8));
-    rootPort.write32(0x02200000 + 0x41000 + 0x20, (burstLen>>24)|(((unsigned long)numReqs)<<8));
-    rootPort.write32(0x02200000 + 0x41000 + 0x20, byteEnable|(((unsigned long)burstLen)<<8));
-
-    if (1) {
-      // pause for vivado to connect
-      fprintf(stderr, "type enter to continue again:\n");
-      char line[100];
-      fgets(line, sizeof(line), stdin);
-    }
-
-    }
-
+    fprintf(stderr, "CTS %08x\n", rootPort.read32( 0x1c));
     rootPort.write32(0x1c, 0x10); // clear reset bit
-    fprintf(stderr, "CMB size and location\n");
-    rootPort.read(0x38);
+    fprintf(stderr, "CTS %08x\n", rootPort.read32( 0x1c));
+
+    // reset
+    rootPort.write32(0x20, 0x4e564d65);
+    fprintf(stderr, "Reset reg %08x\n", rootPort.read32(0x20));
+    fprintf(stderr, "CTS %08x\n", rootPort.read32( 0x1c));
+    // CC.enable
+    rootPort.write32(0x14, 1);
+    fprintf(stderr, "CTS %08x\n", rootPort.read32( 0x1c));
+
+    fprintf(stderr, "CMB size     %08x\n", rootPort.read32(0x38));
+    fprintf(stderr, "CMB location %08x\n", rootPort.read32(0x3c));
     fprintf(stderr, "Setting up Admin submission and completion queues\n");
     uint64_t adminCompletionBaseAddress = rootPort.adminCompletionQueueRef << 24;
     rootPort.write(0x28, adminCompletionBaseAddress);
-    rootPort.read(0x28);
+    fprintf(stderr, "AdminCompletionBaseAddress %08llx\n", (long long)rootPort.read32(0x28));
     uint64_t adminSubmissionBaseAddress = rootPort.adminSubmissionQueueRef << 24;
     rootPort.write(0x30, adminSubmissionBaseAddress);
-    rootPort.read(0x30);
+    fprintf(stderr, "AdminSubmissionBaseAddress %08llx\n", (long long)rootPort.read(0x30));
     rootPort.write32(0x24, 0x003f003f);
-    rootPort.read(0x20);
+    fprintf(stderr, "register 0x20 %x\n", rootPort.read32(0x20));
     // update submission queue tail
-    rootPort.write32(0x1000, 0);
-    rootPort.write32(0x1000, 64);
+    rootPort.write32(0x1000, 1);
+    //rootPort.write32(0x1000, 64);
     fprintf(stderr, "CTS %08x\n", rootPort.read32( 0x1c));
     fprintf(stderr, "CMDSTATUS: %08x\n", rootPort.readCtl((1 << 20) + 0x4));
     for (int i = 0; i < 10; i++)
