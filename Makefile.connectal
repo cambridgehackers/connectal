@@ -207,6 +207,7 @@ endif
 	$(foreach interfaces, $(INTERFACES), -interfaces $(interfaces)) \
 	$(foreach f, $(CPPFILES), --source $f) \
 	$(foreach f, $(ALL_CPPFILES2), --source2 $f) \
+	$(foreach f, $(BSVPATH), --bsvpath $f) \
 	$(foreach f, $(PINOUT_FILE), --pinout $f) \
 	$(foreach f, $(PIN_BINDINGS), --pin-binding $f) \
 	$(foreach f, $(PRTOP_FILE), --prtop $f) \
