@@ -6,6 +6,25 @@
 #include "RootPortRequest.h"
 #include "RootPortTrace.h"
 
+enum nvme_admin_opcode {
+    nvme_identify = 0xe2 // 6?
+};
+
+struct nvme_id_cmd {
+    uint8_t opcode;
+    uint8_t flags;
+    uint16_t cid;
+    uint32_t nsid;
+    uint32_t reserved0;
+    uint32_t reserved1;
+    uint32_t ndt;
+    uint32_t ndm;
+    uint32_t channel_off;
+    uint32_t cdw13;
+    uint32_t cdw14;
+    uint32_t cdw15;
+};
+
 class RootPortTrace : public RootPortTraceWrapper {
 public:
     void traceDmaRequest(const DmaChannel chan, const int write, const uint16_t objId, const uint64_t offset, const uint16_t burstLen)
@@ -77,6 +96,8 @@ public:
     uint32_t reference();
     // Removes the address translation table from the hardware MMU
     void dereference();
+    // invalidate and optionally flush from the dcache
+    void cacheFlush(int size=0, int flush=0);
 };
 
 DmaManager *DmaBuffer::mgr;
@@ -116,6 +137,14 @@ void DmaBuffer::dereference()
 	mgr->dereference(ref);
     ref = -1;
 }
+
+void DmaBuffer::cacheFlush(int size, int flush)
+{
+    if (size == 0)
+	size = this->size;
+    portalCacheFlush(fd, buf, size, flush);
+}
+
 
 class RootPort {
     RootPortRequestProxy device;
@@ -303,21 +332,34 @@ int main(int argc, const char **argv)
     rootPort.write32(0x20, 0x4e564d65);
     fprintf(stderr, "Reset reg %08x\n", rootPort.read32(0x20));
     fprintf(stderr, "CTS %08x\n", rootPort.read32( 0x1c));
+
+    fprintf(stderr, "CMB size     %08x\n", rootPort.read32(0x38));
+    fprintf(stderr, "CMB location %08x\n", rootPort.read32(0x3c));
+    uint64_t adminCompletionBaseAddress = rootPort.adminCompletionQueueRef << 24;
+    uint64_t adminSubmissionBaseAddress = rootPort.adminSubmissionQueueRef << 24;
+    fprintf(stderr, "Setting up Admin submission and completion queues %llx %llx\n",
+	    (long long)adminCompletionBaseAddress, (long long)adminSubmissionBaseAddress);
+    rootPort.write(0x28, adminSubmissionBaseAddress);
+    fprintf(stderr, "AdminSubmissionBaseAddress %08llx\n", (long long)rootPort.read(0x28));
+    rootPort.write(0x30, adminCompletionBaseAddress);
+    fprintf(stderr, "AdminCompletionBaseAddress %08llx\n", (long long)rootPort.read(0x30));
+    rootPort.write32(0x24, 0x003f003f);
+    fprintf(stderr, "register 0x20 %x\n", rootPort.read32(0x20));
+
     // CC.enable
     rootPort.write32(0x14, 1);
     fprintf(stderr, "CTS %08x\n", rootPort.read32( 0x1c));
 
-    fprintf(stderr, "CMB size     %08x\n", rootPort.read32(0x38));
-    fprintf(stderr, "CMB location %08x\n", rootPort.read32(0x3c));
-    fprintf(stderr, "Setting up Admin submission and completion queues\n");
-    uint64_t adminCompletionBaseAddress = rootPort.adminCompletionQueueRef << 24;
-    rootPort.write(0x28, adminCompletionBaseAddress);
-    fprintf(stderr, "AdminCompletionBaseAddress %08llx\n", (long long)rootPort.read32(0x28));
-    uint64_t adminSubmissionBaseAddress = rootPort.adminSubmissionQueueRef << 24;
-    rootPort.write(0x30, adminSubmissionBaseAddress);
-    fprintf(stderr, "AdminSubmissionBaseAddress %08llx\n", (long long)rootPort.read(0x30));
-    rootPort.write32(0x24, 0x003f003f);
-    fprintf(stderr, "register 0x20 %x\n", rootPort.read32(0x20));
+
+    memset(rootPort.adminCompletionQueue.buffer(), 0xbf, 4096);
+
+    // write an identify command
+    nvme_id_cmd *cmd = (nvme_id_cmd *)rootPort.adminSubmissionQueue.buffer();
+    memset(cmd, 0, 4096);
+    cmd->opcode = 0xef; //nvme_identify;
+    //rootPort.adminSubmissionQueue.cacheFlush(4096, 1);
+    //rootPort.adminCompletionQueue.cacheFlush(4096, 0);
+
     // update submission queue tail
     rootPort.write32(0x1000, 1);
     //rootPort.write32(0x1000, 64);
@@ -327,6 +369,10 @@ int main(int argc, const char **argv)
       sleep(1);
     fprintf(stderr, "CTS %08x\n", rootPort.read32( 0x1c));
     fprintf(stderr, "CMDSTATUS: %08x\n", rootPort.readCtl((1 << 20) + 0x4));
+    for (int i = 0; i < 16; i++) {
+      int *buffer = (int *)rootPort.adminCompletionQueue.buffer();
+      fprintf(stderr, "response[%02x]=%08x\n", i*4, buffer[i]);
+    }
     return 0;
 }
 
