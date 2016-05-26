@@ -41,7 +41,7 @@ ifeq ($(OS),android)
 OBJCOPY?=$(NDK_OBJCOPY)
 BINFILE?=bin/mkTop.xdevcfg.bin.gz
 else #!android
-OBJCOPY?=objcopy
+OBJCOPY?=$(TOOLCHAIN)objcopy
 BINFILE?=bin/mkTop.bin.gz
 endif #!android
 else
@@ -237,12 +237,12 @@ endif # CONNECTAL_SHARED
 define SIM_C_RULE
 $1/$(notdir $(basename $3)).o: $3
 	mkdir -p $1
-	gcc -c $2 -O1 -o $1/$(notdir $(basename $3)).o $3
+	$(CC) -c $2 -O1 -o $1/$(notdir $(basename $3)).o $3
 endef
 define SIM_CXX_RULE
 $1/$(notdir $(basename $3)).o: $3
 	mkdir -p $1
-	g++ -c $2 -O1 -o $1/$(notdir $(basename $3)).o $3
+	$(CXX) -c $2 -O1 -o $1/$(notdir $(basename $3)).o $3
 endef
 
 $(foreach src, $(filter %.c, $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)), $(eval $(call SIM_C_RULE, $(DTOP)/lib, $(SIM_CFLAGS), $(src))))
@@ -319,7 +319,7 @@ vsim: verilog $(VSIM_OBJECTS)
 	rm -rf work
 	vlib work
 	vlog -timescale 1ns/1ps -dpiheader XsimTop.h $(VSIM_DEFINES) $(VSIM_SV) $(VSIM_LIBRARY_FILES) $(VSIM_MISC_FILES) +libext+.sv+.v $(SV_SEARCH_PATH) $(VERILOG_PATH:%=-y %) -sv verilog/*.v
-	g++ $(CXXFLAGS_PROJECT) -O -g -I$(DTOP)/jni -shared -fPIC -g -o xsimtop.so $(VSIM_OBJECTS)
+	$(CXX) $(CXXFLAGS_PROJECT) -O -g -I$(DTOP)/jni -shared -fPIC -g -o xsimtop.so $(VSIM_OBJECTS)
 endif #MODELSIM
 
 obj/%.bvi: verilog/%.v
@@ -360,7 +360,7 @@ obj/Makefile: $(OBJMAKEFILE_DEP) syntax.timestamp
 
 $(DTOP)/bin/libconnectal-sim.so: $(SIM_OBJECTS) prepare_bin_target
 	$(Q)mkdir -p $(DTOP)/bin
-	g++ -O -g -I$(DTOP)/jni -shared -fpic $(SIM_CXXFLAGS) -g -o $(DTOP)/bin/libconnectal-sim.so $(SIM_OBJECTS)
+	$(CXX) -O -g -I$(DTOP)/jni -shared -fpic $(SIM_CXXFLAGS) -g -o $(DTOP)/bin/libconnectal-sim.so $(SIM_OBJECTS)
 
 bsim: prepare_bin_target $(DTOP)/bin/libconnectal-sim.so
 	$(Q)mkdir -p $(DTOP)/obj verilog
