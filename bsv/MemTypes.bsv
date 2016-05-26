@@ -73,7 +73,7 @@ typedef struct {
    Bit#(TDiv#(dataBusWidth,8)) firstbe; // maybe we only need lastbe
    Bit#(TDiv#(dataBusWidth,8)) lastbe;
 `endif
-   } PhysMemRequest#(numeric type addrWidth, numeric type dataBusWidth) deriving (Bits);
+   } PhysMemRequest#(numeric type addrWidth, numeric type dataBusWidth) deriving (Bits, FShow);
 
 instance DefaultValue#(PhysMemRequest#(addrWidth,dataBusWidth));
    defaultValue = PhysMemRequest { addr: 0, burstLen: 0, tag: 0
@@ -94,7 +94,7 @@ typedef struct {
    Bit#(ByteEnableSize) firstbe; // maybe we only need lastbe
    Bit#(ByteEnableSize) lastbe;
 `endif
-   } MemRequest deriving (Bits);
+   } MemRequest deriving (Bits, FShow);
 
 instance DefaultValue#(MemRequest);
    defaultValue = MemRequest {
@@ -110,7 +110,7 @@ typedef struct {
    Bit#(dsz) data;
    Bit#(MemTagSize) tag;
    Bool last;
-   } MemData#(numeric type dsz) deriving (Bits);
+   } MemData#(numeric type dsz) deriving (Bits, FShow);
 
 typeclass ReqByteEnables#(type t, numeric type besz);
    function Bit#(besz) reqFirstByteEnable(t req);
