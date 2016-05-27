@@ -10,7 +10,25 @@ enum nvme_admin_opcode {
     nvme_identify = 0xe2 // 6?
 };
 
-struct nvme_id_cmd {
+struct nvme_admin_cmd {
+    uint8_t opcode;
+    uint8_t flags;
+    uint16_t cid;
+    uint32_t nsid;
+    uint32_t reserved0;
+    uint32_t reserved1;
+    uint64_t mptr;
+    uint64_t prp1;
+    uint64_t prp2;
+    uint32_t cdw10;
+    uint32_t cdw11;
+    uint32_t cdw12;
+    uint32_t cdw13;
+    uint32_t cdw14;
+    uint32_t cdw15;
+};
+
+struct nvme_io_cmd {
     uint8_t opcode;
     uint8_t flags;
     uint16_t cid;
@@ -158,9 +176,13 @@ public:
     DmaBuffer transferBuffer;
     DmaBuffer adminSubmissionQueue;
     DmaBuffer adminCompletionQueue;
+    DmaBuffer ioSubmissionQueue;
+    DmaBuffer ioCompletionQueue;
     int transferBufferRef;
     int adminSubmissionQueueRef;
     int adminCompletionQueueRef;
+    int ioSubmissionQueueRef;
+    int ioCompletionQueueRef;
 
     RootPort()
 	: device(IfcNames_RootPortRequestS2H)
@@ -169,7 +191,9 @@ public:
 	, dummy(4096)
 	, transferBuffer(10*4096)
 	, adminSubmissionQueue(64*64)
-	, adminCompletionQueue(4096) {
+	, adminCompletionQueue(4096)
+	, ioSubmissionQueue(8192)
+	, ioCompletionQueue(8192) {
 	
 	dummy.reference();
 	transferBufferRef = transferBuffer.reference();
@@ -177,6 +201,10 @@ public:
 	adminCompletionQueueRef = adminCompletionQueue.reference();
 	fprintf(stderr, "adminSubmissionQueue %d\n", adminSubmissionQueue.reference());
 	fprintf(stderr, "adminCompletionQueue %d\n", adminCompletionQueue.reference());
+	ioSubmissionQueueRef = ioSubmissionQueue.reference();
+	ioCompletionQueueRef = ioCompletionQueue.reference();
+	fprintf(stderr, "ioSubmissionQueue %d\n", ioSubmissionQueue.reference());
+	fprintf(stderr, "ioCompletionQueue %d\n", ioCompletionQueue.reference());
 	device.status();
 	indication.wait();
     }
@@ -264,6 +292,140 @@ void memserverWrite(RootPort *rootPort)
     rootPort->write32(0x02200000 + 0x41000 + 0x20, byteEnable|(((unsigned long)burstLen)<<8));
 }
 
+void identify(RootPort *rootPort)
+{
+    memset(rootPort->adminCompletionQueue.buffer(), 0xbf, 4096);
+
+    fprintf(stderr, "sizeof(nvmd_id_cmd)=%d\n", sizeof(nvme_admin_cmd));
+    // write an identify command
+    nvme_admin_cmd *cmd = (nvme_admin_cmd *)rootPort->adminSubmissionQueue.buffer();
+    memset(cmd, 0, 64);
+    cmd->opcode = 6; //nvme_identify;
+    cmd->cid = 22;
+    cmd->nsid = 0;
+    cmd->prp1 = (rootPort->transferBufferRef << 24) + 0;
+    cmd->prp2 = (rootPort->transferBufferRef << 24) + 4096;
+    cmd->cdw10 = 1;
+
+    //rootPort->adminSubmissionQueue.cacheFlush(4096, 1);
+    //rootPort->adminCompletionQueue.cacheFlush(4096, 0);
+
+    // update submission queue tail
+    rootPort->write32(0x1000, 1);
+    //rootPort->write32(0x1000, 64);
+    fprintf(stderr, "CTS %08x\n", rootPort->read32( 0x1c));
+    fprintf(stderr, "CMDSTATUS: %08x\n", rootPort->readCtl((1 << 20) + 0x4));
+    sleep(1);
+    fprintf(stderr, "CTS %08x\n", rootPort->read32( 0x1c));
+    fprintf(stderr, "CMDSTATUS: %08x\n", rootPort->readCtl((1 << 20) + 0x4));
+    {
+	int *buffer = (int *)rootPort->adminCompletionQueue.buffer();
+	for (int i = 0; i < 16; i++) {
+	    fprintf(stderr, "response[%02x]=%08x\n", i*4, buffer[i]);
+	}
+	int status = buffer[3];
+	int more = (status >> 30) & 1;
+	int sc = (status >> 17) & 0xff;
+	int sct = (status >> 25) & 0x7;
+	fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
+    }
+    {
+	char *cbuffer = (char *)(rootPort->transferBuffer.buffer() + 0);
+	int *buffer = (int *)(rootPort->transferBuffer.buffer() + 0);
+	for (int i = 0; i < 16; i++) {
+	    fprintf(stderr, "identity[%02x]=%08x\n", i*4, buffer[i]);
+	}
+	fprintf(stderr, "error log page entries %d\n", cbuffer[262]);
+	fprintf(stderr, "host buffer preferred size %x\n", *(int *)&cbuffer[272]);
+	fprintf(stderr, "host buffer min size       %x\n", *(int *)&cbuffer[276]);
+	fprintf(stderr, "nvm submission queue entry size %d\n", cbuffer[512]);
+	fprintf(stderr, "nvm completion queue entry size %d\n", cbuffer[513]);
+	fprintf(stderr, "nvm capacity: %08llx %08llx\n", *(long long *)&cbuffer[288], *(long long *)&cbuffer[280]);
+
+    }
+}
+
+void allocIOQueues(RootPort *rootPort, int entry=0)
+{
+    // write an identify command
+    nvme_admin_cmd *cmd = (nvme_admin_cmd *)(rootPort->adminSubmissionQueue.buffer() + (entry+0)*64);
+    memset(cmd, 0, 64);
+    cmd->opcode = 1; //create I/O submission queue
+    cmd->cid = 17;
+    cmd->nsid = 0;
+    cmd->prp1 = (rootPort->ioSubmissionQueueRef << 24) + 0;
+    cmd->cdw10 = ((8192 / 64 - 1) << 16) + 1; // submission queue 1
+    cmd->cdw11 = 1; // physically contiguous
+
+    cmd = (nvme_admin_cmd *)(rootPort->adminSubmissionQueue.buffer() + (entry+1)*64);
+    memset(cmd, 0, 64);
+    cmd->opcode = 5; //create I/O completion queue
+    cmd->cid = 18;
+    cmd->nsid = 0;
+    cmd->prp1 = (rootPort->ioCompletionQueueRef << 24) + 0;
+    cmd->cdw10 = ((8192 / 16 - 1) << 16) + 1; // completion queue 1
+    cmd->cdw11 = 1; // physically contiguous
+
+    fprintf(stderr, "allocating IO submission queue\n");
+    // update submission queue tail
+    rootPort->write32(0x1000, entry+2);
+
+    sleep(1);
+    {
+	int *buffer = (int *)(rootPort->adminCompletionQueue.buffer() + (entry+0)*16);
+	for (int i = 0; i < 16; i++) {
+	    fprintf(stderr, "response[%02x]=%08x\n", i*4, buffer[i]);
+	}
+	int status = buffer[3];
+	int more = (status >> 30) & 1;
+	int sc = (status >> 17) & 0xff;
+	int sct = (status >> 25) & 0x7;
+	fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
+    }
+    {
+	int *buffer = (int *)(rootPort->adminCompletionQueue.buffer() + (entry+1)*16);
+	for (int i = 0; i < 16; i++) {
+	    fprintf(stderr, "response[%02x]=%08x\n", i*4, buffer[i]);
+	}
+	int status = buffer[3];
+	int more = (status >> 30) & 1;
+	int sc = (status >> 17) & 0xff;
+	int sct = (status >> 25) & 0x7;
+	fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
+    }
+    
+    {
+	// let's do a read
+	nvme_io_cmd *cmd = (nvme_io_cmd *)(rootPort->ioSubmissionQueue.buffer() + (entry+0)*64);
+	memset(cmd, 0, 64);
+	cmd->opcode = 2; // read
+	cmd->cid = 42;
+	cmd->nsid = 0;
+	cmd->prp1 = (rootPort->transferBufferRef << 24) + 0;
+	cmd->cdw10 = 0; // starting LBA.lower
+	cmd->cdw11 = 0; // starting LBA.upper
+	cmd->cdw12 = 1; // read 2 blocks
+
+	fprintf(stderr, "enqueueing IO read request\n");
+	// update submission queue tail
+	rootPort->write32(0x1000+(2*1*(4 << 0)), entry+2);
+	sleep(1);
+
+	{
+	    int *buffer = (int *)(rootPort->ioCompletionQueue.buffer() + (entry+0)*16);
+	    for (int i = 0; i < 16; i++) {
+		fprintf(stderr, "response[%02x]=%08x\n", i*4, buffer[i]);
+	    }
+	    int status = buffer[3];
+	    int more = (status >> 30) & 1;
+	    int sc = (status >> 17) & 0xff;
+	    int sct = (status >> 25) & 0x7;
+	    fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
+	}
+    }
+
+}
+
 int main(int argc, const char **argv)
 {
     RootPort rootPort;
@@ -323,7 +485,7 @@ int main(int argc, const char **argv)
     if (1) {
 	fprintf(stderr, "Reading card memory space BAR0\n");
 	for (int i = 0; i < 8; i++)
-	    fprintf(stderr, "BAR0[%02x]=%08x\n", i*4, rootPort.read32(0 + i*8));
+	    fprintf(stderr, "BAR0[%02x]=%08x\n", i*4, rootPort.read32(0 + i*4));
     }
     if (0) {
 	fprintf(stderr, "Reading card memory space BAR2\n");
@@ -335,8 +497,11 @@ int main(int argc, const char **argv)
     rootPort.write32(0x1c, 0x10); // clear reset bit
     fprintf(stderr, "CTS %08x\n", rootPort.read32( 0x1c));
 
+    // disable
+    rootPort.write32(0x14, 0);
     // reset
     rootPort.write32(0x20, 0x4e564d65);
+    sleep(1);
     fprintf(stderr, "Reset reg %08x\n", rootPort.read32(0x20));
     fprintf(stderr, "CTS %08x\n", rootPort.read32( 0x1c));
 
@@ -353,60 +518,14 @@ int main(int argc, const char **argv)
     rootPort.write32(0x24, 0x003f003f);
     fprintf(stderr, "register 0x20 %x\n", rootPort.read32(0x20));
 
+    fprintf(stderr, "CTS %08x\n", rootPort.read32( 0x1c));
     // CC.enable
     rootPort.write32(0x14, 1);
     fprintf(stderr, "CTS %08x\n", rootPort.read32( 0x1c));
 
+    //identify(&rootPort);
+    allocIOQueues(&rootPort, 0);
 
-    memset(rootPort.adminCompletionQueue.buffer(), 0xbf, 4096);
-
-    fprintf(stderr, "sizeof(nvmd_id_cmd)=%d\n", sizeof(nvme_id_cmd));
-    // write an identify command
-    nvme_id_cmd *cmd = (nvme_id_cmd *)rootPort.adminSubmissionQueue.buffer();
-    memset(cmd, 0, 4096);
-    cmd->opcode = 6; //nvme_identify;
-    cmd->cid = 22;
-    cmd->nsid = 0;
-    cmd->prp1 = (rootPort.transferBufferRef << 24) + 0;
-    cmd->prp2 = (rootPort.transferBufferRef << 24) + 4096;
-    cmd->cdw10 = 1;
-
-    //rootPort.adminSubmissionQueue.cacheFlush(4096, 1);
-    //rootPort.adminCompletionQueue.cacheFlush(4096, 0);
-
-    // update submission queue tail
-    rootPort.write32(0x1000, 1);
-    //rootPort.write32(0x1000, 64);
-    fprintf(stderr, "CTS %08x\n", rootPort.read32( 0x1c));
-    fprintf(stderr, "CMDSTATUS: %08x\n", rootPort.readCtl((1 << 20) + 0x4));
-    sleep(1);
-    fprintf(stderr, "CTS %08x\n", rootPort.read32( 0x1c));
-    fprintf(stderr, "CMDSTATUS: %08x\n", rootPort.readCtl((1 << 20) + 0x4));
-    {
-	int *buffer = (int *)rootPort.adminCompletionQueue.buffer();
-	for (int i = 0; i < 16; i++) {
-	    fprintf(stderr, "response[%02x]=%08x\n", i*4, buffer[i]);
-	}
-	int status = buffer[3];
-	int more = (status >> 30) & 1;
-	int sc = (status >> 17) & 0xff;
-	int sct = (status >> 25) & 0x7;
-	fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
-    }
-    {
-	char *cbuffer = (char *)(rootPort.transferBuffer.buffer() + 0);
-	int *buffer = (int *)(rootPort.transferBuffer.buffer() + 0);
-	for (int i = 0; i < 16; i++) {
-	    fprintf(stderr, "identity[%02x]=%08x\n", i*4, buffer[i]);
-	}
-	fprintf(stderr, "error log page entries %d\n", cbuffer[262]);
-	fprintf(stderr, "host buffer preferred size %x\n", *(int *)&cbuffer[272]);
-	fprintf(stderr, "host buffer min size       %x\n", *(int *)&cbuffer[276]);
-	fprintf(stderr, "nvm submission queue entry size %d\n", cbuffer[512]);
-	fprintf(stderr, "nvm completion queue entry size %d\n", cbuffer[513]);
-	fprintf(stderr, "nvm capacity: %08llx %08llx\n", *(long long *)&cbuffer[288], *(long long *)&cbuffer[280]);
-
-    }
     return 0;
 }
 
