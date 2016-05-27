@@ -347,24 +347,28 @@ void identify(RootPort *rootPort)
 
 void allocIOQueues(RootPort *rootPort, int entry=0)
 {
-    // write an identify command
-    nvme_admin_cmd *cmd = (nvme_admin_cmd *)(rootPort->adminSubmissionQueue.buffer() + (entry+0)*64);
+    nvme_admin_cmd *cmd = 0;
+
+    // create I/O completion queue
+    cmd = (nvme_admin_cmd *)(rootPort->adminSubmissionQueue.buffer() + (entry+0)*64);
+    memset(cmd, 0, 64);
+    cmd->opcode = 5; //create I/O completion queue
+    cmd->cid = 18;
+    cmd->nsid = 0;
+    cmd->prp1 = (rootPort->ioCompletionQueueRef << 24) + 0;
+    cmd->cdw10 = ((8192 / 16 - 1) << 16) | 1; // size, completion queue 1
+    cmd->cdw11 = 1; // physically contiguous
+
+    // create I/O submission queue
+    cmd = (nvme_admin_cmd *)(rootPort->adminSubmissionQueue.buffer() + (entry+1)*64);
     memset(cmd, 0, 64);
     cmd->opcode = 1; //create I/O submission queue
     cmd->cid = 17;
     cmd->nsid = 0;
     cmd->prp1 = (rootPort->ioSubmissionQueueRef << 24) + 0;
     cmd->cdw10 = ((8192 / 64 - 1) << 16) + 1; // submission queue 1
-    cmd->cdw11 = 1; // physically contiguous
+    cmd->cdw11 = (1 << 16) | 1; // completion queue 1, physically contiguous
 
-    cmd = (nvme_admin_cmd *)(rootPort->adminSubmissionQueue.buffer() + (entry+1)*64);
-    memset(cmd, 0, 64);
-    cmd->opcode = 5; //create I/O completion queue
-    cmd->cid = 18;
-    cmd->nsid = 0;
-    cmd->prp1 = (rootPort->ioCompletionQueueRef << 24) + 0;
-    cmd->cdw10 = ((8192 / 16 - 1) << 16) + 1; // completion queue 1
-    cmd->cdw11 = 1; // physically contiguous
 
     fprintf(stderr, "allocating IO submission queue\n");
     // update submission queue tail
@@ -400,17 +404,16 @@ void allocIOQueues(RootPort *rootPort, int entry=0)
 	memset(cmd, 0, 64);
 	cmd->opcode = 2; // read
 	cmd->cid = 42;
-	cmd->nsid = 0;
+	cmd->nsid = 1;
 	cmd->prp1 = (rootPort->transferBufferRef << 24) + 0;
 	cmd->cdw10 = 0; // starting LBA.lower
 	cmd->cdw11 = 0; // starting LBA.upper
-	cmd->cdw12 = 1; // read 2 blocks
+	cmd->cdw12 = 7; // read 8 blocks
 
 	fprintf(stderr, "enqueueing IO read request\n");
 	// update submission queue tail
-	rootPort->write32(0x1000+(2*1*(4 << 0)), entry+2);
+	rootPort->write32(0x1000+(2*1*(4 << 0)), 1);
 	sleep(1);
-
 	{
 	    int *buffer = (int *)(rootPort->ioCompletionQueue.buffer() + (entry+0)*16);
 	    for (int i = 0; i < 16; i++) {
@@ -421,6 +424,12 @@ void allocIOQueues(RootPort *rootPort, int entry=0)
 	    int sc = (status >> 17) & 0xff;
 	    int sct = (status >> 25) & 0x7;
 	    fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
+	}
+	{
+	    int *buffer = (int *)(rootPort->transferBuffer.buffer() + (entry+0)*16);
+	    for (int i = 0; i < 8*512/4; i++) {
+		fprintf(stderr, "data read [%02x]=%08x\n", i*4, buffer[i]);
+	    }
 	}
     }
 
@@ -525,6 +534,8 @@ int main(int argc, const char **argv)
 
     //identify(&rootPort);
     allocIOQueues(&rootPort, 0);
+
+    fprintf(stderr, "CTS %08x\n", rootPort.read32( 0x1c));
 
     return 0;
 }
