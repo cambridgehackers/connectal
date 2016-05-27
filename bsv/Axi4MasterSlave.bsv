@@ -40,7 +40,7 @@ typedef struct {
    Bit#(4) qos;
 } Axi4ReadRequest#(numeric type addrWidth, numeric type idWidth) deriving (Bits);
 
-function Bit#(3) axiBusSize(Integer busWidth);
+function Bit#(3) axiBusSize(busWidthType busWidth) provisos (Eq#(busWidthType),Literal#(busWidthType));
    if (busWidth == 32)
       return 3'b010; // 3'b010: 32bit, 3'b011: 64bit, 3'b100: 128bit
    else if (busWidth == 64)
@@ -51,10 +51,14 @@ function Bit#(3) axiBusSize(Integer busWidth);
       return 3'b101;
    else if (busWidth == 512)
       return 3'b110;
-   else if (busWidth == 1024)
-      return 3'b111;
+//   else if (busWidth == 1024)
+//      return 3'b111;
    else
       return 0;
+endfunction
+
+function Bit#(3) axiBusSizeBytes(busWidthType busWidth) provisos (Eq#(busWidthType),Literal#(busWidthType),Arith#(busWidthType));
+   return axiBusSize(8*busWidth);
 endfunction
 
 typedef struct {
