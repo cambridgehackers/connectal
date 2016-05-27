@@ -354,7 +354,7 @@ if (trace_portal) fprintf(stderr, "[%s:%d] LD_LIBRARY_PATH %s *******\n", __FUNC
             argv[ind++] = strdup(serial);
         }
         {
-#ifdef __android__
+#ifdef __ANDROID__
 	  // on zynq android, fpgajtag is in the initramdisk in the root directory
 	  const char *fpgajtag = "/fpgajtag";
 #else
