@@ -425,7 +425,7 @@ int portalAlloc(size_t size, int cached)
       unlink(fname);
       lseek(fd, size, SEEK_SET);
       size_t bytesWritten = write(fd, (void*)fname, 512);
-      if (bytesWritten != size)
+      if (bytesWritten != 512)
 	fprintf(stderr, "ERROR %s:%d fname=%s fd=%d wrote %ld bytes\n", __FUNCTION__, __LINE__, fname, fd, bytesWritten);
       portalmem_sizes[fd] = size;
     }
