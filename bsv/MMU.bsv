@@ -366,7 +366,9 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
       let nextId <- sglId_gen.getTag;
       let resp = (fromInteger(iid) << 16) | extend(nextId);
       if (verbose) $display("mkMMU::idRequest %d", fd);
-      let va <- simDma.initfd(resp, fd);
+      if (hostMapped) begin
+	 let va <- simDma.initfd(resp, fd);
+      end
       mmuIndication.idResponse(resp);
    endmethod
    method Action idReturn(Bit#(32) sglId);
