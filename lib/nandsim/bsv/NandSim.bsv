@@ -26,6 +26,9 @@ import Vector::*;
 import BRAM::*;
 import GetPut::*;
 import Connectable::*;
+
+import ConnectalConfig::*;
+import ConnectalMemory::*;
 import Pipe::*;
 import MemTypes::*;
 import HostInterface::*;
@@ -73,8 +76,9 @@ module mkNandSim#(NandCfgIndication indication) (NandSim);
    interface PhysMemSlave memSlave;
       interface PhysMemWriteServer write_server;
 	 interface Put writeReq;
-	    method Action put(PhysMemRequest#(PhysAddrWidth) req);
-	       slave_write_server.request.put(MemengineCmd{sglId:ns.nandPtr, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen), tag: 0});
+	    method Action put(PhysMemRequest#(PhysAddrWidth,64) req);
+	       if (verbose) $display("mkNandSim.memSlave::writeReq %d %d %d", req.addr, req.burstLen, req.tag);
+	       slave_write_server.request.put(MemengineCmd{sglId:ns.nandPtr, base:truncate(req.addr), burstLen:req.burstLen, len:extend(req.burstLen), tag: 0});
 	       slaveWriteTag.enq(req.tag);
             endmethod
 	 endinterface
@@ -93,22 +97,22 @@ module mkNandSim#(NandCfgIndication indication) (NandSim);
       endinterface
       interface PhysMemReadServer read_server;
 	 interface Put readReq;
-	    method Action put(PhysMemRequest#(PhysAddrWidth) req);
+	    method Action put(PhysMemRequest#(PhysAddrWidth,64) req) if (slaveReadCnt == 0);
 	       if (verbose) $display("mkNandSim.memSlave::readReq %d %d %d", req.addr, req.burstLen, req.tag);
-	       slave_read_server.request.put(MemengineCmd{sglId:ns.nandPtr, base:extend(req.addr), burstLen:req.burstLen, len:extend(req.burstLen), tag: 0});
+	       slave_read_server.request.put(MemengineCmd{sglId:ns.nandPtr, base:truncate(req.addr), burstLen:req.burstLen, len:extend(req.burstLen), tag: 0});
 	       slaveReadTag.enq(req.tag);
 	       slaveReadCnt <= req.burstLen;
 	    endmethod
 	 endinterface
 	 interface Get  readData;
-	    method ActionValue#(MemData#(64)) get();
+	    method ActionValue#(MemData#(64)) get() if (slaveReadCnt != 0);
 	       let rv <- toGet(slave_read_server.data).get;
 	       let new_slaveReadCnt = slaveReadCnt-8;
 	       let last = new_slaveReadCnt==0;
 	       slaveReadCnt <= new_slaveReadCnt;
                if (rv.last)
                   slaveReadTag.deq;
-	       if (verbose) $display("mkNandSim.memSlave::readData %d %d %d %d", slaveReadTag.first, last, rv.data, slaveReadCnt);
+	       if (verbose) $display("mkNandSim.memSlave::readData %d %d %h %d", slaveReadTag.first, last, rv.data, slaveReadCnt);
 	       return MemData{data:rv.data, tag:slaveReadTag.first,last:last};
             endmethod
 	 endinterface
@@ -120,7 +124,7 @@ module mkNandSim#(NandCfgIndication indication) (NandSim);
 
 endmodule
 
-module mkNandSimControl#(Vector#(2, MemReadServer#(64)) readSrvs, Vector#(3, MemWriteServer#(64)) writeSrvs,
+module mkNandSimControl#(Vector#(2, MemReadEngineServer#(64)) readSrvs, Vector#(3, MemWriteEngineServer#(64)) writeSrvs,
 			  NandCfgIndication indication) (NandSimControl);
    let dramReadServer = readSrvs[0];
    let nandReadServer = readSrvs[1];
