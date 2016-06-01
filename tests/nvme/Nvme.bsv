@@ -28,6 +28,7 @@ import FIFOF::*;
 import GetPut::*;
 import Vector::*;
 
+import AddressGenerator::*;
 import AxiBits::*;
 import ConnectalClocks::*;
 import ConnectalConfig::*;
@@ -66,7 +67,7 @@ interface Nvme;
 `endif
 endinterface
 
-module mkNvme#(HostInterface host, NvmeIndication ind, NvmeTrace trace)(Nvme);
+module mkNvme#(NvmeIndication ind, NvmeTrace trace)(Nvme);
    let clock <- exposeCurrentClock;
    let reset <- exposeCurrentReset;
    let refclk_p <- mkB2C1();
@@ -155,8 +156,8 @@ module mkNvme#(HostInterface host, NvmeIndication ind, NvmeTrace trace)(Nvme);
 		   method SGLId objId(Bit#(32) addr); return extend(addr[31:24]); endmethod
 		   method Bit#(MemOffsetSize) addr(Bit#(32) axiAddr); return extend(axiAddr[23:0]); endmethod
 		   endinterface);
-   let memReadClients  <- mapM(mkMemReadClient(getObjId), vec(m_axi_mm));
-   let memWriteClients <- mapM(mkMemWriteClient(getObjId), vec(m_axi_mm));
+   let memReadClient  <- mkMemReadClient(getObjId, m_axi_mm);
+   let memWriteClient <- mkMemWriteClient(getObjId, m_axi_mm);
 
    FIFOF#(Tuple4#(DmaChannel,Bool,MemRequest,Bit#(32))) traceFifo <- mkSizedBRAMFIFOF(128);
    PipeIn#(Tuple4#(DmaChannel,Bool,MemRequest,Bit#(32))) tracePipe = toPipeIn(traceFifo);
@@ -171,12 +172,19 @@ module mkNvme#(HostInterface host, NvmeIndication ind, NvmeTrace trace)(Nvme);
       trace.traceDmaData(chan, write, md.data, md.last, extend(md.tag), timestamp);
    endrule
 
-   let traceReadClients <- mapM(uncurry(mkTraceReadClient(tracePipe,traceDataPipe)),
-				zip(vec(DMA_TX),
-				    memReadClients));
-   let traceWriteClients <- mapM(uncurry(mkTraceWriteClient(tracePipe,traceDataPipe)),
-				 zip(vec(DMA_RX),
-				     memWriteClients));
+   let traceReadClient <- mkTraceReadClient(tracePipe,traceDataPipe,DMA_TX,memReadClient);
+   let traceWriteClient <- mkTraceWriteClient(tracePipe,traceDataPipe,DMA_RX,memWriteClient);
+   let traceClient = (interface MemClient#(DataBusWidth);
+			 interface readClient = traceReadClient;
+			 interface writeClient = traceWriteClient;
+		      endinterface);
+
+   let splitter <- mkSplitMemServer();
+   let traceMemCnx <- mkConnection(traceClient, splitter.server);
+   rule rl_data;
+      let md <- toGet(splitter.data).get();
+      trace.traceData(md.data, md.last, extend(md.tag));
+   endrule
 
    interface NvmeRequest request;
 
@@ -217,8 +225,8 @@ module mkNvme#(HostInterface host, NvmeIndication ind, NvmeTrace trace)(Nvme);
          refclk_n.inputclock(n);
       endmethod
    endinterface
-   interface Vector dmaReadClient = traceReadClients;
-   interface Vector dmaWriteClient = traceWriteClients;
+   interface Vector dmaReadClient = vec(splitter.busClient.readClient);
+   interface Vector dmaWriteClient = vec(splitter.busClient.writeClient);
 endmodule
 
 instance ToAxi4SlaveBits#(Axi4SlaveBits#(32,DataBusWidth,4,Empty), AprpS_axi);
@@ -341,3 +349,127 @@ function Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty) toAxi4MasterBits(AprpM_
 	 endinterface);
    endfunction
 endinstance
+
+interface SplitMemServer;
+   interface MemServer#(DataBusWidth) server;
+   interface MemClient#(DataBusWidth) busClient;
+   interface MemClient#(DataBusWidth) bramClient;
+   interface PipeOut#(MemData#(DataBusWidth)) data;
+endinterface
+
+module mkSplitMemServer(SplitMemServer);
+   let readReqFifo   <- mkFIFOF();
+   let readDataFifo  <- mkFIFOF();
+   let writeReqFifo  <- mkFIFOF();
+   let writeDataFifo <- mkFIFOF();
+   let writeDoneFifo <- mkFIFOF();
+
+   let busReadReqFifo   <- mkFIFOF();
+   let busReadDataFifo  <- mkFIFOF();
+   let busWriteReqFifo  <- mkFIFOF();
+   let busWriteDataFifo <- mkFIFOF();
+   let busWriteDoneFifo <- mkFIFOF();
+
+   let bramReadReqFifo   <- mkFIFOF();
+   let bramReadDataFifo  <- mkFIFOF();
+   let bramWriteReqFifo  <- mkFIFOF();
+   let bramWriteDataFifo <- mkFIFOF();
+   let bramWriteDoneFifo <- mkFIFOF();
+
+   let doneFifo <- mkFIFOF();
+
+   let dataFifo <- mkSizedBRAMFIFOF(128);
+
+   AddressGenerator#(24,DataBusWidth) readAddrGenerator <- mkAddressGenerator();
+   AddressGenerator#(24,DataBusWidth) writeAddrGenerator <- mkAddressGenerator();
+
+   rule rl_rd_req;
+      MemRequest req <- toGet(readReqFifo).get();
+      if ((req.sglId & 'h80) == 'h80)
+	 bramReadReqFifo.enq(req);
+      else
+	 busReadReqFifo.enq(req);
+      readAddrGenerator.request.put(PhysMemRequest { addr: truncate(req.offset), burstLen: req.burstLen, tag: extend(req.sglId[7:6]) });
+   endrule
+   
+   rule rl_rd_data;
+      let addrBeat <- readAddrGenerator.addrBeat.get();
+      MemData#(DataBusWidth) md;
+      if (addrBeat.tag == 2)
+	 md <- toGet(bramReadDataFifo).get();
+      else
+	 md <- toGet(busReadDataFifo).get();
+      readDataFifo.enq(md);
+   endrule
+
+   rule rl_wr_req;
+      MemRequest req <- toGet(writeReqFifo).get();
+      if ((req.sglId & 'hc0) == 'h80)
+	 bramWriteReqFifo.enq(req);
+      else if ((req.sglId & 'hc0) == 'hc0)
+	 bramWriteReqFifo.enq(req);
+      else
+	 busWriteReqFifo.enq(req);
+      writeAddrGenerator.request.put(PhysMemRequest { addr: truncate(req.offset), burstLen: req.burstLen, tag: extend(req.sglId[7:6]) });
+   endrule
+   
+   rule rl_wr_data;
+      let addrBeat <- writeAddrGenerator.addrBeat.get();
+      MemData#(DataBusWidth) md <- toGet(writeDataFifo).get();
+      if (addrBeat.tag == 2)
+	 bramWriteDataFifo.enq(md);
+      else if (addrBeat.tag == 3)
+	 dataFifo.enq(md);
+      else
+	 busWriteDataFifo.enq(md);
+      if (addrBeat.last)
+	 doneFifo.enq(md.tag);
+   endrule
+
+   rule rl_wr_done;
+      let tag <- toGet(doneFifo).get();
+      Bit#(MemTagSize) doneTag;
+      if (tag == 2)
+	 doneTag <- toGet(bramWriteDoneFifo).get();
+      else if (tag  == 3)
+	 doneTag = 0;
+      else
+	 doneTag <- toGet(busWriteDoneFifo).get();
+      writeDoneFifo.enq(doneTag);
+   endrule
+
+   interface MemServer server;
+      interface MemReadServer readServer;
+	 interface readReq  = toPut(readReqFifo);
+	 interface readData = toGet(readDataFifo);
+      endinterface
+      interface MemWriteServer writeServer;
+	 interface writeReq  = toPut(writeReqFifo);
+	 interface writeData = toPut(writeDataFifo);
+	 interface writeDone = toGet(writeDoneFifo);
+      endinterface
+   endinterface
+   interface MemClient busClient;
+      interface MemReadClient readClient;
+	 interface readReq  = toGet(busReadReqFifo);
+	 interface readData = toPut(busReadDataFifo);
+      endinterface
+      interface MemWriteClient writeClient;
+	 interface writeReq  = toGet(busWriteReqFifo);
+	 interface writeData = toGet(busWriteDataFifo);
+	 interface writeDone = toPut(busWriteDoneFifo);
+      endinterface
+   endinterface
+   interface MemClient bramClient;
+      interface MemReadClient readClient;
+	 interface readReq  = toGet(bramReadReqFifo);
+	 interface readData = toPut(bramReadDataFifo);
+      endinterface
+      interface MemWriteClient writeClient;
+	 interface writeReq  = toGet(bramWriteReqFifo);
+	 interface writeData = toGet(bramWriteDataFifo);
+	 interface writeDone = toPut(bramWriteDoneFifo);
+      endinterface
+   endinterface
+   interface PipeOut data = toPipeOut(dataFifo);
+endmodule
