@@ -54,6 +54,9 @@ public:
     void traceDmaData ( const DmaChannel chan, const int write, const uint64_t data, const int last, const uint8_t tag, const uint32_t timestamp ) {
 	fprintf(stderr, "%08x: traceDmaData chan=%d write=%d data=%08llx last=%d tag=%x\n", timestamp, chan, write, (long long)data, last, tag);
     }
+    void traceData ( const uint64_t data, const int last, const uint8_t tag ) {
+	fprintf(stderr, "traceData data=%08llx last=%d tag=%x\n", (long long)data, last, tag);
+    }
 
     NvmeTrace(int id, PortalPoller *poller = 0) : NvmeTraceWrapper(id, poller) {
     }
@@ -318,8 +321,8 @@ void identify(Nvme *nvme)
     fprintf(stderr, "CMDSTATUS: %08x\n", nvme->readCtl((1 << 20) + 0x4));
     {
 	int *buffer = (int *)nvme->adminCompletionQueue.buffer();
-	for (int i = 0; i < 16; i++) {
-	    fprintf(stderr, "response[%02x]=%08x\n", i*4, buffer[i]);
+	for (int i = 0; i < 4; i++) {
+	    fprintf(stderr, "identify-response[%02x]=%08x\n", i*4, buffer[i]);
 	}
 	int status = buffer[3];
 	int more = (status >> 30) & 1;
@@ -375,8 +378,8 @@ void allocIOQueues(Nvme *nvme, int entry=0)
     sleep(1);
     {
 	int *buffer = (int *)(nvme->adminCompletionQueue.buffer() + (entry+0)*16);
-	for (int i = 0; i < 16; i++) {
-	    fprintf(stderr, "response[%02x]=%08x\n", i*4, buffer[i]);
+	for (int i = 0; i < 4; i++) {
+	    fprintf(stderr, "alloc-completion-queue-response[%02x]=%08x\n", i*4, buffer[i]);
 	}
 	int status = buffer[3];
 	int more = (status >> 30) & 1;
@@ -386,8 +389,8 @@ void allocIOQueues(Nvme *nvme, int entry=0)
     }
     {
 	int *buffer = (int *)(nvme->adminCompletionQueue.buffer() + (entry+1)*16);
-	for (int i = 0; i < 16; i++) {
-	    fprintf(stderr, "response[%02x]=%08x\n", i*4, buffer[i]);
+	for (int i = 0; i < 4; i++) {
+	    fprintf(stderr, "alloc-submission-queue-response[%02x]=%08x\n", i*4, buffer[i]);
 	}
 	int status = buffer[3];
 	int more = (status >> 30) & 1;
@@ -403,7 +406,8 @@ void allocIOQueues(Nvme *nvme, int entry=0)
 	cmd->opcode = 2; // read
 	cmd->cid = 42;
 	cmd->nsid = 1;
-	cmd->prp1 = (nvme->transferBufferRef << 24) + 0;
+	//cmd->prp1 = (nvme->transferBufferRef << 24) + 0;
+	cmd->prp1 = (3 << 24) + 0; // send data to the FIFO
 	cmd->cdw10 = 0; // starting LBA.lower
 	cmd->cdw11 = 0; // starting LBA.upper
 	cmd->cdw12 = 7; // read 8 blocks
