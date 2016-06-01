@@ -20,6 +20,7 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+import BuildVector::*;
 import Clocks::*;
 import DefaultValue::*;
 import GetPut::*;
@@ -348,5 +349,5 @@ module mkPS7#(Clock axiClock)(PS7);
         ps7.irq.f2p({19'b0, v});
     endmethod
     interface i2c = ps7.i2c;
-   interface s_axi_acp = cons(ps7.s_axi_acp, nil);
+   interface s_axi_acp = vec(ps7.s_axi_acp);
 endmodule
