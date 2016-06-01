@@ -1,7 +1,7 @@
 CONNECTALDIR?=../..
 
 S2H_INTERFACES = NvmeRequest:Nvme.request
-H2S_INTERFACES = Nvme:NvmeIndication,NvmeTrace:host
+H2S_INTERFACES = Nvme:NvmeIndication,NvmeTrace
 
 MEM_READ_INTERFACES = lNvme.dmaReadClient
 MEM_WRITE_INTERFACES = lNvme.dmaWriteClient
@@ -18,7 +18,7 @@ AUTOTOP += --portalclock=lNvme.portalClockSource
 CONNECTALFLAGS += -D USE_ACP
 CONNECTALFLAGS += -D TOP_SOURCES_PORTAL_CLOCK --mainclockperiod=8
 
-CONNECTALFLAGS += -D IMPORT_HOSTIF --bsvpath=../spikehw
+CONNECTALFLAGS += --bsvpath=../spikehw
 CONNECTALFLAGS += --xci=cores/$(BOARD)/axi_pcie_rp/axi_pcie_rp.xci
 CONNECTALFLAGS += --implconstraint=nvme.xdc
 
