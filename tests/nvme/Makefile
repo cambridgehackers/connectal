@@ -15,7 +15,7 @@ PIN_TYPE_INCLUDE = NvmePins
 AUTOTOP = --interface pins:Nvme.pins
 
 AUTOTOP += --portalclock=lNvme.portalClockSource
-CONNECTALFLAGS += -D USE_ACP
+//CONNECTALFLAGS += -D USE_ACP
 CONNECTALFLAGS += -D TOP_SOURCES_PORTAL_CLOCK --mainclockperiod=8
 
 CONNECTALFLAGS += --bsvpath=../spikehw
