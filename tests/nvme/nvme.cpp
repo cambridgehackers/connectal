@@ -33,8 +33,7 @@ struct nvme_io_cmd {
     uint8_t flags;
     uint16_t cid;
     uint32_t nsid;
-    uint32_t reserved0;
-    uint32_t reserved1;
+    uint64_t reserved0;
     uint64_t mptr;
     uint64_t prp1;
     uint64_t prp2;
@@ -119,7 +118,7 @@ public:
     // Removes the address translation table from the hardware MMU
     void dereference();
     // invalidate and optionally flush from the dcache
-    void cacheFlush(int size=0, int flush=0);
+    void cacheInvalidate(int size=0, int flush=0);
 };
 
 DmaManager *DmaBuffer::mgr;
@@ -160,11 +159,15 @@ void DmaBuffer::dereference()
     ref = -1;
 }
 
-void DmaBuffer::cacheFlush(int size, int flush)
+void DmaBuffer::cacheInvalidate(int size, int flush)
 {
+#ifndef USE_ACP
     if (size == 0)
 	size = this->size;
     portalCacheFlush(fd, buf, size, flush);
+#else
+    fprintf(stderr, "cacheInvalidate skipped due to use of ACP\n");
+#endif
 }
 
 
@@ -308,8 +311,8 @@ void identify(Nvme *nvme)
     cmd->prp2 = (nvme->transferBufferRef << 24) + 4096;
     cmd->cdw10 = 1;
 
-    //nvme->adminSubmissionQueue.cacheFlush(4096, 1);
-    //nvme->adminCompletionQueue.cacheFlush(4096, 0);
+    nvme->adminSubmissionQueue.cacheInvalidate(4096, 1);
+    nvme->adminCompletionQueue.cacheInvalidate(4096, 0);
 
     // update submission queue tail
     nvme->write32(0x1000, 1);
@@ -371,6 +374,9 @@ void allocIOQueues(Nvme *nvme, int entry=0)
     cmd->cdw11 = (1 << 16) | 1; // completion queue 1, physically contiguous
 
 
+    nvme->adminSubmissionQueue.cacheInvalidate(4096, 1);
+    nvme->adminCompletionQueue.cacheInvalidate(4096, 0);
+
     fprintf(stderr, "allocating IO submission queue\n");
     // update submission queue tail
     nvme->write32(0x1000, entry+2);
@@ -399,26 +405,33 @@ void allocIOQueues(Nvme *nvme, int entry=0)
 	fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
     }
     
-    {
+    if (1) {
 	// let's do a read
 	nvme_io_cmd *cmd = (nvme_io_cmd *)(nvme->ioSubmissionQueue.buffer() + (entry+0)*64);
 	memset(cmd, 0, 64);
 	cmd->opcode = 2; // read
-	cmd->cid = 42;
+	cmd->cid = 45;
 	cmd->nsid = 1;
-	//cmd->prp1 = (nvme->transferBufferRef << 24) + 0;
-	cmd->prp1 = (3 << 24) + 0; // send data to the FIFO
-	cmd->cdw10 = 0; // starting LBA.lower
+	if (0)
+	    cmd->prp1 = (nvme->transferBufferRef << 24) + 0;
+	else
+	    cmd->prp1 = (uint64_t)0x30000000ul; // send data to the FIFO
+	cmd->cdw10 = 10; // starting LBA.lower
 	cmd->cdw11 = 0; // starting LBA.upper
-	cmd->cdw12 = 7; // read 8 blocks
+	cmd->cdw12 = 1; // read 2 blocks
 
-	fprintf(stderr, "enqueueing IO read request\n");
+	nvme->ioSubmissionQueue.cacheInvalidate(4096, 1);
+	nvme->ioCompletionQueue.cacheInvalidate(4096, 0);
+	nvme->transferBuffer.cacheInvalidate(8*512, 0);
+
+	fprintf(stderr, "enqueueing IO read request offsetof(prp1)=%d offsetof(prp2)=%d offsetof(cdw10)=%d sizeof(req)=%d\n",
+		offsetof(nvme_io_cmd,prp1), offsetof(nvme_io_cmd,prp2), offsetof(nvme_io_cmd,cdw10), sizeof(nvme_io_cmd));
 	// update submission queue tail
 	nvme->write32(0x1000+(2*1*(4 << 0)), 1);
 	sleep(1);
 	{
 	    int *buffer = (int *)(nvme->ioCompletionQueue.buffer() + (entry+0)*16);
-	    for (int i = 0; i < 16; i++) {
+	    for (int i = 0; i < 4; i++) {
 		fprintf(stderr, "response[%02x]=%08x\n", i*4, buffer[i]);
 	    }
 	    int status = buffer[3];
@@ -429,7 +442,8 @@ void allocIOQueues(Nvme *nvme, int entry=0)
 	    if (sc == 0) {
 		int *buffer = (int *)(nvme->transferBuffer.buffer() + (entry+0)*16);
 		for (int i = 0; i < 8*512/4; i++) {
-		    fprintf(stderr, "data read [%02x]=%08x\n", i*4, buffer[i]);
+		    if (buffer[i])
+			fprintf(stderr, "data read [%02x]=%08x\n", i*4, buffer[i]);
 		}
 	    }
 	}

@@ -385,17 +385,19 @@ module mkSplitMemServer(SplitMemServer);
 
    rule rl_rd_req;
       MemRequest req <- toGet(readReqFifo).get();
-      if ((req.sglId & 'h80) == 'h80)
+      let dest = req.sglId[5:4];
+      if (dest == 2)
 	 bramReadReqFifo.enq(req);
       else
 	 busReadReqFifo.enq(req);
-      readAddrGenerator.request.put(PhysMemRequest { addr: truncate(req.offset), burstLen: req.burstLen, tag: extend(req.sglId[7:6]) });
+      readAddrGenerator.request.put(PhysMemRequest { addr: truncate(req.offset), burstLen: req.burstLen, tag: extend(dest) });
    endrule
    
    rule rl_rd_data;
       let addrBeat <- readAddrGenerator.addrBeat.get();
+      let dest = addrBeat.tag[1:0];
       MemData#(DataBusWidth) md;
-      if (addrBeat.tag == 2)
+      if (dest == 2)
 	 md <- toGet(bramReadDataFifo).get();
       else
 	 md <- toGet(busReadDataFifo).get();
@@ -404,21 +406,23 @@ module mkSplitMemServer(SplitMemServer);
 
    rule rl_wr_req;
       MemRequest req <- toGet(writeReqFifo).get();
-      if ((req.sglId & 'hc0) == 'h80)
+      Bit#(2) dest = req.sglId[5:4];
+      if (dest == 2)
 	 bramWriteReqFifo.enq(req);
-      else if ((req.sglId & 'hc0) == 'hc0)
-	 bramWriteReqFifo.enq(req);
-      else
+      else if (dest == 3) begin
+	 // no need to send the request
+      end else
 	 busWriteReqFifo.enq(req);
-      writeAddrGenerator.request.put(PhysMemRequest { addr: truncate(req.offset), burstLen: req.burstLen, tag: extend(req.sglId[7:6]) });
+      writeAddrGenerator.request.put(PhysMemRequest { addr: truncate(req.offset), burstLen: req.burstLen, tag: extend(dest) });
    endrule
    
    rule rl_wr_data;
       let addrBeat <- writeAddrGenerator.addrBeat.get();
+      let dest = addrBeat.tag[1:0];
       MemData#(DataBusWidth) md <- toGet(writeDataFifo).get();
-      if (addrBeat.tag == 2)
+      if (dest == 2)
 	 bramWriteDataFifo.enq(md);
-      else if (addrBeat.tag == 3)
+      else if (dest == 3)
 	 dataFifo.enq(md);
       else
 	 busWriteDataFifo.enq(md);
@@ -428,10 +432,11 @@ module mkSplitMemServer(SplitMemServer);
 
    rule rl_wr_done;
       let tag <- toGet(doneFifo).get();
+      let dest = tag[1:0];
       Bit#(MemTagSize) doneTag;
-      if (tag == 2)
+      if (dest == 2)
 	 doneTag <- toGet(bramWriteDoneFifo).get();
-      else if (tag  == 3)
+      else if (dest == 3)
 	 doneTag = 0;
       else
 	 doneTag <- toGet(busWriteDoneFifo).get();
