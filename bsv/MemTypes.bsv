@@ -198,6 +198,11 @@ interface MemWriteClient#(numeric type dsz);
    interface Put#(Bit#(MemTagSize))       writeDone;
 endinterface
 
+interface MemClient#(numeric type dsz);
+   interface MemReadClient#(dsz) readClient;
+   interface MemWriteClient#(dsz) writeClient;
+endinterface
+
 interface MemReadServer#(numeric type dsz);
    interface Put#(MemRequest) readReq;
    interface Get#(MemData#(dsz))     readData;
