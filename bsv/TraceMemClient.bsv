@@ -26,24 +26,29 @@ import GetPut::*;
 import MemTypes::*;
 import ConnectalMemory::*;
 
-module mkTraceReadClient#(PipeIn#(Tuple3#(dmaChanId,Bool,MemRequest)) tracePipe,
-			  PipeIn#(Tuple3#(dmaChanId,Bool,MemData#(dataWidth))) traceDataPipe,
+module mkTraceReadClient#(PipeIn#(Tuple4#(dmaChanId,Bool,MemRequest,Bit#(timeStampWidth))) tracePipe,
+			  PipeIn#(Tuple4#(dmaChanId,Bool,MemData#(dataWidth),Bit#(timeStampWidth))) traceDataPipe,
 			  dmaChanId chan,
 			  MemReadClient#(dataWidth) m)
    (MemReadClient#(dataWidth));
 
+   Reg#(Bit#(timeStampWidth)) cycles <- mkReg(0);
+   rule rl_cycles;
+      cycles <= cycles + 1;
+   endrule
+
    let reqFifo  <- mkFIFOF();
    let dataFifo <- mkFIFOF();
 
-   rule rl_req;
+   rule rl_rd_req;
       let mr <- m.readReq.get();
-      tracePipe.enq(tuple3(chan, False, mr));
+      tracePipe.enq(tuple4(chan, False, mr, cycles));
       reqFifo.enq(mr);
    endrule
 
-   rule rl_data;
+   rule rl_rd_data;
       let md <- toGet(dataFifo).get();
-      traceDataPipe.enq(tuple3(chan, False, md));
+      traceDataPipe.enq(tuple4(chan, False, md, cycles));
       m.readData.put(md);
    endrule
 
@@ -51,23 +56,28 @@ module mkTraceReadClient#(PipeIn#(Tuple3#(dmaChanId,Bool,MemRequest)) tracePipe,
    interface Put readData = toPut(dataFifo);
 endmodule
 
-module mkTraceWriteClient#(PipeIn#(Tuple3#(dmaChanId,Bool,MemRequest)) tracePipe,
-			   PipeIn#(Tuple3#(dmaChanId,Bool,MemData#(dataWidth))) traceDataPipe,
+module mkTraceWriteClient#(PipeIn#(Tuple4#(dmaChanId,Bool,MemRequest,Bit#(timeStampWidth))) tracePipe,
+			   PipeIn#(Tuple4#(dmaChanId,Bool,MemData#(dataWidth),Bit#(timeStampWidth))) traceDataPipe,
 			   dmaChanId chan, MemWriteClient#(dataWidth) m)
    (MemWriteClient#(dataWidth));
+
+   Reg#(Bit#(timeStampWidth)) cycles <- mkReg(0);
+   rule rl_cycles;
+      cycles <= cycles + 1;
+   endrule
 
    let reqFifo <- mkFIFOF();
    let dataFifo <- mkFIFOF();
 
-   rule rl_req;
+   rule rl_wr_req;
       let mr <- m.writeReq.get();
-      tracePipe.enq(tuple3(chan, True, mr));
+      tracePipe.enq(tuple4(chan, True, mr, cycles));
       reqFifo.enq(mr);
    endrule
 
-   rule rl_data;
+   rule rl_wr_data;
       let md <- m.writeData.get();
-      traceDataPipe.enq(tuple3(chan, True, md));
+      traceDataPipe.enq(tuple4(chan, True, md, cycles));
       dataFifo.enq(md);
    endrule
 
