@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import BRAM::*;
 import BuildVector::*;
 import Clocks::*;
 import Connectable::*;
@@ -33,6 +34,7 @@ import ConnectalConfig::*;
 import DefaultValue::*;
 import HostInterface::*;
 import MemTypes::*;
+import PhysMemToBram::*;
 import Pipe::*;
 import TraceMemClient::*;
 import XilinxCells::*;
@@ -156,24 +158,16 @@ module mkNvme#(HostInterface host, NvmeIndication ind, NvmeTrace trace)(Nvme);
    let memReadClients  <- mapM(mkMemReadClient(getObjId), vec(m_axi_mm));
    let memWriteClients <- mapM(mkMemWriteClient(getObjId), vec(m_axi_mm));
 
-   FIFOF#(Tuple4#(DmaChannel,Bool,MemRequest,Bit#(32))) traceFifo <- mkDualClockBramFIFOF(clock, reset, clock, reset);
-   FIFOF#(Tuple4#(DmaChannel,Bool,MemRequest,Bit#(32))) traceFifo0 <- mkFIFOF();
-   FIFOF#(Tuple4#(DmaChannel,Bool,MemRequest,Bit#(32))) traceFifo1 <- mkFIFOF();
-   PipeIn#(Tuple4#(DmaChannel,Bool,MemRequest,Bit#(32))) tracePipe = toPipeIn(traceFifo0);
-   FIFOF#(Tuple4#(DmaChannel,Bool,MemData#(DataBusWidth),Bit#(32))) traceDataFifo <- mkDualClockBramFIFOF(clock, reset, clock, reset);
-   FIFOF#(Tuple4#(DmaChannel,Bool,MemData#(DataBusWidth),Bit#(32))) traceDataFifo0 <- mkFIFOF();
-   FIFOF#(Tuple4#(DmaChannel,Bool,MemData#(DataBusWidth),Bit#(32))) traceDataFifo1 <- mkFIFOF();
-   PipeIn#(Tuple4#(DmaChannel,Bool,MemData#(DataBusWidth),Bit#(32))) traceDataPipe = toPipeIn(traceDataFifo0);
-   let trace0Cnx <- mkConnection(toGet(traceFifo0), toPut(traceFifo));
-   let trace1Cnx <- mkConnection(toGet(traceFifo), toPut(traceFifo1));
+   FIFOF#(Tuple4#(DmaChannel,Bool,MemRequest,Bit#(32))) traceFifo <- mkSizedBRAMFIFOF(128);
+   PipeIn#(Tuple4#(DmaChannel,Bool,MemRequest,Bit#(32))) tracePipe = toPipeIn(traceFifo);
+   FIFOF#(Tuple4#(DmaChannel,Bool,MemData#(DataBusWidth),Bit#(32))) traceDataFifo <- mkSizedBRAMFIFOF(512);
+   PipeIn#(Tuple4#(DmaChannel,Bool,MemData#(DataBusWidth),Bit#(32))) traceDataPipe = toPipeIn(traceDataFifo);
    rule rl_trace1;
-      match { .chan, .write, .req, .timestamp } <- toGet(traceFifo1).get();
+      match { .chan, .write, .req, .timestamp } <- toGet(traceFifo).get();
       trace.traceDmaRequest(chan, write, truncate(req.sglId), extend(req.offset), extend(req.burstLen), extend(req.tag), timestamp);
    endrule
-   let traceData0Cnx <- mkConnection(toGet(traceDataFifo0), toPut(traceDataFifo));
-   let traceData1Cnx <- mkConnection(toGet(traceDataFifo), toPut(traceDataFifo1));
    rule rl_trace_data;
-      match { .chan, .write, .md, .timestamp } <- toGet(traceDataFifo1).get();
+      match { .chan, .write, .md, .timestamp } <- toGet(traceDataFifo).get();
       trace.traceDmaData(chan, write, md.data, md.last, extend(md.tag), timestamp);
    endrule
 
