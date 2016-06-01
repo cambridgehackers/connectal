@@ -41,6 +41,6 @@ interface RootPortIndication;
 endinterface
 
 interface RootPortTrace;
-   method Action traceDmaRequest(DmaChannel channel, Bool write, Bit#(16) objId, Bit#(DataBusWidth) offset, Bit#(16) burstLen);
-   method Action traceDmaData(DmaChannel channel, Bool write, Bit#(DataBusWidth) data, Bool last);
+   method Action traceDmaRequest(DmaChannel channel, Bool write, Bit#(16) objId, Bit#(DataBusWidth) offset, Bit#(16) burstLen, Bit#(8) tag, Bit#(32) timestamp);
+   method Action traceDmaData(DmaChannel channel, Bool write, Bit#(DataBusWidth) data, Bool last, Bit#(8) tag, Bit#(32) timestamp);
 endinterface

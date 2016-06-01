@@ -48,13 +48,11 @@ struct nvme_io_cmd {
 
 class RootPortTrace : public RootPortTraceWrapper {
 public:
-    void traceDmaRequest(const DmaChannel chan, const int write, const uint16_t objId, const uint64_t offset, const uint16_t burstLen)
-    {
-	fprintf(stderr, "traceDmaRequest chan=%d write=%d objId=%d offset=%08lx burstLen=%d\n", chan, write, objId, (long)offset, burstLen);
+    void traceDmaRequest(const DmaChannel chan, const int write, const uint16_t objId, const uint64_t offset, const uint16_t burstLen, const uint8_t tag, const uint32_t timestamp) {
+	fprintf(stderr, "%08x: traceDmaRequest chan=%d write=%d objId=%d offset=%08lx burstLen=%d tag=%x\n", timestamp, chan, write, objId, (long)offset, burstLen, tag);
     }
-    void traceDmaData ( const DmaChannel chan, const int write, const uint64_t data, const int last )
-    {
-	fprintf(stderr, "traceDmaData chan=%d write=%d data=%08llx last=%d\n", chan, write, (long long)data, last);
+    void traceDmaData ( const DmaChannel chan, const int write, const uint64_t data, const int last, const uint8_t tag, const uint32_t timestamp ) {
+	fprintf(stderr, "%08x: traceDmaData chan=%d write=%d data=%08llx last=%d tag=%x\n", timestamp, chan, write, (long long)data, last, tag);
     }
 
     RootPortTrace(int id, PortalPoller *poller = 0) : RootPortTraceWrapper(id, poller) {
