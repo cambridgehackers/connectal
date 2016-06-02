@@ -1,7 +1,7 @@
 language: cpp
 cache: Bluespec-2015.09.bata2
 before_script:
-- curl http://www.bluespec.com/downloads/Bluespec-2015.09.beta2.tar.gz | tar -ztf -
+- curl http://www.bluespec.com/downloads/Bluespec-2015.09.beta2.tar.gz | tar -zxf -
 - mkdir -p lib
 - ln -s /usr/lib/x86_64-linux-gnu/libgmp.so.10 lib/libgmp.so.3
 - ls
