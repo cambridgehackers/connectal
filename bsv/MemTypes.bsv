@@ -288,6 +288,13 @@ instance Connectable#(MemWriteClient#(dsz), MemWriteServer#(dsz));
    endmodule
 endinstance
 
+instance Connectable#(MemClient#(dsz), MemServer#(dsz));
+   module mkConnection#(MemClient#(dsz) source, MemServer#(dsz) sink)(Empty);
+      mkConnection(source.readClient, sink.readServer);
+      mkConnection(source.writeClient, sink.writeServer);
+   endmodule
+endinstance
+
 instance Connectable#(PhysMemMaster#(addrWidth, busWidth), PhysMemSlave#(addrWidth, busWidth));
    module mkConnection#(PhysMemMaster#(addrWidth, busWidth) m, PhysMemSlave#(addrWidth, busWidth) s)(Empty);
       mkConnection(m.read_client.readReq, s.read_server.readReq);
