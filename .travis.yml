@@ -1,4 +1,5 @@
 language: cpp
+script: make
 sudo: no
 dist: trusty
 os:
