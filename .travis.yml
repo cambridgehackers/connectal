@@ -21,7 +21,7 @@ addons:
   apt:
     packages:
     - python-ply
-    - libgmp
+    - libgmp10
 notifications:
   email: false
   irc:
