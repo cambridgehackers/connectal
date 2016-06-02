@@ -4,15 +4,18 @@ before_script:
 - curl http://www.bluespec.com/downloads/Bluespec-2015.09.beta2.tar.gz | tar -zxf -
 - mkdir -p lib
 - ln -s /usr/lib/x86_64-linux-gnu/libgmp.so.10 lib/libgmp.so.3
-- ls
 env:
   global:
     - BLUESPECDIR=$PWD/Bluespec-2015.09.beta2/lib
     - PATH=$PATH:$PWD/Bluespec-2015.09.beta2/bin
     - LD_LIBRARY_PATH=$PWD/lib
     - secure: "JMM9GHMCVIJUxQh1wAepLUVjfdSbVB0dL5LGZN6FoKNTXiAZX8wLiGlb/HvtLJFv2YmL3BT7eqC0Hbp4juQ5Q3SmIdnJ0oX9xp6ODQ6PgfpTyl6vBsOnEVp6xtz39Ck/8tgZ28eToOaJfbbcit8ESPsiI4cq4R6Dqjq1a8HFLNY="
+  matrix:
+    - CONNECTAL_TEST=examples/echo
+    - CONNECTAL_TEST=examples/simple
+    - CONNECTAL_TEST=examples/memcpy
 script:
-- make scripts/syntax/parsetab.py; cd examples/echo; make build.bluesim
+- make scripts/syntax/parsetab.py; cd $CONNECTAL_TEST; make build.bluesim run.bluesim
 sudo: no
 dist: trusty
 os:
