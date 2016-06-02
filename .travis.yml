@@ -1,0 +1,15 @@
+language: cpp
+sudo: no
+dist: trusty
+os:
+- linux
+addons:
+  apt:
+    packages:
+      python-ply
+notifications:
+  email: false
+  irc:
+    channels:
+    - chat.freenode.net#connectal
+
