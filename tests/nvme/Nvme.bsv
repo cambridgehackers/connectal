@@ -36,7 +36,7 @@ import ConnectalConfig::*;
 import DefaultValue::*;
 import HostInterface::*;
 import MemTypes::*;
-import PhysMemToBram::*;
+import PhysMemSlaveFromBram::*;
 import Pipe::*;
 import TraceMemClient::*;
 import XilinxCells::*;

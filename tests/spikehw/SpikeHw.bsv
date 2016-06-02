@@ -22,7 +22,7 @@ import HostInterface::*;
 import MemTypes::*;
 import Pipe::*;
 import AxiBits::*;
-import PhysMemToBram::*;
+import PhysMemSlaveFromBram::*;
 import TraceMemClient::*;
 
 import BpiFlash::*;
