@@ -1,5 +1,15 @@
 language: cpp
-script: make scripts/syntax/parsetab.py
+cache: Bluespec-2015.09.bata2
+before_script:
+- curl http://www.bluespec.com/downloads/Bluespec-2015.09.beta2.tar.gz | tar -ztf -
+- mkdir -p lib
+- ln -s /usr/lib/x86_64-linux-gnu/libgmp.so.10 lib/libgmp.so.3
+- ls
+env:
+- BLUESPECDIR=$PWD/Bluespec-2015.09.beta2/lib
+- PATH=$PATH:$PWD/Bluespec-2015.09.beta2/bin
+script:
+- make scripts/syntax/parsetab.py; cd examples/echo; make build.bluesim
 sudo: no
 dist: trusty
 os:
@@ -8,6 +18,7 @@ addons:
   apt:
     packages:
     - python-ply
+    - libgmp
 notifications:
   email: false
   irc:
