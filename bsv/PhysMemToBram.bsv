@@ -29,7 +29,7 @@ import BRAM::*;
 import Memory::*;
 
 
-module mkPhysMemToBram#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (PhysMemSlave#(busAddrWidth, busDataWidth))
+module mkPhysMemSlaveFromBram#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (PhysMemSlave#(busAddrWidth, busDataWidth))
    provisos(Add#(a__, bramAddrWidth, busAddrWidth));
 
    FIFOF#(Bit#(6))  readTagFifo <- mkFIFOF();
@@ -101,7 +101,7 @@ module mkPhysMemToBram#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br)
    endinterface
 endmodule
 
-module mkPhysMemToBramBE#(BRAMServerBE#(Bit#(bramAddrWidth), Bit#(busDataWidth), dataWidthBytes) br) (PhysMemSlave#(busAddrWidth, busDataWidth))
+module mkPhysMemSlaveFromBramBE#(BRAMServerBE#(Bit#(bramAddrWidth), Bit#(busDataWidth), dataWidthBytes) br) (PhysMemSlave#(busAddrWidth, busDataWidth))
    provisos(Add#(a__, bramAddrWidth, busAddrWidth)
            ,Mul#(dataWidthBytes, 8, busDataWidth)
            ,Div#(busDataWidth, 8, dataWidthBytes)

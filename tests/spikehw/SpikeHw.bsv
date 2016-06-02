@@ -176,14 +176,14 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
    PhysMemSlave#(20,32) deviceSlaveMux       <- mkPhysMemSlaveMux(vec(axiUartMemSlave, axiIntcMemSlave, axiIicMemSlave));
 `endif
 
-   PhysMemSlave#(20,32) bootRomMemSlave      <- mkPhysMemToBram(bootRom);
+   PhysMemSlave#(20,32) bootRomMemSlave      <- mkPhysMemSlaveFromBram(bootRom);
    PhysMemSlave#(21,32) memSlaveMux          <- mkPhysMemSlaveMux(vec(bootRomMemSlave, deviceSlaveMux));
 
    let memReadClients  <- mapM(mkMemReadClient(objId), vec(m_axi_mm2s, m_axi_sg));
    let memWriteClients <- mapM(mkMemWriteClient(objId), vec(m_axi_s2mm, m_axi_sg));
 
 `ifdef IncludeFlash
-   PhysMemSlave#(26,16) bpiFlashSlave <- mkPhysMemToBram(bpiFlash.server);
+   PhysMemSlave#(26,16) bpiFlashSlave <- mkPhysMemSlaveFromBram(bpiFlash.server);
 `endif
    FIFOF#(Bit#(32)) dfifo <- mkFIFOF();
    FIFOF#(Bit#(32)) flashdfifo <- mkFIFOF();
