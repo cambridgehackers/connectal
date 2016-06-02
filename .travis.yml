@@ -1,5 +1,5 @@
 language: cpp
-script: make
+script: make scripts/syntax/parsetab.py
 sudo: no
 dist: trusty
 os:
@@ -8,7 +8,6 @@ addons:
   apt:
     packages:
     - python-ply
-    - linux-headers-generic
 notifications:
   email: false
   irc:
