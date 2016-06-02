@@ -6,8 +6,10 @@ before_script:
 - ln -s /usr/lib/x86_64-linux-gnu/libgmp.so.10 lib/libgmp.so.3
 - ls
 env:
-- BLUESPECDIR=$PWD/Bluespec-2015.09.beta2/lib
-- PATH=$PATH:$PWD/Bluespec-2015.09.beta2/bin
+  global:
+    - BLUESPECDIR=$PWD/Bluespec-2015.09.beta2/lib
+    - PATH=$PATH:$PWD/Bluespec-2015.09.beta2/bin
+    - LD_LIBRARY_PATH=$PWD/lib
 script:
 - make scripts/syntax/parsetab.py; cd examples/echo; make build.bluesim
 sudo: no
