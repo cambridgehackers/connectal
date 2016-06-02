@@ -356,7 +356,7 @@ def typeBitWidth(item):
     if item['name'] == 'SpecialTypeForSendingFd':
         return 32
     if item.get('type') == 'Enum':
-        return int(math.ceil(math.log(len(item['elements']))))
+        return int(math.ceil(math.log(len(item['elements']), 2)))
     if hasBitWidth(item):
         width = item['params'][0]['name']
         while globalv_globalvars.has_key(width):
