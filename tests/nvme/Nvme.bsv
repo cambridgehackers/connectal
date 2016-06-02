@@ -26,6 +26,7 @@ import Clocks::*;
 import Connectable::*;
 import FIFOF::*;
 import GetPut::*;
+import Probe::*;
 import Vector::*;
 
 import AddressGenerator::*;
@@ -107,11 +108,11 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace)(Nvme);
    PhysMemSlave#(32,DataBusWidth)          axiRootPortMemSlave    <- mkPhysMemSlave(axiRootPortSlave, clocked_by axiClock, reset_by axiReset);
    PhysMemSlave#(32,32)          axiRootPortMemSlaveCtl <- mkPhysMemSlave(axiRootPortSlaveCtl, clocked_by axiCtlClock, reset_by axiCtlReset);
 
-   FIFOF#(PhysMemRequest#(32,DataBusWidth)) araddrFifo <- mkDualClockBramFIFOF(clock, reset, axiClock, axiReset);
-   FIFOF#(PhysMemRequest#(32,DataBusWidth)) awaddrFifo <- mkDualClockBramFIFOF(clock, reset, axiClock, axiReset);
-   FIFOF#(MemData#(DataBusWidth))           rdataFifo <- mkDualClockBramFIFOF(axiClock, axiReset, clock, reset);
-   FIFOF#(MemData#(DataBusWidth))           wdataFifo <- mkDualClockBramFIFOF(clock, reset, axiClock, axiReset);
-   FIFOF#(Bit#(6))                doneFifo <- mkDualClockBramFIFOF(axiClock, axiReset, clock, reset);
+   FIFOF#(PhysMemRequest#(32,DataBusWidth)) araddrFifo <- mkFIFOF();
+   FIFOF#(PhysMemRequest#(32,DataBusWidth)) awaddrFifo <- mkFIFOF();
+   FIFOF#(MemData#(DataBusWidth))           rdataFifo <- mkFIFOF();
+   FIFOF#(MemData#(DataBusWidth))           wdataFifo <- mkFIFOF();
+   FIFOF#(Bit#(6))                doneFifo <- mkFIFOF();
 
    let araddrCnx <- mkConnection(toGet(araddrFifo), axiRootPortMemSlave.read_server.readReq);
    let awaddrCnx <- mkConnection(toGet(awaddrFifo), axiRootPortMemSlave.write_server.writeReq);
@@ -129,11 +130,11 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace)(Nvme);
       ind.writeDone();
    endrule
 
-   FIFOF#(PhysMemRequest#(32,32)) araddrFifoCtl <- mkDualClockBramFIFOF(clock, reset, axiCtlClock, axiCtlReset);
-   FIFOF#(PhysMemRequest#(32,32)) awaddrFifoCtl <- mkDualClockBramFIFOF(clock, reset, axiCtlClock, axiCtlReset);
-   FIFOF#(MemData#(32))           rdataFifoCtl <- mkDualClockBramFIFOF(axiCtlClock, axiCtlReset, clock, reset);
-   FIFOF#(MemData#(32))           wdataFifoCtl <- mkDualClockBramFIFOF(clock, reset, axiCtlClock, axiCtlReset);
-   FIFOF#(Bit#(6))                doneFifoCtl <- mkDualClockBramFIFOF(axiCtlClock, axiCtlReset, clock, reset);
+   FIFOF#(PhysMemRequest#(32,32)) araddrFifoCtl <- mkFIFOF();
+   FIFOF#(PhysMemRequest#(32,32)) awaddrFifoCtl <- mkFIFOF();
+   FIFOF#(MemData#(32))           rdataFifoCtl <- mkFIFOF();
+   FIFOF#(MemData#(32))           wdataFifoCtl <- mkFIFOF();
+   FIFOF#(Bit#(6))                doneFifoCtl <- mkFIFOF();
 
    let araddrCtlCnx <- mkConnection(toGet(araddrFifoCtl), axiRootPortMemSlaveCtl.read_server.readReq);
    let awaddrCtlCnx <- mkConnection(toGet(awaddrFifoCtl), axiRootPortMemSlaveCtl.write_server.writeReq);
@@ -161,7 +162,7 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace)(Nvme);
 
    FIFOF#(Tuple4#(DmaChannel,Bool,MemRequest,Bit#(32))) traceFifo <- mkSizedBRAMFIFOF(128);
    PipeIn#(Tuple4#(DmaChannel,Bool,MemRequest,Bit#(32))) tracePipe = toPipeIn(traceFifo);
-   FIFOF#(Tuple4#(DmaChannel,Bool,MemData#(DataBusWidth),Bit#(32))) traceDataFifo <- mkSizedBRAMFIFOF(512);
+   FIFOF#(Tuple4#(DmaChannel,Bool,MemData#(DataBusWidth),Bit#(32))) traceDataFifo <- mkSizedBRAMFIFOF(1024);
    PipeIn#(Tuple4#(DmaChannel,Bool,MemData#(DataBusWidth),Bit#(32))) traceDataPipe = toPipeIn(traceDataFifo);
    rule rl_trace1;
       match { .chan, .write, .req, .timestamp } <- toGet(traceFifo).get();
@@ -180,7 +181,13 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace)(Nvme);
 		      endinterface);
 
    let splitter <- mkSplitMemServer();
+   BRAM_Configure bramConfig = defaultValue;
+   bramConfig.latency = 2;
+   bramConfig.memorySize = 1024;
+   BRAM1Port#(Bit#(32),Bit#(DataBusWidth)) bram        <- mkBRAM1Server(bramConfig);
+   MemServer#(DataBusWidth) bramMem     <- mkMemToBram(bram.portA);
    let traceMemCnx <- mkConnection(traceClient, splitter.server);
+   let bramMemCnx  <- mkConnection(splitter.bramClient, bramMem);
    rule rl_data;
       let md <- toGet(splitter.data).get();
       trace.traceData(md.data, md.last, extend(md.tag));
@@ -365,23 +372,35 @@ module mkSplitMemServer(SplitMemServer);
    let writeDoneFifo <- mkFIFOF();
 
    let busReadReqFifo   <- mkFIFOF();
-   let busReadDataFifo  <- mkFIFOF();
+   let busReadDataFifo  <- mkSizedBRAMFIFOF(16);
    let busWriteReqFifo  <- mkFIFOF();
-   let busWriteDataFifo <- mkFIFOF();
+   let busWriteDataFifo <- mkSizedBRAMFIFOF(16);
    let busWriteDoneFifo <- mkFIFOF();
 
    let bramReadReqFifo   <- mkFIFOF();
-   let bramReadDataFifo  <- mkFIFOF();
+   let bramReadDataFifo  <- mkSizedBRAMFIFOF(16);
    let bramWriteReqFifo  <- mkFIFOF();
-   let bramWriteDataFifo <- mkFIFOF();
+   let bramWriteDataFifo <- mkSizedBRAMFIFOF(16);
    let bramWriteDoneFifo <- mkFIFOF();
 
    let doneFifo <- mkFIFOF();
 
-   let dataFifo <- mkSizedBRAMFIFOF(128);
+   let dataFifo <- mkSizedBRAMFIFOF(4096);
 
    AddressGenerator#(24,DataBusWidth) readAddrGenerator <- mkAddressGenerator();
    AddressGenerator#(24,DataBusWidth) writeAddrGenerator <- mkAddressGenerator();
+
+   let readReqObj <- mkProbe();
+   let readReqDest <- mkProbe();
+   let readReqOffset <- mkProbe();
+   let readDataDest <- mkProbe();
+   let readDataData <- mkProbe();
+   let readDataLast <- mkProbe();
+   let readBeatAddr <- mkProbe();
+   let readBeatByteCount <- mkProbe();
+   let readBeatLast <- mkProbe();
+   let busReadDataData <- mkProbe();
+   let busReadDataLast <- mkProbe();
 
    rule rl_rd_req;
       MemRequest req <- toGet(readReqFifo).get();
@@ -391,8 +410,12 @@ module mkSplitMemServer(SplitMemServer);
       else
 	 busReadReqFifo.enq(req);
       readAddrGenerator.request.put(PhysMemRequest { addr: truncate(req.offset), burstLen: req.burstLen, tag: extend(dest) });
+
+      readReqObj <= req.sglId;
+      readReqDest <= dest;
+      readReqOffset <= req.offset[31:0];
    endrule
-   
+
    rule rl_rd_data;
       let addrBeat <- readAddrGenerator.addrBeat.get();
       let dest = addrBeat.tag[1:0];
@@ -402,6 +425,13 @@ module mkSplitMemServer(SplitMemServer);
       else
 	 md <- toGet(busReadDataFifo).get();
       readDataFifo.enq(md);
+
+      readDataDest <= dest;
+      readDataData <= md.data;
+      readDataLast <= md.last;
+      readBeatAddr <= addrBeat.addr[15:0];
+      readBeatByteCount <= addrBeat.bc;
+      readBeatLast <= addrBeat.last;
    endrule
 
    rule rl_wr_req;
@@ -457,7 +487,13 @@ module mkSplitMemServer(SplitMemServer);
    interface MemClient busClient;
       interface MemReadClient readClient;
 	 interface readReq  = toGet(busReadReqFifo);
-	 interface readData = toPut(busReadDataFifo);
+	 interface Put readData;
+	    method Action put(MemData#(DataBusWidth) md);
+	       busReadDataFifo.enq(md);
+	       busReadDataData <= md.data;
+	       busReadDataLast <= md.last;
+	    endmethod
+	 endinterface
       endinterface
       interface MemWriteClient writeClient;
 	 interface writeReq  = toGet(busWriteReqFifo);
