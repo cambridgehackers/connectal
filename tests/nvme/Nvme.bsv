@@ -478,3 +478,42 @@ module mkSplitMemServer(SplitMemServer);
    endinterface
    interface PipeOut data = toPipeOut(dataFifo);
 endmodule
+
+interface MemServerPortal;
+   interface MemServerPortalRequest request;
+endinterface
+
+module mkPhysMemSlavePortal#(PhysMemSlave#(32,DataBusWidth) ms, MemServerPortalIndication ind)(MemServerPortal);
+
+   FIFOF#(PhysMemRequest#(32,DataBusWidth)) araddrFifo <- mkFIFOF();
+   FIFOF#(PhysMemRequest#(32,DataBusWidth)) awaddrFifo <- mkFIFOF();
+   FIFOF#(MemData#(DataBusWidth))           rdataFifo <- mkFIFOF();
+   FIFOF#(MemData#(DataBusWidth))           wdataFifo <- mkFIFOF();
+   FIFOF#(Bit#(6))                doneFifo <- mkFIFOF();
+
+   let araddrCnx <- mkConnection(toGet(araddrFifo), ms.read_server.readReq);
+   let awaddrCnx <- mkConnection(toGet(awaddrFifo), ms.write_server.writeReq);
+   let rdataCnx  <- mkConnection(ms.read_server.readData, toPut(rdataFifo));
+   let wdataCnx  <- mkConnection(toGet(wdataFifo), ms.write_server.writeData);
+   let doneCnx   <- mkConnection(ms.write_server.writeDone, toPut(doneFifo));
+
+   rule rl_rdata;
+      let rdata <- toGet(rdataFifo).get();
+      ind.readDone(rdata.data);
+   endrule
+
+   rule rl_writeDone;
+      let tag <- toGet(doneFifo).get();
+      ind.writeDone();
+   endrule
+
+   interface MemServerPortalRequest request;
+      method Action read(Bit#(32) addr);
+	 araddrFifo.enq(PhysMemRequest { addr: addr, burstLen: fromInteger(valueOf(TDiv#(DataBusWidth,8))), tag: 0 });
+      endmethod
+      method Action write(Bit#(32) addr, Bit#(DataBusWidth) value);
+	 awaddrFifo.enq(PhysMemRequest { addr: addr, burstLen: fromInteger(valueOf(TDiv#(DataBusWidth,8))), tag: 0 });
+	 wdataFifo.enq(MemData {data: value, tag: 0, last: True});
+      endmethod
+   endinterface
+endmodule

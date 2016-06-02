@@ -24,6 +24,16 @@ import ConnectalConfig::*;
 
 typedef enum { DMA_RX, DMA_TX, DMA_SG } DmaChannel deriving (Bits,Eq);
 
+interface MemServerPortalRequest;
+   method Action read(Bit#(32) addr);
+   method Action write(Bit#(32) addr, Bit#(DataBusWidth) data);
+endinterface
+
+interface MemServerPortalIndication;
+   method Action readDone(Bit#(DataBusWidth) data);
+   method Action writeDone();
+endinterface
+
 interface NvmeRequest;
    method Action read32(Bit#(32) addr);
    method Action write32(Bit#(32) addr, Bit#(32) data);
