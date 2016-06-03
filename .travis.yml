@@ -13,12 +13,12 @@ env:
     - LD_LIBRARY_PATH=$PWD/lib
     - secure: "JMM9GHMCVIJUxQh1wAepLUVjfdSbVB0dL5LGZN6FoKNTXiAZX8wLiGlb/HvtLJFv2YmL3BT7eqC0Hbp4juQ5Q3SmIdnJ0oX9xp6ODQ6PgfpTyl6vBsOnEVp6xtz39Ck/8tgZ28eToOaJfbbcit8ESPsiI4cq4R6Dqjq1a8HFLNY="
   matrix:
-    - CONNECTAL_TEST=examples/echo CONNECTAL_ARCH=bluesim
     - CONNECTAL_TEST=examples/echo CONNECTAL_ARCH=verilator
     - CONNECTAL_TEST=examples/simple CONNECTAL_ARCH=bluesim
     - CONNECTAL_TEST=examples/simple CONNECTAL_ARCH=verilator
     - CONNECTAL_TEST=examples/memcpy CONNECTAL_ARCH=bluesim
     - CONNECTAL_TEST=examples/memcpy CONNECTAL_ARCH=verilator
+    - CONNECTAL_TEST=examples/strstr CONNECTAL_ARCH=verilator
 script:
 - make scripts/syntax/parsetab.py; cd $CONNECTAL_TEST; make build.$CONNECTAL_ARCH run.$CONNECTAL_ARCH
 sudo: no
