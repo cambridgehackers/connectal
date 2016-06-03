@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include "mp.h"
 #include "portal.h"
 #include "dmaManager.h"
 #include "NvmeIndication.h"
@@ -79,6 +80,10 @@ public:
 	fprintf(stderr, "%s:%d mmcm_lock=%d\n", __FUNCTION__, __LINE__, mmcm_lock);
 	sem_post(&sem);
     }	
+    virtual void setupComplete() {
+	fprintf(stderr, "%s\n", __FUNCTION__);
+	sem_post(&sem);
+    }
     virtual void strstrLoc ( const uint32_t loc ) {
 	fprintf(stderr, "strstr loc loc=%d\n", loc);
     }
@@ -185,11 +190,15 @@ public:
     DmaBuffer adminCompletionQueue;
     DmaBuffer ioSubmissionQueue;
     DmaBuffer ioCompletionQueue;
+    DmaBuffer needleBuffer;
+    DmaBuffer mpNextBuffer;
     int transferBufferRef;
     int adminSubmissionQueueRef;
     int adminCompletionQueueRef;
     int ioSubmissionQueueRef;
     int ioCompletionQueueRef;
+    int needleRef;
+    int mpNextRef;
 
     Nvme()
 	: device(IfcNames_NvmeRequestS2H)
@@ -200,7 +209,10 @@ public:
 	, adminSubmissionQueue(64*64)
 	, adminCompletionQueue(4096)
 	, ioSubmissionQueue(8192)
-	, ioCompletionQueue(8192) {
+	, ioCompletionQueue(8192)
+	, needleBuffer(8192)
+	, mpNextBuffer(8192)
+  {
 	
 	dummy.reference();
 	transferBufferRef = transferBuffer.reference();
@@ -210,6 +222,8 @@ public:
 	fprintf(stderr, "adminCompletionQueue %d\n", adminCompletionQueue.reference());
 	ioSubmissionQueueRef = ioSubmissionQueue.reference();
 	ioCompletionQueueRef = ioCompletionQueue.reference();
+	needleRef = needleBuffer.reference();
+	mpNextRef = mpNextBuffer.reference();
 	fprintf(stderr, "ioSubmissionQueue %d\n", ioSubmissionQueue.reference());
 	fprintf(stderr, "ioCompletionQueue %d\n", ioCompletionQueue.reference());
 	device.status();
@@ -221,6 +235,10 @@ public:
     void write(uint32_t addr, uint64_t data);
     uint32_t read32(uint32_t addr);
     void write32(uint32_t addr, uint32_t data);
+
+    int setSearchString ( const uint32_t needleSglId, const uint32_t mpNextSglId, const uint32_t needleLen );
+    int startSearch ( const uint32_t searchLen );
+
 };
 
 uint32_t Nvme::readCtl(uint32_t addr)
@@ -260,6 +278,16 @@ void Nvme::write32(uint32_t addr, uint32_t data)
     //device.write(addr & ~7, v << ((addr & 4) ? 32 : 0));
     device.write32(addr, v);
     //indication.wait();
+}
+
+int Nvme::setSearchString ( const uint32_t needleSglId, const uint32_t mpNextSglId, const uint32_t needleLen )
+{
+    device.setSearchString(needleSglId, mpNextSglId, needleLen);
+    indication.wait();
+}
+int Nvme::startSearch ( const uint32_t searchLen )
+{
+    device.startSearch(searchLen);
 }
 
 void memserverWrite(Nvme *nvme)
@@ -409,7 +437,8 @@ void allocIOQueues(Nvme *nvme, int entry=0)
     }
     
     if (1) {
-        int numBlocks = 1;
+	int startBlock = 34816;
+        int numBlocks = 4; //8177;
 
 	// clear transfer buffer
 	{
@@ -557,9 +586,28 @@ int main(int argc, const char **argv)
     // CC.enable
     nvme.write32(0x14, 1);
     fprintf(stderr, "CTS %08x\n", nvme.read32( 0x1c));
-
     //identify(&nvme);
+
+    const char *needle = "property";
+    int needle_len = strlen(needle);
+    int border[needle_len+1];
+
+    compute_borders(nvme.needleBuffer.buffer(), border, needle_len);
+    compute_MP_next(nvme.needleBuffer.buffer(), (int *)nvme.mpNextBuffer.buffer(), needle_len);
+    nvme.needleBuffer.cacheInvalidate(0, 1); // flush the whole thing
+    nvme.mpNextBuffer.cacheInvalidate(0, 1); // flush the whole thing
+
+    //FIXME: read the text from NVME storage
+    //MP(needle, haystack, mpNext, needle_len, haystack_len, &sw_match_cnt);
+
+    // the MPEngine will read in the needle and mpNext
+    nvme.setSearchString(nvme.needleRef, nvme.mpNextRef, needle_len);
+
+    fprintf(stderr, "skipping the search for now\n");
+    return 0;
+
     allocIOQueues(&nvme, 0);
+    nvme.startSearch(8177*512);
 
     fprintf(stderr, "CTS %08x\n", nvme.read32( 0x1c));
 
