@@ -31,7 +31,7 @@ import DefaultValue::*;
 import Gearbox::*;
 import Clocks::*;
 
-typedef Tuple3#(x,x,x) Tripple#(type x);
+typedef Tuple3#(x,x,x) Triplet#(type x);
 typedef Tuple2#(x,x)   Pair#(type x);
 
 interface PipeIn#(type a);

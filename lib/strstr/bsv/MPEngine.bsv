@@ -42,7 +42,7 @@ import Pipe::*;
 import EHR::*;
 
 interface MPEngine#(numeric type haystackBusWidth, numeric type configBusWidth);
-   interface PipeIn#(Tripple#(Bit#(32))) setsearch;
+   interface PipeIn#(Triplet#(Bit#(32))) setsearch;
    interface PipeOut#(Int#(32)) locdone;
 endinterface
 
@@ -108,7 +108,7 @@ module mkMPEngine#(MemReadEngineServer#(haystackBusWidth) haystackReader,
    BRAMWriter#(NeedleIdxWidth,configBusWidth) mp2b <- mkBRAMWriter(1, mpNext.portB, configReader);
 
    FIFOF#(Tuple2#(Bit#(2),Bit#(32))) efifo <- mkSizedFIFOF(2);
-   FIFOF#(Tripple#(Bit#(32))) ssfifo <- mkFIFOF;
+   FIFOF#(Triplet#(Bit#(32))) ssfifo <- mkFIFOF;
    FIFO#(void) doneFifo <- mkFIFO;
    
    rule countCycles;

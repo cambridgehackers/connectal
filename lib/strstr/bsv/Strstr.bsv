@@ -94,8 +94,8 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(haystackBusWidth, configBu
    Vector#(DegPar, MPEngine#(haystackBusWidth,configBusWidth)) engines <- mapM(uncurry(mkMPEngine),read_servers);
    Vector#(DegPar, PipeOut#(Int#(32))) locdonePipes;
 
-   FIFOF#(Tripple#(Bit#(32))) setsearchFIFO <- mkFIFOF;
-   UnFunnelPipe#(1,DegPar,Tripple#(Bit#(32)),1) setsearchPipeUnFunnel <- mkUnFunnelPipesPipelinedRR(vec(toPipeOut(setsearchFIFO)), 1);
+   FIFOF#(Triplet#(Bit#(32))) setsearchFIFO <- mkFIFOF;
+   UnFunnelPipe#(1,DegPar,Triplet#(Bit#(32)),1) setsearchPipeUnFunnel <- mkUnFunnelPipesPipelinedRR(vec(toPipeOut(setsearchFIFO)), 1);
 
    for(Integer i = 0; i < valueOf(DegPar); i=i+1) begin
       locdonePipes[i] = engines[i].locdone;
