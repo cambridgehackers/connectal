@@ -283,7 +283,9 @@ void Nvme::write32(uint32_t addr, uint32_t data)
 int Nvme::setSearchString ( const uint32_t needleSglId, const uint32_t mpNextSglId, const uint32_t needleLen )
 {
     device.setSearchString(needleSglId, mpNextSglId, needleLen);
-    indication.wait();
+    // completion method is missing
+    //indication.wait();
+    sleep(1);
 }
 int Nvme::startSearch ( const uint32_t searchLen )
 {
@@ -438,7 +440,7 @@ void allocIOQueues(Nvme *nvme, int entry=0)
     
     if (1) {
 	int startBlock = 34816;
-        int numBlocks = 4; //8177;
+        int numBlocks = 15; //8177;
 
 	// clear transfer buffer
 	{
@@ -452,7 +454,7 @@ void allocIOQueues(Nvme *nvme, int entry=0)
 	cmd->opcode = 2; // read
 	cmd->cid = 45;
 	cmd->nsid = 1;
-	if (1)
+	if (0)
 	    cmd->prp1 = (nvme->transferBufferRef << 24) + 0;
 	else
 	    cmd->prp1 = (uint64_t)0x30000000ul; // send data to the FIFO
@@ -604,7 +606,6 @@ int main(int argc, const char **argv)
     nvme.setSearchString(nvme.needleRef, nvme.mpNextRef, needle_len);
 
     fprintf(stderr, "skipping the search for now\n");
-    return 0;
 
     allocIOQueues(&nvme, 0);
     nvme.startSearch(8177*512);
