@@ -35,11 +35,13 @@ import ConnectalClocks::*;
 import ConnectalConfig::*;
 import DefaultValue::*;
 import HostInterface::*;
+import MemReadEngine::*;
 import MemTypes::*;
 import PhysMemSlaveFromBram::*;
 import Pipe::*;
 import TraceMemClient::*;
 import XilinxCells::*;
+import MPEngine::*;
 
 import AxiPcieRootPort::*;
 import NvmeIfc::*;
@@ -59,16 +61,17 @@ endmodule
 
 interface Nvme;
    interface NvmeRequest request;
+   interface MemServerPortalRequest bramRequest;
    interface NvmeTrace trace;
    interface NvmePins pins;
-   interface Vector#(1, MemReadClient#(DataBusWidth)) dmaReadClient;
+   interface Vector#(2, MemReadClient#(DataBusWidth)) dmaReadClient;
    interface Vector#(1, MemWriteClient#(DataBusWidth)) dmaWriteClient;
 `ifdef TOP_SOURCES_PORTAL_CLOCK
    interface Clock portalClockSource;
 `endif
 endinterface
 
-module mkNvme#(NvmeIndication ind, NvmeTrace trace)(Nvme);
+module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication bramIndication)(Nvme);
    let clock <- exposeCurrentClock;
    let reset <- exposeCurrentReset;
    let refclk_p <- mkB2C1();
@@ -184,15 +187,26 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace)(Nvme);
    BRAM_Configure bramConfig = defaultValue;
    bramConfig.latency = 2;
    bramConfig.memorySize = 1024;
-   BRAM1Port#(Bit#(32),Bit#(DataBusWidth)) bram        <- mkBRAM1Server(bramConfig);
-   MemServer#(DataBusWidth) bramMem     <- mkMemToBram(bram.portA);
+   BRAM2Port#(Bit#(32),Bit#(DataBusWidth)) bram <- mkBRAM2Server(bramConfig);
+   MemServer#(DataBusWidth)            bramMemA <- mkMemServerFromBram(bram.portA);
+   PhysMemSlave#(32,DataBusWidth)      bramMemB <- mkPhysMemSlaveFromBram(bram.portB);
+   MemServerPortal          bramMemServerPortal <- mkPhysMemSlavePortal(bramMemB,bramIndication);
+
+   MemReadEngine#(DataBusWidth,DataBusWidth,2,1) re <- mkMemReadEngine();
+   MPEngine#(DataBusWidth,DataBusWidth)    mpEngine <- mkMPStreamEngine(splitter.data, re.readServers[0]);
+
    let traceMemCnx <- mkConnection(traceClient, splitter.server);
-   let bramMemCnx  <- mkConnection(splitter.bramClient, bramMem);
-   rule rl_data;
-      let md <- toGet(splitter.data).get();
-      trace.traceData(md.data, md.last, extend(md.tag));
+   let bramMemCnx  <- mkConnection(splitter.bramClient, bramMemA);
+   // rule rl_data;
+   //    let md <- toGet(splitter.data).get();
+   //    trace.traceData(md.data, md.last, extend(md.tag));
+   // endrule
+   rule rl_locdone;
+      let loc <- toGet(mpEngine.locdone).get();
+      ind.strstrLoc(pack(loc));
    endrule
 
+   interface MemServerPortalRequest bramRequest = bramMemServerPortal.request;
    interface NvmeRequest request;
 
       method Action status();
@@ -221,6 +235,12 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace)(Nvme);
 	 awaddrFifoCtl.enq(PhysMemRequest { addr: addr, burstLen: 4, tag: 0 });
 	 wdataFifoCtl.enq(MemData {data: truncate(value), tag: 0, last: True});
       endmethod
+      method Action setSearchString(Bit#(32) needleSglId, mpNextSglId, needleLen);
+	 mpEngine.setsearch.enq(tuple3(needleSglId, mpNextSglId, needleLen));
+      endmethod
+      method Action startSearch(Bit#(32) haystackLen);
+	 mpEngine.setsearch.enq(tuple3(/* unused */maxBound, haystackLen, /* unused */0));
+      endmethod
    endinterface
    interface Clock portalClockSource = axiRootPort.axi.aclk_out;
    interface NvmePins pins;
@@ -232,7 +252,7 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace)(Nvme);
          refclk_n.inputclock(n);
       endmethod
    endinterface
-   interface Vector dmaReadClient = vec(splitter.busClient.readClient);
+   interface Vector dmaReadClient = vec(splitter.busClient.readClient, re.dmaClient);
    interface Vector dmaWriteClient = vec(splitter.busClient.writeClient);
 endmodule
 

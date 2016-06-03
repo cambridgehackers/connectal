@@ -79,6 +79,9 @@ public:
 	fprintf(stderr, "%s:%d mmcm_lock=%d\n", __FUNCTION__, __LINE__, mmcm_lock);
 	sem_post(&sem);
     }	
+    virtual void strstrLoc ( const uint32_t loc ) {
+	fprintf(stderr, "strstr loc loc=%d\n", loc);
+    }
 
     void wait() {
 	sem_wait(&sem);
@@ -406,23 +409,31 @@ void allocIOQueues(Nvme *nvme, int entry=0)
     }
     
     if (1) {
+        int numBlocks = 1;
+
+	// clear transfer buffer
+	{
+	  int *buffer = (int *)(nvme->ioCompletionQueue.buffer() + (entry+0)*16);
+	  memset(buffer, 0, numBlocks*512);
+	}
+
 	// let's do a read
 	nvme_io_cmd *cmd = (nvme_io_cmd *)(nvme->ioSubmissionQueue.buffer() + (entry+0)*64);
 	memset(cmd, 0, 64);
 	cmd->opcode = 2; // read
 	cmd->cid = 45;
 	cmd->nsid = 1;
-	if (0)
+	if (1)
 	    cmd->prp1 = (nvme->transferBufferRef << 24) + 0;
 	else
 	    cmd->prp1 = (uint64_t)0x30000000ul; // send data to the FIFO
 	cmd->cdw10 = 10; // starting LBA.lower
 	cmd->cdw11 = 0; // starting LBA.upper
-	cmd->cdw12 = 1; // read 2 blocks
+	cmd->cdw12 = numBlocks-1; // read N blocks
 
 	nvme->ioSubmissionQueue.cacheInvalidate(4096, 1);
 	nvme->ioCompletionQueue.cacheInvalidate(4096, 0);
-	nvme->transferBuffer.cacheInvalidate(8*512, 0);
+	nvme->transferBuffer.cacheInvalidate(8*512, 1);
 
 	fprintf(stderr, "enqueueing IO read request offsetof(prp1)=%d offsetof(prp2)=%d offsetof(cdw10)=%d sizeof(req)=%d\n",
 		offsetof(nvme_io_cmd,prp1), offsetof(nvme_io_cmd,prp2), offsetof(nvme_io_cmd,cdw10), sizeof(nvme_io_cmd));
@@ -441,7 +452,7 @@ void allocIOQueues(Nvme *nvme, int entry=0)
 	    fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
 	    if (sc == 0) {
 		int *buffer = (int *)(nvme->transferBuffer.buffer() + (entry+0)*16);
-		for (int i = 0; i < 8*512/4; i++) {
+		for (int i = 0; i < numBlocks*512/4; i++) {
 		    if (buffer[i])
 			fprintf(stderr, "data read [%02x]=%08x\n", i*4, buffer[i]);
 		}
