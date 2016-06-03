@@ -42,13 +42,15 @@ module mkTraceReadClient#(PipeIn#(Tuple4#(dmaChanId,Bool,MemRequest,Bit#(timeSta
 
    rule rl_rd_req;
       let mr <- m.readReq.get();
-      tracePipe.enq(tuple4(chan, False, mr, cycles));
+      if (tracePipe.notFull())
+	 tracePipe.enq(tuple4(chan, False, mr, cycles));
       reqFifo.enq(mr);
    endrule
 
    rule rl_rd_data;
       let md <- toGet(dataFifo).get();
-      traceDataPipe.enq(tuple4(chan, False, md, cycles));
+      if (traceDataPipe.notFull())
+	 traceDataPipe.enq(tuple4(chan, False, md, cycles));
       m.readData.put(md);
    endrule
 
@@ -71,13 +73,15 @@ module mkTraceWriteClient#(PipeIn#(Tuple4#(dmaChanId,Bool,MemRequest,Bit#(timeSt
 
    rule rl_wr_req;
       let mr <- m.writeReq.get();
-      tracePipe.enq(tuple4(chan, True, mr, cycles));
+      if (tracePipe.notFull())
+	 tracePipe.enq(tuple4(chan, True, mr, cycles));
       reqFifo.enq(mr);
    endrule
 
    rule rl_wr_data;
       let md <- m.writeData.get();
-      traceDataPipe.enq(tuple4(chan, True, md, cycles));
+      if (traceDataPipe.notFull())
+	 traceDataPipe.enq(tuple4(chan, True, md, cycles));
       dataFifo.enq(md);
    endrule
 
