@@ -19,6 +19,7 @@ AUTOTOP += --portalclock=lNvme.portalClockSource
 #CONNECTALFLAGS += -D USE_ACP
 CONNECTALFLAGS += -D TOP_SOURCES_PORTAL_CLOCK --mainclockperiod=8
 
+CONNECTALFLAGS += -I $(CONNECTALDIR)/lib/strstr/cpp
 CONNECTALFLAGS += --bsvpath=../spikehw
 CONNECTALFLAGS += --xci=cores/$(BOARD)/axi_pcie_rp/axi_pcie_rp.xci
 CONNECTALFLAGS += --implconstraint=nvme.xdc
