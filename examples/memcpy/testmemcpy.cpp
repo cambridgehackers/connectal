@@ -72,12 +72,23 @@ public:
     fprintf(stderr, "done\n");
     finished = true;
     memcmp_fail = memcmp(srcBuffer, dstBuffer, numWords*sizeof(unsigned int));
+    for (int i = 0; i < numWords; i++) {
+      int *s = (int *)srcBuffer;
+      int *d = (int *)dstBuffer;
+      if (s[i] != i)
+	fprintf(stderr, "bad data src[%x]=%x\n", i, s[i]);
+      if (d[i] != i)
+	fprintf(stderr, "bad data dst[%x]=%x\n", i, d[i]);
+    }
     if (memcmp_fail) {
+      memcmp_fail=0;
       for (int i = 0; i < numWords; i++) {
 	int *s = (int *)srcBuffer;
 	int *d = (int *)dstBuffer;
-	if (s[i] != d[i])
+	if (s[i] != d[i]) {
 	  fprintf(stderr, "mismatch %d %08x %08x\n", i, s[i], d[i]);
+	  memcmp_fail++;
+	}
       }
     }
     fprintf(stderr, "memcmp=%x\n", memcmp_fail);
