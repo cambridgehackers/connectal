@@ -30,20 +30,27 @@ struct nvme_admin_cmd {
 };
 
 struct nvme_io_cmd {
-    uint8_t opcode;
+    uint8_t opcode;     // offset: 00
     uint8_t flags;
     uint16_t cid;
-    uint32_t nsid;
-    uint64_t reserved0;
-    uint64_t mptr;
-    uint64_t prp1;
-    uint64_t prp2;
-    uint32_t cdw10;
-    uint32_t cdw11;
+    uint32_t nsid;      // offset 04
+    uint64_t reserved0; // offset 08
+    uint64_t mptr;      // offset 16
+    uint64_t prp1;      // offset 24
+    uint64_t prp2;      // offset 32
+    uint32_t cdw10;     // offset 40
+    uint32_t cdw11;     // offset 44
     uint32_t cdw12;
     uint32_t cdw13;
     uint32_t cdw14;
     uint32_t cdw15;
+};
+
+struct sgl_data_block_descriptor {
+    uint64_t address;
+    uint32_t length;
+    uint8_t reserved[3];
+    uint8_t sglid;
 };
 
 class NvmeTrace : public NvmeTraceWrapper {
@@ -52,7 +59,8 @@ public:
 	fprintf(stderr, "%08x: traceDmaRequest chan=%d write=%d objId=%d offset=%08lx burstLen=%d tag=%x\n", timestamp, chan, write, objId, (long)offset, burstLen, tag);
     }
     void traceDmaData ( const DmaChannel chan, const int write, const uint64_t data, const int last, const uint8_t tag, const uint32_t timestamp ) {
-	fprintf(stderr, "%08x: traceDmaData chan=%d write=%d data=%08llx last=%d tag=%x\n", timestamp, chan, write, (long long)data, last, tag);
+	fprintf(stderr, "%08x: traceDmaData chan=%d write=%d data=%08x.%08x last=%d tag=%x\n",
+		timestamp, chan, write, (uint32_t)(data>>32), (uint32_t)(data >> 0), last, tag);
     }
     virtual void traceDmaDone ( const DmaChannel chan, const uint8_t tag, const uint32_t timestamp ) {
 	fprintf(stderr, "%08x: traceDmaDone chan=%d tag=%x\n", timestamp, chan, tag);
@@ -443,8 +451,8 @@ void allocIOQueues(Nvme *nvme, int entry=0)
     
     if (1) {
 	int startBlock = 34816;
-        int numBlocks = 15; //8177;
-
+        int numBlocks = 32; //8177;
+	int blocksPerPage = 4096 / 512;
 	// clear transfer buffer
 	{
 	  int *buffer = (int *)(nvme->ioCompletionQueue.buffer() + (entry+0)*16);
@@ -457,10 +465,17 @@ void allocIOQueues(Nvme *nvme, int entry=0)
 	cmd->opcode = 2; // read
 	cmd->cid = 45;
 	cmd->nsid = 1;
-	if (0)
+	if (0) {
 	    cmd->prp1 = (nvme->transferBufferRef << 24) + 0;
-	else
-	    cmd->prp1 = (uint64_t)0x30000000ul; // send data to the FIFO
+	} else {
+	    cmd->flags = 0x40; // SGL used for this transfer
+	    cmd->prp1 = 0x30000000ul; // send data to the FIFO
+	    cmd->prp2 = (nvme->transferBufferRef << 24) + 0;
+	    uint64_t *prplist = (uint64_t *)nvme->transferBuffer.buffer();
+	    for (int i = 0; i < numBlocks/blocksPerPage; i++) {
+		prplist[i] = (uint64_t)(0x30000000ul + 0x1000*i + 0x1000); // send data to the FIFO
+	    }
+	}
 	cmd->cdw10 = 10; // starting LBA.lower
 	cmd->cdw11 = 0; // starting LBA.upper
 	cmd->cdw12 = numBlocks-1; // read N blocks
@@ -469,11 +484,12 @@ void allocIOQueues(Nvme *nvme, int entry=0)
 	nvme->ioCompletionQueue.cacheInvalidate(4096, 0);
 	nvme->transferBuffer.cacheInvalidate(8*512, 1);
 
+	fprintf(stderr, "IO cmd opcode=%02x flags=%02x cid=%04x %08x\n", cmd->opcode, cmd->flags, cmd->cid, *(int *)cmd);
 	fprintf(stderr, "enqueueing IO read request offsetof(prp1)=%d offsetof(prp2)=%d offsetof(cdw10)=%d sizeof(req)=%d\n",
 		offsetof(nvme_io_cmd,prp1), offsetof(nvme_io_cmd,prp2), offsetof(nvme_io_cmd,cdw10), sizeof(nvme_io_cmd));
 	// update submission queue tail
 	nvme->write32(0x1000+(2*1*(4 << 0)), 1);
-	sleep(1);
+	sleep(2);
 	{
 	    int *buffer = (int *)(nvme->ioCompletionQueue.buffer() + (entry+0)*16);
 	    for (int i = 0; i < 4; i++) {
