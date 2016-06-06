@@ -54,6 +54,9 @@ public:
     void traceDmaData ( const DmaChannel chan, const int write, const uint64_t data, const int last, const uint8_t tag, const uint32_t timestamp ) {
 	fprintf(stderr, "%08x: traceDmaData chan=%d write=%d data=%08llx last=%d tag=%x\n", timestamp, chan, write, (long long)data, last, tag);
     }
+    virtual void traceDmaDone ( const DmaChannel chan, const uint8_t tag, const uint32_t timestamp ) {
+	fprintf(stderr, "%08x: traceDmaDone chan=%d tag=%x\n", timestamp, chan, tag);
+    }
     void traceData ( const uint64_t data, const int last, const uint8_t tag ) {
 	fprintf(stderr, "traceData data=%08llx last=%d tag=%x\n", (long long)data, last, tag);
     }

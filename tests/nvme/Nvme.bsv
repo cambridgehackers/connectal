@@ -115,7 +115,7 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
    FIFOF#(PhysMemRequest#(32,DataBusWidth)) awaddrFifo <- mkFIFOF();
    FIFOF#(MemData#(DataBusWidth))           rdataFifo <- mkFIFOF();
    FIFOF#(MemData#(DataBusWidth))           wdataFifo <- mkFIFOF();
-   FIFOF#(Bit#(6))                doneFifo <- mkFIFOF();
+   FIFOF#(Bit#(6))                           doneFifo <- mkFIFOF();
 
    let araddrCnx <- mkConnection(toGet(araddrFifo), axiRootPortMemSlave.read_server.readReq);
    let awaddrCnx <- mkConnection(toGet(awaddrFifo), axiRootPortMemSlave.write_server.writeReq);
@@ -167,6 +167,9 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
    PipeIn#(Tuple4#(DmaChannel,Bool,MemRequest,Bit#(32))) tracePipe = toPipeIn(traceFifo);
    FIFOF#(Tuple4#(DmaChannel,Bool,MemData#(DataBusWidth),Bit#(32))) traceDataFifo <- mkSizedBRAMFIFOF(1024);
    PipeIn#(Tuple4#(DmaChannel,Bool,MemData#(DataBusWidth),Bit#(32))) traceDataPipe = toPipeIn(traceDataFifo);
+   FIFOF#(Tuple2#(DmaChannel,Bit#(32)))                              traceDoneFifo <- mkSizedBRAMFIFOF(1024);
+   PipeIn#(Tuple2#(DmaChannel,Bit#(32)))                             traceDonePipe = toPipeIn(traceDoneFifo);
+
    rule rl_trace1;
       match { .chan, .write, .req, .timestamp } <- toGet(traceFifo).get();
       trace.traceDmaRequest(chan, write, truncate(req.sglId), extend(req.offset), extend(req.burstLen), extend(req.tag), timestamp);
@@ -177,7 +180,7 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
    endrule
 
    let traceReadClient <- mkTraceReadClient(tracePipe,traceDataPipe,DMA_TX,memReadClient);
-   let traceWriteClient <- mkTraceWriteClient(tracePipe,traceDataPipe,DMA_RX,memWriteClient);
+   let traceWriteClient <- mkTraceWriteClient(tracePipe,traceDataPipe,traceDonePipe,DMA_RX,memWriteClient);
    let traceClient = (interface MemClient#(DataBusWidth);
 			 interface readClient = traceReadClient;
 			 interface writeClient = traceWriteClient;
@@ -235,7 +238,7 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 	 awaddrFifoCtl.enq(PhysMemRequest { addr: addr, burstLen: 4, tag: 0 });
 	 wdataFifoCtl.enq(MemData {data: truncate(value), tag: 0, last: True});
       endmethod
-      method Action setSearchString(Bit#(32) needleSglId, mpNextSglId, needleLen);
+      method Action setSearchString(Bit#(32) needleSglId, Bit#(32) mpNextSglId, Bit#(32) needleLen);
 	 mpEngine.setsearch.enq(tuple3(needleSglId, mpNextSglId, needleLen));
       endmethod
       method Action startSearch(Bit#(32) haystackLen);
@@ -421,6 +424,17 @@ module mkSplitMemServer(SplitMemServer);
    let readBeatLast <- mkProbe();
    let busReadDataData <- mkProbe();
    let busReadDataLast <- mkProbe();
+   let writeReqObj <- mkProbe();
+   let writeReqDest <- mkProbe();
+   let writeReqOffset <- mkProbe();
+   let writeDataDest <- mkProbe();
+   let writeDataData <- mkProbe();
+   let writeDataLast <- mkProbe();
+   let writeBeatAddr <- mkProbe();
+   let writeBeatByteCount <- mkProbe();
+   let writeBeatLast <- mkProbe();
+   let writeDoneTag <- mkProbe();
+   let writeDoneDest <- mkProbe();
 
    rule rl_rd_req;
       MemRequest req <- toGet(readReqFifo).get();
@@ -464,6 +478,10 @@ module mkSplitMemServer(SplitMemServer);
       end else
 	 busWriteReqFifo.enq(req);
       writeAddrGenerator.request.put(PhysMemRequest { addr: truncate(req.offset), burstLen: req.burstLen, tag: extend(dest) });
+
+      writeReqObj <= req.sglId;
+      writeReqDest <= dest;
+      writeReqOffset <= req.offset[31:0];
    endrule
    
    rule rl_wr_data;
@@ -477,12 +495,21 @@ module mkSplitMemServer(SplitMemServer);
       else
 	 busWriteDataFifo.enq(md);
       if (addrBeat.last)
-	 doneFifo.enq(md.tag);
+	 doneFifo.enq(tuple2(dest, md.tag));
+      else if (md.last)
+	 doneFifo.enq(tuple2(dest, maxBound));
+
+      writeDataDest <= dest;
+      writeDataData <= md.data;
+      writeDataLast <= md.last;
+      writeBeatAddr <= addrBeat.addr[15:0];
+      writeBeatByteCount <= addrBeat.bc;
+      writeBeatLast <= addrBeat.last;
+
    endrule
 
    rule rl_wr_done;
-      let tag <- toGet(doneFifo).get();
-      let dest = tag[1:0];
+      match { .dest, .tag } <- toGet(doneFifo).get();
       Bit#(MemTagSize) doneTag;
       if (dest == 2)
 	 doneTag <- toGet(bramWriteDoneFifo).get();
@@ -491,6 +518,9 @@ module mkSplitMemServer(SplitMemServer);
       else
 	 doneTag <- toGet(busWriteDoneFifo).get();
       writeDoneFifo.enq(doneTag);
+
+      writeDoneTag <= doneTag;
+      writeDoneDest <= dest;
    endrule
 
    interface MemServer server;
