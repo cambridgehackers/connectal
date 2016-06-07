@@ -60,6 +60,7 @@ endmodule
 
 module mkTraceWriteClient#(PipeIn#(Tuple4#(dmaChanId,Bool,MemRequest,Bit#(timeStampWidth))) tracePipe,
 			   PipeIn#(Tuple4#(dmaChanId,Bool,MemData#(dataWidth),Bit#(timeStampWidth))) traceDataPipe,
+			   PipeIn#(Tuple2#(dmaChanId,Bit#(timeStampWidth))) traceDonePipe,
 			   dmaChanId chan, MemWriteClient#(dataWidth) m)
    (MemWriteClient#(dataWidth));
 
@@ -70,6 +71,7 @@ module mkTraceWriteClient#(PipeIn#(Tuple4#(dmaChanId,Bool,MemRequest,Bit#(timeSt
 
    let reqFifo <- mkFIFOF();
    let dataFifo <- mkFIFOF();
+   let doneFifo <- mkFIFOF();
 
    rule rl_wr_req;
       let mr <- m.writeReq.get();
@@ -85,7 +87,14 @@ module mkTraceWriteClient#(PipeIn#(Tuple4#(dmaChanId,Bool,MemRequest,Bit#(timeSt
       dataFifo.enq(md);
    endrule
 
+   rule rl_wr_done;
+      let tag <- toGet(doneFifo).get();
+      if (traceDonePipe.notFull())
+	 traceDonePipe.enq(tuple2(chan, cycles));
+      m.writeDone.put(tag);
+   endrule
+
    interface Get writeReq = toGet(reqFifo);
    interface Get writeData = toGet(dataFifo);
-   interface Put writeDone = m.writeDone;
+   interface Put writeDone = toPut(doneFifo);
 endmodule
