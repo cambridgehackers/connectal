@@ -46,6 +46,13 @@ struct nvme_io_cmd {
     uint32_t cdw15;
 };
 
+struct nvme_completion {
+    int cdw0;
+    int cdw1;
+    int cdw2;
+    int cdw3;
+};
+
 struct sgl_data_block_descriptor {
     uint64_t address;
     uint32_t length;
@@ -194,6 +201,8 @@ class Nvme {
     NvmeRequestProxy device;
     NvmeIndication  indication;
     NvmeTrace       trace;
+    int adminRequestNumber;
+    int ioRequestNumber;
 public:
     DmaBuffer dummy;
     DmaBuffer transferBuffer;
@@ -215,9 +224,11 @@ public:
 	: device(IfcNames_NvmeRequestS2H)
 	, indication(IfcNames_NvmeIndicationH2S)
 	, trace(IfcNames_NvmeTraceH2S)
+	, adminRequestNumber(0)
+	, ioRequestNumber(0)
 	, dummy(4096)
 	, transferBuffer(10*4096)
-	, adminSubmissionQueue(64*64)
+	, adminSubmissionQueue(4096)
 	, adminCompletionQueue(4096)
 	, ioSubmissionQueue(8192)
 	, ioCompletionQueue(8192)
@@ -249,6 +260,9 @@ public:
 
     int setSearchString ( const uint32_t needleSglId, const uint32_t mpNextSglId, const uint32_t needleLen );
     int startSearch ( const uint32_t searchLen );
+
+    int adminCommand(const nvme_admin_cmd *cmd, nvme_completion *completion);
+    int ioCommand(const nvme_io_cmd *cmd, nvme_completion *completion);
 
 };
 
@@ -340,13 +354,75 @@ void memserverWrite(Nvme *nvme)
     nvme->write32(0x02200000 + 0x41000 + 0x20, byteEnable|(((unsigned long)burstLen)<<8));
 }
 
+int Nvme::adminCommand(const nvme_admin_cmd *cmd, nvme_completion *completion)
+{
+    nvme_admin_cmd *requests = (nvme_admin_cmd *)adminSubmissionQueue.buffer();
+    int requestNumber        = adminRequestNumber % (4096 / sizeof(nvme_admin_cmd));
+    nvme_admin_cmd *request  = &requests[requestNumber];
+    int *responses           = (int *)adminCompletionQueue.buffer();
+    int responseNumber       = adminRequestNumber % (4096 / 16);
+    int *response            = &responses[responseNumber * 4];
+    adminRequestNumber++;
+
+    fprintf(stderr, "%s:%d requestNumber=%d responseNumber = %d\n", __FUNCTION__, __LINE__, requestNumber, responseNumber);
+
+    *request = *cmd;
+    adminSubmissionQueue.cacheInvalidate(4096, 1);
+    adminCompletionQueue.cacheInvalidate(4096, 0);
+
+    // update submission queue tail
+    write32(0x1000, requestNumber+1);
+    sleep(1);
+
+    for (int i = 0; i < 4; i++) {
+	fprintf(stderr, "    response[%02x]=%08x\n", i*4, response[i]);
+    }
+    int status = response[3];
+    int more = (status >> 30) & 1;
+    int sc = (status >> 17) & 0xff;
+    int sct = (status >> 25) & 0x7;
+    fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
+    return sc;
+}
+
+int Nvme::ioCommand(const nvme_io_cmd *cmd, nvme_completion *completion)
+{
+    nvme_io_cmd *requests = (nvme_io_cmd *)ioSubmissionQueue.buffer();
+    int requestNumber        = ioRequestNumber % (8192 / sizeof(nvme_io_cmd));
+    nvme_io_cmd *request  = &requests[requestNumber];
+    int *responses           = (int *)ioCompletionQueue.buffer();
+    int responseNumber       = ioRequestNumber % (8192 / 16);
+    int *response            = &responses[responseNumber * 4];
+    ioRequestNumber++;
+
+    fprintf(stderr, "%s:%d requestNumber=%d responseNumber = %d\n", __FUNCTION__, __LINE__, requestNumber, responseNumber);
+
+    *request = *cmd;
+    ioSubmissionQueue.cacheInvalidate(8192, 1);
+    ioCompletionQueue.cacheInvalidate(8192, 0);
+
+    // update submission queue tail
+    write32(0x1000, requestNumber+1);
+    sleep(1);
+
+    for (int i = 0; i < 4; i++) {
+	fprintf(stderr, "    response[%02x]=%08x\n", i*4, response[i]);
+    }
+    int status = response[3];
+    int more = (status >> 30) & 1;
+    int sc = (status >> 17) & 0xff;
+    int sct = (status >> 25) & 0x7;
+    fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
+    return sc;
+}
+
 void identify(Nvme *nvme)
 {
-    memset(nvme->adminCompletionQueue.buffer(), 0xbf, 4096);
-
     fprintf(stderr, "sizeof(nvmd_id_cmd)=%d\n", sizeof(nvme_admin_cmd));
     // write an identify command
-    nvme_admin_cmd *cmd = (nvme_admin_cmd *)nvme->adminSubmissionQueue.buffer();
+    nvme_completion completion;
+    nvme_admin_cmd buffer;
+    nvme_admin_cmd *cmd = &buffer;
     memset(cmd, 0, 64);
     cmd->opcode = 6; //nvme_identify;
     cmd->cid = 22;
@@ -355,50 +431,44 @@ void identify(Nvme *nvme)
     cmd->prp2 = (nvme->transferBufferRef << 24) + 4096;
     cmd->cdw10 = 1;
 
-    nvme->adminSubmissionQueue.cacheInvalidate(4096, 1);
-    nvme->adminCompletionQueue.cacheInvalidate(4096, 0);
+    nvme->adminCommand(cmd, &completion);
 
-    // update submission queue tail
-    nvme->write32(0x1000, 1);
-    //nvme->write32(0x1000, 64);
-    fprintf(stderr, "CTS %08x\n", nvme->read32( 0x1c));
-    fprintf(stderr, "CMDSTATUS: %08x\n", nvme->readCtl((1 << 20) + 0x4));
-    sleep(1);
-    fprintf(stderr, "CTS %08x\n", nvme->read32( 0x1c));
-    fprintf(stderr, "CMDSTATUS: %08x\n", nvme->readCtl((1 << 20) + 0x4));
-    {
-	int *buffer = (int *)nvme->adminCompletionQueue.buffer();
-	for (int i = 0; i < 4; i++) {
-	    fprintf(stderr, "identify-response[%02x]=%08x\n", i*4, buffer[i]);
-	}
-	int status = buffer[3];
-	int more = (status >> 30) & 1;
-	int sc = (status >> 17) & 0xff;
-	int sct = (status >> 25) & 0x7;
-	fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
-    }
     {
 	char *cbuffer = (char *)(nvme->transferBuffer.buffer() + 0);
 	int *buffer = (int *)(nvme->transferBuffer.buffer() + 0);
-	for (int i = 0; i < 16; i++) {
-	    fprintf(stderr, "identity[%02x]=%08x\n", i*4, buffer[i]);
-	}
-	fprintf(stderr, "error log page entries %d\n", cbuffer[262]);
+	char str[128];
+	fprintf(stderr, "PCI vendorid %02x\n", *(unsigned short *)&cbuffer[0]);
+	fprintf(stderr, "PCI deviceid %02x\n", *(unsigned short *)&cbuffer[2]);
+	snprintf(str, 20, "%s", &cbuffer[4]);
+	fprintf(stderr, "serial number '%s'\n", str);
+	snprintf(str, 40, "%s", &cbuffer[24]);
+	fprintf(stderr, "model number  '%s'\n", str);
 	fprintf(stderr, "host buffer preferred size %x\n", *(int *)&cbuffer[272]);
 	fprintf(stderr, "host buffer min size       %x\n", *(int *)&cbuffer[276]);
 	fprintf(stderr, "nvm submission queue entry size %d\n", cbuffer[512]);
 	fprintf(stderr, "nvm completion queue entry size %d\n", cbuffer[513]);
+	fprintf(stderr, "maximum data transfer size: %d\n", cbuffer[77]);
+	fprintf(stderr, "controller id: %d\n", *(unsigned short *)&cbuffer[78]);
+	fprintf(stderr, "OACS: %x\n", *(unsigned short *)&cbuffer[256]);
+	fprintf(stderr, "log page attributes: %x\n", cbuffer[261]);
+	fprintf(stderr, "error log page entries %d\n", cbuffer[262]);
+	fprintf(stderr, "host memory buffer preferred size: %x\n", *(unsigned int *)&cbuffer[272]);
+	fprintf(stderr, "host memory buffer minimum size: %x\n", *(unsigned int *)&cbuffer[272]);
 	fprintf(stderr, "nvm capacity: %08llx %08llx\n", *(long long *)&cbuffer[288], *(long long *)&cbuffer[280]);
-
+	fprintf(stderr, "unallocated capacity: %08llx %08llx\n", *(long long *)&cbuffer[304], *(long long *)&cbuffer[296]);
+	fprintf(stderr, "number of namespaces: %x\n", *(unsigned int *)&cbuffer[516]);
+	fprintf(stderr, "ONCS: %x\n", *(unsigned short *)&cbuffer[520]);
+	fprintf(stderr, "supports SGL: %x\n", *(int *)&cbuffer[536]);
     }
 }
 
 void allocIOQueues(Nvme *nvme, int entry=0)
 {
-    nvme_admin_cmd *cmd = 0;
+    nvme_completion completion;
+    nvme_admin_cmd buffer;
+    nvme_admin_cmd *cmd = &buffer;
 
     // create I/O completion queue
-    cmd = (nvme_admin_cmd *)(nvme->adminSubmissionQueue.buffer() + (entry+0)*64);
     memset(cmd, 0, 64);
     cmd->opcode = 5; //create I/O completion queue
     cmd->cid = 17;
@@ -406,9 +476,9 @@ void allocIOQueues(Nvme *nvme, int entry=0)
     cmd->prp1 = (nvme->ioCompletionQueueRef << 24) + 0;
     cmd->cdw10 = ((8192 / 16 - 1) << 16) | 1; // size, completion queue 1
     cmd->cdw11 = 1; // physically contiguous
+    nvme->adminCommand(cmd, &completion);
 
     // create I/O submission queue
-    cmd = (nvme_admin_cmd *)(nvme->adminSubmissionQueue.buffer() + (entry+1)*64);
     memset(cmd, 0, 64);
     cmd->opcode = 1; //create I/O submission queue
     cmd->cid = 18;
@@ -416,97 +486,54 @@ void allocIOQueues(Nvme *nvme, int entry=0)
     cmd->prp1 = (nvme->ioSubmissionQueueRef << 24) + 0;
     cmd->cdw10 = ((8192 / 64 - 1) << 16) + 1; // submission queue 1
     cmd->cdw11 = (1 << 16) | 1; // completion queue 1, physically contiguous
+    nvme->adminCommand(cmd, &completion);
+}
 
-
-    nvme->adminSubmissionQueue.cacheInvalidate(4096, 1);
-    nvme->adminCompletionQueue.cacheInvalidate(4096, 0);
-
-    fprintf(stderr, "allocating IO submission queue\n");
-    // update submission queue tail
-    nvme->write32(0x1000, entry+2);
-
-    sleep(1);
+void doIO(Nvme *nvme)
+{
+    int startBlock = 34816;
+    int numBlocks = 32; //8177;
+    int blocksPerPage = 4096 / 512;
+    // clear transfer buffer
     {
-	int *buffer = (int *)(nvme->adminCompletionQueue.buffer() + (entry+0)*16);
-	for (int i = 0; i < 4; i++) {
-	    fprintf(stderr, "alloc-completion-queue-response[%02x]=%08x\n", i*4, buffer[i]);
-	}
-	int status = buffer[3];
-	int more = (status >> 30) & 1;
-	int sc = (status >> 17) & 0xff;
-	int sct = (status >> 25) & 0x7;
-	fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
+	int *buffer = (int *)nvme->ioCompletionQueue.buffer();
+	memset(buffer, 0, numBlocks*512);
     }
-    {
-	int *buffer = (int *)(nvme->adminCompletionQueue.buffer() + (entry+1)*16);
-	for (int i = 0; i < 4; i++) {
-	    fprintf(stderr, "alloc-submission-queue-response[%02x]=%08x\n", i*4, buffer[i]);
+
+    // let's do a read
+    nvme_io_cmd cmd;
+    nvme_completion completion;
+    memset(&cmd, 0, 64);
+    cmd.opcode = 2; // read
+    cmd.cid = 45;
+    cmd.nsid = 1;
+    if (0) {
+	cmd.prp1 = (nvme->transferBufferRef << 24) + 0;
+    } else {
+	cmd.flags = 0x40; // SGL used for this transfer
+	cmd.prp1 = 0x30000000ul; // send data to the FIFO
+	cmd.prp2 = (nvme->transferBufferRef << 24) + 0;
+	uint64_t *prplist = (uint64_t *)nvme->transferBuffer.buffer();
+	for (int i = 0; i < numBlocks/blocksPerPage; i++) {
+	    prplist[i] = (uint64_t)(0x30000000ul + 0x1000*i + 0x1000); // send data to the FIFO
 	}
-	int status = buffer[3];
-	int more = (status >> 30) & 1;
-	int sc = (status >> 17) & 0xff;
-	int sct = (status >> 25) & 0x7;
-	fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
     }
-    
-    if (1) {
-	int startBlock = 34816;
-        int numBlocks = 32; //8177;
-	int blocksPerPage = 4096 / 512;
-	// clear transfer buffer
-	{
-	  int *buffer = (int *)(nvme->ioCompletionQueue.buffer() + (entry+0)*16);
-	  memset(buffer, 0, numBlocks*512);
-	}
+    cmd.cdw10 = 10; // starting LBA.lower
+    cmd.cdw11 = 0; // starting LBA.upper
+    cmd.cdw12 = numBlocks-1; // read N blocks
 
-	// let's do a read
-	nvme_io_cmd *cmd = (nvme_io_cmd *)(nvme->ioSubmissionQueue.buffer() + (entry+0)*64);
-	memset(cmd, 0, 64);
-	cmd->opcode = 2; // read
-	cmd->cid = 45;
-	cmd->nsid = 1;
-	if (0) {
-	    cmd->prp1 = (nvme->transferBufferRef << 24) + 0;
-	} else {
-	    cmd->flags = 0x40; // SGL used for this transfer
-	    cmd->prp1 = 0x30000000ul; // send data to the FIFO
-	    cmd->prp2 = (nvme->transferBufferRef << 24) + 0;
-	    uint64_t *prplist = (uint64_t *)nvme->transferBuffer.buffer();
-	    for (int i = 0; i < numBlocks/blocksPerPage; i++) {
-		prplist[i] = (uint64_t)(0x30000000ul + 0x1000*i + 0x1000); // send data to the FIFO
-	    }
-	}
-	cmd->cdw10 = 10; // starting LBA.lower
-	cmd->cdw11 = 0; // starting LBA.upper
-	cmd->cdw12 = numBlocks-1; // read N blocks
+    nvme->transferBuffer.cacheInvalidate(8*512, 1);
 
-	nvme->ioSubmissionQueue.cacheInvalidate(4096, 1);
-	nvme->ioCompletionQueue.cacheInvalidate(4096, 0);
-	nvme->transferBuffer.cacheInvalidate(8*512, 1);
+    fprintf(stderr, "IO cmd opcode=%02x flags=%02x cid=%04x %08x\n", cmd.opcode, cmd.flags, cmd.cid, *(int *)&cmd);
+    fprintf(stderr, "enqueueing IO read request offsetof(prp1)=%d offsetof(prp2)=%d offsetof(cdw10)=%d sizeof(req)=%d\n",
+	    offsetof(nvme_io_cmd,prp1), offsetof(nvme_io_cmd,prp2), offsetof(nvme_io_cmd,cdw10), sizeof(nvme_io_cmd));
 
-	fprintf(stderr, "IO cmd opcode=%02x flags=%02x cid=%04x %08x\n", cmd->opcode, cmd->flags, cmd->cid, *(int *)cmd);
-	fprintf(stderr, "enqueueing IO read request offsetof(prp1)=%d offsetof(prp2)=%d offsetof(cdw10)=%d sizeof(req)=%d\n",
-		offsetof(nvme_io_cmd,prp1), offsetof(nvme_io_cmd,prp2), offsetof(nvme_io_cmd,cdw10), sizeof(nvme_io_cmd));
-	// update submission queue tail
-	nvme->write32(0x1000+(2*1*(4 << 0)), 1);
-	sleep(2);
-	{
-	    int *buffer = (int *)(nvme->ioCompletionQueue.buffer() + (entry+0)*16);
-	    for (int i = 0; i < 4; i++) {
-		fprintf(stderr, "response[%02x]=%08x\n", i*4, buffer[i]);
-	    }
-	    int status = buffer[3];
-	    int more = (status >> 30) & 1;
-	    int sc = (status >> 17) & 0xff;
-	    int sct = (status >> 25) & 0x7;
-	    fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
-	    if (sc == 0) {
-		int *buffer = (int *)(nvme->transferBuffer.buffer() + (entry+0)*16);
-		for (int i = 0; i < numBlocks*512/4; i++) {
-		    if (buffer[i])
-			fprintf(stderr, "data read [%02x]=%08x\n", i*4, buffer[i]);
-		}
-	    }
+    int sc = nvme->ioCommand(&cmd, &completion);
+    if (sc) {
+	int *buffer = (int *)nvme->transferBuffer.buffer();
+	for (int i = 0; i < numBlocks*512/4; i++) {
+	    if (buffer[i])
+		fprintf(stderr, "data read [%02x]=%08x\n", i*4, buffer[i]);
 	}
     }
 }
@@ -607,7 +634,6 @@ int main(int argc, const char **argv)
     // CC.enable
     nvme.write32(0x14, 1);
     fprintf(stderr, "CTS %08x\n", nvme.read32( 0x1c));
-    //identify(&nvme);
 
     const char *needle = "property";
     int needle_len = strlen(needle);
@@ -624,8 +650,8 @@ int main(int argc, const char **argv)
     // the MPEngine will read in the needle and mpNext
     nvme.setSearchString(nvme.needleRef, nvme.mpNextRef, needle_len);
 
-    fprintf(stderr, "skipping the search for now\n");
-
+    identify(&nvme);
+    return 0;
     allocIOQueues(&nvme, 0);
     nvme.startSearch(8177*512);
 
