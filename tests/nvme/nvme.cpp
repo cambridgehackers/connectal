@@ -121,6 +121,7 @@ public:
 
 class DmaBuffer {
     const int size;
+    const bool cached;
     int fd;
     char *buf;
     int ref;
@@ -128,7 +129,7 @@ class DmaBuffer {
     static void initDmaManager();
 public:
     // Allocates a portal memory object of specified size and maps it into user process
-    DmaBuffer(int size);
+    DmaBuffer(int size, bool cached=true);
     // Dereferences and deallocates the portal memory object
     // if destructor is not called, the object is automatically
     // unreferenced and freed when the process exits
@@ -156,11 +157,14 @@ void DmaBuffer::initDmaManager()
 }
 
 
-DmaBuffer::DmaBuffer(int size)
-  : size(size), ref(-1)
+DmaBuffer::DmaBuffer(int size, bool cached)
+    : size(size), cached(cached), ref(-1)
 {
-    fd = portalAlloc(size, 1);
+    fd = portalAlloc(size, cached);
     buf = (char *)portalMmap(fd, size);
+    if (1) {
+	cacheInvalidate(size, 0);
+    }
 }
 
 DmaBuffer::~DmaBuffer()
@@ -190,7 +194,9 @@ void DmaBuffer::cacheInvalidate(int size, int flush)
 #ifndef USE_ACP
     if (size == 0)
 	size = this->size;
-    portalCacheFlush(fd, buf, size, flush);
+    if (cached) {
+      portalCacheFlush(fd, buf, size, flush);
+    }
 #else
     fprintf(stderr, "cacheInvalidate skipped due to use of ACP\n");
 #endif
