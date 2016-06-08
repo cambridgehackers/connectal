@@ -41,7 +41,7 @@ VARIANT_PROJECTS := $(foreach item,$(VARIANT_LIST),variantgen.$(item))
 ## use "make gen.board" to generate the build directory
 gen.%:
 ifeq ($(BOARD),)
-	$(eval BOARD := $*)
+	$(eval BOARD := $(word 1, $(subst ., ,$*)))
 endif
 	+BOARD=$(BOARD) PROJECTDIR=$* $(MAKE) --no-print-directory gentarget prebuild $(VARIANT_PROJECTS)
 
