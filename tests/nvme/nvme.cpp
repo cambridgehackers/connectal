@@ -427,7 +427,7 @@ int Nvme::ioCommand(const nvme_io_cmd *cmd, nvme_completion *completion)
     int sc = (status >> 17) & 0xff;
     int sct = (status >> 25) & 0x7;
     fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
-    return sc;
+    return status ? sc : -1;
 }
 
 void identify(Nvme *nvme)
@@ -503,7 +503,7 @@ void allocIOQueues(Nvme *nvme, int entry=0)
     nvme->adminCommand(cmd, &completion);
 }
 
-void doIO(Nvme *nvme, int startBlock, int numBlocks)
+int doIO(Nvme *nvme, int startBlock, int numBlocks)
 {
     int blocksPerPage = 4096 / 512;
     // clear transfer buffer
@@ -547,6 +547,7 @@ void doIO(Nvme *nvme, int startBlock, int numBlocks)
 		fprintf(stderr, "data read [%02x]=%08x\n", i*4, buffer[i]);
 	}
     }
+    return sc;
 }
 
 int main(int argc, const char **argv)
@@ -669,7 +670,9 @@ int main(int argc, const char **argv)
     int startBlock = 34816;
     int numBlocks = 8; //8177;
     for (int block = 0; block < 8177; block += numBlocks) {
-      doIO(&nvme, startBlock, numBlocks);
+      int sc = doIO(&nvme, startBlock, numBlocks);
+      if (sc != 0)
+	break;
       startBlock += numBlocks;
     }
 
