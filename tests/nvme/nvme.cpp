@@ -442,9 +442,8 @@ void identify(Nvme *nvme)
     nvme_completion completion;
     nvme_admin_cmd buffer;
     nvme_admin_cmd *cmd = &buffer;
-    memset(cmd, 0, 64);
+    memset(cmd, 0, sizeof(*cmd));
     cmd->opcode = 6; //nvme_identify;
-    cmd->cid = 22;
     cmd->nsid = 0;
     cmd->prp1 = (nvme->transferBufferRef << 24) + 0;
     cmd->prp2 = (nvme->transferBufferRef << 24) + 4096;
@@ -487,23 +486,23 @@ void allocIOQueues(Nvme *nvme, int entry=0)
     nvme_admin_cmd buffer;
     nvme_admin_cmd *cmd = &buffer;
 
+    fprintf(stderr, "%s:%d allocating completion queue with %d entries\n", __FUNCTION__, __LINE__, (Nvme::ioQueueSize / 16));
     // create I/O completion queue
-    memset(cmd, 0, 64);
+    memset(cmd, 0, sizeof(*cmd));
     cmd->opcode = 5; //create I/O completion queue
-    cmd->cid = 17;
     cmd->nsid = 0;
     cmd->prp1 = (nvme->ioCompletionQueueRef << 24) + 0;
     cmd->cdw10 = ((Nvme::ioQueueSize / 16 - 1) << 16) | 1; // size, completion queue 1
     cmd->cdw11 = 1; // physically contiguous
     nvme->adminCommand(cmd, &completion);
 
+    fprintf(stderr, "%s:%d allocating request queue with %d entries\n", __FUNCTION__, __LINE__, (Nvme::ioQueueSize / 64));
     // create I/O submission queue
-    memset(cmd, 0, 64);
+    memset(cmd, 0, sizeof(*cmd));
     cmd->opcode = 1; //create I/O submission queue
-    cmd->cid = 18;
     cmd->nsid = 0;
     cmd->prp1 = (nvme->ioSubmissionQueueRef << 24) + 0;
-    cmd->cdw10 = ((Nvme::ioQueueSize / 64 - 1) << 16) + 1; // submission queue 1
+    cmd->cdw10 = ((Nvme::ioQueueSize / 64 - 1) << 16) | 1; // size, submission queue 1
     cmd->cdw11 = (1 << 16) | 1; // completion queue 1, physically contiguous
     nvme->adminCommand(cmd, &completion);
 }
@@ -520,7 +519,7 @@ int doIO(Nvme *nvme, int startBlock, int numBlocks)
     // let's do a read
     nvme_io_cmd cmd;
     nvme_completion completion;
-    memset(&cmd, 0, 64);
+    memset(&cmd, 0, sizeof(cmd));
     cmd.opcode = 2; // read
     cmd.nsid = 1;
     if (0) {
@@ -534,7 +533,7 @@ int doIO(Nvme *nvme, int startBlock, int numBlocks)
 	    prplist[i] = (uint64_t)(0x30000000ul + 0x1000*i + 0x1000); // send data to the FIFO
 	}
     }
-    cmd.cdw10 = 10; // starting LBA.lower
+    cmd.cdw10 = startBlock; // starting LBA.lower
     cmd.cdw11 = 0; // starting LBA.upper
     cmd.cdw12 = numBlocks-1; // read N blocks
 
@@ -669,11 +668,11 @@ int main(int argc, const char **argv)
 
     identify(&nvme);
     allocIOQueues(&nvme, 0);
-    nvme.startSearch(8177*512);
+    nvme.startSearch(64*512);// 8177*512
 
     fprintf(stderr, "CTS %08x\n", nvme.read32( 0x1c));
     int startBlock = 34816;
-    int numBlocks = 8; //8177;
+    int numBlocks = 2; //8177;
     for (int block = 0; block < 8177; block += numBlocks) {
       int sc = doIO(&nvme, startBlock, numBlocks);
       nvme.status();
@@ -681,6 +680,8 @@ int main(int argc, const char **argv)
 	break;
       startBlock += numBlocks;
     }
+
+    fprintf(stderr, "CTS %08x\n", nvme.read32( 0x1c));
 
     return 0;
 }
