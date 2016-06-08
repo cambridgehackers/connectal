@@ -22,6 +22,8 @@
 # File: Makefile.build
 #
 
+space := $(eval) $(eval)
+
 V?=0
 ifeq ($(V),0)
   Q=@
@@ -91,7 +93,8 @@ BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info
 BSCFLAGS_COMMON += $(BSCWARNFLAGS) $(BSCOPTFLAGS) $(BSCPATHFLAGS) --wait-for-license
 PROF_FLAGS= #-pg
 export SIM_CFLAGS= $(CFLAGS_PROJECT) -fPIC -Ijni -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -D SIMULATION $(BSVDEFINES) -O $(PROF_FLAGS)
-export SIM_CXXFLAGS= $(CXXFLAGS_PROJECT) -fPIC -Ijni -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -D SIMULATION $(BSVDEFINES) -O $(PROF_FLAGS)
+export BSIMV_CXXFLAGS= $(CXXFLAGS_PROJECT) -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -D SIMULATION $(BSVDEFINES) -O $(PROF_FLAGS)
+export SIM_CXXFLAGS= -fPIC -Ijni $(BSIMV_CXXFLAGS)
 SIM_CXX_COMMON = $(addprefix $(CONNECTALDIR)/cpp/, TlpReplay.cpp BsimDma.cpp sock_utils.c portalPrintf.c XsimTop.cpp poller.cpp transportSocket.c transportHardware.c transportXsim.c portal.c)
 SIM_CXX_LOCAL = $(SIM_CXX_COMMON) $(DTOP)/jni/XsimMsgRequest.c $(DTOP)/jni/XsimMsgIndication.c $(DTOP)/jni/GeneratedCppCallbacks.cpp
 
@@ -102,6 +105,10 @@ ifneq ($(XILINX),)
 BLUESPEC_VERILOG+=$(BLUESPECDIR)/Verilog.Vivado
 endif
 BLUESPEC_VERILOG+=$(BLUESPECDIR)/Verilog
+
+ifneq ($(BSVSIM),)
+BSIMV_CXXFLAGS += -I $(BLUESPECDIR)/VPI
+endif
 
 VIVADO=$(shell which vivado)
 ifneq ($(VIVADO), )
@@ -362,12 +369,18 @@ $(DTOP)/bin/libconnectal-sim.so: $(SIM_OBJECTS) prepare_bin_target
 	$(Q)mkdir -p $(DTOP)/bin
 	$(CXX) -O -g -I$(DTOP)/jni -shared -fpic $(SIM_CXXFLAGS) -g -o $(DTOP)/bin/libconnectal-sim.so $(SIM_OBJECTS)
 
-bsim: prepare_bin_target $(DTOP)/bin/libconnectal-sim.so
+bsim: prepare_bin_target $(BSVSIM:%=verilog) $(DTOP)/bin/libconnectal-sim.so
 	$(Q)mkdir -p $(DTOP)/obj verilog
 	@echo BSCBSIM [$(DTOP)]
+ifeq ($(BSVSIM),)
 	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -D SIMULATION -sim -u -g $(MKTOP) $(TOPBSVFILE)
 	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -O -L $(DTOP)/bin  -l connectal-sim -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba
 	$(Q)cp -v generatedbsv/bsim* bin
+else # generate in run/execute directory, Thirdparty simulate will generate intermedia files
+	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -D SIMULATION -verilog -u -g $(MKTOP) $(TOPBSVFILE)
+	$(Q)cd $(DTOP)/bin; MAKEFLAGS="" $(RUN_BSC) $(BSIMV_CXXFLAGS) -Xl -Wl,-rpath,$(DTOP)/bin -L $(DTOP)/bin -l connectal-sim -vsim $(BSVSIM) -vsearch $(DTOP):$(DTOP)/verilog:$(subst $(space),:,$(VERILOG_PATH)) -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba
+	$(Q)cp -v $(DTOP)/bin/directc_*.so $(DTOP)/
+endif # BSVSIM
 
 syntax.timestamp: $(BSVFILES)
 	@#$syntax.py uses environment variables: V INTERFACES BSVDEFINES_LIST DTOP DUT_NAME
