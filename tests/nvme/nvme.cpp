@@ -403,7 +403,10 @@ int Nvme::ioCommand(const nvme_io_cmd *cmd, nvme_completion *completion)
     int responseNumber       = ioRequestNumber % (Nvme::ioQueueSize / 16);
     int *response            = &responses[responseNumber * 4];
 
-    fprintf(stderr, "%s:%d requestNumber=%d responseNumber = %d\n", __FUNCTION__, __LINE__, requestNumber, responseNumber);
+    fprintf(stderr, "%s:%d requestNumber=%d responseNumber = %d requestOffset=%x io request objid=%d\n",
+	    __FUNCTION__, __LINE__, requestNumber, responseNumber, requestNumber*sizeof(nvme_io_cmd), ioSubmissionQueueRef);
+
+    ioSubmissionQueue.cacheInvalidate(Nvme::ioQueueSize, 0);
 
     *request = *cmd;
     request->cid = ioRequestNumber++;
@@ -500,10 +503,8 @@ void allocIOQueues(Nvme *nvme, int entry=0)
     nvme->adminCommand(cmd, &completion);
 }
 
-void doIO(Nvme *nvme)
+void doIO(Nvme *nvme, int startBlock, int numBlocks)
 {
-    int startBlock = 34816;
-    int numBlocks = 32; //8177;
     int blocksPerPage = 4096 / 512;
     // clear transfer buffer
     {
@@ -665,8 +666,12 @@ int main(int argc, const char **argv)
     nvme.startSearch(8177*512);
 
     fprintf(stderr, "CTS %08x\n", nvme.read32( 0x1c));
-    for (int block = 0; block < 8177; block += 32)
-      doIO(&nvme);
+    int startBlock = 34816;
+    int numBlocks = 8; //8177;
+    for (int block = 0; block < 8177; block += numBlocks) {
+      doIO(&nvme, startBlock, numBlocks);
+      startBlock += numBlocks;
+    }
 
     return 0;
 }
