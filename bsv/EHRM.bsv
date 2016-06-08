@@ -38,7 +38,6 @@ typedef  Vector#(n, Reg#(t)) Ehr#(numeric type n, type t);
 module mkEhr#(t init)(Ehr#(n, t)) provisos(Bits#(t, tSz));
   Vector#(n, RWire#(t)) lat <- replicateM(mkUnsafeRWire);
 
-  Vector#(n, Vector#(n, RWire#(Maybe#(t)))) dummy <- replicateM(replicateM(mkUnsafeRWire));
   Vector#(n, Reg#(Bool)) dummy2 <- replicateM(mkReg(True));
 
   Reg#(t) rl <- mkReg(init);
@@ -56,8 +55,6 @@ module mkEhr#(t init)(Ehr#(n, t)) provisos(Bits#(t, tSz));
 	 method Action _write(t x);
 	    lat[i].wset(x);
 	    dummy2[i] <= True;
-	    for(Integer j = 0; j < i; j = j + 1)
-	       dummy[i][j].wset(lat[j].wget);
          endmethod
 
 	 method t _read;
