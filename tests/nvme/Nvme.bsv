@@ -210,12 +210,14 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 
    let                             probeDataCounter <- mkProbe();
    Reg#(Bit#(32))                       dataCounter <- mkReg(0);
+   FIFOF#(Bit#(32))                  dataLengthFifo <- mkFIFOF();
    let                                     fifoToMp <- mkFIFOF();
    MemReadEngine#(DataBusWidth,DataBusWidth,2,1) re <- mkMemReadEngine();
    MPEngine#(DataBusWidth,DataBusWidth)    mpEngine <- mkMPStreamEngine(toPipeOut(fifoToMp), re.readServers[0]);
 
    rule rl_count_data_to_mp;
       let data <- toGet(splitter.data).get();
+      data.last = (dataCounter+fromInteger(valueOf(DataBusWidth)/8)) >= dataLengthFifo.first;
       fifoToMp.enq(data);
       dataCounter <= dataCounter + 1;
       probeDataCounter <= dataCounter + 1;
@@ -267,6 +269,7 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 	 mpEngine.setsearch.enq(tuple3(needleSglId, mpNextSglId, needleLen));
       endmethod
       method Action startSearch(Bit#(32) haystackLen);
+	 dataLengthFifo.enq(haystackLen);
 	 mpEngine.setsearch.enq(tuple3(/* unused */maxBound, haystackLen, /* unused */0));
       endmethod
    endinterface
