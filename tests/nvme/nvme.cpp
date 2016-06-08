@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include "DmaBuffer.h"
 #include "mp.h"
 #include "portal.h"
 #include "dmaManager.h"
@@ -118,90 +119,6 @@ public:
     }
   
 };
-
-class DmaBuffer {
-    const int size;
-    const bool cached;
-    int fd;
-    char *buf;
-    int ref;
-    static DmaManager *mgr;
-    static void initDmaManager();
-public:
-    // Allocates a portal memory object of specified size and maps it into user process
-    DmaBuffer(int size, bool cached=true);
-    // Dereferences and deallocates the portal memory object
-    // if destructor is not called, the object is automatically
-    // unreferenced and freed when the process exits
-    ~DmaBuffer();
-    // returns the address of the mapped buffer
-    char *buffer() {
-	return buf;
-    }
-    // returns the reference to the object
-    //
-    // Sends the address translation table to hardware MMU if necessary.
-    uint32_t reference();
-    // Removes the address translation table from the hardware MMU
-    void dereference();
-    // invalidate and optionally flush from the dcache
-    void cacheInvalidate(int size=0, int flush=0);
-};
-
-DmaManager *DmaBuffer::mgr;
-
-void DmaBuffer::initDmaManager()
-{
-    if (!mgr)
-	mgr = platformInit();
-}
-
-
-DmaBuffer::DmaBuffer(int size, bool cached)
-    : size(size), cached(cached), ref(-1)
-{
-    fd = portalAlloc(size, cached);
-    buf = (char *)portalMmap(fd, size);
-    if (1) {
-	cacheInvalidate(size, 0);
-    }
-}
-
-DmaBuffer::~DmaBuffer()
-{
-    dereference();
-    portalMunmap(buf, size);
-    close(fd);
-}
-
-uint32_t DmaBuffer::reference()
-{
-    initDmaManager();
-    if (ref == -1)
-	ref = mgr->reference(fd);
-    return ref;
-}
-
-void DmaBuffer::dereference()
-{
-    if (ref != -1 && mgr)
-	mgr->dereference(ref);
-    ref = -1;
-}
-
-void DmaBuffer::cacheInvalidate(int size, int flush)
-{
-#ifndef USE_ACP
-    if (size == 0)
-	size = this->size;
-    if (cached) {
-      portalCacheFlush(fd, buf, size, flush);
-    }
-#else
-    fprintf(stderr, "cacheInvalidate skipped due to use of ACP\n");
-#endif
-}
-
 
 class Nvme {
     NvmeRequestProxy device;

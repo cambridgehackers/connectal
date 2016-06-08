@@ -8,7 +8,8 @@ MEM_WRITE_INTERFACES = lNvme.dmaWriteClient
 
 BSVPATH = $(CONNECTALDIR)/lib/strstr/bsv
 BSVFILES = NvmeIfc.bsv $(CONNECTALDIR)/bsv/ConnectalConfig.bsv
-CPPFILES= nvme.cpp
+CPPFILES += nvme.cpp
+CPPFILES += $(CONNECTALDIR)/cpp/DmaBuffer.cpp
 
 PINOUT_FILE += nvme.json
 PIN_TYPE = NvmePins
