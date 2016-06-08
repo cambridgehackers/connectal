@@ -165,9 +165,9 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 
    FIFOF#(Tuple4#(DmaChannel,Bool,MemRequest,Bit#(32))) traceFifo <- mkSizedBRAMFIFOF(128);
    PipeIn#(Tuple4#(DmaChannel,Bool,MemRequest,Bit#(32))) tracePipe = toPipeIn(traceFifo);
-   FIFOF#(Tuple4#(DmaChannel,Bool,MemData#(DataBusWidth),Bit#(32))) traceDataFifo <- mkSizedBRAMFIFOF(1024);
+   FIFOF#(Tuple4#(DmaChannel,Bool,MemData#(DataBusWidth),Bit#(32))) traceDataFifo <- mkSizedBRAMFIFOF(2048);
    PipeIn#(Tuple4#(DmaChannel,Bool,MemData#(DataBusWidth),Bit#(32))) traceDataPipe = toPipeIn(traceDataFifo);
-   FIFOF#(Tuple2#(DmaChannel,Bit#(32)))                              traceDoneFifo <- mkSizedBRAMFIFOF(1024);
+   FIFOF#(Tuple2#(DmaChannel,Bit#(32)))                              traceDoneFifo <- mkSizedBRAMFIFOF(128);
    PipeIn#(Tuple2#(DmaChannel,Bit#(32)))                             traceDonePipe = toPipeIn(traceDoneFifo);
 
    rule rl_trace1;
