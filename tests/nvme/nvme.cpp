@@ -406,7 +406,8 @@ int Nvme::ioCommand(const nvme_io_cmd *cmd, nvme_completion *completion)
     ioCompletionQueue.cacheInvalidate(Nvme::ioQueueSize, 0);
 
     // update submission queue tail
-    write32(0x1000, requestNumber+1);
+    write32(0x1000+(2*1*(4<<0)), requestNumber+1);
+
     sleep(1);
 
     for (int i = 0; i < 4; i++) {
