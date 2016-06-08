@@ -94,8 +94,8 @@ public:
 	//fprintf(stderr, "%s:%d\n", __FUNCTION__, __LINE__);
 	sem_post(&wsem);
     }
-    virtual void status ( const uint8_t mmcm_lock ) {
-	fprintf(stderr, "%s:%d mmcm_lock=%d\n", __FUNCTION__, __LINE__, mmcm_lock);
+    virtual void status ( const uint8_t mmcm_lock, const uint32_t counter ) {
+	fprintf(stderr, "%s:%d mmcm_lock=%d counter=%d\n", __FUNCTION__, __LINE__, mmcm_lock, counter);
 	sem_post(&sem);
     }	
     virtual void setupComplete() {
@@ -271,7 +271,10 @@ public:
 
     int adminCommand(const nvme_admin_cmd *cmd, nvme_completion *completion);
     int ioCommand(const nvme_io_cmd *cmd, nvme_completion *completion);
-
+    void status() {
+	device.status();
+	indication.wait();
+    }
 };
 
 uint32_t Nvme::readCtl(uint32_t addr)
@@ -671,6 +674,7 @@ int main(int argc, const char **argv)
     int numBlocks = 8; //8177;
     for (int block = 0; block < 8177; block += numBlocks) {
       int sc = doIO(&nvme, startBlock, numBlocks);
+      nvme.status();
       if (sc != 0)
 	break;
       startBlock += numBlocks;

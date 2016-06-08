@@ -208,8 +208,18 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
    PhysMemSlave#(32,DataBusWidth)      bramMemB <- mkPhysMemSlaveFromBram(bram.portB);
    MemServerPortal          bramMemServerPortal <- mkPhysMemSlavePortal(bramMemB,bramIndication);
 
+   let                             probeDataCounter <- mkProbe();
+   Reg#(Bit#(32))                       dataCounter <- mkReg(0);
+   let                                     fifoToMp <- mkFIFOF();
    MemReadEngine#(DataBusWidth,DataBusWidth,2,1) re <- mkMemReadEngine();
-   MPEngine#(DataBusWidth,DataBusWidth)    mpEngine <- mkMPStreamEngine(splitter.data, re.readServers[0]);
+   MPEngine#(DataBusWidth,DataBusWidth)    mpEngine <- mkMPStreamEngine(toPipeOut(fifoToMp), re.readServers[0]);
+
+   rule rl_count_data_to_mp;
+      let data <- toGet(splitter.data).get();
+      fifoToMp.enq(data);
+      dataCounter <= dataCounter + 1;
+      probeDataCounter <= dataCounter + 1;
+   endrule
 
    let traceMemCnx <- mkConnection(traceClient, splitter.server);
    let bramMemCnx  <- mkConnection(splitter.bramClient, bramMemA);
@@ -226,12 +236,11 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
    interface NvmeRequest request;
 
       method Action status();
-        ind.status(axiRootPort.mmcm.lock());
+        ind.status(axiRootPort.mmcm.lock(), dataCounter);
       endmethod
       method Action trace(Bool enabled);
 	 traceEnabled <= enabled;
       endmethod
-
       method Action read32(Bit#(32) addr);
 	 araddrFifo.enq(PhysMemRequest { addr: addr, burstLen: 4, tag: 0 });
       endmethod
