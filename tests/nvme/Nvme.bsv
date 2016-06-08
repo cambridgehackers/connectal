@@ -178,6 +178,10 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
       match { .chan, .write, .md, .timestamp } <- toGet(traceDataFifo).get();
       trace.traceDmaData(chan, write, md.data, md.last, extend(md.tag), timestamp);
    endrule
+   rule rl_trace_done;
+      match { .chan, .timestamp } <- toGet(traceDoneFifo).get();
+      trace.traceDmaDone(chan, 0, timestamp);
+   endrule
 
    let traceReadClient <- mkTraceReadClient(tracePipe,traceDataPipe,DMA_TX,memReadClient);
    let traceWriteClient <- mkTraceWriteClient(tracePipe,traceDataPipe,traceDonePipe,DMA_RX,memWriteClient);
