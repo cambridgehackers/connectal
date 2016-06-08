@@ -383,7 +383,7 @@ int Nvme::adminCommand(const nvme_admin_cmd *cmd, nvme_completion *completion)
     adminCompletionQueue.cacheInvalidate(4096, 0);
 
     // update submission queue tail
-    write32(0x1000, requestNumber+1);
+    write32(0x1000 + ((2*0 + 0) * (4 << 0)), requestNumber+1);
     sleep(1);
 
     for (int i = 0; i < 4; i++) {
@@ -393,6 +393,7 @@ int Nvme::adminCommand(const nvme_admin_cmd *cmd, nvme_completion *completion)
     int more = (status >> 30) & 1;
     int sc = (status >> 17) & 0xff;
     int sct = (status >> 25) & 0x7;
+    write32(0x1000 + ((2*0 + 1) * (4 << 0)), responseNumber+1);
     fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
     return sc;
 }
@@ -429,6 +430,7 @@ int Nvme::ioCommand(const nvme_io_cmd *cmd, nvme_completion *completion)
     int more = (status >> 30) & 1;
     int sc = (status >> 17) & 0xff;
     int sct = (status >> 25) & 0x7;
+    write32(0x1000 + ((2*1 + 1) * (4 << 0)), responseNumber+1);
     fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
     return status ? sc : -1;
 }
