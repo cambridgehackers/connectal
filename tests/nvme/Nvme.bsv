@@ -59,6 +59,13 @@ endmodule
 `endif
 
 
+function PipeIn#(t) sinkPipe();
+   return (interface PipeIn#(a);
+	      method Action enq(t v); endmethod
+	      method Bool notFull(); return False; endmethod
+	   endinterface);
+endfunction
+
 interface Nvme;
    interface NvmeRequest request;
    interface MemServerPortalRequest bramRequest;
@@ -163,12 +170,14 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
    let memReadClient  <- mkMemReadClient(getObjId, m_axi_mm);
    let memWriteClient <- mkMemWriteClient(getObjId, m_axi_mm);
 
+   Reg#(Bool) traceEnabled <- mkReg(False);
+
    FIFOF#(Tuple4#(DmaChannel,Bool,MemRequest,Bit#(32))) traceFifo <- mkSizedBRAMFIFOF(128);
-   PipeIn#(Tuple4#(DmaChannel,Bool,MemRequest,Bit#(32))) tracePipe = toPipeIn(traceFifo);
+   PipeIn#(Tuple4#(DmaChannel,Bool,MemRequest,Bit#(32))) tracePipe = traceEnabled ? toPipeIn(traceFifo) : sinkPipe();
    FIFOF#(Tuple4#(DmaChannel,Bool,MemData#(DataBusWidth),Bit#(32))) traceDataFifo <- mkSizedBRAMFIFOF(2048);
-   PipeIn#(Tuple4#(DmaChannel,Bool,MemData#(DataBusWidth),Bit#(32))) traceDataPipe = toPipeIn(traceDataFifo);
+   PipeIn#(Tuple4#(DmaChannel,Bool,MemData#(DataBusWidth),Bit#(32))) traceDataPipe = traceEnabled ? toPipeIn(traceDataFifo) : sinkPipe();
    FIFOF#(Tuple2#(DmaChannel,Bit#(32)))                              traceDoneFifo <- mkSizedBRAMFIFOF(128);
-   PipeIn#(Tuple2#(DmaChannel,Bit#(32)))                             traceDonePipe = toPipeIn(traceDoneFifo);
+   PipeIn#(Tuple2#(DmaChannel,Bit#(32)))                             traceDonePipe = traceEnabled ? toPipeIn(traceDoneFifo) : sinkPipe();
 
    rule rl_trace1;
       match { .chan, .write, .req, .timestamp } <- toGet(traceFifo).get();
@@ -218,6 +227,9 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 
       method Action status();
         ind.status(axiRootPort.mmcm.lock());
+      endmethod
+      method Action trace(Bool enabled);
+	 traceEnabled <= enabled;
       endmethod
 
       method Action read32(Bit#(32) addr);

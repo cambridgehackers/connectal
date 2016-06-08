@@ -42,6 +42,7 @@ interface NvmeRequest;
    method Action readCtl(Bit#(32) addr);
    method Action writeCtl(Bit#(32) addr, Bit#(DataBusWidth) data);
    method Action status();
+   method Action trace(Bool enabled);
    // FIXME: move to new portal
    method Action setSearchString(Bit#(32) needleSglId, Bit#(32) mpNextSglId, Bit#(32) needleLen);
    method Action startSearch(Bit#(32) searchLen);
