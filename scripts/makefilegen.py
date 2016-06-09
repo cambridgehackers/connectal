@@ -208,8 +208,8 @@ LOCAL_MODULE := %(android_local_module)s
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog %(clibdirs)s %(clibs)s %(clibfiles)s
 LOCAL_CPPFLAGS := "-march=armv7-a"
-LOCAL_CFLAGS := -DZYNQ %(cflags)s %(werr)s
-LOCAL_CXXFLAGS := -DZYNQ %(cxxflags)s %(werr)s
+LOCAL_CFLAGS := %(cflags)s %(werr)s
+LOCAL_CXXFLAGS := %(cxxflags)s %(werr)s
 LOCAL_CFLAGS2 := $(cdefines2)s
 
 include $(%(android_build_type)s)
@@ -218,8 +218,8 @@ include $(%(android_build_type)s)
 androidmk2_template='''
 include $(CLEAR_VARS)
 LOCAL_CPPFLAGS := "-march=armv7-a"
-LOCAL_CFLAGS := -DZYNQ %(cflags)s %(werr)s
-LOCAL_CXXFLAGS := -DZYNQ %(cxxflags)s %(werr)s
+LOCAL_CFLAGS := %(cflags)s %(werr)s
+LOCAL_CXXFLAGS := %(cxxflags)s %(werr)s
 LOCAL_SRC_FILES= %(source2)s
 LOCAL_MODULE := android.exe2
 include $(BUILD_EXECUTABLE)
