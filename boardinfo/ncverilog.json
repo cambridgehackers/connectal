@@ -1,0 +1,13 @@
+{
+    "options": {
+        "os" : "ubuntu",
+        "partname" : "xc7z020clg484-1",
+        "TOP" : "XsimTop",
+	"bsvdefines": ["CnocTop", "XsimHostInterface", "PhysAddrWidth=40", "SIMULATION", "SVDPI",
+		       	"CONNECTAL_BITS_DEPENDENCES=ncverilogsim"],
+        "CONNECTALFLAGS" : ["--mainclockperiod=20", "--derivedclockperiod=10"],
+        "need_pcie" : "unused"
+    }
+}
+
+
