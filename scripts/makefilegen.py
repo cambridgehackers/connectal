@@ -310,9 +310,9 @@ if __name__=='__main__':
         bsvdefines.append('PcieClockPeriod=%d' % options.pcieclockperiod)
     print bsvdefines
 
-    if option_info['rewireclockstring'] != '':
-        option_info['rewireclockstring'] = tclzynqrewireclock
-    rewireclockstring = option_info['rewireclockstring']
+    rewireclockstring = tclzynqrewireclock
+    if 'rewireclockstring' in option_info and option_info['rewireclockstring'] != '':
+        rewireclockstring = option_info['rewireclockstring']
 
     dutname = 'mk' + option_info['TOP']
     topbsv = connectaldir + '/bsv/' + option_info['TOP'] + '.bsv'
