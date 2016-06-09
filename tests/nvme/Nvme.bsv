@@ -209,25 +209,25 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
    let splitter <- mkSplitMemServer();
    BRAM_Configure bramConfig = defaultValue;
    bramConfig.latency = 2;
-   bramConfig.memorySize = 1024;
+   bramConfig.memorySize = 2048; // 4 pages
    BRAM2Port#(Bit#(32),Bit#(DataBusWidth)) bram <- mkBRAM2Server(bramConfig);
 
    let arbIfc <- mkFixedPriority();
    Arbiter#(2, BRAMRequest#(Bit#(32),Bit#(DataBusWidth)),Bit#(DataBusWidth)) arbiter <- mkArbiter(arbIfc,2);
-   let arbCnx <- mkConnection(arbiter.master, bram.portA);
+   let arbCnx <- mkConnection(arbiter.master, bram.portB);
 
-   MemServer#(DataBusWidth)            bramMemA <- mkMemServerFromBram(arbiter.users[0]);
-   PhysMemSlave#(32,DataBusWidth)      bramMemB <- mkPhysMemSlaveFromBram(bram.portB);
+   MemServer#(DataBusWidth)            bramMemA <- mkMemServerFromBram(bram.portA);
+   PhysMemSlave#(32,DataBusWidth)      bramMemB <- mkPhysMemSlaveFromBram(arbiter.users[0]);
    MemServerPortal          bramMemServerPortal <- mkPhysMemSlavePortal(bramMemB,bramIndication);
 
    let probeResponse <- mkProbe();
-   let portA1 = arbiter.users[1];
+   let portB1 = arbiter.users[1];
    Reg#(Bit#(32)) requestId <- mkReg(0);
    let fsm <- mkAutoFSM(seq
 			   while (True) seq
-			      portA1.request.put(BRAMRequest {address: (requestId << 1) + 1, write: False, responseOnWrite: False, datain: 0});
+			      portB1.request.put(BRAMRequest {address: (requestId << 1) + 1, write: False, responseOnWrite: False, datain: 0});
 			      action
-				 let response <- portA1.response.get();
+				 let response <- portB1.response.get();
 				 probeResponse <= response;
 				 if (response[16] == 1) begin
 				    // if status field written by NVME
