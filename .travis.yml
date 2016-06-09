@@ -12,6 +12,7 @@ env:
     - LD_LIBRARY_PATH=$PWD/lib
   matrix:
     - CONNECTAL_TEST=examples/echo CONNECTAL_ARCH=verilator
+    - CONNECTAL_TEST=examples/echopy CONNECTAL_ARCH=verilator
     - CONNECTAL_TEST=examples/simple CONNECTAL_ARCH=bluesim
     - CONNECTAL_TEST=examples/memcpy CONNECTAL_ARCH=bluesim
     - CONNECTAL_TEST=examples/memcpy CONNECTAL_ARCH=verilator
@@ -28,6 +29,7 @@ addons:
     sources:
     - sourceline: 'ppa:jamey-hicks/connectal'
     packages:
+    - python-dev
     - python-ply
     - libgmp10
     - verilator
