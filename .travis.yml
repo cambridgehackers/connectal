@@ -1,7 +1,6 @@
 language: cpp
 cache:
   directories:
-  - Bluespec-2015.09.beta2
 before_script:
 - if [ -d Bluespec-2015.09.beta2 ] ; then echo bluespec cached; else curl http://www.bluespec.com/downloads/Bluespec-2015.09.beta2.tar.gz | tar -zxf - ; fi
 - mkdir -p lib
@@ -18,6 +17,7 @@ env:
     - CONNECTAL_TEST=examples/memcpy CONNECTAL_ARCH=verilator
     - CONNECTAL_TEST=examples/strstr CONNECTAL_ARCH=bluesim
 script:
+- ls Bluespec-2015.09.beta2
 - make scripts/syntax/parsetab.py; cd $CONNECTAL_TEST; make build.$CONNECTAL_ARCH run.$CONNECTAL_ARCH
 sudo: no
 dist: trusty
