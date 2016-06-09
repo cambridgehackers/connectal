@@ -19,7 +19,7 @@ env:
     - CONNECTAL_TEST=examples/strstr CONNECTAL_ARCH=bluesim
 script:
 - ls Bluespec-2015.09.beta2
-- make scripts/syntax/parsetab.py; cd $CONNECTAL_TEST; make build.$CONNECTAL_ARCH run.$CONNECTAL_ARCH
+- export PYTHONPATH=$PWD/scripts; make scripts/syntax/parsetab.py; cd $CONNECTAL_TEST; make build.$CONNECTAL_ARCH run.$CONNECTAL_ARCH
 sudo: no
 dist: trusty
 os:
