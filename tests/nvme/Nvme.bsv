@@ -204,7 +204,12 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
    bramConfig.latency = 2;
    bramConfig.memorySize = 1024;
    BRAM2Port#(Bit#(32),Bit#(DataBusWidth)) bram <- mkBRAM2Server(bramConfig);
-   MemServer#(DataBusWidth)            bramMemA <- mkMemServerFromBram(bram.portA);
+
+   let arbIfc <- mkFixedPriority();
+   Vector#(2,Server#(BRAMRequest#(Bit#(32),Bit#(DataBusWidth)))) arbiter <- mkArbiter#(arbIfc,2);
+   let arbCnx <- mkConnection(arbiter.master, bram.portA);
+
+   MemServer#(DataBusWidth)            bramMemA <- mkMemServerFromBram(arbiter.users[0]);
    PhysMemSlave#(32,DataBusWidth)      bramMemB <- mkPhysMemSlaveFromBram(bram.portB);
    MemServerPortal          bramMemServerPortal <- mkPhysMemSlavePortal(bramMemB,bramIndication);
 
