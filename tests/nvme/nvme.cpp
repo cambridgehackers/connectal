@@ -109,8 +109,8 @@ public:
 	fprintf(stderr, "strstr loc loc=%d\n", loc);
     }
 
-    virtual void requestCompleted ( const uint32_t requestId, const uint32_t status ) {
-	fprintf(stderr, "%s:%d requestId=%08x status=%08x\n", __FILE__, __LINE__, requestId, status);
+    virtual void requestCompleted ( const uint32_t requestId, const uint64_t status ) {
+      fprintf(stderr, "%s:%d requestId=%08x status=%08llx\n", __FILE__, __LINE__, requestId, (long long)status);
     }
 
     void wait() {

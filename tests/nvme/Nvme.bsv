@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import Arbitrate::*;
 import BRAM::*;
 import BuildVector::*;
 import Clocks::*;
@@ -27,6 +28,7 @@ import Connectable::*;
 import FIFOF::*;
 import GetPut::*;
 import Probe::*;
+import StmtFSM::*;
 import Vector::*;
 
 import AddressGenerator::*;
@@ -65,6 +67,11 @@ function PipeIn#(t) sinkPipe();
 	      method Bool notFull(); return False; endmethod
 	   endinterface);
 endfunction
+
+instance ArbRequestTC#(BRAMRequest#(a,b));
+   function Bool isReadRequest(BRAMRequest#(a,b) x); return !x.write; endfunction
+   function Bool isWriteRequest(BRAMRequest#(a,b) x); return x.write; endfunction
+endinstance
 
 interface Nvme;
    interface NvmeRequest request;
@@ -206,12 +213,30 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
    BRAM2Port#(Bit#(32),Bit#(DataBusWidth)) bram <- mkBRAM2Server(bramConfig);
 
    let arbIfc <- mkFixedPriority();
-   Vector#(2,Server#(BRAMRequest#(Bit#(32),Bit#(DataBusWidth)))) arbiter <- mkArbiter#(arbIfc,2);
+   Arbiter#(2, BRAMRequest#(Bit#(32),Bit#(DataBusWidth)),Bit#(DataBusWidth)) arbiter <- mkArbiter(arbIfc,2);
    let arbCnx <- mkConnection(arbiter.master, bram.portA);
 
    MemServer#(DataBusWidth)            bramMemA <- mkMemServerFromBram(arbiter.users[0]);
    PhysMemSlave#(32,DataBusWidth)      bramMemB <- mkPhysMemSlaveFromBram(bram.portB);
    MemServerPortal          bramMemServerPortal <- mkPhysMemSlavePortal(bramMemB,bramIndication);
+
+   let probeResponse <- mkProbe();
+   let portA1 = arbiter.users[1];
+   Reg#(Bit#(32)) requestId <- mkReg(0);
+   let fsm <- mkAutoFSM(seq
+			   while (True) seq
+			      portA1.request.put(BRAMRequest {address: (requestId << 1) + 1, write: False, responseOnWrite: False, datain: 0});
+			      action
+				 let response <- portA1.response.get();
+				 probeResponse <= response;
+				 if (response[16] == 1) begin
+				    // if status field written by NVME
+				    requestId <= requestId + 1;
+				    ind.requestCompleted(requestId, response);
+				 end
+			      endaction
+			   endseq // while
+			endseq);
 
    let                             probeDataCounter <- mkProbe();
    Reg#(Bit#(32))                       dataCounter <- mkReg(0);
