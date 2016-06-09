@@ -1,7 +1,7 @@
 language: cpp
 cache:
   directories:
-  - Bluespec-2015.09.bata2
+  - Bluespec-2015.09.beta2
 before_script:
 - if [ -d Bluespec-2015.09.beta2 ] ; then echo bluespec cached; else curl http://www.bluespec.com/downloads/Bluespec-2015.09.beta2.tar.gz | tar -zxf - ; fi
 - mkdir -p lib
