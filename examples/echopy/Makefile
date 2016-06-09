@@ -6,7 +6,7 @@ BSVFILES = EchoInterface.bsv
 CPPFILES = $(CONNECTALDIR)/cpp/portalPython.cpp
 CPPFILES2= runechopy.cpp
 CONNECTALFLAGS += --shared
-CONNECTALFLAGS += --run-args="$(PWD)/testecho.py $(PWD)/portal.py $(PWD)/$(BOARD)/bin/connectal.so"
+CONNECTALFLAGS += --run-args="$(PWD)/testecho.py $(CONNECTALDIR)/scripts/portal.py $(PWD)/$(BOARD)/bin/connectal.so"
 ifeq ($(BOARD),zedboard)
 ## git clone git://github.com/cambridgehackers/python-for-android-sdk
 PYTHON_FOR_ANDROID ?= $(CONNECTALDIR)/../python-for-android-sdk
