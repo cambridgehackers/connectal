@@ -516,7 +516,7 @@ void allocIOQueues(Nvme *nvme, int entry=0)
     cmd->opcode = 5; //create I/O completion queue
     cmd->nsid = 0;
     cmd->prp1 = (nvme->ioCompletionQueueRef << 24) + 0;
-    cmd->cdw10 = ((Nvme::ioQueueSize / 16 - 1) << 16) | 1; // size, completion queue 1
+    cmd->cdw10 = ((Nvme::ioQueueSize / 16) << 16) | 1; // size, completion queue 1
     cmd->cdw11 = 1; // physically contiguous
     nvme->adminCommand(cmd, &completion);
 
@@ -526,7 +526,7 @@ void allocIOQueues(Nvme *nvme, int entry=0)
     cmd->opcode = 1; //create I/O submission queue
     cmd->nsid = 0;
     cmd->prp1 = (nvme->ioSubmissionQueueRef << 24) + 0;
-    cmd->cdw10 = ((Nvme::ioQueueSize / 64 - 1) << 16) | 1; // size, submission queue 1
+    cmd->cdw10 = ((Nvme::ioQueueSize / 64) << 16) | 1; // size, submission queue 1
     cmd->cdw11 = (1 << 16) | 1; // completion queue 1, physically contiguous
     nvme->adminCommand(cmd, &completion);
 
@@ -539,7 +539,7 @@ void allocIOQueues(Nvme *nvme, int entry=0)
     cmd->opcode = 5; //create I/O completion queue
     cmd->nsid = 0;
     cmd->prp1 = (0x20 << 24) + 0;
-    cmd->cdw10 = ((numBramEntries-1)<<16) | 2; // size, completion queue 2
+    cmd->cdw10 = (numBramEntries<<16) | 2; // size, completion queue 2
     cmd->cdw11 = 1; // physically contiguous
     nvme->adminCommand(cmd, &completion);
 
@@ -549,7 +549,7 @@ void allocIOQueues(Nvme *nvme, int entry=0)
     cmd->opcode = 1; //create I/O submission queue
     cmd->nsid = 0;
     cmd->prp1 = (0x20 << 24) + 0x1000;
-    cmd->cdw10 = ((numBramEntries-1)<<16) | 2; // size, submission queue 2
+    cmd->cdw10 = (numBramEntries<<16) | 2; // size, submission queue 2
     cmd->cdw11 = (2 << 16) | 1; // completion queue 2, physically contiguous
     nvme->adminCommand(cmd, &completion);
 
