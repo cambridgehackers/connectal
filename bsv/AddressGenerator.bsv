@@ -65,7 +65,7 @@ module mkAddressGenerator(AddressGenerator#(addrWidth, dataWidth))
       let nextIsLast = burstCount == 2;
       let nextBurstCount = burstCount - 1;
 
-      addrReg <= addr + 1;
+      addrReg <= addr + fromInteger(valueOf(dataWidthBytes));
       burstCountReg <= nextBurstCount;
       isLastReg <= nextIsLast;
       Bool nextIsFirst = False;
