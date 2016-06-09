@@ -302,6 +302,11 @@ static void initPortalHardwareOnce(void)
 	  argv[ind++] = (char*)simulator_vcd_name;
 	}
 #endif
+#if defined(BOARD_ncverilog)
+	const char *exetype = "ncverilog";
+	bindir = 0; // the simulation driver is found in $PATH
+	//FIXME ARGS
+#endif
 #if defined(BOARD_verilator)
 	const char *exetype = "vlsim";
 	if (simulator_dump_vcd) {
@@ -314,6 +319,11 @@ static void initPortalHardwareOnce(void)
 	bindir = 0; // the simulation driver is found in $PATH
         argv[ind++] = (char *)"-R";
         argv[ind++] = (char *)"work.xsimtop";
+#endif
+#if defined(BOARD_vcs)
+	const char *exetype = "vcs";
+	bindir = 0; // the simulation driver is found in $PATH
+	//FIXME ARGS
 #endif
 #if defined(BOARD_vsim)
 	const char *exetype = "vsim";
