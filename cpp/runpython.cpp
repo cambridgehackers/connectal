@@ -7,12 +7,12 @@
 
 int main(int argc, char * const *argv)
 {
-    const char *exename = "../testecho.py";
+    const char *exename = "../test.py";
     char library_path[4096];
     struct utsname utsname;
     const char *libdir = "./bin";
 
-    fprintf(stderr, "runecho args: ");
+    fprintf(stderr, "runpython args: ");
     for (int i = 0; i < argc; i++)
       fprintf(stderr, " %s", argv[i]);
     fprintf(stderr, "\n");
