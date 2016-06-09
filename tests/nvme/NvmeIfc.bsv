@@ -53,6 +53,7 @@ interface NvmeIndication;
    method Action writeDone();
    method Action status(Bit#(1) mmcm_lock, Bit#(32) dataCounter);
    method Action setupComplete();
+   method Action requestCompleted(Bit#(32) requestId, Bit#(32) status);
    method Action strstrLoc(Bit#(32) loc);
 endinterface
 

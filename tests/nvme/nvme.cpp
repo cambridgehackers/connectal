@@ -109,12 +109,17 @@ public:
 	fprintf(stderr, "strstr loc loc=%d\n", loc);
     }
 
+    virtual void requestCompleted ( const uint32_t requestId, const uint32_t status ) {
+	fprintf(stderr, "%s:%d requestId=%08x status=%08x\n", __FILE__, __LINE__, requestId, status);
+    }
+
     void wait() {
 	sem_wait(&sem);
     }
     void waitwrite() {
 	sem_wait(&wsem);
     }
+
     NvmeIndication(int id, PortalPoller *poller = 0) : NvmeIndicationWrapper(id, poller) {
 	sem_init(&sem, 0, 0);
 	sem_init(&wsem, 0, 0);
