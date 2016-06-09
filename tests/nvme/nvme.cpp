@@ -7,6 +7,8 @@
 #include "NvmeIndication.h"
 #include "NvmeRequest.h"
 #include "NvmeTrace.h"
+#include "MemServerPortalRequest.h"
+#include "MemServerPortalIndication.h"
 
 enum nvme_admin_opcode {
     nvme_identify = 0xe2 // 6?
@@ -120,10 +122,37 @@ public:
   
 };
 
+class MemServerPortalIndication : public MemServerPortalIndicationWrapper {
+    sem_t sem;
+    sem_t wsem;
+public:
+    uint64_t value;
+    MemServerPortalIndication(int id, PortalPoller *poller = 0)
+	: MemServerPortalIndicationWrapper(id, poller) {
+	sem_init(&sem, 0, 0);
+	sem_init(&wsem, 0, 0);
+    }
+    virtual void readDone ( const uint64_t data ) {
+	value = data;
+	sem_post(&sem);
+    }
+    virtual void writeDone (  ) {
+	sem_post(&wsem);
+    }
+    void wait() {
+	sem_wait(&sem);
+    }
+    void waitw() {
+	sem_wait(&sem);
+    }
+};
+
 class Nvme {
     NvmeRequestProxy device;
     NvmeIndication  indication;
     NvmeTrace       trace;
+    MemServerPortalRequestProxy bram;
+    MemServerPortalIndication   bramIndication;
     int adminRequestNumber;
     int ioRequestNumber;
 public:
@@ -149,6 +178,8 @@ public:
 	: device(IfcNames_NvmeRequestS2H)
 	, indication(IfcNames_NvmeIndicationH2S)
 	, trace(IfcNames_NvmeTraceH2S)
+	, bram(IfcNames_MemServerPortalRequestS2H)
+	, bramIndication(IfcNames_MemServerPortalIndicationH2S)
 	, adminRequestNumber(0)
 	, ioRequestNumber(0)
 	, dummy(4096)
@@ -182,6 +213,8 @@ public:
     void write(uint32_t addr, uint64_t data);
     uint32_t read32(uint32_t addr);
     void write32(uint32_t addr, uint32_t data);
+    uint64_t bramRead(uint32_t addr);
+    void bramWrite(uint32_t addr, uint64_t data);
 
     int setSearchString ( const uint32_t needleSglId, const uint32_t mpNextSglId, const uint32_t needleLen );
     int startSearch ( const uint32_t searchLen );
@@ -231,6 +264,17 @@ void Nvme::write32(uint32_t addr, uint32_t data)
     //device.write(addr & ~7, v << ((addr & 4) ? 32 : 0));
     device.write32(addr, v);
     //indication.wait();
+}
+uint64_t Nvme::bramRead(uint32_t addr)
+{
+    bram.read(addr);
+    bramIndication.wait();
+    return bramIndication.value;
+}
+void Nvme::bramWrite(uint32_t addr, uint64_t data)
+{
+    bram.write(addr, data);
+    //bramIndication.wait();
 }
 
 int Nvme::setSearchString ( const uint32_t needleSglId, const uint32_t mpNextSglId, const uint32_t needleLen )
@@ -599,6 +643,9 @@ int main(int argc, const char **argv)
     }
 
     fprintf(stderr, "CTS %08x\n", nvme.read32( 0x1c));
+
+    nvme.bramWrite(0, 0xdeadbeef);
+    fprintf(stderr, "BRAM[0]=%08llx\n", (long long)nvme.bramRead(0));
 
     return 0;
 }
