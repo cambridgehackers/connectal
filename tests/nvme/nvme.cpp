@@ -114,7 +114,9 @@ public:
     }
 
     virtual void transferCompleted ( const uint16_t requestId, const uint64_t status ) {
-      fprintf(stderr, "%s:%d requestId=%08x status=%08llx\n", __FILE__, __LINE__, requestId, (long long)status);
+      fprintf(stderr, "%s:%d requestId=%08x status=%08llx\n", __FUNCTION__, __LINE__, requestId, (long long)status);
+      value = status;
+      sem_post(&sem);
     }
 
     void wait() {
@@ -384,6 +386,19 @@ int Nvme::ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue)
 	    __FUNCTION__, __LINE__, requestNumber, responseNumber, requestNumber*sizeof(nvme_io_cmd), ioSubmissionQueueRef);
 
     cmd->cid = ioRequestNumber[queue]++;
+
+    if (queue == 2) {
+	fprintf(stderr, "%s:%d starting transfer\n", __FUNCTION__, __LINE__);
+	device.startTransfer(/* read */ 2, /* flags */ 0, cmd->cid, cmd->cdw10, cmd->cdw12);
+	fprintf(stderr, "%s:%d waiting for completion\n", __FUNCTION__, __LINE__);
+	indication.wait();
+	int status = indication.value >> 32;
+	int more = (status >> 30) & 1;
+	int sc = (status >> 17) & 0xff;
+	int sct = (status >> 25) & 0x7;
+	fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
+	return sc;
+    }
 
     if (queue == 1) {
 	ioSubmissionQueue.cacheInvalidate(Nvme::ioQueueSize, 0);
