@@ -360,6 +360,9 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 	 dataLengthFifo.enq(haystackLen);
 	 mpEngine.setsearch.enq(tuple3(/* unused */maxBound, haystackLen, /* unused */0));
       endmethod
+      method Action startTransfer(Bit#(8) opcode, Bit#(8) flags, Bit#(16) requestId, Bit#(64) startBlock, Bit#(32) numBlocks);
+	 ioCommandFifo.enq(NvmeIoCommand{opcode: opcode, flags: flags, requestId: requestId, startBlock: startBlock, numBlocks: numBlocks });
+      endmethod
    endinterface
    interface Clock portalClockSource = axiRootPort.axi.aclk_out;
    interface NvmePins pins;
