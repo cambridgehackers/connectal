@@ -45,16 +45,16 @@ class NativeProxy:
         newIndicationPortal.restype = ctypes.c_void_p
         reqifcname = ctypes.c_int.in_dll(connectal, 'ifcNames_%sS2H' % interfaceName)
         reqinfo = ctypes.c_int.in_dll(connectal, '%s_reqinfo' % interfaceName)
-        print('reqifcname=', reqifcname, ' reqinfo=', reqinfo)
+        #print('reqifcname=', reqifcname, ' reqinfo=', reqinfo)
         self.requestPortal = newRequestPortal(reqifcname, reqinfo)
         respifcname = ctypes.c_int.in_dll(connectal, 'ifcNames_%sH2S' % responseInterface)
         respinfo = ctypes.c_int.in_dll(connectal, '%s_reqinfo' % responseInterface)
         resphandlemessage = getattr(connectal, '%s_handleMessage' % responseInterface)
         respproxyreq = ctypes.c_long.in_dll(connectal, 'p%sJsonProxyReq' % responseInterface)
-        print 'respproxyreq=', respproxyreq
+        #print 'respproxyreq=', respproxyreq
         self.responsePortal = newIndicationPortal(respifcname, respinfo, resphandlemessage, respproxyreq)
         connectal.set_callback(self.responsePortal, ctypes.py_object(self))
-        print 'JJ', '%x' % self.requestPortal, '%x' % self.responsePortal
+        #print 'JJ', '%x' % self.requestPortal, '%x' % self.responsePortal
         if multithreaded:
             self.t1 = threading.Thread(target=self.worker)
             self.t1.start()
