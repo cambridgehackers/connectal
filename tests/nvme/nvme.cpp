@@ -113,7 +113,7 @@ public:
 	fprintf(stderr, "strstr loc loc=%d\n", loc);
     }
 
-    virtual void requestCompleted ( const uint32_t requestId, const uint64_t status ) {
+    virtual void transferCompleted ( const uint16_t requestId, const uint64_t status ) {
       fprintf(stderr, "%s:%d requestId=%08x status=%08llx\n", __FILE__, __LINE__, requestId, (long long)status);
     }
 
@@ -216,6 +216,7 @@ public:
 	fprintf(stderr, "ioCompletionQueue %d\n", ioCompletionQueue.reference());
 	device.status();
 	indication.wait();
+	device.trace(0);
     }
     uint32_t readCtl(uint32_t addr);
     void writeCtl(uint32_t addr, uint32_t data);
@@ -384,8 +385,6 @@ int Nvme::ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue)
 
     cmd->cid = ioRequestNumber[queue]++;
 
-    device.trace(1);
-
     if (queue == 1) {
 	ioSubmissionQueue.cacheInvalidate(Nvme::ioQueueSize, 0);
 
@@ -403,6 +402,12 @@ int Nvme::ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue)
 	}
     }
 
+    if (0 && requestNumber==7) {
+	fprintf(stderr, "enabling DMA trace\n");
+	device.trace(1);
+	sleep(1);
+    }
+
     // update submission queue tail
     write32(0x1000+(2*queue*(4<<0)), requestNumber+1);
 
@@ -411,7 +416,7 @@ int Nvme::ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue)
     if (queue != 1) {
 	// read response from BRAM
 	response = responseBuffer;
-	responseNumber = 0; //cmd->cid % 8;
+	responseNumber = cmd->cid % 8;
 	fprintf(stderr, "cmd->cid=%x\n", cmd->cid);
 	for (int i = 0; i < sizeof(nvme_completion); i += DataBusBytes) {
 	  uint64_t val = bramRead(responseNumber*sizeof(nvme_completion) + i);
@@ -427,6 +432,14 @@ int Nvme::ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue)
     int more = (status >> 30) & 1;
     int sc = (status >> 17) & 0xff;
     int sct = (status >> 25) & 0x7;
+    // clear status field so we can detect when NVME updates it
+    if (queue == 1) {
+	response[3] = 0;
+    } else {
+      // clear status field
+	bramWrite(responseNumber*sizeof(nvme_completion) + 1, 0);
+    }
+    // notify NVME that we processed this response
     write32(0x1000 + ((2*queue + 1) * (4 << 0)), responseNumber+1);
     fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
     return status ? sc : -1;
@@ -572,7 +585,7 @@ int doIO(Nvme *nvme, int startBlock, int numBlocks, int queue=1)
     memset(&cmd, 0, sizeof(cmd));
     cmd.opcode = 2; // read
     cmd.nsid = 1;
-    cmd.flags = 0x40; // SGL used for this transfer
+    cmd.flags = 0x00; // PRP used for this transfer
     cmd.prp1 = 0x30000000ul; // send data to the FIFO
     cmd.prp2 = (transferBufferId << 24) + 0;
     if (queue == 1) { 
@@ -723,12 +736,12 @@ int main(int argc, const char **argv)
     identify(&nvme);
     getFeatures(&nvme);
     allocIOQueues(&nvme, 0);
-    nvme.startSearch(64*512);// 8177*512
 
     fprintf(stderr, "CTS %08x\n", nvme.read32( 0x1c));
-    int startBlock = 34816;
-    int numBlocks = 2; // 8177;
-    int blocksPerRequest = 2;
+    int startBlock = 34816; // base and extent of test file in SSD
+    int numBlocks = 55; //8177;
+    int blocksPerRequest = 32;
+    nvme.startSearch(numBlocks*512);
     for (int block = 0; block < numBlocks; block += blocksPerRequest) {
       int sc = doIO(&nvme, startBlock, blocksPerRequest, 2);
       nvme.status();
