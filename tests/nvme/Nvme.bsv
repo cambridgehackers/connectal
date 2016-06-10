@@ -269,9 +269,11 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 	 portB1.request.put(BRAMRequest {address: 'h1000/8 + (extend(requestId[2:0]) << 3) + 6, write: True, responseOnWrite: False, datain: {ioCommand[13],ioCommand[12]}});
 	 portB1.request.put(BRAMRequest {address: 'h1000/8 + (extend(requestId[2:0]) << 3) + 7, write: True, responseOnWrite: False, datain: {ioCommand[15],ioCommand[14]}});
 	 // tell the NVME the new submission queue tail pointer
-	 awaddrFifo.enq(PhysMemRequest { addr: 'h1000 + (2*2+0)*(4<<0), burstLen: 4, tag: 1 });
-	 wdataFifo.enq(MemData{data: zeroExtend((requestId+1)[2:0]), tag: 1, last: True});
-	 
+	 action
+	    awaddrFifo.enq(PhysMemRequest { addr: 'h1000 + (2*2+0)*(4<<0), burstLen: 4, tag: 1 });
+	    wdataFifo.enq(MemData{data: zeroExtend((requestId+1)[2:0]), tag: 1, last: True});
+	    requestInProgress <= True;
+	 endaction
 	 // wait for response queue to be updated
 	 while (requestInProgress) seq
 	    portB1.request.put(BRAMRequest {address: (extend(requestId[2:0]) << 1) + 1, write: False, responseOnWrite: False, datain: 0});
@@ -293,9 +295,10 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 	 endseq // while requestInProgress
 
 	 // tell the NVME the new response queue head pointer
-	 awaddrFifo.enq(PhysMemRequest { addr: 'h1000 + (2*2+1)*(4<<0), burstLen: 4, tag: 1 });
-	 wdataFifo.enq(MemData{data: zeroExtend((requestId+1)[2:0]), tag: 1, last: True});
-
+	 action
+	    awaddrFifo.enq(PhysMemRequest { addr: 'h1000 + (2*2+1)*(4<<0), burstLen: 4, tag: 1 });
+	    wdataFifo.enq(MemData{data: zeroExtend((requestId+1)[2:0]), tag: 1, last: True});
+	 endaction
       endseq // while True
       endseq);
 
