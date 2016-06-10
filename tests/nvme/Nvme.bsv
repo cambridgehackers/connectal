@@ -49,6 +49,14 @@ import AxiPcieRootPort::*;
 import NvmeIfc::*;
 import NvmePins::*;
 
+typedef struct {
+   Bit#(8)  opcode;
+   Bit#(8)  flags;
+   Bit#(16) requestId;
+   Bit#(64) startBlock;
+   Bit#(32) numBlocks;
+   } NvmeIoCommand deriving (Bits);
+
 `ifndef TOP_SOURCES_PORTAL_CLOCK
 import ConnectalBramFifo::*;
 `else
@@ -139,12 +147,14 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 
    rule rl_rdata;
       let rdata <- toGet(rdataFifo).get();
-      ind.readDone(rdata.data);
+      if (rdata.tag == 0)
+	 ind.readDone(rdata.data);
    endrule
 
    rule rl_writeDone;
       let tag <- toGet(doneFifo).get();
-      ind.writeDone();
+      if (tag == 0)
+	 ind.writeDone();
    endrule
 
    FIFOF#(PhysMemRequest#(32,32)) araddrFifoCtl <- mkFIFOF();
@@ -220,25 +230,74 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
    PhysMemSlave#(32,DataBusWidth)      bramMemB <- mkPhysMemSlaveFromBram(arbiter.users[0]);
    MemServerPortal          bramMemServerPortal <- mkPhysMemSlavePortal(bramMemB,bramIndication);
 
-   let probeResponse <- mkProbe();
    let portB1 = arbiter.users[1];
-   Reg#(Bit#(32)) requestId <- mkReg(0);
-   let fsm <- mkAutoFSM(seq
-			   while (True) seq
-			      portB1.request.put(BRAMRequest {address: (requestId << 1) + 1, write: False, responseOnWrite: False, datain: 0});
-			      action
-				 let response <- portB1.response.get();
-				 probeResponse <= response;
-				 if (response[16] == 1) begin
-				    // if status field written by NVME
-				    requestId <= requestId + 1;
-				    ind.requestCompleted(requestId, response);
-				 end
-			      endaction
-			   endseq // while
-			endseq);
+   Reg#(Bit#(16)) requestId <- mkReg(0);
+   Reg#(Bit#(16)) requestQueueEntryCount <- mkReg(8);
+   Reg#(Bool) requestInProgress <- mkReg(True);
+   Reg#(Vector#(16,Bit#(32))) ioCommand <- mkReg(unpack(0));
 
-   let                             probeDataCounter <- mkProbe();
+   FIFOF#(NvmeIoCommand) ioCommandFifo <- mkFIFOF();
+
+   let bramQueryAddress <- mkProbe();
+   let bramQueryResponse <- mkProbe();
+   let requestCompleted <- mkProbe();
+
+   let fsm <- mkAutoFSM(seq
+      while (True) seq
+	 action
+	    let req <- toGet(ioCommandFifo).get();
+	    Vector#(16,Bit#(32)) command = unpack(0);
+	    command[0] = { req.requestId, req.flags, req.opcode };
+	    // prp1: send data to fifo
+	    command[6] = 32'h30000000;
+	    // p2p2: read PRP list from BRAM at offset 0x2000
+	    command[8] = 32'h20002000;
+	    command[10] = req.startBlock[31:0];
+	    command[11] = req.startBlock[63:32];
+	    command[12] = req.numBlocks-1;
+	    requestId <= req.requestId;
+	    ioCommand <= command; 
+	 endaction
+	 // write a IO read request to BRAM
+	 portB1.request.put(BRAMRequest {address: 'h1000/8 + (extend(requestId[2:0]) << 3) + 0, write: True, responseOnWrite: False, datain: {ioCommand[1],ioCommand[0]}});
+	 portB1.request.put(BRAMRequest {address: 'h1000/8 + (extend(requestId[2:0]) << 3) + 1, write: True, responseOnWrite: False, datain: {ioCommand[3],ioCommand[2]}});
+	 portB1.request.put(BRAMRequest {address: 'h1000/8 + (extend(requestId[2:0]) << 3) + 2, write: True, responseOnWrite: False, datain: {ioCommand[5],ioCommand[4]}});
+	 portB1.request.put(BRAMRequest {address: 'h1000/8 + (extend(requestId[2:0]) << 3) + 3, write: True, responseOnWrite: False, datain: {ioCommand[7],ioCommand[6]}});
+	 portB1.request.put(BRAMRequest {address: 'h1000/8 + (extend(requestId[2:0]) << 3) + 4, write: True, responseOnWrite: False, datain: {ioCommand[9],ioCommand[8]}});
+	 portB1.request.put(BRAMRequest {address: 'h1000/8 + (extend(requestId[2:0]) << 3) + 5, write: True, responseOnWrite: False, datain: {ioCommand[11],ioCommand[10]}});
+	 portB1.request.put(BRAMRequest {address: 'h1000/8 + (extend(requestId[2:0]) << 3) + 6, write: True, responseOnWrite: False, datain: {ioCommand[13],ioCommand[12]}});
+	 portB1.request.put(BRAMRequest {address: 'h1000/8 + (extend(requestId[2:0]) << 3) + 7, write: True, responseOnWrite: False, datain: {ioCommand[15],ioCommand[14]}});
+	 // tell the NVME the new submission queue tail pointer
+	 awaddrFifo.enq(PhysMemRequest { addr: 'h1000 + (2*2+0)*(4<<0), burstLen: 4, tag: 1 });
+	 wdataFifo.enq(MemData{data: zeroExtend((requestId+1)[2:0]), tag: 1, last: True});
+	 
+	 // wait for response queue to be updated
+	 while (requestInProgress) seq
+	    portB1.request.put(BRAMRequest {address: (extend(requestId[2:0]) << 1) + 1, write: False, responseOnWrite: False, datain: 0});
+	    bramQueryAddress <= (requestId << 1) + 1;
+	    action
+	       let response <- portB1.response.get();
+	       bramQueryResponse <= response;
+	       if (response[16+32] == 1) begin
+		  requestCompleted <= response;
+		  // if status field written by NVME
+		  let nextRequestId = (requestId + 1);
+		  if (nextRequestId == requestQueueEntryCount)
+		     nextRequestId = 0;
+		  requestId <= nextRequestId;
+		  ind.transferCompleted(requestId, response);
+		  requestInProgress <= False;
+	       end
+	    endaction
+	 endseq // while requestInProgress
+
+	 // tell the NVME the new response queue head pointer
+	 awaddrFifo.enq(PhysMemRequest { addr: 'h1000 + (2*2+1)*(4<<0), burstLen: 4, tag: 1 });
+	 wdataFifo.enq(MemData{data: zeroExtend((requestId+1)[2:0]), tag: 1, last: True});
+
+      endseq // while True
+      endseq);
+
    Reg#(Bit#(32))                       dataCounter <- mkReg(0);
    FIFOF#(Bit#(32))                  dataLengthFifo <- mkFIFOF();
    let                                     fifoToMp <- mkFIFOF();
@@ -250,7 +309,6 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
       data.last = (dataCounter+fromInteger(valueOf(DataBusWidth)/8)) >= dataLengthFifo.first;
       fifoToMp.enq(data);
       dataCounter <= dataCounter + 1;
-      probeDataCounter <= dataCounter + 1;
    endrule
 
    let traceMemCnx <- mkConnection(traceClient, splitter.server);
