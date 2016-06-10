@@ -248,6 +248,7 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 	    let req <- toGet(ioCommandFifo).get();
 	    Vector#(16,Bit#(32)) command = unpack(0);
 	    command[0] = { req.requestId, req.flags, req.opcode };
+	    command[1] = 1; // nsid
 	    // prp1: send data to fifo
 	    command[6] = 32'h30000000;
 	    // p2p2: read PRP list from BRAM at offset 0x2000
