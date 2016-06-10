@@ -28,12 +28,15 @@ else:
     connectal = ctypes.CDLL('./connectal.so')
 
 class NativeProxy:
-    def __init__(self, interfaceName, handler, responseInterface=None, rpc=False):
+    def __init__(self, interfaceName, handler, responseInterface=None, rpc=False, multithreaded=False):
         self.interfaceName = interfaceName
         self.handler = handler
         self.rpc = rpc
+        self.multithreaded = multithreaded
         if rpc:
-            self.sem_response = threading.Semaphore(0)
+            if multithreaded:
+                self.sem_response = threading.Semaphore(0)
+                self._response = False
         self.stopPolling = False
         self.methods = {}
         newRequestPortal = connectal.newRequestPortal
@@ -52,8 +55,9 @@ class NativeProxy:
         self.responsePortal = newIndicationPortal(respifcname, respinfo, resphandlemessage, respproxyreq)
         connectal.set_callback(self.responsePortal, ctypes.py_object(self))
         print 'JJ', '%x' % self.requestPortal, '%x' % self.responsePortal
-        self.t1 = threading.Thread(target=self.worker)
-        self.t1.start()
+        if multithreaded:
+            self.t1 = threading.Thread(target=self.worker)
+            self.t1.start()
 
     def callback(self, a):
         vec = json.loads(a.strip())
@@ -61,7 +65,10 @@ class NativeProxy:
         if hasattr(self.handler, vec[0]):
             getattr(self.handler, vec[0])(*vec[1:])
             if self.rpc:
-                self.sem_response.release()
+                if self.multithreaded:
+                    self.sem_response.release()
+                else:
+                    self._response = True
 
     def worker(self):
         while not self.stopPolling:
@@ -81,7 +88,12 @@ class NativeProxy:
                 elif len(args) == 2:
                     m(requestPortal, args[0], args[1])
                 if self.rpc:
-                    self.sem_response.acquire()
+                    if self.multithreaded:
+                        self.sem_response.acquire()
+                    else:
+                        self._response = False
+                        while not self._response:
+                            connectal.portal_event(ctypes.c_void_p(self.responsePortal))
             self.methods[name] = fcn
             return fcn
         else:
