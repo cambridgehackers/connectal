@@ -76,7 +76,8 @@ argparser.add_argument('--xsimflags', help='Options to pass to the xsim simulato
 argparser.add_argument('--ipdir', help='Directory in which to store generated IP')
 argparser.add_argument('-q', '--qtused', help='Qt used in simulator test application', action='store_true')
 argparser.add_argument('--stl', help='STL implementation to use for Android builds', default=None, choices=supported_stl)
-argparser.add_argument('--android-platform', help='Android platform to use for Android builds', type=int, default=None)
+argparser.add_argument('--android-platform', help='Android platform to use for Android builds', type=int, default='16')
+argparser.add_argument('--android-toolchain', help='NDK toolchain to use for Android builds', default='4.9')
 argparser.add_argument('--floorplan', help='Floorplan XDC', default=None)
 argparser.add_argument('-P', '--partition-module', help='Modules to separately synthesize/place/route', action='append', default=[])
 argparser.add_argument('--cachedir', help='Cache directory for fpgamake to use', default=None)
@@ -412,12 +413,14 @@ if __name__=='__main__':
     f = util.createDirAndOpen(linuxmkname, 'w')
     f.write(linuxmakefile_template % substs)
     f.close()
-    if options.stl or options.android_platform:
+    if options.stl or options.android_platform or options.android_toolchain:
 	    f = util.createDirAndOpen(os.path.join(project_dir, 'jni', 'Application.mk'), 'w')
             if options.stl:
                 f.write('APP_STL                 := %s\n' % options.stl)
             if options.android_platform:
                 f.write('APP_PLATFORM             := android-%s\n' % options.android_platform)
+            if options.android_toolchain:
+                f.write('NDK_TOOLCHAIN_VERSION    := %s\n' % options.android_toolchain)
 	    f.close()
 
     tclsubsts = {'dut': dutname.lower(),
