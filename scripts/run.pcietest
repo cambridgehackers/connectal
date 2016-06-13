@@ -45,15 +45,17 @@ if [ "$RUNPARAM" != "" ]; then
     shift
     echo "ARGS=$*"
     for arg in $*; do arg_basename=`basename $arg`; ARGS="$ARGS $TEMPDIR/$arg_basename"; done
-    ssh $SSHPARAM -p $RUNPORT $RUNIP "$BOARD_SERIAL $ENV timeout $TIMELIMIT catchsegv $TEMPDIR/$EXENAME $ARGS"
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "$BOARD_SERIAL $ENV timeout $TIMELIMIT catchsegv $TEMPDIR/$EXENAME $ARGS"; status=$?
     ssh $SSHPARAM -p $RUNPORT $RUNIP "pcieflat > $TEMPDIR/pcieflat.txt"
     scp -P $RUNPORT $RUNIP:$TEMPDIR/pcieflat.txt `dirname $EXE`
     ssh $SSHPARAM -p $RUNPORT $RUNIP "rm -rf $TEMPDIR"
+    exit $status
 else
-    timeout 3m catchsegv $1
+    timeout 3m catchsegv $1; status=$?
     if [ "$PORTAL_DUMP_MAP" != "" ]; then
         pcieflat -j $PORTAL_DUMP_MAP generatedDesignInterfaceFile.json > bin/pcieflat.txt
     else
         pcieflat > bin/pcieflat.txt
     fi
+    exit $status
 fi
