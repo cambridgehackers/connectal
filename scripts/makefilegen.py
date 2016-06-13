@@ -242,7 +242,7 @@ DTOP?=%(project_dir)s
 TOOLCHAIN=%(toolchain)s
 CC=$(TOOLCHAIN)gcc
 CXX=$(TOOLCHAIN)g++
-CFLAGS_COMMON = -O -g %(cflags)s -Wall %(werr)s
+CFLAGS_COMMON = -O -g %(cflags)s -Wall %(werr)s %(cxxflags)s
 CFLAGS = $(CFLAGS_COMMON)
 CFLAGS2 = %(cdefines2)s
 
