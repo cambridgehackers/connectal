@@ -138,9 +138,11 @@ proxyMethodTemplate='''
 
 proxyJMethodTemplate='''
 {
-    %(channelName)sData tempdata;
+    json request = {
     %(paramStructMarshall)s
-    connectalJsonEncodeAndSend(p, &tempdata, &%(classNameOrig)sInfo[%(channelNumber)s]);
+    };
+    std::string requestjson = request.dump();
+    connectalJsonSend(p, requestjson.c_str());
     return 0;
 };
 '''
@@ -460,6 +462,29 @@ def formalParameters(params, insertPortal):
         rc.insert(0, ' struct PortalInternal *p')
     return ', '.join(rc)
 
+def genToJson(name, prefix, ptype):
+    typename = ptype['name']
+    print 'genToJson', name, typename, ptype
+    if typename in ['Bit', 'Int', 'UInt', 'Bool']:
+        return '{ "%s", %s }' % (name, prefix)
+    if 'type' not in ptype:
+        typedef = globalv_globalvars[typename]
+        print '    dereferencing typedef', typedef
+        if typedef['dtype'] == 'TypeDef':
+            tdtype = typedef['tdtype']
+            return genToJson(name, prefix, tdtype)
+
+    ptype_type = ptype['type']
+    if ptype_type == 'Struct':
+        print 'elements', ptype['elements']
+        expr = '{ "%s", { %s } }' % (name, ', '.join([genToJson(elt['pname'], '%s.%s' % (name, elt['pname']), elt['ptype']) for elt in ptype['elements'] ]))
+        print '    expr', expr
+        return expr
+    elif ptype_type == 'Enum':
+        return '{ "%s", (int)%s }' % (name, prefix)
+    else:
+        print 'cannot handle', name, prefix, ptype
+
 def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
     global fdName
 
@@ -491,10 +516,9 @@ def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
         paramStructMarshall = []
         for pitem in params:
             pname = pitem['pname']
-            if typeJson(pitem['ptype']) == 'other':
-                titem = 'memcpy(&tempdata.%s, &%s, sizeof(tempdata.%s));' % (pname,pname,pname)
-            else:
-                titem = 'tempdata.%s = %s;' % (pname,pname)
+            ptype = pitem['ptype']
+            print 'method', methodName, pname, ptype, typeJson(ptype)
+            titem = '    %s' % (genToJson(pname, pname, pitem['ptype']))
             paramStructMarshall.append(titem)
     paramStructDeclarations = [ '%s %s;' % (typeCName(pitem['ptype']), pitem['pname']) for pitem in params]
     paramJsonDeclarations = [ '{"%s", Connectaloffsetof(%sData,%s), ITYPE_%s},' % \
@@ -509,7 +533,7 @@ def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
         'paramDeclarations': formalParameters(params, False),
         'paramProxyDeclarations': formalParameters(params, True),
         'paramStructDeclarations': '\n    '.join(paramStructDeclarations),
-        'paramStructMarshall': '\n    '.join(paramStructMarshall),
+        'paramStructMarshall': (',\n    ' if classVariant else '\n    ').join(paramStructMarshall),
         'paramJsonDeclarations': '\n        '.join(paramJsonDeclarations),
         'paramStructDemarshall': '\n        '.join(paramStructDemarshall),
         'paramNames': ', '.join(['msg->%s' % pitem['pname'] for pitem in params]),
@@ -559,12 +583,18 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
     global generatedVectors
     className = classNameOrig + classVariant
     classCName = cName(className)
-    cppname = '%s.c' % className
+    if classVariant == 'Json':
+        cppname = '%s.cpp' % className
+    else:
+        cppname = '%s.c' % className
     hppname = '%s.h' % className
     if cppname in generatedCFiles:
         return
     generatedCFiles.append(cppname)
     cpp = create_cpp_file(cppname)
+    if classVariant:
+        cpp.write('#include "json.hpp"\n')
+        cpp.write('using json = nlohmann::json;\n')
     maxSize = 0
     reqChanNums = []
     methodList = []
@@ -582,7 +612,7 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         substs, t = gatherMethodInfo(mitem['dname'], mitem['dparams'], className, classNameOrig, classVariant)
         if t > maxSize:
             maxSize = t
-        if classVariant:
+        if False and classVariant:
             cpp.write((jsonStructTemplateDecl) % substs)
         methodList.append(substs['methodName'])
         reqChanNums.append(substs['channelNumber'])
