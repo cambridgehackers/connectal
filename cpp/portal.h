@@ -295,6 +295,7 @@ int portal_serialmux_handler(struct PortalInternal *p, unsigned int channel, int
 // Json encode/decode functions called from generated code
 void connectalJsonEncode(char *json, void *data, ConnectalMethodJsonInfo *info, int json_arg_vector);
 void connectalJsonEncodeAndSend(PortalInternal *pint, void *data, ConnectalMethodJsonInfo *info);
+void connectalJsonSend(PortalInternal *pint, const char *data);
 int connnectalJsonDecode(PortalInternal *pint, int channel, void *data, ConnectalMethodJsonInfo *info);
 
 // Primitive used to send/recv data across a socket.
