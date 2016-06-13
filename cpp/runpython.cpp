@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/utsname.h>
 #include <libgen.h>
 
@@ -10,7 +12,9 @@ int main(int argc, char * const *argv)
     const char *exename = "../test.py";
     char library_path[4096];
     struct utsname utsname;
+    struct stat statbuf;
     const char *libdir = "./bin";
+    int statok = 0;
 
     fprintf(stderr, "runpython args: ");
     for (int i = 0; i < argc; i++)
@@ -21,8 +25,11 @@ int main(int argc, char * const *argv)
 	// What? dirname modifies its argument?
 	libdir = dirname(strdup(argv[1]));
     }
+    statok = stat("/usr/bin/python", &statbuf);
     uname(&utsname);
-    if (strcmp(utsname.machine, "armv7l") == 0) {
+
+    if ((statok != 0)
+	&& strcmp(utsname.machine, "armv7l") == 0) {
 	strncpy(library_path, "./bin:../lib:.", sizeof(library_path));
 	exename = "../bin/python";
     } else {
