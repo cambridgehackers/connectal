@@ -81,6 +81,7 @@ handleMessageTemplate1='''
     int   tmp __attribute__ ((unused));
     int tmpfd __attribute__ ((unused));
     %(classNameOrig)sData tempdata __attribute__ ((unused));
+    memset(&tempdata, 0, sizeof(tempdata));
     %(handleStartup)s
     switch (channel) {'''
 
@@ -108,14 +109,12 @@ handleMessageTemplate2='''
 }
 '''
 
-jsonMethodTemplateDecl='''
-static ConnectalMethodJsonInfo %(classNameOrig)sInfo[] = {'''
-
 proxyMethodTableDecl='''
 %(classNameOrig)sCb %(className)sProxyReq = {
     %(methodTable)s
 };
-%(classNameOrig)sCb *p%(className)sProxyReq = &%(className)sProxyReq;'''
+%(classNameOrig)sCb *p%(className)sProxyReq = &%(className)sProxyReq;
+'''
 
 proxyMethodTemplateDecl='''
 int %(className)s_%(methodName)s (%(paramProxyDeclarations)s )'''
@@ -137,7 +136,7 @@ proxyJMethodTemplate='''
     %(paramStructMarshall)s
     };
     std::string requestjson = request.dump();
-    connectalJsonSend(p, requestjson.c_str());
+    connectalJsonSend(p, requestjson.c_str(), (int)%(channelNumber)s);
     return 0;
 };
 '''
@@ -457,28 +456,35 @@ def formalParameters(params, insertPortal):
         rc.insert(0, ' struct PortalInternal *p')
     return ', '.join(rc)
 
-def genToJson(name, prefix, ptype):
+def genToJson(name, prefix, ptype, genobject=True):
     typename = ptype['name']
     print 'genToJson', name, typename, ptype
     if typename in ['Bit', 'Int', 'UInt', 'Bool']:
-        return '{ "%s", %s }' % (name, prefix)
+        if genobject:
+            return '{ "%s", %s }' % (name, prefix)
+        else:
+            return prefix
     if 'type' not in ptype:
         typedef = globalv_globalvars[typename]
         print '    dereferencing typedef', typedef
         if typedef['dtype'] == 'TypeDef':
             tdtype = typedef['tdtype']
-            return genToJson(name, prefix, tdtype)
+            return genToJson(name, prefix, tdtype, genobject)
 
     ptype_type = ptype['type']
     if ptype_type == 'Struct':
         print 'elements', ptype['elements']
-        expr = '{ "%s", { %s } }' % (name, ', '.join([genToJson(elt['pname'], '%s.%s' % (name, elt['pname']), elt['ptype']) for elt in ptype['elements'] ]))
-        print '    expr', expr
-        return expr
+        expr = '{ %s }' % (', '.join([genToJson(elt['pname'], '%s.%s' % (name, elt['pname']), elt['ptype']) for elt in ptype['elements'] ]))
     elif ptype_type == 'Enum':
-        return '{ "%s", (int)%s }' % (name, prefix)
+        expr = '(int)%s' % prefix
     else:
         print 'cannot handle', name, prefix, ptype
+        expr = prefix
+    print '    expr', expr
+    if genobject:
+        return '{ "%s", %s }' % (name, expr)
+    else:
+        return expr
 
 def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
     global fdName
@@ -509,12 +515,14 @@ def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
             break
     if classVariant:
         paramStructMarshall = []
+        itemNumber = 0
         for pitem in params:
             pname = pitem['pname']
             ptype = pitem['ptype']
             print 'method', methodName, pname, ptype, typeJson(ptype)
-            titem = '    %s' % (genToJson(pname, pname, pitem['ptype']))
+            titem = '    %s' % (genToJson(pname, pname, pitem['ptype'], False))
             paramStructMarshall.append(titem)
+            itemNumber = itemNumber + 1
     paramStructDeclarations = [ '%s %s;' % (typeCName(pitem['ptype']), pitem['pname']) for pitem in params]
     paramJsonDeclarations = [ '{"%s", Connectaloffsetof(%sData,%s), ITYPE_%s},' % \
         (pitem['pname'], chname, pitem['pname'], typeJson(pitem['ptype'])) for pitem in params]
@@ -595,9 +603,7 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
     reqChanNums = []
     methodList = []
     cnSubst = {'className': className, 'classNameOrig': classNameOrig}
-    if classVariant:
-        cpp.write(jsonMethodTemplateDecl % cnSubst)
-    else:
+    if not classVariant:
         hpp = create_cpp_file(hppname)
         hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': className.upper()})
         hpp.write('#include "portal.h"\n')
@@ -611,11 +617,10 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         methodList.append(substs['methodName'])
         reqChanNums.append(substs['channelNumber'])
     methodJsonDeclarations = ['{"%(methodName)s", %(classNameOrig)s_%(methodName)sInfo},' % {'methodName': p, 'classNameOrig': classNameOrig} for p in methodList]
-    if classVariant:
-        cpp.write('{}};\n')
     for mitem in declList:
         substs, t = gatherMethodInfo(mitem['dname'], mitem['dparams'], className, classNameOrig, classVariant)
         if classVariant:
+            print substs
             cpp.write((proxyMethodTemplateDecl + proxyJMethodTemplate) % substs)
         else:
             cpp.write((proxyMethodTemplateDecl + proxyMethodTemplate) % substs)
@@ -632,7 +637,7 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
             'reqInfo': '0x%x' % ((len(declList) << 16) + (maxSize+1) * sizeofUint32_t),
             'classNameOrig': classNameOrig }
     if classVariant:
-        subs['handleStartup'] = 'channel = connnectalJsonDecode(p, channel, &tempdata, %(classNameOrig)sInfo);' % subs
+        subs['handleStartup'] = 'json msg = connectalJsonReceive(p);' % subs
     else:
         subs['handleStartup'] = 'volatile unsigned int* temp_working_addr = p->transport->mapchannelInd(p, channel);'
         generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n' % subs)
