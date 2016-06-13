@@ -16,9 +16,9 @@ endif
 ifeq ($(BOARD),zedboard_ubuntu)
 CONNECTALFLAGS += -I usr/include
 CONNECTALFLAGS += -L usr/lib/python2.7/config-arm-linux-gnueabihf -lpython2.7
-endif
 
 prebuild::
 	./ubuntu-python-dev.sh
+endif
 
 include $(CONNECTALDIR)/Makefile.connectal
