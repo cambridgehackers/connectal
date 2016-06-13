@@ -108,11 +108,6 @@ handleMessageTemplate2='''
 }
 '''
 
-jsonStructTemplateDecl='''
-    {"%(methodName)s", ((ConnectalParamJsonInfo[]){
-        %(paramJsonDeclarations)s
-        {NULL, %(channelNumber)s}}) },'''
-
 jsonMethodTemplateDecl='''
 static ConnectalMethodJsonInfo %(classNameOrig)sInfo[] = {'''
 
@@ -613,8 +608,6 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         substs, t = gatherMethodInfo(mitem['dname'], mitem['dparams'], className, classNameOrig, classVariant)
         if t > maxSize:
             maxSize = t
-        if False and classVariant:
-            cpp.write((jsonStructTemplateDecl) % substs)
         methodList.append(substs['methodName'])
         reqChanNums.append(substs['channelNumber'])
     methodJsonDeclarations = ['{"%(methodName)s", %(classNameOrig)s_%(methodName)sInfo},' % {'methodName': p, 'classNameOrig': classNameOrig} for p in methodList]
