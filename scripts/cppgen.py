@@ -133,6 +133,7 @@ proxyMethodTemplate='''
 proxyJMethodTemplate='''
 {
     json request = {
+    "%(methodName)s",
     %(paramStructMarshall)s
     };
     std::string requestjson = request.dump();
@@ -620,7 +621,6 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
     for mitem in declList:
         substs, t = gatherMethodInfo(mitem['dname'], mitem['dparams'], className, classNameOrig, classVariant)
         if classVariant:
-            print substs
             cpp.write((proxyMethodTemplateDecl + proxyJMethodTemplate) % substs)
         else:
             cpp.write((proxyMethodTemplateDecl + proxyMethodTemplate) % substs)
