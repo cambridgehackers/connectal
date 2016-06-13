@@ -122,8 +122,11 @@ void connectalJsonEncodeAndSend(PortalInternal *pint, void *binarydata, Connecta
 
 void connectalJsonSend(PortalInternal *pint, const char *jsonp, int methodNumber)
 {
-    if (pint->json_arg_vector)
-	jsonp = (const char *)pint->parent;
+    //fprintf(stderr, "%s:%d jsonp=%s\n", __FUNCTION__, __LINE__, jsonp);
+    if (pint->json_arg_vector) {
+	//FIXME strncpy
+	strcpy((char *)pint->parent, jsonp);
+    }
     if (!pint->json_arg_vector) {
 	int rounded_size = strlen(jsonp);
 	pint->transport->send(pint, (volatile unsigned int*)jsonp, (methodNumber << 16) | (1 + rounded_size), -1);
