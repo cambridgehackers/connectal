@@ -23,6 +23,11 @@
 #include <string.h>
 #include "portal.h"
 
+// extern "C" because some of the makefiles use g++ to compile this file
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 static int trace_json;// = 1;
 void connectalJsonEncode(char *datap, void *binarydata, ConnectalMethodJsonInfo *info, int json_arg_vector)
 {
@@ -115,7 +120,33 @@ void connectalJsonEncodeAndSend(PortalInternal *pint, void *binarydata, Connecta
     }
 }
 
-int connnectalJsonDecode(PortalInternal *pint, int _unused_channel, void *binarydata, ConnectalMethodJsonInfo *infoa)
+void connectalJsonSend(PortalInternal *pint, const char *jsonp, int methodNumber)
+{
+    if (pint->json_arg_vector)
+	jsonp = (const char *)pint->parent;
+    if (!pint->json_arg_vector) {
+	int rounded_size = strlen(jsonp);
+	pint->transport->send(pint, (volatile unsigned int*)jsonp, (methodNumber << 16) | (1 + rounded_size), -1);
+    }
+}
+
+const char *connectalJsonReceive(PortalInternal *pint)
+{
+    uint32_t header = *(uint32_t *)pint->map_base;
+    char *datap = (char *)pint->transport->mapchannelInd(pint, 0);
+    int tmpfd;
+    int len = (header & 0xffff)-1;
+    int rc = pint->transport->recv(pint, (volatile unsigned int*)datap, len, &tmpfd);
+    if (rc != len)
+      fprintf(stderr, "[%s:%d] short read %d\n", __FUNCTION__, __LINE__, rc);
+
+    datap[len*sizeof(uint32_t)] = 0;
+    if (trace_json)
+        fprintf(stderr, "[%s] message '%s'\n", __FUNCTION__, (char *)datap);
+    return datap;
+}
+
+int connectalJsonDecode(PortalInternal *pint, int _unused_channel, void *binarydata, ConnectalMethodJsonInfo *infoa)
 {
     int channel = 0;
     ConnectalMethodJsonInfo *info = NULL;
@@ -195,3 +226,7 @@ int connnectalJsonDecode(PortalInternal *pint, int _unused_channel, void *binary
     }
     return channel;
 }
+
+#ifdef __cplusplus
+}
+#endif
