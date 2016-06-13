@@ -5,7 +5,7 @@
     ar x libpython2.7_2.7.11-11_armhf.deb;
     xzcat data.tar.xz | tar -xvf -
 )
-[ -f libpython2.7_2.7.11-11_armhf.deb ] || (
+[ -f libpython2.7-dev_2.7.11-11_armhf.deb ] || (
     wget http://ports.ubuntu.com/ubuntu-ports/pool/main/p/python2.7/libpython2.7-dev_2.7.11-11_armhf.deb;
     ar x libpython2.7-dev_2.7.11-11_armhf.deb;
     xzcat data.tar.xz | tar -xvf - )
