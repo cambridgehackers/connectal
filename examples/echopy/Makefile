@@ -6,6 +6,7 @@ BSVFILES = EchoInterface.bsv
 CPPFILES = $(CONNECTALDIR)/cpp/portalPython.cpp
 CPPFILES2= $(CONNECTALDIR)/cpp/runpython.cpp
 CONNECTALFLAGS += --shared
+CONNECTALFLAGS += -D PORTAL_JSON
 CONNECTALFLAGS += --run-args="$(PWD)/testecho.py $(CONNECTALDIR)/scripts/portal.py $(PWD)/$(BOARD)/bin/connectal.so"
 ifeq ($(BOARD),zedboard)
 ## git clone git://github.com/cambridgehackers/python-for-android-sdk
