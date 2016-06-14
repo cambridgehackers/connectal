@@ -482,6 +482,7 @@ def genToJson(var, name, prefix, ptype, appendto=False):
         print 'elements', ptype['elements']
         structvar = '_%sValue' % name
         result.append('Json::Value %s;' % structvar)
+        result.append('%s["__type__"]="%s";' % (structvar, typename))
         for elt in ptype['elements']:
             result.extend(genToJson(structvar, elt['pname'], '%s.%s' % (name, elt['pname']), elt['ptype']))
         expr = structvar
