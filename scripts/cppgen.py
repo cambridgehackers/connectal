@@ -457,9 +457,10 @@ def formalParameters(params, insertPortal):
         rc.insert(0, ' struct PortalInternal *p')
     return ', '.join(rc)
 
+toJsonVerbose = False
 def genToJson(var, name, prefix, ptype, appendto=False):
     typename = ptype['name']
-    print 'genToJson', name, typename, ptype, appendto
+    if toJsonVerbose: print 'genToJson', name, typename, ptype, appendto
     if typename in ['Bit', 'Int', 'UInt', 'Bool']:
         if typename == 'Int':
             cast = 'Json::Int64'
@@ -472,7 +473,7 @@ def genToJson(var, name, prefix, ptype, appendto=False):
 
     if 'type' not in ptype and typename != 'Vector':
         typedef = globalv_globalvars[typename]
-        print '    dereferencing typedef', typedef
+        if toJsonVerbose: print '    dereferencing typedef', typedef
         if typedef['dtype'] == 'TypeDef':
             tdtype = typedef['tdtype']
             return genToJson(var, name, prefix, tdtype, appendto)
@@ -484,7 +485,7 @@ def genToJson(var, name, prefix, ptype, appendto=False):
         ptype_type = ptype['type']
 
     if ptype_type == 'Struct':
-        print 'elements', ptype['elements']
+        if toJsonVerbose: print 'elements', ptype['elements']
         structvar = '_%sValue' % name
         result.append('Json::Value %s;' % structvar)
         result.append('%s["__type__"]="%s";' % (structvar, typename))
@@ -502,13 +503,13 @@ def genToJson(var, name, prefix, ptype, appendto=False):
             result.extend(genToJson(vectorName,None,('%s[%d]' % (prefix,i)),vectorType,True))
         expr = vectorName
     else:
-        print 'cannot handle', name, prefix, ptype
+        print 'genToJson cannot handle', name, prefix, ptype
         expr = prefix
     if appendto:
         result.append('%s.append(%s);' % (var, expr))
     else:
         result.append('%s["%s"] = %s;' % (var, name, expr))
-    print 'result', result
+    if toJsonVerbose: print 'result', result
     return result
 
 def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
@@ -544,7 +545,6 @@ def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
         for pitem in params:
             pname = pitem['pname']
             ptype = pitem['ptype']
-            print 'method', methodName, pname, ptype, typeJson(ptype)
             titems = genToJson('request', pname, pname, pitem['ptype'], True)
             paramStructMarshall.extend(titems)
             itemNumber = itemNumber + 1
