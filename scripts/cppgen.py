@@ -400,7 +400,7 @@ def accumWords(s, pro, memberList):
 def generate_marshall(pfmt, w):
     global fdName
     off = 0
-    word = []
+    fields = []
     fmt = pfmt
     outstr = ''
     for e in w:
@@ -416,23 +416,23 @@ def generate_marshall(pfmt, w):
             field = '(((unsigned long)%s)<<%s)' % (field, off)
         if typeBitWidth(e.datatype) > 64:
             field = '(const %s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, typeBitWidth(e.datatype))
-        word.append(field)
+        fields.append(field)
         off = off+e.width-e.shifted
         if typeCName(e.datatype) == 'SpecialTypeForSendingFd':
             fdName = field
             fmt = 'p->transport->writefd(p, &temp_working_addr, %s);'
-    return fmt % (''.join(util.intersperse('|', word)))
+    return fmt % (''.join(util.intersperse('|', fields)))
 
 def generate_demarshall(argStruct, w):
     fmt, methodName = argStruct
     off = 0
-    word = []
-    word.append(fmt)
+    statements = []
+    statements.append(fmt)
     for e in w:
         # print e.name+' (d)'
         field = 'tmp'
         if typeCName(e.datatype) == 'float':
-            word.append('tempdata.%s.%s %s *(float *)&(%s);'%(methodName, e.name, e.assignOp, field))
+            statements.append('tempdata.%s.%s %s *(float *)&(%s);'%(methodName, e.name, e.assignOp, field))
             continue
         if off:
             field = '%s>>%s' % (field, off)
@@ -445,11 +445,11 @@ def generate_demarshall(argStruct, w):
         if e.shifted:
             field = '((%s)(%s)<<%s)' % (typeCName(e.datatype),field, e.shifted)
         if typeCName(e.datatype) == 'SpecialTypeForSendingFd':
-            word.append('tempdata.%s.%s %s messageFd;'%(methodName, e.name, e.assignOp))
+            statements.append('tempdata.%s.%s %s messageFd;'%(methodName, e.name, e.assignOp))
         else:
-            word.append('tempdata.%s.%s %s (%s)(%s);'%(methodName, e.name, e.assignOp, typeCName(e.datatype), field))
+            statements.append('tempdata.%s.%s %s (%s)(%s);'%(methodName, e.name, e.assignOp, typeCName(e.datatype), field))
         off = off+e.width-e.shifted
-    return '\n        '.join(word)
+    return '\n        '.join(statements)
 
 def formalParameters(params, insertPortal):
     rc = [ 'const %s %s' % (typeCName(pitem['ptype']), pitem['pname']) for pitem in params]
