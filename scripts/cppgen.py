@@ -609,7 +609,7 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
     cpp = create_cpp_file(cppname)
     if classVariant:
         cpp.write('#ifdef PORTAL_JSON\n')
-        cpp.write('#include "json/json.h"\n')
+        cpp.write('#include "jsoncpp/json/json.h"\n')
     maxSize = 0
     reqChanNums = []
     methodList = []
