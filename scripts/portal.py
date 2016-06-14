@@ -73,6 +73,7 @@ class NativeProxy:
             self.t1.start()
 
     def callback(self, a):
+        ## use json_object_hook to convert JSON dictionaries to python objects
         vec = json.loads(a.strip(), None, None, json_object_hook)
         #print 'callback called!!!', a, vec
         if hasattr(self.handler, vec[0]):
