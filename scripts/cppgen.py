@@ -469,15 +469,20 @@ def genToJson(var, name, prefix, ptype, appendto=False):
             return ['%s.append((%s)%s);' % (var, cast, prefix)]
         else:
             return ['%s["%s"] = (%s)%s;' % (var, name, cast, prefix)]
-    if 'type' not in ptype:
+
+    if 'type' not in ptype and typename != 'Vector':
         typedef = globalv_globalvars[typename]
         print '    dereferencing typedef', typedef
         if typedef['dtype'] == 'TypeDef':
             tdtype = typedef['tdtype']
             return genToJson(var, name, prefix, tdtype, appendto)
 
-    ptype_type = ptype['type']
     result = []
+    if typename == 'Vector':
+        ptype_type = 'Vector'
+    else:
+        ptype_type = ptype['type']
+
     if ptype_type == 'Struct':
         print 'elements', ptype['elements']
         structvar = '_%sValue' % name
@@ -488,6 +493,14 @@ def genToJson(var, name, prefix, ptype, appendto=False):
         expr = structvar
     elif ptype_type == 'Enum':
         expr = '(int)%s' % prefix
+    elif ptype_type == 'Vector':
+        vectorSize = int(ptype['params'][0]['name'])
+        vectorType = ptype['params'][1]
+        vectorName = '%sVector' % cName(prefix)
+        result.append('Json::Value %s;' % vectorName)
+        for i in range(0,vectorSize):
+            result.extend(genToJson(vectorName,None,('%s[%d]' % (prefix,i)),vectorType,True))
+        expr = vectorName
     else:
         print 'cannot handle', name, prefix, ptype
         expr = prefix
