@@ -621,7 +621,6 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
     generatedCFiles.append(cppname)
     cpp = create_cpp_file(cppname)
     if classVariant:
-        cpp.write('#ifdef PORTAL_JSON\n')
         cpp.write('#include "jsoncpp/json/json.h"\n')
     maxSize = 0
     reqChanNums = []
@@ -717,8 +716,6 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         hpp.write('#endif // _%(name)s_H_\n' % {'name': className.upper()})
         hpp.close()
     generated_hpp.write('extern %(classNameOrig)sCb %(className)sProxyReq;\n' % subs)
-    if classVariant:
-        cpp.write('#endif /* PORTAL_JSON */\n')
     cpp.close()
 
 def emitStructMember(item, f, indentation):
