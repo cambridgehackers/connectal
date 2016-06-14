@@ -27,6 +27,19 @@ if os.environ.has_key('LD_LIBRARY_PATH'):
 else:
     connectal = ctypes.CDLL('./connectal.so')
 
+class JsonObject:
+    def __init__(self, d=None, **kwargs):
+        if d:
+            for k in d:
+                setattr(self, k, d[k])
+        if kwargs:
+            for k in kwargs:
+                setattr(self, k, kwargs[k])
+
+def json_object_hook(d, encoding=None):
+    result = JsonObject(d)
+    return result
+
 class NativeProxy:
     def __init__(self, interfaceName, handler, responseInterface=None, rpc=False, multithreaded=False):
         self.interfaceName = interfaceName
@@ -60,7 +73,7 @@ class NativeProxy:
             self.t1.start()
 
     def callback(self, a):
-        vec = json.loads(a.strip())
+        vec = json.loads(a.strip(), None, None, json_object_hook)
         #print 'callback called!!!', a, vec
         if hasattr(self.handler, vec[0]):
             getattr(self.handler, vec[0])(*vec[1:])
