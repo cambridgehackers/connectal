@@ -66,7 +66,7 @@ interface MMU#(numeric type addrWidth);
    interface Vector#(2,Server#(AddrTransRequest,AddrTransResponse#(addrWidth))) addr;
 endinterface
 
-module mkSimpleMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(addrWidth))
+module mkSimpleMMU#(Bit#(4) mmuid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(addrWidth))
    provisos (Add#(b__,8,addrWidth)
 	     ,Add#(c__,24,addrWidth)
 	     ,Bits#(AddrTransResponse#(addrWidth),d__)
@@ -161,7 +161,7 @@ typedef struct {
    } Stage4Params deriving (Bits);
 
 // the address translation servers (addr[0], addr[1]) have a latency of 8 and are fully pipelined
-module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(addrWidth))
+module mkMMU#(Bit#(4) mmuid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(addrWidth))
    provisos(Log#(MaxNumSGLists, listIdxSize),
 	    Add#(listIdxSize,8, entryIdxSize),
 	    Add#(a__,addrWidth,MemOffsetSize));
@@ -204,7 +204,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
       mkConnection(toGet(dmaErrorFifos[i]), toPut(dmaErrorFifo));
    rule dmaError;
       let error <- toGet(dmaErrorFifo).get();
-      mmuIndication.error(extend(pack(error.errorType)), error.pref, extend(error.off), fromInteger(iid));
+      mmuIndication.error(extend(pack(error.errorType)), error.pref, extend(error.off), extend(mmuid));
    endrule
 
    let page_shift0 = fromInteger(valueOf(SGListPageShift0));
@@ -353,7 +353,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
 	     method ActionValue#(AddrTransResponse#(addrWidth)) get();
 		let rv <- toGet(pageResponseFifos[i]).get();
 `ifdef SIMULATION
-		rv.physAddr = rv.physAddr | (fromInteger(iid)<<valueOf(addrWidth)-3);
+		rv.physAddr = rv.physAddr | (extend(mmuid)<<valueOf(addrWidth)-3);
 `endif
 		return rv;
 	     endmethod
@@ -364,7 +364,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
    interface MMURequest request;
    method Action idRequest(SpecialTypeForSendingFd fd);
       let nextId <- sglId_gen.getTag;
-      let resp = (fromInteger(iid) << 16) | extend(nextId);
+      let resp = (extend(mmuid) << 16) | extend(nextId);
       if (verbose) $display("mkMMU::idRequest %d", fd);
       if (hostMapped) begin
 	 let va <- simDma.initfd(resp, fd);
@@ -388,7 +388,7 @@ module mkMMU#(Integer iid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(ad
    endmethod
 
    method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
-         if (fromInteger(iid) != pointer[31:16]) begin
+         if (extend(mmuid) != pointer[31:16]) begin
 	    $display("mkMMU::sglist ERROR");
 	    $finish();
 	 end
