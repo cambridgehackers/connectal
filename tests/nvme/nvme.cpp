@@ -707,8 +707,8 @@ int main(int argc, const char **argv)
     nvme.write32(0x1c, 0x10); // clear reset bit
     fprintf(stderr, "CTS %08x\n", nvme.read32( 0x1c));
 
-    // disable
-    nvme.write32(0x14, 0);
+    // initialize CC.IOCQES and CC.IOSQES
+    nvme.write32(0x14, 0x00460000); // completion queue entry size 2^4, submission queue entry size 2^6
     // reset
     nvme.write32(0x20, 0x4e564d65);
     sleep(1);
@@ -730,7 +730,7 @@ int main(int argc, const char **argv)
 
     fprintf(stderr, "CTS %08x\n", nvme.read32( 0x1c));
     // CC.enable
-    nvme.write32(0x14, 1);
+    nvme.write32(0x14, 0x00460001);
     fprintf(stderr, "CTS %08x\n", nvme.read32( 0x1c));
 
     const char *needle = "property";
