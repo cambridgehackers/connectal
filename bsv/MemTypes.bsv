@@ -36,7 +36,7 @@ import DefaultValue::*;
 
 typedef Bit#(32) SGLId;
 `ifndef ZYNQ
-typedef 36 MemOffsetSize;
+typedef 40 MemOffsetSize; // must be at least as large as PhysAddrSize
 `else
 typedef 32 MemOffsetSize;
 `endif
