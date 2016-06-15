@@ -35,8 +35,10 @@ import ConnectalBram::*;
 import MemTypes::*;
 import StmtFSM::*;
 import ClientServer::*;
+import ConnectalConfig::*;
 import ConnectalMemory::*;
 import ConnectalCompletionBuffer::*;
+import Pipe::*;
 import SimDma::*;
 
 `include "ConnectalProjectConfig.bsv"
@@ -161,11 +163,36 @@ typedef struct {
    } Stage4Params deriving (Bits);
 
 // the address translation servers (addr[0], addr[1]) have a latency of 8 and are fully pipelined
-module mkMMU#(Bit#(4) mmuid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(addrWidth))
+module mkMMU#(Bit#(4) mmuid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(PhysAddrWidth))
    provisos(Log#(MaxNumSGLists, listIdxSize),
-	    Add#(listIdxSize,8, entryIdxSize),
-	    Add#(a__,addrWidth,MemOffsetSize));
-   
+	    Add#(listIdxSize,8, entryIdxSize));
+   let mmu <- mkMMUSynth(mmuid, hostMapped);
+   rule rl_idResponse;
+      let sglId <- toGet(mmu.idResponsePipe).get();
+      mmuIndication.idResponse(extend(sglId));
+   endrule
+   rule rl_configResp;
+      let sglId <- toGet(mmu.configResponsePipe).get();
+      mmuIndication.configResp(extend(sglId));
+   endrule
+   rule dmaError;
+      let error <- toGet(mmu.errorPipe).get();
+      mmuIndication.error(extend(pack(error.errorType)), error.pref, extend(error.off), extend(mmuid));
+   endrule
+   interface request = mmu.request;
+   interface addr    = mmu.addr;
+endmodule
+
+interface MMUSynth#(numeric type addrWidth);
+   interface MMURequest request;
+   interface PipeOut#(SGListId) idResponsePipe;
+   interface PipeOut#(SGListId) configResponsePipe;
+   interface PipeOut#(DmaError) errorPipe;
+   interface Vector#(2,Server#(AddrTransRequest,AddrTransResponse#(addrWidth))) addr;
+endinterface
+
+(* synthesize *)
+module mkMMUSynth#(Bit#(4) mmuid, Bool hostMapped)(MMUSynth#(PhysAddrWidth));
 	    
    let verbose = False;
    TagGen#(MaxNumSGLists) sglId_gen <- mkTagGen();
@@ -192,20 +219,16 @@ module mkMMU#(Bit#(4) mmuid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(
    Vector#(2, FIFOF#(Stage4Params)) stage4Params <- replicateM(mkFIFOF);
 
    // stage 4 (latency == 2)
-   BRAM2Port#(Bit#(entryIdxSize),Page0) translationTable <- ConnectalBram::mkBRAM2Server(bramConfig);
+   BRAM2Port#(Bit#(TAdd#(TLog#(MaxNumSGLists),8)),Page0) translationTable <- ConnectalBram::mkBRAM2Server(bramConfig);
    Vector#(2,FIFOF#(Offset))           offs1 <- replicateM(mkSizedFIFOF(3));
 
    // stage 4 (latnecy == 1)
-   Vector#(2,FIFOF#(AddrTransResponse#(addrWidth))) pageResponseFifos <- replicateM(mkFIFOF);
+   Vector#(2,FIFOF#(AddrTransResponse#(PhysAddrWidth))) pageResponseFifos <- replicateM(mkFIFOF);
       
-   FIFO#(DmaError) dmaErrorFifo <- mkFIFO();
-   Vector#(2,FIFO#(DmaError)) dmaErrorFifos <- replicateM(mkFIFO());
+   FIFOF#(DmaError) dmaErrorFifo <- mkFIFOF1();
+   Vector#(2,FIFO#(DmaError)) dmaErrorFifos <- replicateM(mkFIFO1());
    for (Integer i = 0; i < 2; i = i + 1)
       mkConnection(toGet(dmaErrorFifos[i]), toPut(dmaErrorFifo));
-   rule dmaError;
-      let error <- toGet(dmaErrorFifo).get();
-      mmuIndication.error(extend(pack(error.errorType)), error.pref, extend(error.off), extend(mmuid));
-   endrule
 
    let page_shift0 = fromInteger(valueOf(SGListPageShift0));
    let page_shift4 = fromInteger(valueOf(SGListPageShift4));
@@ -312,7 +335,7 @@ module mkMMU#(Bit#(4) mmuid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(
 	 Page0 page <- portsel(translationTable, i).response.get;
 	 let offset <- toGet(offs1[i]).get();
 	 if (verbose) $display("mkMMU::p ages[%d].response page=%h offset=%h", i, page, offset);
-	 Bit#(MemOffsetSize) rv = ?;
+	 Bit#(PhysAddrWidth) rv = ?;
 	 Page4 b4 = truncate(page);
 	 Page8 b8 = truncate(page);
 	 Page12 b12 = truncate(page);
@@ -326,11 +349,8 @@ module mkMMU#(Bit#(4) mmuid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(
       endrule
    end
 
-   FIFO#(SGListId) configRespFifo <- mkFIFO;
-   rule sendConfigResp;
-      let ptr <- toGet(configRespFifo).get();
-      mmuIndication.configResp(extend(ptr));
-   endrule
+   FIFOF#(SGListId) idResponseFifo <- mkFIFOF1;
+   FIFOF#(SGListId) configResponseFifo <- mkFIFOF1;
    
    // given that the BRAM is faster than the connection from software, I see no need for a SizedBRAMFIFOF here. -Jamey
    FIFOF#(Bit#(32)) idReturnFifo <- mkFIFOF();
@@ -341,19 +361,19 @@ module mkMMU#(Bit#(4) mmuid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(
       $display("idReturn %d", sglId);
    endrule
    
-   function Server#(AddrTransRequest,AddrTransResponse#(addrWidth)) addrServer(Integer i);
+   function Server#(AddrTransRequest,AddrTransResponse#(PhysAddrWidth)) addrServer(Integer i);
    return
-      (interface Server#(AddrTransRequest,Bit#(addrWidth));
+      (interface Server#(AddrTransRequest,Bit#(PhysAddrWidth));
 	  interface Put request;
 	     method Action put(AddrTransRequest req);
 		incomingReqs[i].enq(req);
 	     endmethod
 	  endinterface
 	  interface Get response;
-	     method ActionValue#(AddrTransResponse#(addrWidth)) get();
+	     method ActionValue#(AddrTransResponse#(PhysAddrWidth)) get();
 		let rv <- toGet(pageResponseFifos[i]).get();
 `ifdef SIMULATION
-		rv.physAddr = rv.physAddr | (extend(mmuid)<<valueOf(addrWidth)-3);
+		rv.physAddr = rv.physAddr | (extend(mmuid)<<valueOf(PhysAddrWidth)-3);
 `endif
 		return rv;
 	     endmethod
@@ -369,7 +389,7 @@ module mkMMU#(Bit#(4) mmuid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(
       if (hostMapped) begin
 	 let va <- simDma.initfd(resp, fd);
       end
-      mmuIndication.idResponse(resp);
+      idResponseFifo.enq(resp);
    endmethod
    method Action idReturn(Bit#(32) sglId);
       idReturnFifo.enq(sglId);
@@ -384,7 +404,7 @@ module mkMMU#(Bit#(4) mmuid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(
              reg4: SingleRegion{barrier: truncate(barr4), idxOffset: truncate(index4)},
              reg0: SingleRegion{barrier: truncate(barr0), idxOffset: truncate(index0)}} });
       if (verbose) $display("mkMMU::region pointer=%d barr12=%h barr8=%h barr4=%h barr0=%h", pointer, barr12, barr8, barr4, barr0);
-      configRespFifo.enq(truncate(pointer));
+      configResponseFifo.enq(truncate(pointer));
    endmethod
 
    method Action sglist(Bit#(32) pointer, Bit#(32) pointerIndex, Bit#(64) addr,  Bit#(32) len);
@@ -405,6 +425,9 @@ module mkMMU#(Bit#(4) mmuid, Bool hostMapped, MMUIndication mmuIndication)(MMU#(
    endinterface
    interface addr = genWith(addrServer);
 
+   interface idResponsePipe     = toPipeOut(idResponseFifo);
+   interface configResponsePipe = toPipeOut(configResponseFifo);
+   interface errorPipe          = toPipeOut(dmaErrorFifo);
 endmodule
 
 interface ArbitratedMMU#(numeric type addrWidth, numeric type numServers);
