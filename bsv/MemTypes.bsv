@@ -35,7 +35,11 @@ import DefaultValue::*;
 `include "ConnectalProjectConfig.bsv"
 
 typedef Bit#(32) SGLId;
-typedef 44 MemOffsetSize;
+`ifndef ZYNQ
+typedef 36 MemOffsetSize;
+`else
+typedef 32 MemOffsetSize;
+`endif
 `ifdef MemTagSize
 typedef `MemTagSize MemTagSize;
 `else
