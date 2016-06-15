@@ -389,7 +389,18 @@ int Nvme::ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue)
 
     if (queue == 2) {
 	fprintf(stderr, "%s:%d starting transfer\n", __FUNCTION__, __LINE__);
-	device.startTransfer(/* read */ 2, /* flags */ 0, cmd->cid, cmd->cdw10, cmd->cdw12);
+	device.trace(1);
+
+	device.startTransfer(/* read */ 2, /* flags */ 0, cmd->cid, cmd->cdw10, cmd->cdw12+1);
+	sleep(1);
+
+	for (int i = 0; i < 16; i++) {
+	    fprintf(stderr, "requestbuffer[%02x]=%016llx\n", i, bramRead(0x1000 + i*8));
+	}
+	for (int i = 0; i < 4; i++) {
+	    fprintf(stderr, "responsebuffer[%02x]=%016llx\n", i, bramRead(i*8));
+	}
+
 	fprintf(stderr, "%s:%d waiting for completion\n", __FUNCTION__, __LINE__);
 	indication.wait();
 	int status = indication.value >> 32;
@@ -662,19 +673,20 @@ int main(int argc, const char **argv)
     nvme.readCtl((1 << 20) + 0);
     nvme.readCtl((1 << 20) + 4);
     nvme.readCtl((1 << 20) + 8);
-    fprintf(stderr, "Card BAR0: %08x\n", nvme.readCtl((1 << 20) + 0x10));
+    for (int i = 0; i < 6; i++)
+      fprintf(stderr, "Card BAR%d: %08x\n", i, nvme.readCtl((1 << 20) + 0x10 + i*4));
     fprintf(stderr, "reading AXI BAR\n");
     nvme.readCtl(0x208);
     nvme.readCtl(0x20C);
     nvme.readCtl(0x210);
-    fprintf(stderr, "writing card BAR0\n");
+    fprintf(stderr, "writing card BAR\n");
     for (int i = 0; i < 6; i++) {
 	nvme.writeCtl((1 << 20) + 0x10 + 4*i, 0xffffffff);
-	nvme.readCtl((1 << 20) + 0x10 + 4*i);
+	fprintf(stderr, "Card BAR%d: %08x\n", i, nvme.readCtl((1 << 20) + 0x10 + 4*i));
     }
-    nvme.writeCtl((1 << 20) + 0x10, 0);
-    nvme.writeCtl((1 << 20) + 0x14, 0x0000);
-    nvme.writeCtl((1 << 20) + 0x18, 0x02200000); // BAR1
+    nvme.writeCtl((1 << 20) + 0x10, 0x00000000); // initialize to offset 0
+    nvme.writeCtl((1 << 20) + 0x14, 0x00000000);
+    nvme.writeCtl((1 << 20) + 0x18, 0x02200000); // BAR2 unused
     nvme.writeCtl((1 << 20) + 0x1c, 0x00000000);
     nvme.writeCtl((1 << 20) + 0x10+5*4, 0); // sata card
     fprintf(stderr, "reading card BARs\n");
@@ -693,27 +705,22 @@ int main(int argc, const char **argv)
     nvme.readCtl(0x140);
 
     if (1) {
-	fprintf(stderr, "Reading card memory space BAR0\n");
-	for (int i = 0; i < 8; i++)
-	    fprintf(stderr, "BAR0[%02x]=%08x\n", i*4, nvme.read32(0 + i*4));
-    }
-    if (0) {
-	fprintf(stderr, "Reading card memory space BAR2\n");
-	for (int i = 0; i < 8; i++)
-	    fprintf(stderr, "BAR1[%02x]=%08x\n", i*4, nvme.read32(0x02200000 + i*4));
+	fprintf(stderr, "Reading card memory space\n");
+	for (int i = 0; i < 10; i++)
+	    fprintf(stderr, "CARDMEM[%02x]=%08x\n", i*4, nvme.read32(0x00000000 + i*4));
     }
 
-    fprintf(stderr, "CTS %08x\n", nvme.read32( 0x1c));
+    fprintf(stderr, "CSTS %08x checking reset bit\n", nvme.read32( 0x1c));
     nvme.write32(0x1c, 0x10); // clear reset bit
-    fprintf(stderr, "CTS %08x\n", nvme.read32( 0x1c));
+    fprintf(stderr, "CSTS %08x cleared reset bit\n", nvme.read32( 0x1c));
 
     // initialize CC.IOCQES and CC.IOSQES
     nvme.write32(0x14, 0x00460000); // completion queue entry size 2^4, submission queue entry size 2^6
     // reset
-    nvme.write32(0x20, 0x4e564d65);
-    sleep(1);
+    //nvme.write32(0x20, 0x4e564d65);
+    //sleep(1);
     fprintf(stderr, "Reset reg %08x\n", nvme.read32(0x20));
-    fprintf(stderr, "CTS %08x\n", nvme.read32( 0x1c));
+    fprintf(stderr, "CSTS %08x\n", nvme.read32( 0x1c));
 
     fprintf(stderr, "CMB size     %08x\n", nvme.read32(0x38));
     fprintf(stderr, "CMB location %08x\n", nvme.read32(0x3c));
@@ -728,10 +735,10 @@ int main(int argc, const char **argv)
     nvme.write32(0x24, 0x003f003f);
     fprintf(stderr, "register 0x20 %x\n", nvme.read32(0x20));
 
-    fprintf(stderr, "CTS %08x\n", nvme.read32( 0x1c));
+    fprintf(stderr, "CSTS %08x\n", nvme.read32( 0x1c));
     // CC.enable
     nvme.write32(0x14, 0x00460001);
-    fprintf(stderr, "CTS %08x\n", nvme.read32( 0x1c));
+    fprintf(stderr, "CSTS %08x\n", nvme.read32( 0x1c));
 
     const char *needle = "property";
     int needle_len = strlen(needle);
@@ -752,10 +759,10 @@ int main(int argc, const char **argv)
     getFeatures(&nvme);
     allocIOQueues(&nvme, 0);
 
-    fprintf(stderr, "CTS %08x\n", nvme.read32( 0x1c));
+    fprintf(stderr, "CSTS %08x\n", nvme.read32( 0x1c));
     int startBlock = 34816; // base and extent of test file in SSD
-    int numBlocks = 55; //8177;
-    int blocksPerRequest = 32;
+    int numBlocks = 8; // 55; //8177;
+    int blocksPerRequest = 1;
     nvme.startSearch(numBlocks*512);
     for (int block = 0; block < numBlocks; block += blocksPerRequest) {
       int sc = doIO(&nvme, startBlock, blocksPerRequest, 2);
@@ -765,7 +772,7 @@ int main(int argc, const char **argv)
       startBlock += blocksPerRequest;
     }
 
-    fprintf(stderr, "CTS %08x\n", nvme.read32( 0x1c));
+    fprintf(stderr, "CSTS %08x\n", nvme.read32( 0x1c));
 
     return 0;
 }
