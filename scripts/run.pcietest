@@ -37,8 +37,8 @@ if [ "$RUNPARAM" != "" ]; then
     RUNIP=${array[0]}
     RUNPORT=${array[1]}
     TEMPDIR=/tmp/`uname -n`-$PPID-pcie
-    ssh $SSHPARAM -p $RUNPORT $RUNIP "rm -rf $TEMPDIR; mkdir -p $TEMPDIR"
-    scp -P $RUNPORT $* $RUNIP:$TEMPDIR
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "rm -rf $TEMPDIR; mkdir -p $TEMPDIR" || exit 1
+    scp -P $RUNPORT $* $RUNIP:$TEMPDIR || exit 2
     EXE=$1
     EXENAME=`basename $1`
     ARGS=""
