@@ -20,7 +20,11 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import Vector::*;
 import ConnectalConfig::*;
+`include "ConnectalProjectConfig.bsv"
+
+typedef `PcieDataBusWidth PcieDataBusWidth;
 
 typedef enum { DMA_RX, DMA_TX, DMA_SG } DmaChannel deriving (Bits,Eq);
 
@@ -50,7 +54,7 @@ interface NvmeRequest;
 endinterface
 
 interface NvmeIndication;
-   method Action transferCompleted(Bit#(16) requestId, Bit#(64) sc);
+   method Action transferCompleted(Bit#(16) requestId, Bit#(64) sc, Bit#(32) cycles);
    method Action readDone(Bit#(DataBusWidth) data);
    method Action writeDone();
    method Action status(Bit#(1) mmcm_lock, Bit#(32) dataCounter);
@@ -59,8 +63,8 @@ interface NvmeIndication;
 endinterface
 
 interface NvmeTrace;
-   method Action traceDmaRequest(DmaChannel channel, Bool write, Bit#(16) objId, Bit#(DataBusWidth) offset, Bit#(16) burstLen, Bit#(8) tag, Bit#(32) timestamp);
-   method Action traceDmaData(DmaChannel channel, Bool write, Bit#(DataBusWidth) data, Bool last, Bit#(8) tag, Bit#(32) timestamp);
+   method Action traceDmaRequest(DmaChannel channel, Bool write, Bit#(16) objId, Bit#(64) offset, Bit#(16) burstLen, Bit#(8) tag, Bit#(32) timestamp);
+   method Action traceDmaData(DmaChannel channel, Bool write, Vector#(TDiv#(PcieDataBusWidth,32),Bit#(32)) data, Bool last, Bit#(8) tag, Bit#(32) timestamp);
    method Action traceDmaDone(DmaChannel channel, Bit#(8) tag, Bit#(32) timestamp);
-   method Action traceData(Bit#(DataBusWidth) data, Bool last, Bit#(8) tag);
+   method Action traceData(Vector#(TDiv#(PcieDataBusWidth,32),Bit#(32)) data, Bool last, Bit#(8) tag);
 endinterface

@@ -23,6 +23,7 @@ import DefaultValue::*;
 import XilinxCells::*;
 import GetPut::*;
 import AxiBits::*;
+import NvmeIfc::*; // for PcieDataBusWidth
 
 (* always_ready, always_enabled *)
 interface AprpAxi;
@@ -61,15 +62,15 @@ interface AprpM_axi;
     method Bit#(1)     bready();
     method Action      bresp(Bit#(2) v);
     method Action      bvalid(Bit#(1) v);
-    method Action      rdata(Bit#(64) v);
+    method Action      rdata(Bit#(PcieDataBusWidth) v);
     method Action      rlast(Bit#(1) v);
     method Bit#(1)     rready();
     method Action      rresp(Bit#(2) v);
     method Action      rvalid(Bit#(1) v);
-    method Bit#(64)     wdata();
+    method Bit#(PcieDataBusWidth)     wdata();
     method Bit#(1)     wlast();
     method Action      wready(Bit#(1) v);
-    method Bit#(8)     wstrb();
+    method Bit#(TDiv#(PcieDataBusWidth,8))     wstrb();
     method Bit#(1)     wvalid();
 endinterface
 (* always_ready, always_enabled *)
@@ -111,16 +112,16 @@ interface AprpS_axi;
     method Action      bready(Bit#(1) v);
     method Bit#(2)     bresp();
     method Bit#(1)     bvalid();
-    method Bit#(64)     rdata();
+    method Bit#(PcieDataBusWidth)     rdata();
     method Bit#(4)     rid();
     method Bit#(1)     rlast();
     method Action      rready(Bit#(1) v);
     method Bit#(2)     rresp();
     method Bit#(1)     rvalid();
-    method Action      wdata(Bit#(64) v);
+    method Action      wdata(Bit#(PcieDataBusWidth) v);
     method Action      wlast(Bit#(1) v);
     method Bit#(1)     wready();
-    method Action      wstrb(Bit#(8) v);
+    method Action      wstrb(Bit#(TDiv#(PcieDataBusWidth,8)) v);
     method Action      wvalid(Bit#(1) v);
 endinterface
 (* always_ready, always_enabled *)

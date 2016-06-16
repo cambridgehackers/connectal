@@ -26,6 +26,7 @@ import BuildVector::*;
 import Clocks::*;
 import Connectable::*;
 import FIFOF::*;
+import Gearbox::*;
 import GetPut::*;
 import Probe::*;
 import StmtFSM::*;
@@ -36,6 +37,7 @@ import AxiBits::*;
 import ConnectalClocks::*;
 import ConnectalConfig::*;
 import DefaultValue::*;
+import GearboxGetPut::*;
 import HostInterface::*;
 import MemReadEngine::*;
 import MemTypes::*;
@@ -128,15 +130,15 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 `endif
 
    FIFOF#(Bit#(32)) dfifoCtl <- mkFIFOF();
-   Axi4SlaveBits#(32,DataBusWidth,4,Empty) axiRootPortSlave    = toAxi4SlaveBits(axiRootPort.s_axi);
-   Axi4SlaveLiteBits#(32,32)     axiRootPortSlaveCtl = toAxi4SlaveBits(axiRootPort.s_axi_ctl);
-   PhysMemSlave#(32,DataBusWidth)          axiRootPortMemSlave    <- mkPhysMemSlave(axiRootPortSlave, clocked_by axiClock, reset_by axiReset);
-   PhysMemSlave#(32,32)          axiRootPortMemSlaveCtl <- mkPhysMemSlave(axiRootPortSlaveCtl, clocked_by axiCtlClock, reset_by axiCtlReset);
+   Axi4SlaveBits#(32,PcieDataBusWidth,4,Empty) axiRootPortSlave = toAxi4SlaveBits(axiRootPort.s_axi);
+   Axi4SlaveLiteBits#(32,32)                axiRootPortSlaveCtl = toAxi4SlaveBits(axiRootPort.s_axi_ctl);
+   PhysMemSlave#(32,PcieDataBusWidth)       axiRootPortMemSlave <- mkPhysMemSlave(axiRootPortSlave, clocked_by axiClock, reset_by axiReset);
+   PhysMemSlave#(32,32)                  axiRootPortMemSlaveCtl <- mkPhysMemSlave(axiRootPortSlaveCtl, clocked_by axiCtlClock, reset_by axiCtlReset);
 
-   FIFOF#(PhysMemRequest#(32,DataBusWidth)) araddrFifo <- mkFIFOF();
-   FIFOF#(PhysMemRequest#(32,DataBusWidth)) awaddrFifo <- mkFIFOF();
-   FIFOF#(MemData#(DataBusWidth))           rdataFifo <- mkFIFOF();
-   FIFOF#(MemData#(DataBusWidth))           wdataFifo <- mkFIFOF();
+   FIFOF#(PhysMemRequest#(32,PcieDataBusWidth)) araddrFifo <- mkFIFOF();
+   FIFOF#(PhysMemRequest#(32,PcieDataBusWidth)) awaddrFifo <- mkFIFOF();
+   FIFOF#(MemData#(PcieDataBusWidth))           rdataFifo <- mkFIFOF();
+   FIFOF#(MemData#(PcieDataBusWidth))           wdataFifo <- mkFIFOF();
    FIFOF#(Bit#(6))                           doneFifo <- mkFIFOF();
 
    let araddrCnx <- mkConnection(toGet(araddrFifo), axiRootPortMemSlave.read_server.readReq);
@@ -148,7 +150,7 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
    rule rl_rdata;
       let rdata <- toGet(rdataFifo).get();
       if (rdata.tag == 0)
-	 ind.readDone(rdata.data);
+	 ind.readDone(truncate(rdata.data));
    endrule
 
    rule rl_writeDone;
@@ -179,7 +181,7 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
       ind.writeDone();
    endrule
 
-   Axi4MasterBits#(32,DataBusWidth,MemTagSize,Empty) m_axi_mm = toAxi4MasterBits(axiRootPort.m_axi);
+   Axi4MasterBits#(32,PcieDataBusWidth,MemTagSize,Empty) m_axi_mm = toAxi4MasterBits(axiRootPort.m_axi);
    let getObjId = (interface GetObjId;
 		   method SGLId objId(Bit#(32) addr); return extend(addr[31:24]); endmethod
 		   method Bit#(MemOffsetSize) addr(Bit#(32) axiAddr); return extend(axiAddr[23:0]); endmethod
@@ -191,8 +193,8 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 
    FIFOF#(Tuple4#(DmaChannel,Bool,MemRequest,Bit#(32))) traceFifo <- mkSizedBRAMFIFOF(128);
    PipeIn#(Tuple4#(DmaChannel,Bool,MemRequest,Bit#(32))) tracePipe = traceEnabled ? toPipeIn(traceFifo) : sinkPipe();
-   FIFOF#(Tuple4#(DmaChannel,Bool,MemData#(DataBusWidth),Bit#(32))) traceDataFifo <- mkSizedBRAMFIFOF(2048);
-   PipeIn#(Tuple4#(DmaChannel,Bool,MemData#(DataBusWidth),Bit#(32))) traceDataPipe = traceEnabled ? toPipeIn(traceDataFifo) : sinkPipe();
+   FIFOF#(Tuple4#(DmaChannel,Bool,MemData#(PcieDataBusWidth),Bit#(32))) traceDataFifo <- mkSizedBRAMFIFOF(2048);
+   PipeIn#(Tuple4#(DmaChannel,Bool,MemData#(PcieDataBusWidth),Bit#(32))) traceDataPipe = traceEnabled ? toPipeIn(traceDataFifo) : sinkPipe();
    FIFOF#(Tuple2#(DmaChannel,Bit#(32)))                              traceDoneFifo <- mkSizedBRAMFIFOF(128);
    PipeIn#(Tuple2#(DmaChannel,Bit#(32)))                             traceDonePipe = traceEnabled ? toPipeIn(traceDoneFifo) : sinkPipe();
 
@@ -202,7 +204,7 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
    endrule
    rule rl_trace_data;
       match { .chan, .write, .md, .timestamp } <- toGet(traceDataFifo).get();
-      trace.traceDmaData(chan, write, md.data, md.last, extend(md.tag), timestamp);
+      trace.traceDmaData(chan, write, unpack(md.data), md.last, extend(md.tag), timestamp);
    endrule
    rule rl_trace_done;
       match { .chan, .timestamp } <- toGet(traceDoneFifo).get();
@@ -211,23 +213,31 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 
    let traceReadClient <- mkTraceReadClient(tracePipe,traceDataPipe,DMA_TX,memReadClient);
    let traceWriteClient <- mkTraceWriteClient(tracePipe,traceDataPipe,traceDonePipe,DMA_RX,memWriteClient);
-   let traceClient = (interface MemClient#(DataBusWidth);
+   let traceClient = (interface MemClient#(PcieDataBusWidth);
 			 interface readClient = traceReadClient;
 			 interface writeClient = traceWriteClient;
 		      endinterface);
 
-   let splitter <- mkSplitMemServer();
+   SplitMemServer#(PcieDataBusWidth) splitter <- mkSplitMemServer();
+   MemServerGearbox#(PcieDataBusWidth,DataBusWidth) axiGearbox <- mk1toNMemServerGearbox();
+   let gearboxCnx <- mkConnection(splitter.busClient, axiGearbox.server);
+
+   let requestSize = 64;
+   let responseSize = 16;
+   let bytesPerEntry = valueOf(TDiv#(PcieDataBusWidth,8));
+   let wordsPerEntry = valueOf(TDiv#(PcieDataBusWidth,32));
+
    BRAM_Configure bramConfig = defaultValue;
    bramConfig.latency = 2;
-   bramConfig.memorySize = 2048; // 4 pages
-   BRAM2Port#(Bit#(32),Bit#(DataBusWidth)) bram <- mkBRAM2Server(bramConfig);
+   bramConfig.memorySize = 4096*4/bytesPerEntry; // 4 pages
+   BRAM2Port#(Bit#(32),Bit#(PcieDataBusWidth)) bram <- mkBRAM2Server(bramConfig);
 
    let arbIfc <- mkFixedPriority();
-   Arbiter#(2, BRAMRequest#(Bit#(32),Bit#(DataBusWidth)),Bit#(DataBusWidth)) arbiter <- mkArbiter(arbIfc,2);
+   Arbiter#(2, BRAMRequest#(Bit#(32),Bit#(PcieDataBusWidth)),Bit#(PcieDataBusWidth)) arbiter <- mkArbiter(arbIfc,2);
    let arbCnx <- mkConnection(arbiter.master, bram.portB);
 
-   MemServer#(DataBusWidth)            bramMemA <- mkMemServerFromBram(bram.portA);
-   PhysMemSlave#(32,DataBusWidth)      bramMemB <- mkPhysMemSlaveFromBram(arbiter.users[0]);
+   MemServer#(PcieDataBusWidth)            bramMemA <- mkMemServerFromBram(bram.portA);
+   PhysMemSlave#(32,PcieDataBusWidth)      bramMemB <- mkPhysMemSlaveFromBram(arbiter.users[0]);
    MemServerPortal          bramMemServerPortal <- mkPhysMemSlavePortal(bramMemB,bramIndication);
 
    let portB1 = arbiter.users[1];
@@ -235,8 +245,16 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
    Reg#(Bit#(16)) requestQueueEntryCount <- mkReg(8);
    Reg#(Bool) requestInProgress <- mkReg(True);
    Reg#(Vector#(16,Bit#(32))) ioCommand <- mkReg(unpack(0));
+   Reg#(Bit#(32)) requestStartTimestamp <- mkReg(0);
 
    FIFOF#(NvmeIoCommand) ioCommandFifo <- mkFIFOF();
+
+   Reg#(Bit#(32)) cycles <- mkReg(0);
+   rule rl_cycles;
+      cycles <= cycles + 1;
+   endrule
+
+   Reg#(Bit#(32)) i <- mkReg(0);
 
    let bramQueryAddress <- mkProbe();
    let bramQueryResponse <- mkProbe();
@@ -257,38 +275,37 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 	    command[11] = req.startBlock[63:32];
 	    command[12] = req.numBlocks-1;
 	    requestId <= req.requestId;
-	    ioCommand <= command; 
+	    ioCommand <= command;
 	 endaction
 	 // write a IO read request to BRAM
-	 portB1.request.put(BRAMRequest {address: 'h1000/8 + (extend(requestId[2:0]) << 3) + 0, write: True, responseOnWrite: False, datain: {ioCommand[1],ioCommand[0]}});
-	 portB1.request.put(BRAMRequest {address: 'h1000/8 + (extend(requestId[2:0]) << 3) + 1, write: True, responseOnWrite: False, datain: {ioCommand[3],ioCommand[2]}});
-	 portB1.request.put(BRAMRequest {address: 'h1000/8 + (extend(requestId[2:0]) << 3) + 2, write: True, responseOnWrite: False, datain: {ioCommand[5],ioCommand[4]}});
-	 portB1.request.put(BRAMRequest {address: 'h1000/8 + (extend(requestId[2:0]) << 3) + 3, write: True, responseOnWrite: False, datain: {ioCommand[7],ioCommand[6]}});
-	 portB1.request.put(BRAMRequest {address: 'h1000/8 + (extend(requestId[2:0]) << 3) + 4, write: True, responseOnWrite: False, datain: {ioCommand[9],ioCommand[8]}});
-	 portB1.request.put(BRAMRequest {address: 'h1000/8 + (extend(requestId[2:0]) << 3) + 5, write: True, responseOnWrite: False, datain: {ioCommand[11],ioCommand[10]}});
-	 portB1.request.put(BRAMRequest {address: 'h1000/8 + (extend(requestId[2:0]) << 3) + 6, write: True, responseOnWrite: False, datain: {ioCommand[13],ioCommand[12]}});
-	 portB1.request.put(BRAMRequest {address: 'h1000/8 + (extend(requestId[2:0]) << 3) + 7, write: True, responseOnWrite: False, datain: {ioCommand[15],ioCommand[14]}});
+         for (i <= 0; i < fromInteger(requestSize/bytesPerEntry); i <= i + 1) seq
+	    portB1.request.put(BRAMRequest {address: 'h1000/fromInteger(bytesPerEntry) + (extend(requestId[2:0]) * fromInteger(requestSize/bytesPerEntry)) + i,
+					    write: True, responseOnWrite: False,
+					    datain: truncate(pack(ioCommand) >> (i*fromInteger(valueOf(PcieDataBusWidth)))) });
+         endseq
 	 // tell the NVME the new submission queue tail pointer
 	 action
 	    awaddrFifo.enq(PhysMemRequest { addr: 'h1000 + (2*2+0)*(4<<0), burstLen: 4, tag: 1 });
 	    wdataFifo.enq(MemData{data: zeroExtend((requestId+1)[2:0]), tag: 1, last: True});
 	    requestInProgress <= True;
+	    requestStartTimestamp <= cycles;
 	 endaction
 	 // wait for response queue to be updated
 	 while (requestInProgress) seq
-	    portB1.request.put(BRAMRequest {address: (extend(requestId[2:0]) << 1) + 1, write: False, responseOnWrite: False, datain: 0});
-	    bramQueryAddress <= (requestId << 1) + 1;
+	    portB1.request.put(BRAMRequest {address: (extend(requestId[2:0]) * fromInteger(responseSize/bytesPerEntry)) + fromInteger(12/bytesPerEntry),
+					    write: False, responseOnWrite: False, datain: 0});
+	    bramQueryAddress <= (requestId * fromInteger(responseSize/bytesPerEntry)) + fromInteger(12/bytesPerEntry);
 	    action
 	       let response <- portB1.response.get();
 	       bramQueryResponse <= response;
-	       if (response[16+32] == 1) begin
+	       if (response[16+(3*32 % valueOf(PcieDataBusWidth))] == 1) begin
 		  requestCompleted <= response;
 		  // if status field written by NVME
 		  let nextRequestId = (requestId + 1);
 		  if (nextRequestId == requestQueueEntryCount)
 		     nextRequestId = 0;
 		  requestId <= nextRequestId;
-		  ind.transferCompleted(requestId, response);
+		  ind.transferCompleted(requestId, truncate(response), cycles - requestStartTimestamp);
 		  requestInProgress <= False;
 	       end
 	    endaction
@@ -306,21 +323,17 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
    FIFOF#(Bit#(32))                  dataLengthFifo <- mkFIFOF();
    let                                     fifoToMp <- mkFIFOF();
    MemReadEngine#(DataBusWidth,DataBusWidth,2,1) re <- mkMemReadEngine();
-   MPEngine#(DataBusWidth,DataBusWidth)    mpEngine <- mkMPStreamEngine(toPipeOut(fifoToMp), re.readServers[0]);
+   MPEngine#(PcieDataBusWidth,DataBusWidth)    mpEngine <- mkMPStreamEngine(toPipeOut(fifoToMp), re.readServers[0]);
 
    rule rl_count_data_to_mp;
       let data <- toGet(splitter.data).get();
-      data.last = (dataCounter+fromInteger(valueOf(DataBusWidth)/8)) >= dataLengthFifo.first;
+      data.last = (dataCounter+fromInteger(valueOf(PcieDataBusWidth)/8)) >= dataLengthFifo.first;
       fifoToMp.enq(data);
       dataCounter <= dataCounter + 1;
    endrule
 
    let traceMemCnx <- mkConnection(traceClient, splitter.server);
    let bramMemCnx  <- mkConnection(splitter.bramClient, bramMemA);
-   // rule rl_data;
-   //    let md <- toGet(splitter.data).get();
-   //    trace.traceData(md.data, md.last, extend(md.tag));
-   // endrule
    rule rl_locdone;
       let loc <- toGet(mpEngine.locdone).get();
       ind.strstrLoc(pack(loc));
@@ -347,7 +360,7 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
       endmethod
       method Action write(Bit#(32) addr, Bit#(DataBusWidth) value);
 	 awaddrFifo.enq(PhysMemRequest { addr: addr, burstLen: fromInteger(valueOf(TDiv#(DataBusWidth,8))), tag: 0 });
-	 wdataFifo.enq(MemData {data: value, tag: 0, last: True});
+	 wdataFifo.enq(MemData {data: extend(value), tag: 0, last: True});
       endmethod
 
       method Action readCtl(Bit#(32) addr);
@@ -378,13 +391,13 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
          refclk_n.inputclock(n);
       endmethod
    endinterface
-   interface Vector dmaReadClient = vec(splitter.busClient.readClient, re.dmaClient);
-   interface Vector dmaWriteClient = vec(splitter.busClient.writeClient);
+   interface Vector dmaReadClient = vec(axiGearbox.client.readClient, re.dmaClient);
+   interface Vector dmaWriteClient = vec(axiGearbox.client.writeClient);
 endmodule
 
-instance ToAxi4SlaveBits#(Axi4SlaveBits#(32,DataBusWidth,4,Empty), AprpS_axi);
-   function Axi4SlaveBits#(32,DataBusWidth,4,Empty) toAxi4SlaveBits(AprpS_axi s);
-      return (interface Axi4SlaveBits#(32,DataBusWidth,4,Empty);
+instance ToAxi4SlaveBits#(Axi4SlaveBits#(32,PcieDataBusWidth,4,Empty), AprpS_axi);
+   function Axi4SlaveBits#(32,PcieDataBusWidth,4,Empty) toAxi4SlaveBits(AprpS_axi s);
+      return (interface Axi4SlaveBits#(32,PcieDataBusWidth,4,Empty);
 	 method araddr = compose(s.araddr, extend);
 	 method arburst = s.arburst;
 	 //method arcache = s.arcache;
@@ -456,9 +469,9 @@ instance ToAxi4SlaveBits#(Axi4SlaveLiteBits#(32,32), AprpS_axi_ctl);
    endfunction
 endinstance
 
-instance ToAxi4MasterBits#(Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty), AprpM_axi);
-function Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty) toAxi4MasterBits(AprpM_axi m);
-   return (interface Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty);
+instance ToAxi4MasterBits#(Axi4MasterBits#(32,PcieDataBusWidth,tagWidth,Empty), AprpM_axi);
+function Axi4MasterBits#(32,PcieDataBusWidth,tagWidth,Empty) toAxi4MasterBits(AprpM_axi m);
+   return (interface Axi4MasterBits#(32,PcieDataBusWidth,tagWidth,Empty);
 	   method araddr = m.araddr;
 	   method arburst = m.arburst;
 	   method arcache = m.arcache;
@@ -503,14 +516,14 @@ function Axi4MasterBits#(32,DataBusWidth,tagWidth,Empty) toAxi4MasterBits(AprpM_
    endfunction
 endinstance
 
-interface SplitMemServer;
-   interface MemServer#(DataBusWidth) server;
-   interface MemClient#(DataBusWidth) busClient;
-   interface MemClient#(DataBusWidth) bramClient;
-   interface PipeOut#(MemData#(DataBusWidth)) data;
+interface SplitMemServer#(numeric type dataBusWidth);
+   interface MemServer#(dataBusWidth) server;
+   interface MemClient#(dataBusWidth) busClient;
+   interface MemClient#(dataBusWidth) bramClient;
+   interface PipeOut#(MemData#(dataBusWidth)) data;
 endinterface
 
-module mkSplitMemServer(SplitMemServer);
+module mkSplitMemServer(SplitMemServer#(dataBusWidth));
    let readReqFifo   <- mkFIFOF();
    let readDataFifo  <- mkFIFOF();
    let writeReqFifo  <- mkFIFOF();
@@ -533,8 +546,8 @@ module mkSplitMemServer(SplitMemServer);
 
    let dataFifo <- mkSizedBRAMFIFOF(4096);
 
-   AddressGenerator#(24,DataBusWidth) readAddrGenerator <- mkAddressGenerator();
-   AddressGenerator#(24,DataBusWidth) writeAddrGenerator <- mkAddressGenerator();
+   AddressGenerator#(24,dataBusWidth) readAddrGenerator <- mkAddressGenerator();
+   AddressGenerator#(24,dataBusWidth) writeAddrGenerator <- mkAddressGenerator();
 
    let readReqObj <- mkProbe();
    let readReqDest <- mkProbe();
@@ -576,7 +589,7 @@ module mkSplitMemServer(SplitMemServer);
    rule rl_rd_data;
       let addrBeat <- readAddrGenerator.addrBeat.get();
       let dest = addrBeat.tag[1:0];
-      MemData#(DataBusWidth) md;
+      MemData#(dataBusWidth) md;
       if (dest == 2)
 	 md <- toGet(bramReadDataFifo).get();
       else
@@ -610,7 +623,7 @@ module mkSplitMemServer(SplitMemServer);
    rule rl_wr_data;
       let addrBeat <- writeAddrGenerator.addrBeat.get();
       let dest = addrBeat.tag[1:0];
-      MemData#(DataBusWidth) md <- toGet(writeDataFifo).get();
+      MemData#(dataBusWidth) md <- toGet(writeDataFifo).get();
       if (dest == 2)
 	 bramWriteDataFifo.enq(md);
       else if (dest == 3)
@@ -661,7 +674,7 @@ module mkSplitMemServer(SplitMemServer);
       interface MemReadClient readClient;
 	 interface readReq  = toGet(busReadReqFifo);
 	 interface Put readData;
-	    method Action put(MemData#(DataBusWidth) md);
+	    method Action put(MemData#(dataBusWidth) md);
 	       busReadDataFifo.enq(md);
 	       busReadDataData <= md.data;
 	       busReadDataLast <= md.last;
@@ -688,16 +701,101 @@ module mkSplitMemServer(SplitMemServer);
    interface PipeOut data = toPipeOut(dataFifo);
 endmodule
 
+interface MemServerGearbox#(numeric type serverDataBusWidth, numeric type clientDataBusWidth);
+   interface MemServer#(serverDataBusWidth) server;
+   interface MemClient#(clientDataBusWidth) client;
+endinterface
+
+module mk1toNMemServerGearbox(MemServerGearbox#(serverDataBusWidth, clientDataBusWidth))
+   provisos (Div#(serverDataBusWidth,clientDataBusWidth,k)
+	     ,Mul#(clientDataBusWidth,k,serverDataBusWidth)
+	     ,Add#(1, a__, TMul#(2, k))
+	     ,Add#(k, b__, TMul#(2, k))
+	     ,Add#(1, c__, k)
+	     );
+   let clock <- exposeCurrentClock();
+   let reset <- exposeCurrentReset();
+
+   let readReqFifo   <- mkFIFOF();
+   let writeReqFifo  <- mkFIFOF();
+   let writeDoneFifo <- mkFIFOF();
+
+   Gearbox#(1,k,MemData#(clientDataBusWidth)) readDataGearbox <- mk1toNGearbox(clock, reset, clock, reset);
+   Gearbox#(k,1,MemData#(clientDataBusWidth)) writeDataGearbox <- mkNto1Gearbox(clock, reset, clock, reset);
+
+   FIFOF#(MemData#(clientDataBusWidth)) busReadDataFifo  <- mkSizedBRAMFIFOF(16);
+   FIFOF#(MemData#(clientDataBusWidth)) busWriteDataFifo <- mkSizedBRAMFIFOF(16);
+
+   rule readDataCnx;
+      let md <- toGet(busReadDataFifo).get();
+      readDataGearbox.enq(vec(md));
+   endrule
+   rule writeDataCnx;
+      let md = writeDataGearbox.first[0];
+      writeDataGearbox.deq();
+      busWriteDataFifo.enq(md);
+   endrule
+
+   interface MemServer server;
+      interface MemReadServer readServer;
+	 interface readReq  = toPut(readReqFifo);
+	 interface Get readData;
+	    method ActionValue#(MemData#(serverDataBusWidth)) get();
+	       let mds = readDataGearbox.first();
+	       readDataGearbox.deq();
+	       let md = MemData { data: pack(map(memDataData, mds)), tag: mds[0].tag, last: mds[valueOf(k)-1].last };
+	       return md;
+	    endmethod
+	 endinterface
+      endinterface
+      interface MemWriteServer writeServer;
+	 interface writeReq  = toPut(writeReqFifo);
+	 interface Put writeData;
+	    method Action put(MemData#(serverDataBusWidth) md);
+	       Vector#(k, Bit#(clientDataBusWidth)) datavec = unpack(md.data);
+	       Vector#(k, MemData#(clientDataBusWidth)) mds = newVector;
+	       for (Integer i = 0; i < valueOf(k); i = i + 1)
+		  mds[i] = MemData { data: datavec[i], tag: md.tag, last: (i == valueOf(k)-1) && md.last };
+	       writeDataGearbox.enq(mds);
+	    endmethod
+	 endinterface
+	 interface writeDone = toGet(writeDoneFifo);
+      endinterface
+   endinterface
+   interface MemClient client;
+      interface MemReadClient readClient;
+	 interface readReq  = toGet(readReqFifo);
+	 interface Put readData;
+	    method Action put(MemData#(clientDataBusWidth) md);
+	       busReadDataFifo.enq(md);
+	       //busReadDataData <= md.data;
+	       //busReadDataLast <= md.last;
+	    endmethod
+	 endinterface
+      endinterface
+      interface MemWriteClient writeClient;
+	 interface writeReq  = toGet(writeReqFifo);
+	 interface writeData = toGet(busWriteDataFifo);
+	 interface writeDone = toPut(writeDoneFifo);
+      endinterface
+   endinterface
+
+endmodule
+
+
 interface MemServerPortal;
    interface MemServerPortalRequest request;
 endinterface
 
-module mkPhysMemSlavePortal#(PhysMemSlave#(32,DataBusWidth) ms, MemServerPortalIndication ind)(MemServerPortal);
+module mkPhysMemSlavePortal#(PhysMemSlave#(32,dataBusWidth) ms, MemServerPortalIndication ind)(MemServerPortal)
+   provisos (Add#(dataBusWidth,7,a__)
+	     ,Add#(b__,64,dataBusWidth)
+	     ,Bits#(MemTypes::MemData#(dataBusWidth), a__));
 
-   FIFOF#(PhysMemRequest#(32,DataBusWidth)) araddrFifo <- mkFIFOF();
-   FIFOF#(PhysMemRequest#(32,DataBusWidth)) awaddrFifo <- mkFIFOF();
-   FIFOF#(MemData#(DataBusWidth))           rdataFifo <- mkFIFOF();
-   FIFOF#(MemData#(DataBusWidth))           wdataFifo <- mkFIFOF();
+   FIFOF#(PhysMemRequest#(32,dataBusWidth)) araddrFifo <- mkFIFOF();
+   FIFOF#(PhysMemRequest#(32,dataBusWidth)) awaddrFifo <- mkFIFOF();
+   FIFOF#(MemData#(dataBusWidth))           rdataFifo <- mkFIFOF();
+   FIFOF#(MemData#(dataBusWidth))           wdataFifo <- mkFIFOF();
    FIFOF#(Bit#(6))                doneFifo <- mkFIFOF();
 
    let araddrCnx <- mkConnection(toGet(araddrFifo), ms.read_server.readReq);
@@ -708,7 +806,7 @@ module mkPhysMemSlavePortal#(PhysMemSlave#(32,DataBusWidth) ms, MemServerPortalI
 
    rule rl_rdata;
       let rdata <- toGet(rdataFifo).get();
-      ind.readDone(rdata.data);
+      ind.readDone(truncate(rdata.data));
    endrule
 
    rule rl_writeDone;
@@ -718,11 +816,11 @@ module mkPhysMemSlavePortal#(PhysMemSlave#(32,DataBusWidth) ms, MemServerPortalI
 
    interface MemServerPortalRequest request;
       method Action read(Bit#(32) addr);
-	 araddrFifo.enq(PhysMemRequest { addr: addr, burstLen: fromInteger(valueOf(TDiv#(DataBusWidth,8))), tag: 0 });
+	 araddrFifo.enq(PhysMemRequest { addr: addr, burstLen: fromInteger(valueOf(TDiv#(dataBusWidth,8))), tag: 0 });
       endmethod
       method Action write(Bit#(32) addr, Bit#(DataBusWidth) value);
-	 awaddrFifo.enq(PhysMemRequest { addr: addr, burstLen: fromInteger(valueOf(TDiv#(DataBusWidth,8))), tag: 0 });
-	 wdataFifo.enq(MemData {data: value, tag: 0, last: True});
+	 awaddrFifo.enq(PhysMemRequest { addr: addr, burstLen: fromInteger(valueOf(TDiv#(dataBusWidth,8))), tag: 0 });
+	 wdataFifo.enq(MemData {data: extend(value), tag: 0, last: True});
       endmethod
    endinterface
 endmodule
