@@ -211,9 +211,9 @@ def typeNumeric(item):
         elif tstr == 'TMul':
             return values[0] * values[1]
         elif tstr == 'TDiv':
-            return math.ceil(values[0] / float(values[1]))
+            return int(math.ceil(values[0] / float(values[1])))
         elif tstr == 'TLog':
-            return math.ceil(math.log(values[0], 2))
+            return int(math.ceil(math.log(values[0], 2)))
         elif tstr == 'TExp':
             return math.pow(2, values[0])
         elif tstr == 'TMax':
@@ -243,7 +243,7 @@ def typeCName(item):
             elif numbits <= 64:
                 return 'uint64_t'
             else:
-                return 'std::bitset<%d>' % (numbits)
+                return 'char * /* %d bytes */' % ((numbits+7) / 8)
         elif cid == 'bit':
             return 'int'
         elif cid == 'Bool':
