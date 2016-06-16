@@ -174,7 +174,7 @@ def collectMembers(scope, pitem):
         elif membtype['name'] == 'SpecialTypeForSendingFd':
             return [('%s%s'%(scope,pitem['pname']),membtype)]
         elif membtype['name'] == 'Vector':
-            nElt = int(membtype['params'][0]['name'])
+            nElt = typeNumeric(membtype['params'][0])
             retitem = []
             ind = 0;
             while ind < nElt:
@@ -495,7 +495,7 @@ def genToJson(var, name, prefix, ptype, appendto=False):
     elif ptype_type == 'Enum':
         expr = '(int)%s' % prefix
     elif ptype_type == 'Vector':
-        vectorSize = int(ptype['params'][0]['name'])
+        vectorSize = typeNumeric(ptype['params'][0])
         vectorType = ptype['params'][1]
         vectorName = '%sVector' % cName(prefix)
         result.append('Json::Value %s;' % vectorName)
