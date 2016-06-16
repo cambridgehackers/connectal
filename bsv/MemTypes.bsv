@@ -116,6 +116,8 @@ typedef struct {
    Bool last;
    } MemData#(numeric type dsz) deriving (Bits, FShow);
 
+function Bit#(dsz) memDataData(MemData#(dsz) md); return md.data; endfunction
+
 typeclass ReqByteEnables#(type t, numeric type besz);
    function Bit#(besz) reqFirstByteEnable(t req);
    function Bit#(besz) reqLastByteEnable(t req);
