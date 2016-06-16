@@ -72,15 +72,24 @@ public:
     void traceDmaRequest(const DmaChannel chan, const int write, const uint16_t objId, const uint64_t offset, const uint16_t burstLen, const uint8_t tag, const uint32_t timestamp) {
 	fprintf(stderr, "%08x: traceDmaRequest chan=%d write=%d objId=%d offset=%08lx burstLen=%d tag=%x\n", timestamp, chan, write, objId, (long)offset, burstLen, tag);
     }
-    void traceDmaData ( const DmaChannel chan, const int write, const uint64_t data, const int last, const uint8_t tag, const uint32_t timestamp ) {
-	fprintf(stderr, "%08x: traceDmaData chan=%d write=%d data=%08x.%08x last=%d tag=%x\n",
-		timestamp, chan, write, (uint32_t)(data>>32), (uint32_t)(data >> 0), last, tag);
+    void traceDmaData ( const DmaChannel chan, const int write, const bsvvector_Luint32_t_L4 data, const int last, const uint8_t tag, const uint32_t timestamp ) {
+	char datastr[128];
+	int offset = 0;
+	for (int i = 0; i < PcieDataBusWidth/32; i++)
+	    offset += snprintf(datastr+offset, sizeof(datastr)-offset-1, " %08x", data[i]);
+
+	fprintf(stderr, "%08x: traceDmaData chan=%d write=%d data=%s last=%d tag=%x\n",
+		timestamp, chan, write, datastr, last, tag);
     }
     virtual void traceDmaDone ( const DmaChannel chan, const uint8_t tag, const uint32_t timestamp ) {
 	fprintf(stderr, "%08x: traceDmaDone chan=%d tag=%x\n", timestamp, chan, tag);
     }
-    void traceData ( const uint64_t data, const int last, const uint8_t tag ) {
-	fprintf(stderr, "traceData data=%08llx last=%d tag=%x\n", (long long)data, last, tag);
+    void traceData ( const bsvvector_Luint32_t_L4 data, const int last, const uint8_t tag ) {
+	char datastr[128];
+	int offset = 0;
+	for (int i = 0; i < PcieDataBusWidth/32; i++)
+	    offset += snprintf(datastr+offset, sizeof(datastr)-offset-1, " %08x", data[i]);
+	fprintf(stderr, "traceData data=%s last=%d tag=%x\n", datastr, last, tag);
     }
 
     NvmeTrace(int id, PortalPoller *poller = 0) : NvmeTraceWrapper(id, poller) {
@@ -113,8 +122,8 @@ public:
 	fprintf(stderr, "strstr loc loc=%d\n", loc);
     }
 
-    virtual void transferCompleted ( const uint16_t requestId, const uint64_t status ) {
-      fprintf(stderr, "%s:%d requestId=%08x status=%08llx\n", __FUNCTION__, __LINE__, requestId, (long long)status);
+  virtual void transferCompleted ( const uint16_t requestId, const uint64_t status, const uint32_t cycles ) {
+      fprintf(stderr, "%s:%d requestId=%08x status=%08llx cycles=%d\n", __FUNCTION__, __LINE__, requestId, (long long)status, cycles);
       value = status;
       sem_post(&sem);
     }
