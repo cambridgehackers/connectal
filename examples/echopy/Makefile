@@ -15,8 +15,9 @@ CONNECTALFLAGS += -I$(PYTHON_FOR_ANDROID)/include/
 CONNECTALFLAGS += -L$(PYTHON_FOR_ANDROID)/lib -lpython2.7
 endif
 ifeq ($(BOARD),zedboard_ubuntu)
+CONNECTALFLAGS += --cxxflags=-std=c++11
 CONNECTALFLAGS += -I usr/include
-CONNECTALFLAGS += -L usr/lib/python2.7/config-arm-linux-gnueabihf -lpython2.7
+CONNECTALFLAGS += -L usr/lib/arm-linux-gnueabihf -lpython2.7
 
 prebuild::
 	./ubuntu-python-dev.sh
