@@ -50,7 +50,7 @@ interface NvmeRequest;
    // FIXME: move to new portal
    method Action setSearchString(Bit#(32) needleSglId, Bit#(32) mpNextSglId, Bit#(32) needleLen);
    method Action startSearch(Bit#(32) searchLen);
-   method Action startTransfer(Bit#(8) opcode, Bit#(8) flags, Bit#(16) requestId, Bit#(64) startBlock, Bit#(32) numBlocks);
+   method Action startTransfer(Bit#(8) opcode, Bit#(8) flags, Bit#(16) requestId, Bit#(64) startBlock, Bit#(32) numBlocks, Bit#(32) dsm);
 endinterface
 
 interface NvmeIndication;

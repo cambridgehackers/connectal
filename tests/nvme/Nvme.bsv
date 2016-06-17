@@ -57,6 +57,7 @@ typedef struct {
    Bit#(16) requestId;
    Bit#(64) startBlock;
    Bit#(32) numBlocks;
+   Bit#(32) dsm;
    } NvmeIoCommand deriving (Bits);
 
 `ifndef TOP_SOURCES_PORTAL_CLOCK
@@ -274,6 +275,7 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 	    command[10] = req.startBlock[31:0];
 	    command[11] = req.startBlock[63:32];
 	    command[12] = req.numBlocks-1;
+	    command[13] = req.dsm;
 	    requestId <= req.requestId;
 	    ioCommand <= command;
 	 endaction
@@ -283,6 +285,10 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 					    write: True, responseOnWrite: False,
 					    datain: truncate(pack(ioCommand) >> (i*fromInteger(valueOf(PcieDataBusWidth)))) });
          endseq
+	 // clear response entry
+	 portB1.request.put(BRAMRequest {address: (extend(requestId[2:0]) * fromInteger(responseSize/bytesPerEntry)) + fromInteger(12/bytesPerEntry),
+					 write: True, responseOnWrite: False, datain: 0});
+
 	 // tell the NVME the new submission queue tail pointer
 	 action
 	    awaddrFifo.enq(PhysMemRequest { addr: 'h1000 + (2*2+0)*(4<<0), burstLen: 4, tag: 1 });
@@ -327,8 +333,10 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 
    rule rl_count_data_to_mp;
       let data <- toGet(splitter.data).get();
-      data.last = (dataCounter+fromInteger(valueOf(PcieDataBusWidth)/8)) >= dataLengthFifo.first;
-      fifoToMp.enq(data);
+      if (dataLengthFifo.notEmpty()) begin
+	 data.last = (dataCounter+fromInteger(valueOf(PcieDataBusWidth)/8)) >= dataLengthFifo.first;
+	 fifoToMp.enq(data);
+      end
       dataCounter <= dataCounter + 1;
    endrule
 
@@ -377,8 +385,8 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 	 dataLengthFifo.enq(haystackLen);
 	 mpEngine.setsearch.enq(tuple3(/* unused */maxBound, haystackLen, /* unused */0));
       endmethod
-      method Action startTransfer(Bit#(8) opcode, Bit#(8) flags, Bit#(16) requestId, Bit#(64) startBlock, Bit#(32) numBlocks);
-	 ioCommandFifo.enq(NvmeIoCommand{opcode: opcode, flags: flags, requestId: requestId, startBlock: startBlock, numBlocks: numBlocks });
+      method Action startTransfer(Bit#(8) opcode, Bit#(8) flags, Bit#(16) requestId, Bit#(64) startBlock, Bit#(32) numBlocks, Bit#(32) dsm);
+	 ioCommandFifo.enq(NvmeIoCommand{opcode: opcode, flags: flags, requestId: requestId, startBlock: startBlock, numBlocks: numBlocks, dsm: dsm });
       endmethod
    endinterface
    interface Clock portalClockSource = axiRootPort.axi.aclk_out;

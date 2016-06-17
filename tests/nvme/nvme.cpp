@@ -101,6 +101,8 @@ class NvmeIndication : public NvmeIndicationWrapper {
     
 public:
     uint64_t value;
+    uint32_t requests;
+    uint32_t cycles;
     virtual void readDone ( const uint64_t data ) {
 	//fprintf(stderr, "%s:%d data=%08llx\n", __FUNCTION__, __LINE__, (long long)data);
 	value = data;
@@ -125,6 +127,8 @@ public:
   virtual void transferCompleted ( const uint16_t requestId, const uint64_t status, const uint32_t cycles ) {
       fprintf(stderr, "%s:%d requestId=%08x status=%08llx cycles=%d\n", __FUNCTION__, __LINE__, requestId, (long long)status, cycles);
       value = status;
+      this->requests++;
+      this->cycles += cycles;
       sem_post(&sem);
     }
 
@@ -135,7 +139,7 @@ public:
 	sem_wait(&wsem);
     }
 
-    NvmeIndication(int id, PortalPoller *poller = 0) : NvmeIndicationWrapper(id, poller) {
+    NvmeIndication(int id, PortalPoller *poller = 0) : NvmeIndicationWrapper(id, poller), value(0), requests(0), cycles(0) {
 	sem_init(&sem, 0, 0);
 	sem_init(&wsem, 0, 0);
     }
@@ -246,6 +250,12 @@ public:
     void status() {
 	device.status();
 	indication.wait();
+    }
+    void transferStats() {
+	uint32_t cycles = indication.cycles;
+	uint32_t requests = indication.requests;
+	fprintf(stderr, "transfer stats: requests=%d cycles=%d average cycles/request=%5.2f\n",
+		requests, cycles, (double)cycles/(double)requests);
     }
 };
 
@@ -398,10 +408,10 @@ int Nvme::ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue)
 
     if (queue == 2) {
 	fprintf(stderr, "%s:%d starting transfer\n", __FUNCTION__, __LINE__);
-	device.trace(1);
+	device.trace(0);
 
-	device.startTransfer(/* read */ 2, /* flags */ 0, cmd->cid, cmd->cdw10, cmd->cdw12+1);
-	sleep(1);
+	device.startTransfer(/* read */ 2, /* flags */ 0, cmd->cid, cmd->cdw10, cmd->cdw12+1, /* dsm */0x71);
+	//sleep(1);
 
 	for (int i = 0; i < 16; i++) {
 	    fprintf(stderr, "requestbuffer[%02x]=%016llx\n", i, bramRead(0x1000 + i*8));
@@ -770,9 +780,10 @@ int main(int argc, const char **argv)
 
     fprintf(stderr, "CSTS %08x\n", nvme.read32( 0x1c));
     int startBlock = 34816; // base and extent of test file in SSD
-    int numBlocks = 8; // 55; //8177;
-    int blocksPerRequest = 1;
-    nvme.startSearch(numBlocks*512);
+    int blocksPerRequest = 5;
+    int numBlocks = 8*blocksPerRequest; // 55; //8177;
+    if (0)
+	nvme.startSearch(numBlocks*512);
     for (int block = 0; block < numBlocks; block += blocksPerRequest) {
       int sc = doIO(&nvme, startBlock, blocksPerRequest, 2);
       nvme.status();
@@ -781,6 +792,7 @@ int main(int argc, const char **argv)
       startBlock += blocksPerRequest;
     }
 
+    nvme.transferStats();
     fprintf(stderr, "CSTS %08x\n", nvme.read32( 0x1c));
 
     return 0;
