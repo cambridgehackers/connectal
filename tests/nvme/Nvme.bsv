@@ -553,32 +553,8 @@ module mkSplitMemServer(SplitMemServer#(dataBusWidth));
    let doneFifo <- mkFIFOF();
 
    let dataFifo <- mkSizedBRAMFIFOF(4096);
-
-   AddressGenerator#(24,dataBusWidth) readAddrGenerator <- mkAddressGenerator();
-   AddressGenerator#(24,dataBusWidth) writeAddrGenerator <- mkAddressGenerator();
-
-   let readReqObj <- mkProbe();
-   let readReqDest <- mkProbe();
-   let readReqOffset <- mkProbe();
-   let readDataDest <- mkProbe();
-   let readDataData <- mkProbe();
-   let readDataLast <- mkProbe();
-   let readBeatAddr <- mkProbe();
-   let readBeatByteCount <- mkProbe();
-   let readBeatLast <- mkProbe();
-   let busReadDataData <- mkProbe();
-   let busReadDataLast <- mkProbe();
-   let writeReqObj <- mkProbe();
-   let writeReqDest <- mkProbe();
-   let writeReqOffset <- mkProbe();
-   let writeDataDest <- mkProbe();
-   let writeDataData <- mkProbe();
-   let writeDataLast <- mkProbe();
-   let writeBeatAddr <- mkProbe();
-   let writeBeatByteCount <- mkProbe();
-   let writeBeatLast <- mkProbe();
-   let writeDoneTag <- mkProbe();
-   let writeDoneDest <- mkProbe();
+   let readDestFifo <- mkFIFOF();
+   let writeDestFifo <- mkFIFOF();
 
    rule rl_rd_req;
       MemRequest req <- toGet(readReqFifo).get();
@@ -587,29 +563,19 @@ module mkSplitMemServer(SplitMemServer#(dataBusWidth));
 	 bramReadReqFifo.enq(req);
       else
 	 busReadReqFifo.enq(req);
-      readAddrGenerator.request.put(PhysMemRequest { addr: truncate(req.offset), burstLen: req.burstLen, tag: extend(dest) });
-
-      readReqObj <= req.sglId;
-      readReqDest <= dest;
-      readReqOffset <= req.offset[31:0];
+      readDestFifo.enq(dest);
    endrule
 
    rule rl_rd_data;
-      let addrBeat <- readAddrGenerator.addrBeat.get();
-      let dest = addrBeat.tag[1:0];
+      let dest = readDestFifo.first();
       MemData#(dataBusWidth) md;
       if (dest == 2)
 	 md <- toGet(bramReadDataFifo).get();
       else
 	 md <- toGet(busReadDataFifo).get();
+      if (md.last)
+	 readDestFifo.deq();
       readDataFifo.enq(md);
-
-      readDataDest <= dest;
-      readDataData <= md.data;
-      readDataLast <= md.last;
-      readBeatAddr <= addrBeat.addr[15:0];
-      readBeatByteCount <= addrBeat.bc;
-      readBeatLast <= addrBeat.last;
    endrule
 
    rule rl_wr_req;
@@ -621,16 +587,11 @@ module mkSplitMemServer(SplitMemServer#(dataBusWidth));
 	 // no need to send the request
       end else
 	 busWriteReqFifo.enq(req);
-      writeAddrGenerator.request.put(PhysMemRequest { addr: truncate(req.offset), burstLen: req.burstLen, tag: extend(dest) });
-
-      writeReqObj <= req.sglId;
-      writeReqDest <= dest;
-      writeReqOffset <= req.offset[31:0];
+      writeDestFifo.enq(dest);
    endrule
    
    rule rl_wr_data;
-      let addrBeat <- writeAddrGenerator.addrBeat.get();
-      let dest = addrBeat.tag[1:0];
+      let dest = writeDestFifo.first();
       MemData#(dataBusWidth) md <- toGet(writeDataFifo).get();
       if (dest == 2)
 	 bramWriteDataFifo.enq(md);
@@ -638,18 +599,10 @@ module mkSplitMemServer(SplitMemServer#(dataBusWidth));
 	 dataFifo.enq(md);
       else
 	 busWriteDataFifo.enq(md);
-      if (addrBeat.last)
+      if (md.last) begin
+	 writeDestFifo.deq();
 	 doneFifo.enq(tuple2(dest, md.tag));
-      else if (md.last)
-	 doneFifo.enq(tuple2(dest, maxBound));
-
-      writeDataDest <= dest;
-      writeDataData <= md.data;
-      writeDataLast <= md.last;
-      writeBeatAddr <= addrBeat.addr[15:0];
-      writeBeatByteCount <= addrBeat.bc;
-      writeBeatLast <= addrBeat.last;
-
+      end
    endrule
 
    rule rl_wr_done;
@@ -662,9 +615,6 @@ module mkSplitMemServer(SplitMemServer#(dataBusWidth));
       else
 	 doneTag <- toGet(busWriteDoneFifo).get();
       writeDoneFifo.enq(doneTag);
-
-      writeDoneTag <= doneTag;
-      writeDoneDest <= dest;
    endrule
 
    interface MemServer server;
@@ -684,8 +634,6 @@ module mkSplitMemServer(SplitMemServer#(dataBusWidth));
 	 interface Put readData;
 	    method Action put(MemData#(dataBusWidth) md);
 	       busReadDataFifo.enq(md);
-	       busReadDataData <= md.data;
-	       busReadDataLast <= md.last;
 	    endmethod
 	 endinterface
       endinterface
