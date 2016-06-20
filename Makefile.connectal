@@ -197,9 +197,6 @@ endif
 comma := ,
 gentarget:: process_autotop generate_altera_custom
 	@[ -e $(CONNECTALDIR)/scripts/syntax/parsetab.py ] || make -C $(CONNECTALDIR) scripts/syntax/parsetab.py
-	$(Q)[ -e $(IPDIR) ] || mkdir -p $(IPDIR)
-	$(Q)[ -e $(PROJECTDIR)/generatedbsv ] || mkdir -p $(PROJECTDIR)/generatedbsv
-	$(Q)[ -e $(PROJECTDIR)/jni ] || mkdir -p $(PROJECTDIR)/jni
 ifeq ($(USE_PRINTF),1)
 	$(CONNECTALDIR)/scripts/preprocess_trace.py $(PROJECTDIR) $(BSVFILES)
 endif
@@ -247,6 +244,7 @@ prebuild::
 	@# additional steps needed before making verilog etc
 ifneq ($(NEED_XILINX_PCIE_$(BOARD)),)
 	@echo "building ... $(BOARD) PCIe gen$(PCIEGEN)"
+	$(Q)[ -e $(IPDIR) ] || mkdir -p $(IPDIR)
 	cd $(PROJECTDIR); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) vivado -notrace -mode batch -source $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
 endif
 
