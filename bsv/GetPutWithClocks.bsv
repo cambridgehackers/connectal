@@ -42,7 +42,7 @@ instance ConnectableWithClocks#(Get#(a), Put#(a)) provisos (Bits#(a, awidth));
    module mkConnectionWithClocks#(Get#(a) in, Put#(a) out,
                                   Clock inClock, Reset inReset,
                                   Clock outClock, Reset outReset)(Empty) provisos (Bits#(a, awidth));
-       SyncFIFOIfc#(a) synchronizer <- mkSyncFIFO(1, inClock, inReset, outClock);
+       SyncFIFOIfc#(a) synchronizer <- mkSyncFIFO(8, inClock, inReset, outClock);
        rule doGet;
            let v <- in.get();
 	   synchronizer.enq(v);

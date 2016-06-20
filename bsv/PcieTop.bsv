@@ -107,7 +107,7 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
    end
 
    // going from level to edge-triggered interrupt
-   SyncFIFOIfc#(Bit#(4)) intrFifo <- mkSyncFIFO(1, host.portalClock, host.portalReset, host.pcieClock);
+   SyncFIFOIfc#(Bit#(4)) intrFifo <- mkSyncFIFO(8, host.portalClock, host.portalReset, host.pcieClock);
    Vector#(16, Reg#(Bool)) interruptRequested <- replicateM(mkReg(False, clocked_by host.portalClock, reset_by host.portalReset));
    rule interrupt_rule;
      Maybe#(Bit#(4)) intr = tagged Invalid;
