@@ -66,5 +66,5 @@ interface NvmeTrace;
    method Action traceDmaRequest(DmaChannel channel, Bool write, Bit#(16) objId, Bit#(64) offset, Bit#(16) burstLen, Bit#(8) tag, Bit#(32) timestamp);
    method Action traceDmaData(DmaChannel channel, Bool write, Vector#(TDiv#(PcieDataBusWidth,32),Bit#(32)) data, Bool last, Bit#(8) tag, Bit#(32) timestamp);
    method Action traceDmaDone(DmaChannel channel, Bit#(8) tag, Bit#(32) timestamp);
-   method Action traceData(Vector#(TDiv#(PcieDataBusWidth,32),Bit#(32)) data, Bool last, Bit#(8) tag);
+   method Action traceData(Vector#(TDiv#(PcieDataBusWidth,32),Bit#(32)) data, Bool last, Bit#(8) tag, Bit#(32) timestamp);
 endinterface
