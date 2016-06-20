@@ -1,4 +1,7 @@
 #include <stdio.h>
+//#include "jsoncpp/json/json.h"
+#include <map>
+#include <string>
 
 #include "DmaBuffer.h"
 #include "mp.h"
@@ -68,28 +71,45 @@ struct sgl_data_block_descriptor {
 };
 
 class NvmeTrace : public NvmeTraceWrapper {
+  std::multimap<int,std::string> traceValues;
 public:
     void traceDmaRequest(const DmaChannel chan, const int write, const uint16_t objId, const uint64_t offset, const uint16_t burstLen, const uint8_t tag, const uint32_t timestamp) {
-	fprintf(stderr, "%08x: traceDmaRequest chan=%d write=%d objId=%d offset=%08lx burstLen=%d tag=%x\n", timestamp, chan, write, objId, (long)offset, burstLen, tag);
+	char msg[128];
+	snprintf(msg, sizeof(msg), "%08x: traceDmaRequest chan=%d write=%d objId=%d offset=%08lx burstLen=%d tag=%x\n", timestamp, chan, write, objId, (long)offset, burstLen, tag);
+	traceValues.insert(std::pair<int, std::string>(timestamp, std::string(msg)));
     }
     void traceDmaData ( const DmaChannel chan, const int write, const bsvvector_Luint32_t_L4 data, const int last, const uint8_t tag, const uint32_t timestamp ) {
+	char msg[128];
 	char datastr[128];
 	int offset = 0;
 	for (int i = 0; i < PcieDataBusWidth/32; i++)
 	    offset += snprintf(datastr+offset, sizeof(datastr)-offset-1, " %08x", data[i]);
 
-	fprintf(stderr, "%08x: traceDmaData chan=%d write=%d data=%s last=%d tag=%x\n",
+	snprintf(msg, sizeof(msg), "%08x: traceDmaData chan=%d write=%d data=%s last=%d tag=%x\n",
 		timestamp, chan, write, datastr, last, tag);
+	traceValues.insert(std::pair<int, std::string>(timestamp, std::string(msg)));
     }
     virtual void traceDmaDone ( const DmaChannel chan, const uint8_t tag, const uint32_t timestamp ) {
-	fprintf(stderr, "%08x: traceDmaDone chan=%d tag=%x\n", timestamp, chan, tag);
+	char msg[128];
+	snprintf(msg, sizeof(msg), "%08x: traceDmaDone chan=%d tag=%x\n", timestamp, chan, tag);
+	traceValues.insert(std::pair<int, std::string>(timestamp, std::string(msg)));
     }
     void traceData ( const bsvvector_Luint32_t_L4 data, const int last, const uint8_t tag ) {
 	char datastr[128];
 	int offset = 0;
 	for (int i = 0; i < PcieDataBusWidth/32; i++)
 	    offset += snprintf(datastr+offset, sizeof(datastr)-offset-1, " %08x", data[i]);
+	//char msg[128];
 	fprintf(stderr, "traceData data=%s last=%d tag=%x\n", datastr, last, tag);
+	//traceValues.insert(std::pair<int,std::string>(timestamp, std::string(msg)));
+    }
+
+    void dumpTrace() {
+	int prev = 0;
+	for (auto it=traceValues.begin(); it!=traceValues.end(); ++it) {
+	    fprintf(stderr, "%08d %4d %s", it->first, it->first - prev, it->second.c_str());
+	    prev = it->first;
+	}
     }
 
     NvmeTrace(int id, PortalPoller *poller = 0) : NvmeTraceWrapper(id, poller) {
@@ -257,6 +277,9 @@ public:
 	fprintf(stderr, "transfer stats: requests=%d cycles=%d average cycles/request=%5.2f\n",
 		requests, cycles, (double)cycles/(double)requests);
     }
+    void dumpTrace() {
+	trace.dumpTrace();
+    }
 };
 
 uint32_t Nvme::readCtl(uint32_t addr)
@@ -408,7 +431,7 @@ int Nvme::ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue)
 
     if (queue == 2) {
 	fprintf(stderr, "%s:%d starting transfer\n", __FUNCTION__, __LINE__);
-	device.trace(0);
+	device.trace(1);
 
 	device.startTransfer(/* read */ 2, /* flags */ 0, cmd->cid, cmd->cdw10, cmd->cdw12+1, /* dsm */0x71);
 	//sleep(1);
@@ -780,8 +803,8 @@ int main(int argc, const char **argv)
 
     fprintf(stderr, "CSTS %08x\n", nvme.read32( 0x1c));
     int startBlock = 34816; // base and extent of test file in SSD
-    int blocksPerRequest = 5;
-    int numBlocks = 8*blocksPerRequest; // 55; //8177;
+    int blocksPerRequest = 32;
+    int numBlocks = 1*blocksPerRequest; // 55; //8177;
     if (0)
 	nvme.startSearch(numBlocks*512);
     for (int block = 0; block < numBlocks; block += blocksPerRequest) {
@@ -792,6 +815,7 @@ int main(int argc, const char **argv)
       startBlock += blocksPerRequest;
     }
 
+    nvme.dumpTrace();
     nvme.transferStats();
     fprintf(stderr, "CSTS %08x\n", nvme.read32( 0x1c));
 
