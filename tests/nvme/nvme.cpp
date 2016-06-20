@@ -94,14 +94,14 @@ public:
 	snprintf(msg, sizeof(msg), "%08x: traceDmaDone chan=%d tag=%x\n", timestamp, chan, tag);
 	traceValues.insert(std::pair<int, std::string>(timestamp, std::string(msg)));
     }
-    void traceData ( const bsvvector_Luint32_t_L4 data, const int last, const uint8_t tag ) {
+    void traceData ( const bsvvector_Luint32_t_L4 data, const int last, const uint8_t tag, const uint32_t timestamp ) {
 	char datastr[128];
 	int offset = 0;
 	for (int i = 0; i < PcieDataBusWidth/32; i++)
 	    offset += snprintf(datastr+offset, sizeof(datastr)-offset-1, " %08x", data[i]);
-	//char msg[128];
-	fprintf(stderr, "traceData data=%s last=%d tag=%x\n", datastr, last, tag);
-	//traceValues.insert(std::pair<int,std::string>(timestamp, std::string(msg)));
+	char msg[128];
+	snprintf(msg, sizeof(msg), "traceData data=%s last=%d tag=%x\n", datastr, last, tag);
+	traceValues.insert(std::pair<int,std::string>(timestamp, std::string(msg)));
     }
 
     void dumpTrace() {
