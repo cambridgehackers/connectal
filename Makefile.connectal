@@ -223,7 +223,7 @@ process_autotop::
 	touch $(PROJECTDIR)/Makefile.autotop
 ifneq ($(USE_AUTOTOP),)
 	$(Q)[ -e $(GPROJ) ] || mkdir -p $(GPROJ)
-	$(Q)$(CONNECTALDIR)/scripts/topgen.py --board $(BOARD) --project-dir $(GPROJ) $(AUTOTOP) $(CNOC) \
+	$(Q)$(CONNECTALDIR)/scripts/topgen.py --project-dir $(GPROJ) $(AUTOTOP) $(CNOC) \
 	    $(foreach f, $(S2H_INTERFACES), --wrapper $f) \
 	    $(foreach f, $(H2S_INTERFACES), --proxy $f)   \
  	    $(foreach f, $(MEM_READ_INTERFACES), --memread $f)   \

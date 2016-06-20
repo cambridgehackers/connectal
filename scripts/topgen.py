@@ -28,7 +28,6 @@ def newArgparser():
     argparser = argparse.ArgumentParser("Generate Top.bsv for an project.")
     argparser.add_argument('--project-dir', help='project directory')
     argparser.add_argument('--interface', default=[], help='exported interface declaration', action='append')
-    argparser.add_argument('--board', help='Board type')
     argparser.add_argument('--portalclock', help='Portal clock source', default=None)
     argparser.add_argument('--importfiles', default=[], help='added imports', action='append')
     argparser.add_argument('--portname', default=[], help='added portal names to enum list', action='append')
@@ -310,6 +309,7 @@ def parseParam(pitem, proxy):
     return pmap
 
 if __name__=='__main__':
+    print 'topgen', sys.argv
     options = argparser.parse_args()
 
     if not options.project_dir:
@@ -331,8 +331,6 @@ if __name__=='__main__':
     instantiatedModules = []
     exportedNames = []
     options.importfiles.append('`PinTypeInclude')
-    if options.board == 'xsim':
-        options.cnoc = True
     if options.cnoc:
         exportedNames.extend(['export mkCnocTop;', 'export NumberOfRequests;', 'export NumberOfIndications;'])
     else:
