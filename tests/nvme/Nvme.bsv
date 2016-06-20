@@ -295,6 +295,7 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 	    wdataFifo.enq(MemData{data: zeroExtend((requestId+1)[2:0]), tag: 1, last: True});
 	    requestInProgress <= True;
 	    requestStartTimestamp <= cycles;
+	    trace.traceData(unpack(0), False, truncate(requestId), cycles);
 	 endaction
 	 // wait for response queue to be updated
 	 while (requestInProgress) seq
