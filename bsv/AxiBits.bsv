@@ -436,10 +436,11 @@ instance MkPhysMemSlave#(Axi4SlaveLiteBits#(axiAddrWidth,dataWidth),addrWidth,da
    endmodule   
 endinstance
 
-function Axi4ReadRequest#(addrWidth,idWidth) toAxi4ReadRequest(PhysMemRequest#(addrWidth,dataBusWidth) req)
-   provisos (Add#(a__, idWidth, 6));
-   Axi4ReadRequest#(addrWidth,idWidth) axireq  = unpack(0);
-   axireq.address = req.addr;
+function Axi4ReadRequest#(axiAddrWidth,idWidth) toAxi4ReadRequest(PhysMemRequest#(addrWidth,dataBusWidth) req)
+   provisos (Add#(axiAddrWidth,a__,addrWidth)
+	     ,Add#(b__, idWidth, 6));
+   Axi4ReadRequest#(axiAddrWidth,idWidth) axireq  = unpack(0);
+   axireq.address = truncate(req.addr);
    axireq.id   = truncate(req.tag);
    let dataWidthBytes = valueOf(TDiv#(dataBusWidth,8));
    let dataSizeMask = dataWidthBytes-1;
@@ -508,24 +509,27 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,dataWidth,tagWidth,Empty),a
       FIFOF#(MemData#(dataWidth)) rfifo <- mkAxiFifoF();
       FIFOF#(PhysMemRequest#(addrWidth,dataWidth)) awfifo <- mkAxiFifoF();
       FIFOF#(MemData#(dataWidth)) wfifo <- mkAxiFifoF();
+      FIFOF#(Bit#(TDiv#(dataWidth,8))) wstrbfifo <- mkAxiFifoF();
       FIFOF#(Bit#(MemTagSize)) bfifo <- mkAxiFifoF();   
       FIFOF#(Bit#(MemTagSize)) rtagfifo <- mkAxiFifoF();   
       FIFOF#(Bit#(MemTagSize)) wtagfifo <- mkAxiFifoF();   
 
-      rule rl_arvalid_araddr;
+      let dataWidthBytes = valueOf(TDiv#(dataWidth,8));
+      let dataSizeMask = dataWidthBytes-1;
+
+      rule rl_arvalid;
 	 axiSlave.arvalid(pack(arfifo.notEmpty && rtagfifo.notFull));
-	 Bit#(axiAddrWidth) addr = 0;
-	 Bit#(tagWidth) id = 0;
-	 if (arfifo.notEmpty) begin
-	    addr = truncate(arfifo.first.addr);
-	    id = truncate(arfifo.first.tag);
-	 end
-	 axiSlave.araddr(addr);
-	 axiSlave.arid(id);
-	 axiSlave.arsize(axiBusSize(valueOf(dataWidth)));
+      endrule
+      rule rl_araddr if (arfifo.notEmpty);
+	 let req = arfifo.first;
+	 Axi4ReadRequest#(axiAddrWidth,tagWidth) axireq = toAxi4ReadRequest(req);
+	 axiSlave.araddr(axireq.address);
+	 axiSlave.arid(axireq.id);
+	 axiSlave.arlen(axireq.len);
+	 axiSlave.arsize(axireq.size);
 	 axiSlave.arburst(2'b01);
 	 axiSlave.arprot(3'b000);
-	 axiSlave.arcache(4'b0011);
+	 axiSlave.arcache(4'b1111); // was 4'b0011
       endrule
       rule rl_arfifo if (axiSlave.arready() == 1);
 	 let req <- toGet(arfifo).get();
@@ -539,20 +543,24 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,dataWidth,tagWidth,Empty),a
 	 rfifo.enq(MemData { data: axiSlave.rdata(), tag: rtag } );
       endrule
 
-      rule rl_awvalid_awaddr;
+      rule rl_awvalid;
 	 axiSlave.awvalid(pack(awfifo.notEmpty && wtagfifo.notFull));
-	 Bit#(axiAddrWidth) addr = 0;
-	 Bit#(tagWidth) id = 0;
-	 if (awfifo.notEmpty) begin
-	    addr = truncate(awfifo.first.addr);
-	    id = truncate(awfifo.first.tag);
-	 end
-	 axiSlave.awaddr(addr);
-	 axiSlave.awid(id);
-	 axiSlave.awsize(axiBusSize(valueOf(dataWidth)));
+      endrule
+      rule rl_awaddr if (awfifo.notEmpty);
+	 let req = awfifo.first;
+	 Axi4ReadRequest#(axiAddrWidth,tagWidth) axireq = toAxi4ReadRequest(req);
+	 axiSlave.awaddr(axireq.address);
+	 axiSlave.awid(axireq.id);
+	 axiSlave.awlen(axireq.len);
+	 axiSlave.awsize(axireq.size);
 	 axiSlave.awburst(2'b01);
 	 axiSlave.awprot(3'b000);
 	 axiSlave.awcache(4'b0011);
+	 //FIXME should go in toAxi4WriteRequest
+	 if (axireq.size == axiBusSizeBytes(dataWidthBytes))
+	    wstrbfifo.enq(maxBound);
+	 else
+	    wstrbfifo.enq('hf);
       endrule   
       rule rl_awfifo if (axiSlave.awready() == 1);
 	 let req <- toGet(awfifo).get();
@@ -566,7 +574,9 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,dataWidth,tagWidth,Empty),a
 	 let wdata = md.data;
 	 axiSlave.wdata(wdata);
 	 axiSlave.wlast(pack(wfifo.first.last));
-	 axiSlave.wstrb(maxBound);
+	 axiSlave.wstrb('hf);
+	 if (wfifo.first.last)
+	    wstrbfifo.deq();
       endrule
       rule rl_bready;
 	 axiSlave.bready(pack(wtagfifo.notEmpty && bfifo.notFull));
@@ -587,7 +597,6 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,dataWidth,tagWidth,Empty),a
       endinterface   
    endmodule   
 endinstance
-
 
 typeclass AxiToMemReadClient#(type objIdType, numeric type axiAddrWidth, numeric type dataWidth);
    module mkMemReadClient#(objIdType objId, Axi4MasterBits#(axiAddrWidth,dataWidth,MemTagSize,Empty) m)(MemReadClient#(dataWidth));
