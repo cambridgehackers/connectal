@@ -117,10 +117,37 @@ CPPFILES   += $(CPPFILES_$(USE_CNOC))
 BSVFILES   += $(BSVFILES_$(USE_CNOC))
 
 ifneq ($(PYFILES),)
-CONNECTALFLAGS += --shared -D PORTAL_JSON -ljsoncpp
+CONNECTALFLAGS += --shared -D PORTAL_JSON
 CPPFILES += $(CONNECTALDIR)/cpp/portalPython.cpp
 CPPFILES2 = $(CONNECTALDIR)/cpp/runpython.cpp
+ifneq ($(BOARD),zedboard)
+CONNECTALFLAGS += -ljsoncpp
 endif
+
+ifeq ($(BOARD),zedboard)
+## git clone git://github.com/cambridgehackers/python-for-android-sdk
+PYTHON_FOR_ANDROID ?= $(CONNECTALDIR)/../python-for-android-sdk
+CONNECTALFLAGS += -I$(PYTHON_FOR_ANDROID)/include/ -I.
+CONNECTALFLAGS += -L$(PYTHON_FOR_ANDROID)/lib -lpython2.7
+CONNECTALFLAGS += --stl=gnustl_static --cxxflags=-fexceptions --android-toolchain=4.8
+
+CPPFILES  += jsoncpp/dist/jsoncpp.cpp
+CPPFILES2 += jsoncpp/dist/jsoncpp.cpp
+
+prebuild::
+	[ -d jsoncpp ] || git clone git://github.com/open-source-parsers/jsoncpp
+	cd jsoncpp; python amalgamate.py; mkdir -p json; cd json; ln -sf ../dist/json/*.h .
+endif #zedboard
+
+ifeq ($(BOARD),zedboard_ubuntu)
+CONNECTALFLAGS += --cxxflags=-std=c++11
+CONNECTALFLAGS += -I usr/include
+CONNECTALFLAGS += -L usr/lib/arm-linux-gnueabihf -lpython2.7
+
+prebuild::
+	./ubuntu-python-dev.sh
+endif # zedboard_ubuntu
+endif # PYFILES
 
 ifneq ($(CPPFILES2),)
 ALL_CPPFILES2 = $(CPPFILES2) $(CPPFILES2_$(USE_CNOC)) $(CPPFILES2_dma)
