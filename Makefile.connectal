@@ -223,8 +223,8 @@ ifneq ($(USE_AUTOTOP),)
 	$(Q)$(CONNECTALDIR)/scripts/topgen.py --project-dir $(GPROJ) $(AUTOTOP) $(CNOC) \
 	    $(foreach f, $(S2H_INTERFACES), --wrapper $f) \
 	    $(foreach f, $(H2S_INTERFACES), --proxy $f)   \
- 	    $(foreach f, $(MEM_READ_INTERFACES), --memread $f)   \
- 	    $(foreach f, $(MEM_WRITE_INTERFACES), --memwrite $f)
+	    $(foreach f, $(MEM_READ_INTERFACES), --memread $f)   \
+	    $(foreach f, $(MEM_WRITE_INTERFACES), --memwrite $f)
 endif
 
 generate_altera_custom::
