@@ -436,6 +436,69 @@ instance MkPhysMemSlave#(Axi4SlaveLiteBits#(axiAddrWidth,dataWidth),addrWidth,da
    endmodule   
 endinstance
 
+function Axi4ReadRequest#(addrWidth,idWidth) toAxi4ReadRequest(PhysMemRequest#(addrWidth,dataBusWidth) req)
+   provisos (Add#(a__, idWidth, 6));
+   Axi4ReadRequest#(addrWidth,idWidth) axireq  = unpack(0);
+   axireq.address = req.addr;
+   axireq.id   = truncate(req.tag);
+   let dataWidthBytes = valueOf(TDiv#(dataBusWidth,8));
+   let dataSizeMask = dataWidthBytes-1;
+   let size = req.burstLen & fromInteger(dataSizeMask);
+   let beats = (req.burstLen + fromInteger(dataWidthBytes-1)) / fromInteger(dataWidthBytes);
+   axireq.len = truncate(beats-1);
+   axireq.size = (beats == 0) ? axiBusSizeBytes(size) : axiBusSizeBytes(dataWidthBytes);
+   axireq.burst = 2'b01;
+   axireq.cache = 4'b1111;
+   return axireq;
+endfunction
+
+`ifdef BLUECHECK
+import BlueCheck::*;
+import StmtFSM::*;
+
+module [BlueCheck] mkPhysMemSlaveSpec();
+   /* This function allows us to make assertions in the properties */
+   Ensure ensure <- getEnsure;
+   Ensure ensure1 <- getEnsure;
+   Bit#(BurstLenSize) bytesPerBeat = 16;
+   let dataSizeMask = bytesPerBeat-1;
+
+   function Stmt checkLen(Bit#(8) burstLen8) =
+   seq
+      action
+	 Bit#(BurstLenSize) burstLen = extend(burstLen8);
+	 PhysMemRequest#(16,128) pmr = PhysMemRequest { addr: 0, burstLen: burstLen };
+	 Axi4ReadRequest#(16,6) amr = toAxi4ReadRequest(pmr);
+	 Bit#(8) expectedValue = truncate((burstLen + dataSizeMask) / bytesPerBeat - 1);
+	 //$display("burstLen=%d arm.len=%x bytesPerBeat=%x dataSizeMask=%x expectedValue=%x", burstLen, amr.len, bytesPerBeat, dataSizeMask, expectedValue);
+	 ensure(extend(amr.len) == expectedValue);
+	 ensure1 ((burstLen == 0) || ((extend(amr.len)+1) * bytesPerBeat >= burstLen));
+      endaction
+   endseq;
+
+   function Stmt checkSize(Bit#(8) burstLen8) =
+   seq
+      action
+	 Bit#(BurstLenSize) burstLen = extend(burstLen8);
+	 PhysMemRequest#(16,128) pmr = PhysMemRequest { addr: 0, burstLen: burstLen };
+	 Axi4ReadRequest#(16,6) amr = toAxi4ReadRequest(pmr);
+	 Bit#(3) expectedValue = axiBusSizeBytes(16);
+	 //$display("burstLen=%d amr.size=%x expectedValue=%x", burstLen, amr.size, expectedValue);
+	 ensure((burstLen == 0) || (extend(amr.size) == expectedValue));
+      endaction
+   endseq;
+
+   prop("checkLen", checkLen);
+   prop("checkSize", checkSize);
+endmodule
+
+module [Module] mkMkPhysMemSlaveChecker();
+   blueCheck(mkPhysMemSlaveSpec);
+endmodule
+
+`endif
+
+
 //FIXME burst transfers
 instance MkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,dataWidth,tagWidth,Empty),addrWidth,dataWidth)
       provisos (Add#(axiAddrWidth,a__,addrWidth),
