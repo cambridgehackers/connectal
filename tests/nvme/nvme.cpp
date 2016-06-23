@@ -552,7 +552,7 @@ void identify(Nvme *nvme)
 	fprintf(stderr, "host buffer min size       %x\n", *(int *)&cbuffer[276]);
 	fprintf(stderr, "nvm submission queue entry size %d\n", cbuffer[512]);
 	fprintf(stderr, "nvm completion queue entry size %d\n", cbuffer[513]);
-	fprintf(stderr, "maximum data transfer size: %d blocks\n", cbuffer[77] ? 2^cbuffer[77] : -1);
+	fprintf(stderr, "maximum data transfer size: %d pages\n", cbuffer[77] ? (1 << cbuffer[77]) : -1);
 	fprintf(stderr, "controller id: %d\n", *(unsigned short *)&cbuffer[78]);
 	fprintf(stderr, "OACS: %x\n", *(unsigned short *)&cbuffer[256]);
 	fprintf(stderr, "log page attributes: %x\n", cbuffer[261]);
@@ -760,7 +760,11 @@ int main(int argc, const char **argv)
 	for (int i = 0; i < 10; i++)
 	    fprintf(stderr, "CARDMEM[%02x]=%08x\n", i*4, nvme.read32(0x00000000 + i*4));
     }
-
+    uint64_t cardcap = nvme.read(0);
+    int mpsmax = (cardcap >> 52)&0xF;
+    int mpsmin = (cardcap >> 48)&0xF;
+    fprintf(stderr, "MPSMAX=%0x %#x bytes\n", mpsmax, 1 << (12+mpsmax));
+    fprintf(stderr, "MPSMIN=%0x %#x bytes\n", mpsmin, 1 << (12+mpsmin));
     fprintf(stderr, "CSTS %08x checking reset bit\n", nvme.read32( 0x1c));
     nvme.write32(0x1c, 0x10); // clear reset bit
     fprintf(stderr, "CSTS %08x cleared reset bit\n", nvme.read32( 0x1c));
