@@ -543,6 +543,8 @@ void identify(Nvme *nvme)
 	fprintf(stderr, "serial number '%s'\n", str);
 	snprintf(str, 40, "%s", &cbuffer[24]);
 	fprintf(stderr, "model number  '%s'\n", str);
+	snprintf(str, 8, "%s", &cbuffer[64]);
+	fprintf(stderr, "firmware rev  '%s'\n", str);
 	fprintf(stderr, "host buffer preferred size %x\n", *(int *)&cbuffer[272]);
 	fprintf(stderr, "host buffer min size       %x\n", *(int *)&cbuffer[276]);
 	fprintf(stderr, "nvm submission queue entry size %d\n", cbuffer[512]);
