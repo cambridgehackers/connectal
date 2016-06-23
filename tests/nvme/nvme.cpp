@@ -110,6 +110,7 @@ public:
 	    fprintf(stderr, "%08d %4d %s", it->first, it->first - prev, it->second.c_str());
 	    prev = it->first;
 	}
+	traceValues.clear();
     }
 
     NvmeTrace(int id, PortalPoller *poller = 0) : NvmeTraceWrapper(id, poller) {
