@@ -437,11 +437,13 @@ int Nvme::ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue)
 	device.startTransfer(/* read */ 2, /* flags */ 0, cmd->cid, cmd->cdw10, cmd->cdw12+1, /* dsm */0x71);
 	//sleep(1);
 
-	for (int i = 0; i < 16; i++) {
-	    fprintf(stderr, "requestbuffer[%02x]=%016llx\n", i, bramRead(0x1000 + i*8));
-	}
-	for (int i = 0; i < 4; i++) {
-	    fprintf(stderr, "responsebuffer[%02x]=%016llx\n", i, bramRead(i*8));
+	if (0) {
+	    for (int i = 0; i < 16; i++) {
+		fprintf(stderr, "requestbuffer[%02x]=%016llx\n", i, bramRead(0x1000 + i*8));
+	    }
+	    for (int i = 0; i < 4; i++) {
+		fprintf(stderr, "responsebuffer[%02x]=%016llx\n", i, bramRead(i*8));
+	    }
 	}
 
 	fprintf(stderr, "%s:%d waiting for completion\n", __FUNCTION__, __LINE__);
