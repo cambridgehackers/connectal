@@ -256,6 +256,7 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
    endrule
 
    Reg#(Bit#(32)) i <- mkReg(0);
+   Reg#(Bit#(1)) phase <- mkReg(1);
 
    let bramQueryAddress <- mkProbe();
    let bramQueryResponse <- mkProbe();
@@ -285,9 +286,6 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 					    write: True, responseOnWrite: False,
 					    datain: truncate(pack(ioCommand) >> (i*fromInteger(valueOf(PcieDataBusWidth)))) });
          endseq
-	 // clear response entry
-	 portB1.request.put(BRAMRequest {address: (extend(requestId[2:0]) * fromInteger(responseSize/bytesPerEntry)) + fromInteger(12/bytesPerEntry),
-					 write: True, responseOnWrite: False, datain: 0});
 
 	 // tell the NVME the new submission queue tail pointer
 	 action
@@ -305,12 +303,14 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 	    action
 	       let response <- portB1.response.get();
 	       bramQueryResponse <= response;
-	       if (response[16+(3*32 % valueOf(PcieDataBusWidth))] == 1) begin
+	       if (response[16+(3*32 % valueOf(PcieDataBusWidth))] == phase) begin
 		  requestCompleted <= response;
 		  // if status field written by NVME
 		  let nextRequestId = (requestId + 1);
-		  if (nextRequestId == requestQueueEntryCount)
+		  if (nextRequestId == requestQueueEntryCount) begin
 		     nextRequestId = 0;
+		     phase <= ~phase;
+		  end
 		  requestId <= nextRequestId;
 		  ind.transferCompleted(requestId, truncate(response), cycles - requestStartTimestamp);
 		  requestInProgress <= False;
