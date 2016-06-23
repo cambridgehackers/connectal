@@ -432,7 +432,7 @@ int Nvme::ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue)
 
     if (queue == 2) {
 	fprintf(stderr, "%s:%d starting transfer\n", __FUNCTION__, __LINE__);
-	device.trace(1);
+	device.trace(0);
 
 	device.startTransfer(/* read */ 2, /* flags */ 0, cmd->cid, cmd->cdw10, cmd->cdw12+1, /* dsm */0x71);
 	//sleep(1);
