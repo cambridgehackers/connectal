@@ -446,6 +446,7 @@ int Nvme::ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue)
 
 	fprintf(stderr, "%s:%d waiting for completion\n", __FUNCTION__, __LINE__);
 	indication.wait();
+	dumpTrace();
 	int status = indication.value >> 32;
 	int more = (status >> 30) & 1;
 	int sc = (status >> 17) & 0xff;
