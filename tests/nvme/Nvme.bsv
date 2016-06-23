@@ -306,12 +306,6 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 	       if (response[16+(3*32 % valueOf(PcieDataBusWidth))] == phase) begin
 		  requestCompleted <= response;
 		  // if status field written by NVME
-		  let nextRequestId = (requestId + 1);
-		  if (nextRequestId == requestQueueEntryCount) begin
-		     nextRequestId = 0;
-		     phase <= ~phase;
-		  end
-		  requestId <= nextRequestId;
 		  ind.transferCompleted(requestId, truncate(response), cycles - requestStartTimestamp);
 		  requestInProgress <= False;
 	       end
@@ -320,8 +314,13 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 
 	 // tell the NVME the new response queue head pointer
 	 action
+	    let nextRequestId = (requestId + 1);
+	    if (nextRequestId[2:0] == 0) begin
+	       phase <= ~phase;
+	    end
+	    requestId <= nextRequestId;
 	    awaddrFifo.enq(PhysMemRequest { addr: 'h1000 + (2*2+1)*(4<<0), burstLen: 4, tag: 1 });
-	    wdataFifo.enq(MemData{data: zeroExtend((requestId+1)[2:0]), tag: 1, last: True});
+	    wdataFifo.enq(MemData{data: zeroExtend((nextRequestId)[2:0]), tag: 1, last: True});
 	 endaction
       endseq // while True
       endseq);
