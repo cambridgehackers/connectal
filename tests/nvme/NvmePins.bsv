@@ -24,12 +24,16 @@
 `include "ConnectalProjectConfig.bsv"
 
 import AxiPcieRootPort::*;
+import NvmeIfc::*;
 
 interface NvmePins;
    interface AprpPci pcie;
    method Action pcie_refclk(Bit#(1) p, Bit#(1) n);
    interface Clock deleteme_unused_clock;
    interface Reset pcie_sys_reset_n;
+`ifdef NVME_ACCELERATOR_INTERFACE
+   interface NvmeAccelerator accel;
+`endif
 endinterface
 
 export NvmePins(..);

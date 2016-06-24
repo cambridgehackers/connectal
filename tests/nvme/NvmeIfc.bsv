@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import AxiStream::*;
 import Vector::*;
 import ConnectalConfig::*;
 `include "ConnectalProjectConfig.bsv"
@@ -36,6 +37,13 @@ endinterface
 interface MemServerPortalIndication;
    method Action readDone(Bit#(DataBusWidth) data);
    method Action writeDone();
+endinterface
+
+// these ports exposed to a verilog wrapper module
+interface NvmeAccelerator;
+   interface AxiStreamMaster#(32) msgOut;
+   interface AxiStreamSlave#(32) msgIn;
+   interface AxiStreamMaster#(PcieDataBusWidth) dataOut;
 endinterface
 
 interface NvmeRequest;

@@ -34,6 +34,7 @@ import Vector::*;
 
 import AddressGenerator::*;
 import AxiBits::*;
+import AxiStream::*;
 import ConnectalClocks::*;
 import ConnectalConfig::*;
 import DefaultValue::*;
@@ -347,6 +348,15 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
       ind.strstrLoc(pack(loc));
    endrule
 
+`ifdef NVME_ACCELERATOR_INTERFACE
+   FIFOF#(Bit#(32)) msgInFifo <- mkFIFOF();
+   FIFOF#(Bit#(32)) msgOutFifo <- mkFIFOF();
+   FIFOF#(Bit#(PcieDataBusWidth)) dataOutFifo <- mkFIFOF();
+   AxiStreamSlave#(32)                msgInStream <- mkAxiStream(msgInFifo);
+   AxiStreamMaster#(32)               msgOutStream <- mkAxiStream(msgOutFifo);
+   AxiStreamMaster#(PcieDataBusWidth) dataOutStream <- mkAxiStream(dataOutFifo);
+`endif
+
    interface MemServerPortalRequest bramRequest = bramMemServerPortal.request;
    interface NvmeRequest request;
 
@@ -398,6 +408,13 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
          refclk_p.inputclock(p);
          refclk_n.inputclock(n);
       endmethod
+`ifdef NVME_ACCELERATOR_INTERFACE
+      interface NvmeAccelerator accel;
+	 interface msgIn = msgInStream;
+	 interface msgOut = msgOutStream;
+	 interface dataOut = dataOutStream;
+      endinterface
+`endif
    endinterface
    interface Vector dmaReadClient = vec(axiGearbox.client.readClient, re.dmaClient);
    interface Vector dmaWriteClient = vec(axiGearbox.client.writeClient);
