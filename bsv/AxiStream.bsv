@@ -94,3 +94,46 @@ endinstance
 typeclass ToAxiStream#(type atype, type btype);
    function atype toAxiStream(btype b);
 endtypeclass
+typeclass MkAxiStream#(type atype, type btype);
+   module mkAxiStream#(btype b)(atype);
+endtypeclass
+
+instance MkAxiStream#(AxiStreamMaster#(dsize), FIFOF#(Bit#(dsize)));
+   module mkAxiStream#(FIFOF#(Bit#(dsize)) f)(AxiStreamMaster#(dsize));
+      Wire#(Bool) readyWire <- mkDWire(False);
+      rule rl_deq if (readyWire && f.notEmpty);
+	 f.deq();
+      endrule
+     method Bit#(dsize)              tdata();
+	if (f.notEmpty())
+	  return f.first();
+	else
+	  return 0;
+     endmethod
+     method Bit#(TDiv#(dsize,8))     tkeep(); return maxBound; endmethod
+     method Bit#(1)                tlast(); return pack(False); endmethod
+     method Action                 tready(Bit#(1) v);
+	readyWire <= unpack(v);
+     endmethod
+     method Bit#(1)                tvalid(); return pack(f.notEmpty()); endmethod
+   endmodule
+endinstance
+
+instance MkAxiStream#(AxiStreamSlave#(dsize), FIFOF#(Bit#(dsize)));
+   module mkAxiStream#(FIFOF#(Bit#(dsize)) f)(AxiStreamSlave#(dsize));
+      Wire#(Bit#(dsize)) dataWire <- mkDWire(unpack(0));
+      Wire#(Bool) validWire <- mkDWire(False);
+      rule enq if (validWire && f.notFull());
+	 f.enq(dataWire);
+      endrule
+      method Action      tdata(Bit#(dsize) v);
+	 dataWire <= v;
+      endmethod
+      method Action      tkeep(Bit#(TDiv#(dsize,8)) v); endmethod
+      method Action      tlast(Bit#(1) v); endmethod
+      method Bit#(1)     tready(); return pack(f.notFull()); endmethod
+      method Action      tvalid(Bit#(1) v);
+	 validWire <= unpack(v);
+      endmethod
+   endmodule
+endinstance
