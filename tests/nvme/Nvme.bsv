@@ -87,6 +87,7 @@ endinstance
 
 interface Nvme;
    interface NvmeRequest request;
+   interface NvmeDriverRequest driverRequest;
    interface MemServerPortalRequest bramRequest;
    interface NvmeTrace trace;
    interface NvmePins pins;
@@ -97,7 +98,7 @@ interface Nvme;
 `endif
 endinterface
 
-module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication bramIndication)(Nvme);
+module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace trace, MemServerPortalIndication bramIndication)(Nvme);
    let clock <- exposeCurrentClock;
    let reset <- exposeCurrentReset;
    let refclk_p <- mkB2C1();
@@ -152,13 +153,13 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
    rule rl_rdata;
       let rdata <- toGet(rdataFifo).get();
       if (rdata.tag == 0)
-	 ind.readDone(truncate(rdata.data));
+	 driverInd.readDone(truncate(rdata.data));
    endrule
 
    rule rl_writeDone;
       let tag <- toGet(doneFifo).get();
       if (tag == 0)
-	 ind.writeDone();
+	 driverInd.writeDone();
    endrule
 
    FIFOF#(PhysMemRequest#(32,32)) araddrFifoCtl <- mkFIFOF();
@@ -175,12 +176,12 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 
    rule rl_rdata_ctl;
       let rdata <- toGet(rdataFifoCtl).get();
-      ind.readDone(extend(rdata.data));
+      driverInd.readDone(extend(rdata.data));
    endrule
 
    rule rl_writeDone_ctl;
       let tag <- toGet(doneFifoCtl).get();
-      ind.writeDone();
+      driverInd.writeDone();
    endrule
 
    Axi4MasterBits#(32,PcieDataBusWidth,MemTagSize,Empty) m_axi_mm = toAxi4MasterBits(axiRootPort.m_axi);
@@ -345,7 +346,7 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
    let bramMemCnx  <- mkConnection(splitter.bramClient, bramMemA);
    rule rl_locdone;
       let loc <- toGet(mpEngine.locdone).get();
-      ind.strstrLoc(pack(loc));
+      driverInd.strstrLoc(pack(loc));
    endrule
 
 `ifdef NVME_ACCELERATOR_INTERFACE
@@ -358,10 +359,9 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 `endif
 
    interface MemServerPortalRequest bramRequest = bramMemServerPortal.request;
-   interface NvmeRequest request;
-
+   interface NvmeDriverRequest driverRequest;
       method Action status();
-        ind.status(axiRootPort.mmcm.lock(), dataCounter);
+        driverInd.status(axiRootPort.mmcm.lock(), dataCounter);
       endmethod
       method Action trace(Bool enabled);
 	 traceEnabled <= enabled;
@@ -395,6 +395,8 @@ module mkNvme#(NvmeIndication ind, NvmeTrace trace, MemServerPortalIndication br
 	 dataLengthFifo.enq(haystackLen);
 	 mpEngine.setsearch.enq(tuple3(/* unused */maxBound, haystackLen, /* unused */0));
       endmethod
+   endinterface
+   interface NvmeRequest request;
       method Action startTransfer(Bit#(8) opcode, Bit#(8) flags, Bit#(16) requestId, Bit#(64) startBlock, Bit#(32) numBlocks, Bit#(32) dsm);
 	 ioCommandFifo.enq(NvmeIoCommand{opcode: opcode, flags: flags, requestId: requestId, startBlock: startBlock, numBlocks: numBlocks, dsm: dsm });
       endmethod

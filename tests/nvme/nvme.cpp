@@ -7,6 +7,8 @@
 #include "mp.h"
 #include "portal.h"
 #include "dmaManager.h"
+#include "NvmeDriverIndication.h"
+#include "NvmeDriverRequest.h"
 #include "NvmeIndication.h"
 #include "NvmeRequest.h"
 #include "NvmeTrace.h"
@@ -121,6 +123,33 @@ public:
 };
 
 class NvmeIndication : public NvmeIndicationWrapper {
+    sem_t sem;
+    
+public:
+    uint64_t value;
+    uint32_t requests;
+    uint32_t cycles;
+  virtual void msgIn ( const uint32_t value ) {
+  }
+
+  virtual void transferCompleted ( const uint16_t requestId, const uint64_t status, const uint32_t cycles ) {
+      fprintf(stderr, "%s:%d requestId=%08x status=%08llx cycles=%d\n", __FUNCTION__, __LINE__, requestId, (long long)status, cycles);
+      value = status;
+      this->requests++;
+      this->cycles += cycles;
+      sem_post(&sem);
+    }
+
+    void wait() {
+	sem_wait(&sem);
+    }
+    NvmeIndication(int id, PortalPoller *poller = 0) : NvmeIndicationWrapper(id, poller), value(0), requests(0), cycles(0) {
+	sem_init(&sem, 0, 0);
+    }
+  
+};
+
+class NvmeDriverIndication : public NvmeDriverIndicationWrapper {
     sem_t sem, wsem;
     
 public:
@@ -163,7 +192,7 @@ public:
 	sem_wait(&wsem);
     }
 
-    NvmeIndication(int id, PortalPoller *poller = 0) : NvmeIndicationWrapper(id, poller), value(0), requests(0), cycles(0) {
+    NvmeDriverIndication(int id, PortalPoller *poller = 0) : NvmeDriverIndicationWrapper(id, poller), value(0), requests(0), cycles(0) {
 	sem_init(&sem, 0, 0);
 	sem_init(&wsem, 0, 0);
     }
@@ -196,8 +225,10 @@ public:
 };
 
 class Nvme {
-    NvmeRequestProxy device;
+    NvmeRequestProxy requestProxy;
     NvmeIndication  indication;
+    NvmeDriverRequestProxy driverRequest;
+    NvmeDriverIndication  driverIndication;
     NvmeTrace       trace;
     MemServerPortalRequestProxy bram;
     MemServerPortalIndication   bramIndication;
@@ -223,8 +254,10 @@ public:
     static const int ioQueueSize = 4096;
 
     Nvme()
-	: device(IfcNames_NvmeRequestS2H)
+	: requestProxy(IfcNames_NvmeRequestS2H)
 	, indication(IfcNames_NvmeIndicationH2S)
+	, driverRequest(IfcNames_NvmeDriverRequestS2H)
+	, driverIndication(IfcNames_NvmeDriverIndicationH2S)
 	, trace(IfcNames_NvmeTraceH2S)
 	, bram(IfcNames_MemServerPortalRequestS2H)
 	, bramIndication(IfcNames_MemServerPortalIndicationH2S)
@@ -253,9 +286,9 @@ public:
 	mpNextRef = mpNextBuffer.reference();
 	fprintf(stderr, "ioSubmissionQueue %d\n", ioSubmissionQueue.reference());
 	fprintf(stderr, "ioCompletionQueue %d\n", ioCompletionQueue.reference());
-	device.status();
-	indication.wait();
-	device.trace(0);
+	driverRequest.status();
+	driverIndication.wait();
+	driverRequest.trace(0);
     }
     uint32_t readCtl(uint32_t addr);
     void writeCtl(uint32_t addr, uint32_t data);
@@ -272,12 +305,12 @@ public:
     int adminCommand(nvme_admin_cmd *cmd, nvme_completion *completion);
     int ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue=1);
     void status() {
-	device.status();
-	indication.wait();
+	driverRequest.status();
+	driverIndication.wait();
     }
     void transferStats() {
-	uint32_t cycles = indication.cycles;
-	uint32_t requests = indication.requests;
+	uint32_t cycles = driverIndication.cycles;
+	uint32_t requests = driverIndication.requests;
 	fprintf(stderr, "transfer stats: requests=%d cycles=%d average cycles/request=%5.2f\n",
 		requests, cycles, (double)cycles/(double)requests);
     }
@@ -288,31 +321,31 @@ public:
 
 uint32_t Nvme::readCtl(uint32_t addr)
 {
-    device.readCtl(addr);
-    indication.wait();
-    return (uint32_t)indication.value;
+    driverRequest.readCtl(addr);
+    driverIndication.wait();
+    return (uint32_t)driverIndication.value;
 }
 void Nvme::writeCtl(uint32_t addr, uint32_t data)
 {
-    device.writeCtl(addr, data);
-    indication.waitwrite();
+    driverRequest.writeCtl(addr, data);
+    driverIndication.waitwrite();
 }
 uint64_t Nvme::read(uint32_t addr)
 {
-    device.read(addr);
-    indication.wait();
-    return indication.value;
+    driverRequest.read(addr);
+    driverIndication.wait();
+    return driverIndication.value;
 }
 void Nvme::write(uint32_t addr, uint64_t data)
 {
-    device.write(addr, data);
-    //indication.wait();
+    driverRequest.write(addr, data);
+    //driverIndication.wait();
 }
 uint32_t Nvme::read32(uint32_t addr)
 {
-    device.read32(addr);
-    indication.wait();
-    uint64_t v = indication.value;
+    driverRequest.read32(addr);
+    driverIndication.wait();
+    uint64_t v = driverIndication.value;
     return (uint32_t)(v >> ((addr & 4) ? 32 : 0));
     //return v;
 }
@@ -320,9 +353,9 @@ void Nvme::write32(uint32_t addr, uint32_t data)
 {
     uint64_t v = data;
     //fixme byte enables
-    //device.write(addr & ~7, v << ((addr & 4) ? 32 : 0));
-    device.write32(addr, v);
-    //indication.wait();
+    //driverRequest.write(addr & ~7, v << ((addr & 4) ? 32 : 0));
+    driverRequest.write32(addr, v);
+    //driverIndication.wait();
 }
 uint64_t Nvme::bramRead(uint32_t addr)
 {
@@ -338,14 +371,14 @@ void Nvme::bramWrite(uint32_t addr, uint64_t data)
 
 int Nvme::setSearchString ( const uint32_t needleSglId, const uint32_t mpNextSglId, const uint32_t needleLen )
 {
-    device.setSearchString(needleSglId, mpNextSglId, needleLen);
+    driverRequest.setSearchString(needleSglId, mpNextSglId, needleLen);
     // completion method is missing
-    //indication.wait();
+    //driverIndication.wait();
     sleep(1);
 }
 int Nvme::startSearch ( const uint32_t searchLen )
 {
-    device.startSearch(searchLen);
+    driverRequest.startSearch(searchLen);
 }
 
 void memserverWrite(Nvme *nvme)
@@ -435,9 +468,9 @@ int Nvme::ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue)
 
     if (queue == 2) {
 	fprintf(stderr, "%s:%d starting transfer\n", __FUNCTION__, __LINE__);
-	device.trace(0);
+	driverRequest.trace(0);
 
-	device.startTransfer(/* read */ 2, /* flags */ 0, cmd->cid, cmd->cdw10, cmd->cdw12+1, /* dsm */0x71);
+	requestProxy.startTransfer(/* read */ 2, /* flags */ 0, cmd->cid, cmd->cdw10, cmd->cdw12+1, /* dsm */0x71);
 	//sleep(1);
 
 	if (0) {
@@ -452,7 +485,7 @@ int Nvme::ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue)
 	fprintf(stderr, "%s:%d waiting for completion\n", __FUNCTION__, __LINE__);
 	indication.wait();
 	dumpTrace();
-	int status = indication.value >> 32;
+	int status = driverIndication.value >> 32;
 	int more = (status >> 30) & 1;
 	int sc = (status >> 17) & 0xff;
 	int sct = (status >> 25) & 0x7;
@@ -479,7 +512,7 @@ int Nvme::ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue)
 
     if (0 && requestNumber==7) {
 	fprintf(stderr, "enabling DMA trace\n");
-	device.trace(1);
+	driverRequest.trace(1);
 	sleep(1);
     }
 
