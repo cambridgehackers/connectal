@@ -276,12 +276,14 @@ long portal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long a
 					printk("[%s:%d]         start_offset %lx end_offset %lx flush_offset %lx\n",
 					       __FUNCTION__, __LINE__, offset, end_offset, flush_offset);
 				}
+#ifdef __arm__
 				if (flush) {
 					//flush_user_range(virt, virt+length, 0);
 					outer_flush_range(start_addr, end_addr);
 				} else {
 					outer_inv_range(start_addr, end_addr);
 				}
+#endif
 				flush_offset += length;
 				flush_length -= length;
 			}
@@ -423,6 +425,7 @@ static int connectal_open(struct inode *inode, struct file *filep)
 long connectal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
         switch (cmd) {
+#ifdef CONFIG_CLKDEV_LOOKUP
         case PORTAL_SET_FCLK_RATE: {
                 PortalClockRequest request;
                 char clkname[32];
@@ -447,7 +450,9 @@ long connectal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
                         return -EFAULT;
                 return 0;
                 }
+
                 break;
+#endif
         case PORTAL_DCACHE_FLUSH_INVAL: {
   	        flush = 1;
 	} // fall through
@@ -502,12 +507,14 @@ long connectal_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
 					printk("[%s:%d]         start_offset %lx end_offset %lx flush_offset %lx\n",
 					       __FUNCTION__, __LINE__, offset, end_offset, flush_offset);
 				}
+#ifdef __arm__
 				if (flush) {
 					//flush_user_range(virt, virt+length, 0);
 					outer_flush_range(start_addr, end_addr);
 				} else {
 					outer_inv_range(start_addr, end_addr);
 				}
+#endif
 				flush_offset += length;
 				flush_length -= length;
 			}
