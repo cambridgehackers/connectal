@@ -27,6 +27,7 @@ import util
 def newArgparser():
     argparser = argparse.ArgumentParser("Generate Top.bsv for an project.")
     argparser.add_argument('--project-dir', help='project directory')
+    argparser.add_argument('--filename', default='Top.bsv', help='name of generated file')
     argparser.add_argument('--interface', default=[], help='exported interface declaration', action='append')
     argparser.add_argument('--portalclock', help='Portal clock source', default=None)
     argparser.add_argument('--importfiles', default=[], help='added imports', action='append')
@@ -412,7 +413,7 @@ if __name__=='__main__':
                      else 'CnocTop#(NumberOfRequests,NumberOfIndications,PhysAddrWidth,DataBusWidth,`PinType,NumberOfMasters)',
                  'portalclock': options.portalclock
                  }
-    topFilename = project_dir + '/Top.bsv'
+    topFilename = project_dir + '/' + options.filename
     print 'Writing:', topFilename
     top = util.createDirAndOpen(topFilename, 'w')
     if options.cnoc:
