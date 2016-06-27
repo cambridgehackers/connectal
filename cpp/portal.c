@@ -43,7 +43,7 @@
 #endif
 #include "drivers/portalmem/portalmem.h" // PA_MALLOC
 
-#ifdef ZYNQ
+#if defined(ZYNQ) || defined(__riscv__)
 #include "drivers/zynqportal/zynqportal.h"
 #else
 #include "drivers/pcieportal/pcieportal.h" // BNOC_TRACE
@@ -475,7 +475,7 @@ int portalMunmap(void *addr, size_t size)
 
 int portalCacheFlush(int fd, void *__p, long size, int flush)
 {
-#if defined(__arm__)
+#if defined(__arm__) || defined (__riscv__)
 #ifdef __KERNEL__
     int i;
     struct scatterlist *sg;
