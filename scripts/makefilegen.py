@@ -251,7 +251,7 @@ include $(CONNECTALDIR)/scripts/Makefile.connectal.application
 SOURCES = %(source)s $(PORTAL_SRC_FILES)
 SOURCES2 = %(source2)s $(PORTAL_SRC_FILES)
 XSOURCES = $(CONNECTALDIR)/cpp/XsimTop.cpp $(PORTAL_SRC_FILES)
-LDLIBS := %(clibdirs)s %(clibs)s %(clibfiles)s -pthread 
+LDLIBS := %(clibdirs)s %(clibs)s %(clibfiles)s -lpthread
 
 ubuntu.exe: $(SOURCES)
 	$(Q)$(CXX) $(CFLAGS) -o ubuntu.exe $(SOURCES) $(LDLIBS)
