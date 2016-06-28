@@ -37,7 +37,7 @@ interface MemServerPortalRequest;
    method Action write64(Bit#(32) addr, Bit#(64) data);
 endinterface
 
-interface MemServerPortalIndication;
+interface MemServerPortalResponse;
    method Action read32Done(Bit#(32) data);
    method Action read64Done(Bit#(64) data);
    method Action writeDone();
@@ -47,7 +47,7 @@ interface MemServerPortal;
    interface MemServerPortalRequest request;
 endinterface
 
-module mkPhysMemSlavePortal#(PhysMemSlave#(addrWidth,dataBusWidth) ms, MemServerPortalIndication ind)(MemServerPortal)
+module mkPhysMemSlavePortal#(PhysMemSlave#(addrWidth,dataBusWidth) ms, MemServerPortalResponse ind)(MemServerPortal)
    provisos (Add#(dataBusWidth,7,a__)
 	     ,Add#(b__,addrWidth,32)
 	     ,Add#(c__, dataBusWidth, 128)
