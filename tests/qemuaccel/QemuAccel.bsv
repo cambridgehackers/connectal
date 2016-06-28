@@ -11,7 +11,7 @@ interface QemuAccel;
    interface MemServerPortalRequest memServerPortalRequest;
 endinterface
 
-module mkQemuAccel#(QemuAccelIndication ind, MemServerPortalIndication memServerPortalIndication)(QemuAccel);
+module mkQemuAccel#(QemuAccelIndication ind, MemServerPortalResponse memServerPortalIndication)(QemuAccel);
 
    let accel <- AccelTop::mkConnectalTop();
    let physMemSlavePortal <- mkPhysMemSlavePortal(accel.slave, memServerPortalIndication);

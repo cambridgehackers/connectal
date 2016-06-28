@@ -3,7 +3,7 @@ CONNECTALDIR?=../..
 INTERFACES = SimpleRequest
 
 S2H_INTERFACES = QemuAccelRequest:QemuAccel.request MemServerPortalRequest:QemuAccel.memServerPortalRequest
-H2S_INTERFACES = QemuAccel:QemuAccelIndication,MemServerPortalIndication
+H2S_INTERFACES = QemuAccel:QemuAccelIndication,MemServerPortalResponse
 
 #MEM_READ_INTERFACES = lQemuAccel.dmaReadClient
 #MEM_WRITE_INTERFACES = lQemuAccel.dmaWriteClient
