@@ -28,6 +28,7 @@ def newArgparser():
     argparser = argparse.ArgumentParser("Generate Top.bsv for an project.")
     argparser.add_argument('--project-dir', help='project directory')
     argparser.add_argument('--filename', default='Top.bsv', help='name of generated file')
+    argparser.add_argument('--ifcnames', default='IfcNames', help='name of interface names enum type and file')
     argparser.add_argument('--interface', default=[], help='exported interface declaration', action='append')
     argparser.add_argument('--portalclock', help='Portal clock source', default=None)
     argparser.add_argument('--importfiles', default=[], help='added imports', action='append')
@@ -53,7 +54,7 @@ import MemReadEngine::*;
 import MemWriteEngine::*;
 import MemTypes::*;
 import MemServer::*;
-import IfcNames::*;
+import %(ifcnames)s::*;
 %(generatedImport)s
 `include "ConnectalProjectConfig.bsv"
 
@@ -103,7 +104,7 @@ endmodule : mkConnectalTop
 '''
 
 ifcnamesTemplate='''
-typedef enum {NoInterface, %(enumList)s} IfcNames deriving (Eq,Bits);
+typedef enum {%(ifcnames)sNone, %(enumList)s} %(ifcnames)s deriving (Eq,Bits);
 '''
 
 topNocTemplate='''
@@ -113,7 +114,7 @@ import Portal::*;
 import CnocPortal::*;
 import Connectable::*;
 import HostInterface::*;
-import IfcNames::*;
+import %(ifcnames)s::*;
 import MemTypes::*;
 %(generatedImport)s
 `include "ConnectalProjectConfig.bsv"
@@ -165,7 +166,7 @@ endmodule : mkCnocTop
 '''
 
 topEnumTemplate='''
-typedef enum {NoInterface, %(enumList)s} IfcNames;
+typedef enum {NoInterface, %(enumList)s} %(ifcnames)s;
 '''
 
 portalTemplate = '''   PortalCtrlMemSlave#(SlaveControlAddrWidth,SlaveDataBusWidth) ctrlPort_%(count)s <- mkPortalCtrlMemSlave(extend(pack(%(enumVal)s)), %(ifcName)s.intr);
@@ -239,7 +240,7 @@ def instMod(pmap, args, modname, modext, constructor, tparam, memFlag, inverseFl
         args = modname + tstr
     pmap['args'] = args % pmap
     if modext:
-        options.portname.append('IfcNames_' + modname + tstr + pmap['number'])
+        options.portname.append('%s_%s%s%s' % (options.ifcnames, modname, tstr, pmap['number']))
         pmap['argsConfig'] = modname + memFlag + tstr
         outputPrefix = ''
         if modext == 'Output':
@@ -270,10 +271,10 @@ def instMod(pmap, args, modname, modext, constructor, tparam, memFlag, inverseFl
             pipeInstantiate.append(pipeInstantiation % pmap)
             connectInstantiate.append(connectInstantiation % pmap)
         if memFlag:
-            options.portname.append('IfcNames_' + modname + memFlag + tstr + pmap['number'])
-            addPortal('', 'IfcNames_' + pmap['argsConfig'], 'l%(modname)sCW' % pmap, 'Request')
+            options.portname.append('%s_%s%s%s%s' % (options.ifcnames, modname, memFlag, tstr, pmap['number']))
+            addPortal('', options.ifcnames + '_' + pmap['argsConfig'], 'l%(modname)sCW' % pmap, 'Request')
         else:
-            addPortal(outputPrefix, 'IfcNames_' + pmap['args'] + pmap['number'], 'l%(modname)s%(number)s' % pmap, pmap['stype'])
+            addPortal(outputPrefix, options.ifcnames + '_' + pmap['args'] + pmap['number'], 'l%(modname)s%(number)s' % pmap, pmap['stype'])
     else:
         if not instantiateRequest.get(pmap['modname']):
             instantiateRequest[pmap['modname']] = iReq()
@@ -323,8 +324,8 @@ if __name__=='__main__':
     pipeInstantiate = []
     connectInstantiate = []
     instantiateRequest = {}
-    for item in ['PlatformIfcNames_MemServerRequestS2H', 'PlatformIfcNames_MMURequestS2H', 'PlatformIfcNames_MemServerIndicationH2S', 'PlatformIfcNames_MMUIndicationH2S']:
-        options.portname.append(item)
+    for item in ['Platform%s_MemServerRequestS2H', 'Platform%s_MMURequestS2H', 'Platform%s_MemServerIndicationH2S', 'Platform%s_MMUIndicationH2S']:
+        options.portname.append(item % options.ifcnames)
     requestList = []
     indicationList = []
     portalList = []
@@ -395,6 +396,7 @@ if __name__=='__main__':
                  'generatedImport': '\n'.join(['import %s::*;' % p for p in options.importfiles]),
                  'generatedTypedefs': '\n'.join(['typedef %d NumberOfRequests;' % len(requestList),
                                                  'typedef %d NumberOfIndications;' % len(indicationList)]),
+                 'ifcnames': options.ifcnames,
                  'pipeInstantiate' : '\n'.join(sorted(pipeInstantiate)),
                  'connectInstantiate' : '\n'.join(sorted(connectInstantiate)),
                  'portalInstantiate' : '\n'.join(portalInstantiate),
@@ -421,7 +423,7 @@ if __name__=='__main__':
     else:
         top.write(topTemplate % topsubsts)
     top.close()
-    topFilename = project_dir + '/IfcNames.bsv'
+    topFilename = project_dir + '/' + options.ifcnames + '.bsv'
     print 'Writing:', topFilename
     top = util.createDirAndOpen(topFilename, 'w')
     top.write(ifcnamesTemplate % topsubsts)
