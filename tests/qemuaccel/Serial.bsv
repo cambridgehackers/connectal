@@ -29,7 +29,7 @@ module mkSerial#(SerialIndication indication)(Serial);
    endrule
    interface SerialRequest request;
       method Action tx(Bit#(8) c);
-	 $display("%h", c);
+	 //$display("%h", c);
 	 outfifo.enq(c);
       endmethod
    endinterface
