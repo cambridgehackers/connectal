@@ -7,6 +7,9 @@
 #include <sys/utsname.h>
 #include <libgen.h>
 
+#define STR_VALUE_(arg)      #arg
+#define STR_VALUE(arg)      STR_VALUE_(arg)
+
 int main(int argc, char * const *argv)
 {
     const char *exename = "../test.py";
@@ -43,6 +46,10 @@ int main(int argc, char * const *argv)
     }
     fprintf(stderr, "LD_LIBRARY_PATH: %s\n", library_path);
     setenv("LD_LIBRARY_PATH", library_path, 1);
+#ifdef PYTHONPATH
+    fprintf(stderr, "PYTHONPATH=%s\n", STR_VALUE(PYTHONPATH));
+    setenv("PYTHONPATH", STR_VALUE(PYTHONPATH), 0);
+#endif
     fprintf(stderr, "%s: execv(%s)\n", argv[0], exename);
     return execv(exename, argv);
 }
