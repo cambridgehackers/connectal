@@ -7,6 +7,7 @@ import Portal::*;
 import Simple::*;
 import AccelTop::*;
 import QemuAccelIfc::*;
+import BlockDev::*;
 import Serial::*;
 
 
@@ -14,9 +15,10 @@ interface QemuAccel;
    interface QemuAccelRequest request;
    interface MemServerPortalRequest memServerPortalRequest;
    interface SerialRequest uartRequest;
+   interface BlockDevResponse blockDevResponse;
 endinterface
 
-module mkQemuAccel#(QemuAccelIndication ind, MemServerPortalResponse memServerPortalIndication, SerialIndication uartIndication)(QemuAccel);
+module mkQemuAccel#(QemuAccelIndication ind, MemServerPortalResponse memServerPortalIndication, SerialIndication uartIndication, BlockDevRequest blockDevRequest)(QemuAccel);
 
    let accel <- AccelTop::mkConnectalTop();
    let physMemSlavePortal <- mkPhysMemSlavePortal(accel.slave, memServerPortalIndication);
@@ -24,6 +26,10 @@ module mkQemuAccel#(QemuAccelIndication ind, MemServerPortalResponse memServerPo
    rule rl_rx;
       let ch <- toGet(accel.pins.out).get();
       uartIndication.rx(ch);
+   endrule
+   rule rl_blockdev;
+      //let req <- accel.pins.blockDev.request.get();
+      //blockDevRequest.transfer(req.op, req.dramaddr, req.offset, req.size, req.tag);
    endrule
 
    interface MemServerPortalRequest memServerPortalRequest = physMemSlavePortal.request;
@@ -36,6 +42,11 @@ module mkQemuAccel#(QemuAccelIndication ind, MemServerPortalResponse memServerPo
    interface SerialRequest uartRequest;
       method Action tx(Bit#(8) ch);
 	 accel.pins.in.enq(ch);
+      endmethod
+   endinterface
+   interface BlockDevResponse blockDevResponse;
+      method Action transferDone(Bit#(32) tag);
+	 //accel.pins.blockDev.response.put(tag);
       endmethod
    endinterface
 endmodule
