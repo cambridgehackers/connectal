@@ -22,6 +22,9 @@
 
 interface QemuAccelRequest;
    method Action start();
+   method Action reset();
+   method Action status();
+   method Action setupDma(Bit#(32) objId);
 endinterface
 
 interface QemuAccelIndication;
