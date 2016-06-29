@@ -29,6 +29,7 @@ def newArgparser():
     argparser.add_argument('--project-dir', help='project directory')
     argparser.add_argument('--filename', default='Top.bsv', help='name of generated file')
     argparser.add_argument('--ifcnames', default='IfcNames', help='name of interface names enum type and file')
+    argparser.add_argument('--pintype', default=[], help='Type of pins interface', action='append')
     argparser.add_argument('--interface', default=[], help='exported interface declaration', action='append')
     argparser.add_argument('--portalclock', help='Portal clock source', default=None)
     argparser.add_argument('--importfiles', default=[], help='added imports', action='append')
@@ -57,6 +58,8 @@ import MemServer::*;
 import %(ifcnames)s::*;
 %(generatedImport)s
 `include "ConnectalProjectConfig.bsv"
+
+%(pinsInterfaceDecl)s
 
 `ifndef IMPORT_HOSTIF
 (* synthesize *)
@@ -393,13 +396,31 @@ if __name__=='__main__':
             portalInstantiate.append('')
     for key in instantiatedModules:
         flushModules(key)
-    for pitem in options.interface:
+    if len(options.pintype) > 1:
+        interfaceList.append('   interface Pins pins;')
+    for i,pitem in enumerate(options.interface):
         p = pitem.split(':')
-        interfaceList.append('   interface %s = l%s;' % (p[0], p[1]))
+        if len(options.pintype) > 1:
+            interfaceList.append('      interface pins%d = l%s;' % (i, p[1]))
+        else:
+            interfaceList.append('      interface %s = l%s;' % (p[0], p[1]))
+    if len(options.pintype) > 1:
+        interfaceList.append('   endinterface ')
 
     memory_flag = 'MemServer' in instantiatedModules
     if clientCount:
         pipeInstantiate.append(memEngineInst % {'clientCount': clientCount})
+    pintype = '`PinType'
+    pinsInterfaceDecl = ''
+    if len(options.pintype) == 1:
+        pintype = options.pintype[0]
+    elif len(options.pintype) > 1:
+        pintype = 'Pins'
+        subifcs = []
+        for (i,ifc) in enumerate(options.pintype):
+            subifcs.append('    interface %s pins%d;\n' % (ifc, i))
+        pinsInterfaceDecl = 'interface Pins;\n %s endinterface\n' % '\n'.join(subifcs)
+        exportedNames.append('export Pins(..);')
     topsubsts = {'enumList': ','.join(options.portname),
                  'generatedImport': '\n'.join(['import %s::*;' % p for p in options.importfiles]),
                  'generatedTypedefs': '\n'.join(['typedef %d NumberOfRequests;' % len(requestList),
@@ -419,8 +440,9 @@ if __name__=='__main__':
                  'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
 #Use e.g., --interface pins:Ddr3Test.ddr3
                  'pinsInterface' : '    interface pins = l%(usermod)s.pins;\n' % pmap if False else '',
-                 'moduleParam' : 'ConnectalTop' if not options.cnoc \
-                     else 'CnocTop#(NumberOfRequests,NumberOfIndications,PhysAddrWidth,DataBusWidth,`PinType,NumberOfMasters)',
+                 'pinsInterfaceDecl' : pinsInterfaceDecl,
+                 'moduleParam' : 'ConnectalTop#(%s)' % pintype if not options.cnoc \
+                     else 'CnocTop#(NumberOfRequests,NumberOfIndications,PhysAddrWidth,DataBusWidth,%s,NumberOfMasters)' % pintype,
                  'portalclock': options.portalclock
                  }
     topFilename = project_dir + '/' + options.filename
