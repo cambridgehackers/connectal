@@ -15,7 +15,7 @@ CONNECTALFLAGS += --bsvpath $(CONNECTALDIR)/examples/simple
 CONNECTALFLAGS += --shared
 
 prebuild::
-	$(CONNECTALDIR)/scripts/topgen.py --project-dir . --filename 'AccelTop.bsv' --ifcnames 'AccelIfcNames' --wrapper SerialRequest:Serial.request --wrapper SimpleRequest:Simple.request --proxy Serial:SerialIndication --proxy Simple:SimpleRequest --interface pins:Serial.port --wrapper BlockDevRequest:BlockDev.request --proxy BlockDev:BlockDevResponse --pintype 'SerialPort'
+	$(CONNECTALDIR)/scripts/topgen.py --project-dir . --filename 'AccelTop.bsv' --ifcnames 'AccelIfcNames' --wrapper SerialRequest:Serial.request --wrapper SimpleRequest:Simple.request --proxy Serial:SerialIndication --proxy Simple:SimpleRequest --interface pins:Serial.port --interface pins:BlockDev.client --wrapper BlockDevRequest:BlockDev.request --proxy BlockDev:BlockDevResponse --pintype 'SerialPort' --pintype BlockDevClient
 
 include $(CONNECTALDIR)/Makefile.connectal
 

@@ -1,5 +1,6 @@
 
 import GetPut::*;
+import ClientServer::*;
 
 import MemServerPortal::*;
 import Pipe::*;
@@ -24,12 +25,12 @@ module mkQemuAccel#(QemuAccelIndication ind, MemServerPortalResponse memServerPo
    let physMemSlavePortal <- mkPhysMemSlavePortal(accel.slave, memServerPortalIndication);
 
    rule rl_rx;
-      let ch <- toGet(accel.pins.out).get();
+      let ch <- toGet(accel.pins.pins0.out).get();
       uartIndication.rx(ch);
    endrule
    rule rl_blockdev;
-      //let req <- accel.pins.blockDev.request.get();
-      //blockDevRequest.transfer(req.op, req.dramaddr, req.offset, req.size, req.tag);
+      let req <- accel.pins.pins1.request.get();
+      blockDevRequest.transfer(req.op, req.dramaddr, req.offset, req.size, req.tag);
    endrule
 
    interface MemServerPortalRequest memServerPortalRequest = physMemSlavePortal.request;
@@ -41,12 +42,12 @@ module mkQemuAccel#(QemuAccelIndication ind, MemServerPortalResponse memServerPo
    endinterface
    interface SerialRequest uartRequest;
       method Action tx(Bit#(8) ch);
-	 accel.pins.in.enq(ch);
+	 accel.pins.pins0.in.enq(ch);
       endmethod
    endinterface
    interface BlockDevResponse blockDevResponse;
       method Action transferDone(Bit#(32) tag);
-	 //accel.pins.blockDev.response.put(tag);
+	 accel.pins.pins1.response.put(tag);
       endmethod
    endinterface
 endmodule
