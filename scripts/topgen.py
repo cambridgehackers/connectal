@@ -297,6 +297,14 @@ def toVectorLiteral(l):
     else:
         return 'nil'
 
+def appendVectors(l):
+    if len(l) > 1:
+        return 'append(%s,%s)' % (l[0], appendVectors(l[1:]))
+    elif len(l) == 1:
+        return l[0]
+    else:
+        return 'nil'
+
 def parseParam(pitem, proxy):
     p = pitem.split(':')
     pmap = {'tparam': '', 'xparam': '', 'uparam': '', 'memFlag': 'Pipes' if p[0][0] == '/' else '', 'inverse': 'Pipes' if p[0][0] == '!' else ''}
@@ -406,8 +414,8 @@ if __name__=='__main__':
                  'indicationList': toVectorLiteral(indicationList),
                  'exportedInterfaces' : '\n'.join(interfaceList),
                  'exportedNames' : '\n'.join(exportedNames),
-                 'portalReaders' : ('append(' if len(options.memread) > 0 else '(') + ', '.join(options.memread + ['nullReaders']) + ')',
-                 'portalWriters' : ('append(' if len(options.memwrite) > 0 else '(') + ', '.join(options.memwrite + ['nullWriters']) + ')',
+                 'portalReaders' : appendVectors(options.memread + ['nullReaders']),
+                 'portalWriters' : appendVectors(options.memwrite + ['nullWriters']),
                  'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
 #Use e.g., --interface pins:Ddr3Test.ddr3
                  'pinsInterface' : '    interface pins = l%(usermod)s.pins;\n' % pmap if False else '',
