@@ -108,7 +108,9 @@ endmodule : %(topname)s
 '''
 
 ifcnamesTemplate='''
-typedef enum {%(ifcnames)sNone, %(enumList)s} %(ifcnames)s deriving (Eq,Bits);
+typedef enum {%(ifcnames)sNone=0,
+%(enumList)s
+} %(ifcnames)s deriving (Eq,Bits);
 '''
 
 topNocTemplate='''
@@ -422,7 +424,7 @@ if __name__=='__main__':
             subifcs.append('    interface %s pins%d;\n' % (ifc, i))
         pinsInterfaceDecl = 'interface Pins;\n %s endinterface\n' % '\n'.join(subifcs)
         exportedNames.append('export Pins(..);')
-    topsubsts = {'enumList': ','.join(options.portname),
+    topsubsts = {'enumList': ',\n'.join(['%s=%d' % (name, i+1) for i,name in enumerate(options.portname)]),
                  'generatedImport': '\n'.join(['import %s::*;' % p for p in options.importfiles]),
                  'generatedTypedefs': '\n'.join(['typedef %d NumberOfRequests;' % len(requestList),
                                                  'typedef %d NumberOfIndications;' % len(indicationList)]),
