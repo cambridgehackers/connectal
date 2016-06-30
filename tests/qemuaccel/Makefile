@@ -13,6 +13,7 @@ CPPFILES = $(CONNECTALDIR)/lib/qemu/fpgadev.cpp
 
 CONNECTALFLAGS += --bsvpath $(CONNECTALDIR)/examples/simple
 CONNECTALFLAGS += --shared
+CONNECTALFLAGS += --cxxflags=-std=c++11
 
 prebuild::
 	$(CONNECTALDIR)/scripts/topgen.py --project-dir . --filename 'AccelTop.bsv' --ifcnames 'AccelIfcNames' --wrapper SerialRequest:Serial.request --wrapper SimpleRequest:Simple.request --proxy Serial:SerialIndication --proxy Simple:SimpleRequest --interface pins:Serial.port --interface pins:BlockDev.client --wrapper BlockDevRequest:BlockDev.request --proxy BlockDev:BlockDevResponse --pintype 'SerialPort' --pintype BlockDevClient
