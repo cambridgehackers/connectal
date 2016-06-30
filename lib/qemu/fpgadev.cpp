@@ -3,8 +3,13 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
+#include <time.h>
 #include <unistd.h>
 #include <errno.h>
+#include <queue>
+#include <thread>
+#include <mutex>
 
 #include <GeneratedTypes.h>
 #include <BlockDevResponse.h>
@@ -25,7 +30,31 @@
 
 
 int verbose = 0;
+std::mutex mutex;
 
+void sem_wait_with_timeout(sem_t *sem)
+{
+    struct timespec timeout;
+
+    for (int tries = 0; tries < 10; tries++) {
+	clock_gettime(CLOCK_REALTIME, &timeout);
+	timeout.tv_sec += 1;
+	int status = sem_timedwait(sem, &timeout);
+	if (status == 0) {
+	    return;
+	} else if (errno == ETIMEDOUT) {
+	    if (tries > 5)
+		fprintf(stderr, "%s:%d: try %d timed out waiting for response status=%d errno=%d:%s\n", __FILE__, __LINE__, tries, status, errno, strerror(errno));
+	} else {
+	    fprintf(stderr, "%s:%d errno=%d:%s\n", __FUNCTION__, __LINE__, errno, strerror(errno));
+	    return;
+	}
+    }
+    fprintf(stderr, "%s:%d timed out waiting for semaphore\n", __FUNCTION__, __LINE__);
+}
+
+int readReq;
+int readCount;
 class MemServerPortalResponse : public MemServerPortalResponseWrapper
 {
     sem_t sem;
@@ -35,33 +64,18 @@ public:
     IrqCallback irqCallback;
 
     void wait() {
-	struct timespec timeout;
-	timeout.tv_sec = 1000;
-	timeout.tv_nsec = 0;
-	if (0) {
-	  for (int tries = 0; tries < 10; tries++) {
-	    int status = sem_timedwait(&sem, &timeout);
-	    if (status != 0 && errno == ETIMEDOUT) {
-	      if (tries > 5)
-		fprintf(stderr, "%s:%d: try %d timed out waiting for response status=%d errno=%d\n", __FILE__, __LINE__, tries, status, errno);
-	    } else {
-	      break;
-	    }
-	  }
-	} else {
-	  sem_wait(&sem);
-	}
+	sem_wait_with_timeout(&sem);
     }
 
     void read32Done ( const uint32_t value ) {
 	buf[0] = value;
-	if (verbose) fprintf(stderr, "readDone value=%08x\n", value);
+	if (0 || verbose) fprintf(stderr, "readDone value=%08x count=%d\n", value, readCount++);
 	sem_post(&sem);
     }
 
     void read64Done ( const uint64_t value ) {
 	*(uint64_t *)buf = value;
-	if (verbose) fprintf(stderr, "readDone value=%08llx\n", (long long)value);
+	if (0 || verbose) fprintf(stderr, "readDone value=%08llx count=%d\n", (long long)value, readCount++);
 	sem_post(&sem);
     }
 
@@ -86,7 +100,7 @@ public:
     virtual void started (  ) {
     }
     virtual void wait() {
-	sem_wait(&sem);
+	sem_wait_with_timeout(&sem);
     }
 };
 
@@ -101,28 +115,56 @@ public:
     }
 };
 
+class BlockDevRequest;
+
 class BlockDevRequest : public BlockDevRequestWrapper {
 private:
-  FpgaDev               *fpgaDev;
-  BlockDevResponseProxy *response;
-  int                   driveFd;
+    FpgaDev               *fpgaDev;
+    BlockDevResponseProxy *response;
+    int                   driveFd;
+    std::queue<uint32_t> responseQueue;
+    sem_t              worker_sem;
+    std::mutex         rqmutex;
+    std::thread        rqthread;
+    static void blockDevWorker(BlockDevRequest *blockdev);
+
 public:
   BlockDevRequest(FpgaDev *fpgaDev, BlockDevResponseProxy *response, int id, PortalPoller *poller = 0)
-    : BlockDevRequestWrapper(id, poller), fpgaDev(fpgaDev), response(response)
+      : BlockDevRequestWrapper(id, poller), fpgaDev(fpgaDev), response(response)
   {
     const char *driveName = getenv("FPGADEV_BLOCKDEV_FILE");
     if (driveName) {
       driveFd = open(driveName, O_RDWR);
       fprintf(stderr, "Opened blockdev %s fd %d\n", driveName, driveFd);
     }
+    sem_init(&worker_sem, 0, 0);
+    rqthread = std::thread(blockDevWorker, this);
   }
     virtual ~BlockDevRequest() {}
   virtual void transfer ( const BlockDevOp op, const uint32_t dramaddr, const uint32_t offset, const uint32_t size, const uint32_t tag );
 };
 
+void BlockDevRequest::blockDevWorker(BlockDevRequest *blockdev)
+{
+    fprintf(stderr, "%s:%d started\n", __FUNCTION__, __LINE__);
+    while (1) {
+	int tag = -1;
+	sem_wait(&blockdev->worker_sem);
+	{
+	    std::lock_guard<std::mutex> lock(blockdev->rqmutex);
+	    tag = blockdev->responseQueue.front();
+	    blockdev->responseQueue.pop();
+	}
+	if (tag != -1) {
+	    //std::lock_guard<std::mutex> lock(mutex);
+	    blockdev->response->transferDone(tag);
+	}
+    }
+}
+
 void BlockDevRequest::transfer ( const BlockDevOp op, const uint32_t dramaddr, const uint32_t offset, const uint32_t size, const uint32_t tag )
 {
-  fprintf(stderr, "BlockDevRequest::transfer op=%x dramaddr=%x offset=%x size=%x tag=%x\n", op, dramaddr, offset, size, tag);
+  if (0) fprintf(stderr, "BlockDevRequest::transfer op=%x dramaddr=%x offset=%x size=%x tag=%x\n", op, dramaddr, offset, size, tag);
   if (fpgaDev->mainMemBuf) {
     if (op == BlockDevRead) {
       int numBytes = pread(driveFd, fpgaDev->mainMemBuf + dramaddr, size, offset);
@@ -134,7 +176,12 @@ void BlockDevRequest::transfer ( const BlockDevOp op, const uint32_t dramaddr, c
 	fprintf(stderr, "Read error size=%d numBytes=%d errno=%d:%s\n", size, numBytes, errno, strerror(errno));
     }
   }
-  response->transferDone(tag);
+  {
+      std::lock_guard<std::mutex> lock(rqmutex);
+      responseQueue.push(tag);
+      sem_post(&worker_sem);
+  }
+
 }
 
 MemServerPortalRequestProxy *request;
@@ -152,10 +199,13 @@ FpgaDev::FpgaDev(IrqCallback callback)
     blockDevResponse = new BlockDevResponseProxy(IfcNames_BlockDevResponseS2H); // responses to the risc-v
     blockDevRequest   = new BlockDevRequest(this, blockDevResponse, IfcNames_BlockDevRequestH2S);       // requests from the risc-v
     dmaManager = platformInit();
+
+    //std::lock_guard<std::mutex> lock(mutex);
+
     qemuAccelRequest->reset();
     fprintf(stderr, "FpgaDev::FpgaDev\n");
     for (int i = 0; i < 20; i++) {
-	request->write32(0xc0002020, '*');
+	request->write32(0xc0003020, '*');
 	indication->wait();
     }
 
@@ -173,8 +223,11 @@ void FpgaDev::maybeReset()
 {
     if (0)
     if (!didReset) {
+      //std::lock_guard<std::mutex> lock(mutex);
+
 	qemuAccelRequest->reset();
 	qemuAccelIndication->wait();
+
 	//request->setParameters(50, 0);
 	didReset = true;
     }
@@ -182,12 +235,14 @@ void FpgaDev::maybeReset()
 
 void FpgaDev::status()
 {
+    //std::lock_guard<std::mutex> lock(mutex);
     qemuAccelRequest->status();
     qemuAccelIndication->wait();
 }
 
 void FpgaDev::setupDma(uint32_t memfd)
 {
+    //std::lock_guard<std::mutex> lock(mutex);
     int memref = dmaManager->reference(memfd);
     fprintf(stderr, "FpgaDev::setupDma memfd=%d memref=%d\n", memfd, memref);
     qemuAccelRequest->setupDma(memref);
@@ -197,10 +252,12 @@ void FpgaDev::read(unsigned long offset, uint8_t *buf)
 {
     maybeReset();
 
-    if (verbose) fprintf(stderr, "FpgaDev::read offset=%lx\n", offset);
+    //std::lock_guard<std::mutex> lock(mutex);
+    int count = readReq++;
+    if (0 || verbose) fprintf(stderr, "FpgaDev::read offset=%lx count=%d\n", offset, count);
     request->read32(offset);
     indication->wait();
-    if (verbose) fprintf(stderr, "FpgaDev::read offset=%lx value=%x\n", offset, *(uint32_t *)indication->buf);
+    if (0 || verbose) fprintf(stderr, "FpgaDev::read offset=%lx value=%x count=%d\n", offset, *(uint32_t *)indication->buf, count);
     memcpy(buf, indication->buf, 4);
 }
 
@@ -208,6 +265,7 @@ void FpgaDev::write(unsigned long offset, const uint8_t *buf)
 {
     maybeReset();
 
+    //std::lock_guard<std::mutex> lock(mutex);
     if (verbose) fprintf(stderr, "FpgaDev::write offset=%lx value=%x\n", offset, *(uint32_t *)buf);
     request->write32(offset, *(uint32_t *)buf);
     indication->wait();
@@ -219,10 +277,12 @@ uint32_t FpgaDev::read(unsigned long offset)
 {
     maybeReset();
 
-    if (verbose) fprintf(stderr, "FpgaDev::read offset=%08lx\n", offset);
+    //std::lock_guard<std::mutex> lock(mutex);
+    int count = readReq++;
+    if (0 || verbose) fprintf(stderr, "FpgaDev::read offset=%08lx count=%d\n", offset, count);
     request->read32(offset);
     indication->wait();
-    if (verbose) fprintf(stderr, "FpgaDev::read done value=%x\n", *(uint32_t *)indication->buf);
+    if (0 || verbose) fprintf(stderr, "FpgaDev::read done value=%x count=%d\n", *(uint32_t *)indication->buf, count);
     return *(uint32_t *)indication->buf;
 }
 
@@ -230,6 +290,7 @@ void FpgaDev::write(unsigned long offset, const uint32_t value)
 {
     maybeReset();
 
+    //std::lock_guard<std::mutex> lock(mutex);
     if (verbose) fprintf(stderr, "FpgaDev::write offset=%08lx value=%x\n", offset, value);
     request->write32(offset, value);
     indication->wait();
@@ -294,7 +355,10 @@ bool spikehw_device_t::has_interrupt()
 
 bool spikehw_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
 {
+    int count=readReq++;
+    fprintf(stderr, "%s:%d addr=%x count=%d\n", __FUNCTION__, __LINE__, addr, count);
     fpgaDev->read32(addr, bytes); // always reads 4 bytes
+    fprintf(stderr, "%s:%d addr=%x -> value %x count=%d\n", __FUNCTION__, __LINE__, addr, *(int *)bytes, count);
     return true;
 }
 
