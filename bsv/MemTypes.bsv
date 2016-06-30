@@ -77,7 +77,7 @@ typedef struct {
    Bit#(TDiv#(dataBusWidth,8)) firstbe; // maybe we only need lastbe
    Bit#(TDiv#(dataBusWidth,8)) lastbe;
 `endif
-   } PhysMemRequest#(numeric type addrWidth, numeric type dataBusWidth) deriving (Bits, FShow);
+   } PhysMemRequest#(numeric type addrWidth, numeric type dataBusWidth) deriving (Bits, Eq, FShow);
 
 instance DefaultValue#(PhysMemRequest#(addrWidth,dataBusWidth));
    defaultValue = PhysMemRequest { addr: 0, burstLen: 0, tag: 0
@@ -114,7 +114,7 @@ typedef struct {
    Bit#(dsz) data;
    Bit#(MemTagSize) tag;
    Bool last;
-   } MemData#(numeric type dsz) deriving (Bits, FShow);
+   } MemData#(numeric type dsz) deriving (Bits, Eq, FShow);
 
 function Bit#(dsz) memDataData(MemData#(dsz) md); return md.data; endfunction
 
