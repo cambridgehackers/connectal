@@ -28,6 +28,7 @@ def newArgparser():
     argparser = argparse.ArgumentParser("Generate Top.bsv for an project.")
     argparser.add_argument('--project-dir', help='project directory')
     argparser.add_argument('--filename', default='Top.bsv', help='name of generated file')
+    argparser.add_argument('--topname', default='mkConnectalTop', help='name of generated module')
     argparser.add_argument('--ifcnames', default='IfcNames', help='name of interface names enum type and file')
     argparser.add_argument('--pintype', default=[], help='Type of pins interface', action='append')
     argparser.add_argument('--interface', default=[], help='exported interface declaration', action='append')
@@ -64,7 +65,7 @@ import %(ifcnames)s::*;
 `ifndef IMPORT_HOSTIF
 (* synthesize *)
 `endif
-module mkConnectalTop
+module %(topname)s
 `ifdef IMPORT_HOSTIF // no synthesis boundary
       #(HostInterface host)
 `else
@@ -102,7 +103,7 @@ module mkConnectalTop
 `endif
 %(pinsInterface)s
 %(exportedInterfaces)s
-endmodule : mkConnectalTop
+endmodule : %(topname)s
 %(exportedNames)s
 '''
 
@@ -347,7 +348,7 @@ if __name__=='__main__':
     if options.cnoc:
         exportedNames.extend(['export mkCnocTop;', 'export NumberOfRequests;', 'export NumberOfIndications;'])
     else:
-        exportedNames.extend(['export mkConnectalTop;'])
+        exportedNames.extend(['export %s;' % options.topname])
     if options.importfiles:
         for item in options.importfiles:
              exportedNames.append('export %s::*;' % item)
@@ -443,7 +444,8 @@ if __name__=='__main__':
                  'pinsInterfaceDecl' : pinsInterfaceDecl,
                  'moduleParam' : 'ConnectalTop#(%s)' % pintype if not options.cnoc \
                      else 'CnocTop#(NumberOfRequests,NumberOfIndications,PhysAddrWidth,DataBusWidth,%s,NumberOfMasters)' % pintype,
-                 'portalclock': options.portalclock
+                 'portalclock': options.portalclock,
+                 'topname': options.topname
                  }
     topFilename = project_dir + '/' + options.filename
     print 'Writing:', topFilename
