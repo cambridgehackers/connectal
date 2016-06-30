@@ -21,7 +21,7 @@ endinterface
 
 module mkQemuAccel#(QemuAccelIndication ind, MemServerPortalResponse memServerPortalIndication, SerialIndication uartIndication, BlockDevRequest blockDevRequest)(QemuAccel);
 
-   let accel <- AccelTop::mkConnectalTop();
+   let accel <- AccelTop::mkAccelTop();
    let physMemSlavePortal <- mkPhysMemSlavePortal(accel.slave, memServerPortalIndication);
 
    rule rl_rx;

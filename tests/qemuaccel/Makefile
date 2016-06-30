@@ -16,7 +16,7 @@ CONNECTALFLAGS += --shared
 CONNECTALFLAGS += --cxxflags=-std=c++11
 
 prebuild::
-	$(CONNECTALDIR)/scripts/topgen.py --project-dir . --filename 'AccelTop.bsv' --ifcnames 'AccelIfcNames' --wrapper SerialRequest:Serial.request --wrapper SimpleRequest:Simple.request --proxy Serial:SerialIndication --proxy Simple:SimpleRequest --interface pins:Serial.port --interface pins:BlockDev.client --wrapper BlockDevRequest:BlockDev.request --proxy BlockDev:BlockDevResponse --pintype 'SerialPort' --pintype BlockDevClient
+	$(CONNECTALDIR)/scripts/topgen.py --project-dir . --filename 'AccelTop.bsv' --topname mkAccelTop --ifcnames 'AccelIfcNames' --wrapper SerialRequest:Serial.request --wrapper SimpleRequest:Simple.request --proxy Serial:SerialIndication --proxy Simple:SimpleRequest --interface pins:Serial.port --interface pins:BlockDev.client --wrapper BlockDevRequest:BlockDev.request --proxy BlockDev:BlockDevResponse --pintype 'SerialPort' --pintype BlockDevClient
 
 include $(CONNECTALDIR)/Makefile.connectal
 
