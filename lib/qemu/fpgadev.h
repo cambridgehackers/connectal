@@ -45,8 +45,10 @@ class FpgaDev {
   DmaManager                  *dmaManager;
   bool didReset;
   int mainMemFd;
+  char *mainMemBuf;
 
   void maybeReset();
+  friend class BlockDevRequest;
 };
 
 #endif

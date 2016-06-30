@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <errno.h>
 
+#include <GeneratedTypes.h>
 #include <BlockDevResponse.h>
 #include <BlockDevRequest.h>
 #include <MemServerPortalResponse.h>
@@ -99,12 +100,22 @@ public:
 	fprintf(stderr, "%c", ch);
     }
 };
+
 class BlockDevRequest : public BlockDevRequestWrapper {
 private:
+  FpgaDev               *fpgaDev;
   BlockDevResponseProxy *response;
+  int                   driveFd;
 public:
-  BlockDevRequest(BlockDevResponseProxy *response, int id, PortalPoller *poller = 0) : BlockDevRequestWrapper(id, poller), response(response) {
+  BlockDevRequest(FpgaDev *fpgaDev, BlockDevResponseProxy *response, int id, PortalPoller *poller = 0)
+    : BlockDevRequestWrapper(id, poller), fpgaDev(fpgaDev), response(response)
+  {
+    const char *driveName = getenv("FPGADEV_BLOCKDEV_FILE");
+    if (driveName) {
+      driveFd = open(driveName, O_RDWR);
+      fprintf(stderr, "Opened blockdev %s fd %d\n", driveName, driveFd);
     }
+  }
     virtual ~BlockDevRequest() {}
   virtual void transfer ( const BlockDevOp op, const uint32_t dramaddr, const uint32_t offset, const uint32_t size, const uint32_t tag );
 };
@@ -112,6 +123,17 @@ public:
 void BlockDevRequest::transfer ( const BlockDevOp op, const uint32_t dramaddr, const uint32_t offset, const uint32_t size, const uint32_t tag )
 {
   fprintf(stderr, "BlockDevRequest::transfer op=%x dramaddr=%x offset=%x size=%x tag=%x\n", op, dramaddr, offset, size, tag);
+  if (fpgaDev->mainMemBuf) {
+    if (op == BlockDevRead) {
+      int numBytes = pread(driveFd, fpgaDev->mainMemBuf + dramaddr, size, offset);
+      if (numBytes != (long)size)
+	fprintf(stderr, "Read error size=%d numBytes=%d errno=%d:%s\n", size, numBytes, errno, strerror(errno));
+    } else {
+      int numBytes = pwrite(driveFd, fpgaDev->mainMemBuf + dramaddr, size, offset);
+      if (numBytes != (long)size)
+	fprintf(stderr, "Read error size=%d numBytes=%d errno=%d:%s\n", size, numBytes, errno, strerror(errno));
+    }
+  }
   response->transferDone(tag);
 }
 
@@ -128,7 +150,7 @@ FpgaDev::FpgaDev(IrqCallback callback)
     serialRequest    = new SerialRequestProxy(IfcNames_SerialRequestS2H);
     serialIndication = new SerialIndication(IfcNames_SerialIndicationH2S);
     blockDevResponse = new BlockDevResponseProxy(IfcNames_BlockDevResponseS2H); // responses to the risc-v
-    blockDevRequest   = new BlockDevRequest(blockDevResponse, IfcNames_BlockDevRequestH2S);       // requests from the risc-v
+    blockDevRequest   = new BlockDevRequest(this, blockDevResponse, IfcNames_BlockDevRequestH2S);       // requests from the risc-v
     dmaManager = platformInit();
     qemuAccelRequest->reset();
     fprintf(stderr, "FpgaDev::FpgaDev\n");
@@ -237,6 +259,7 @@ char *FpgaDev::allocate_mem(size_t memsz)
     if (!mainMemFd) {
 	setupDma(memfd);
 	mainMemFd = memfd;
+	mainMemBuf = buf;
 	fprintf(stderr, "FpgaDev::allocate_mem mainMemFd=%d\n", memfd);
     }
     return buf;
