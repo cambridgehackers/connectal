@@ -114,7 +114,7 @@ module mkZynqTop `SYS_CLK_PARAM (ZynqTop);
 
    BscanTop bscan <- mkBscanTop(3, clocked_by mainclock, reset_by mainreset); // Use USER3  (JTAG IDCODE address 0x22)
    BscanLocal lbscan <- mkBscanLocal(bscan, clocked_by bscan.tck, reset_by bscan.rst);
-   Vector#(NumberOfUserTiles,ConnectalTop) ts <- replicateM(mkConnectalTop(
+   Vector#(NumberOfUserTiles,ConnectalTop#(`PinType)) ts <- replicateM(mkConnectalTop(
 `ifdef IMPORT_HOSTIF
       (interface HostInterface;
           interface ps7 = ps7;

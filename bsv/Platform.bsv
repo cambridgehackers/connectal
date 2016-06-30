@@ -100,7 +100,7 @@ module renameWrites#(Integer tile, MemWriteClient#(DataBusWidth) writer, MemServ
    endinterface
 endmodule
 
-module mkPlatform#(Vector#(NumberOfUserTiles, ConnectalTop) tiles)(Platform);
+module mkPlatform#(Vector#(NumberOfUserTiles, ConnectalTop#(pinType)) tiles)(Platform);
    /////////////////////////////////////////////////////////////
    // connecting up the tiles
 
