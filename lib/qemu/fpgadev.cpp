@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <errno.h>
 
+#include <BlockDevResponse.h>
+#include <BlockDevRequest.h>
 #include <MemServerPortalResponse.h>
 #include <MemServerPortalRequest.h>
 #include <QemuAccelRequest.h>
@@ -97,7 +99,21 @@ public:
 	fprintf(stderr, "%c", ch);
     }
 };
+class BlockDevRequest : public BlockDevRequestWrapper {
+private:
+  BlockDevResponseProxy *response;
+public:
+  BlockDevRequest(BlockDevResponseProxy *response, int id, PortalPoller *poller = 0) : BlockDevRequestWrapper(id, poller), response(response) {
+    }
+    virtual ~BlockDevRequest() {}
+  virtual void transfer ( const BlockDevOp op, const uint32_t dramaddr, const uint32_t offset, const uint32_t size, const uint32_t tag );
+};
 
+void BlockDevRequest::transfer ( const BlockDevOp op, const uint32_t dramaddr, const uint32_t offset, const uint32_t size, const uint32_t tag )
+{
+  fprintf(stderr, "BlockDevRequest::transfer op=%x dramaddr=%x offset=%x size=%x tag=%x\n", op, dramaddr, offset, size, tag);
+  response->transferDone(tag);
+}
 
 MemServerPortalRequestProxy *request;
 MemServerPortalResponse *indication;
@@ -111,6 +127,8 @@ FpgaDev::FpgaDev(IrqCallback callback)
     qemuAccelIndication = new QemuAccelIndication(IfcNames_QemuAccelIndicationH2S);
     serialRequest    = new SerialRequestProxy(IfcNames_SerialRequestS2H);
     serialIndication = new SerialIndication(IfcNames_SerialIndicationH2S);
+    blockDevResponse = new BlockDevResponseProxy(IfcNames_BlockDevResponseS2H); // responses to the risc-v
+    blockDevRequest   = new BlockDevRequest(blockDevResponse, IfcNames_BlockDevRequestH2S);       // requests from the risc-v
     dmaManager = platformInit();
     qemuAccelRequest->reset();
     fprintf(stderr, "FpgaDev::FpgaDev\n");

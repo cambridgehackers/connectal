@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+class BlockDevResponseProxy; // responses sent to the risc-v
+class BlockDevRequest;       // requests received from the risc-v
 class MemServerPortalRequestProxy;
 class MemServerPortalResponse;
 class DmaManager;
@@ -31,6 +33,9 @@ class FpgaDev {
   char *allocate_mem(size_t memsz);
  private:
   void setupDma( uint32_t memfd );
+
+  BlockDevResponseProxy       *blockDevResponse;
+  BlockDevRequest             *blockDevRequest;
   MemServerPortalRequestProxy *request;
   MemServerPortalResponse     *indication;
   QemuAccelRequestProxy       *qemuAccelRequest;
