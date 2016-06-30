@@ -48,6 +48,7 @@ argparser = newArgparser()
 topTemplate='''
 import ConnectalConfig::*;
 import Vector::*;
+import BuildVector::*;
 import Portal::*;
 import CtrlMux::*;
 import HostInterface::*;
@@ -116,6 +117,7 @@ typedef enum {%(ifcnames)sNone=0,
 topNocTemplate='''
 import ConnectalConfig::*;
 import Vector::*;
+import BuildVector::*;
 import Portal::*;
 import CnocPortal::*;
 import Connectable::*;
@@ -299,7 +301,7 @@ def flushModules(key):
 
 def toVectorLiteral(l):
     if l:
-        return 'cons(%s,%s)' % (l[0], toVectorLiteral(l[1:]))
+        return 'vec(%s)' % ', '.join(l)
     else:
         return 'nil'
 
