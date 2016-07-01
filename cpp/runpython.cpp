@@ -48,7 +48,11 @@ int main(int argc, char * const *argv)
     setenv("LD_LIBRARY_PATH", library_path, 1);
 #ifdef PYTHONPATH
     fprintf(stderr, "PYTHONPATH=%s\n", STR_VALUE(PYTHONPATH));
-    setenv("PYTHONPATH", STR_VALUE(PYTHONPATH), 0);
+    fprintf(stderr, "CONNECTALDIR=%s\n", STR_VALUE(CONNECTALDIR));
+    static char pythonpath[1024];
+    snprintf(pythonpath, sizeof(pythonpath), "%s:%s", STR_VALUE(PYTHONPATH), STR_VALUE(CONNECTALDIR));
+    fprintf(stderr, "using PYTHONPATH=%s\n", pythonpath);
+    setenv("PYTHONPATH", pythonpath, 1);
 #endif
     fprintf(stderr, "%s: execv(%s)\n", argv[0], exename);
     return execv(exename, argv);
