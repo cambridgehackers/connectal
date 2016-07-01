@@ -6,6 +6,6 @@ BSVFILES = EchoInterface.bsv
 PYFILES  = testecho.py
 
 CONNECTALFLAGS += --run-args="$(PWD)/testecho.py $(CONNECTALDIR)/scripts/portal.py $(PWD)/$(BOARD)/bin/connectal.so"
-CONNECTALFLAGS += -D PYTHONPATH="$(CONNECTALDIR)/scripts:."
+CONNECTALFLAGS += -D PYTHONPATH="$(CONNECTALDIR)/scripts:." -D CONNECTALDIR="$(CONNECTALDIR)"
 
 include $(CONNECTALDIR)/Makefile.connectal
