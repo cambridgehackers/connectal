@@ -50,7 +50,7 @@ int main(int argc, char * const *argv)
     fprintf(stderr, "PYTHONPATH=%s\n", STR_VALUE(PYTHONPATH));
     fprintf(stderr, "CONNECTALDIR=%s\n", STR_VALUE(CONNECTALDIR));
     static char pythonpath[1024];
-    snprintf(pythonpath, sizeof(pythonpath), "%s:%s", STR_VALUE(PYTHONPATH), STR_VALUE(CONNECTALDIR));
+    snprintf(pythonpath, sizeof(pythonpath), "%s:%s/scripts", STR_VALUE(PYTHONPATH), STR_VALUE(CONNECTALDIR));
     fprintf(stderr, "using PYTHONPATH=%s\n", pythonpath);
     setenv("PYTHONPATH", pythonpath, 1);
 #endif
