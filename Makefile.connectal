@@ -121,7 +121,9 @@ CONNECTALFLAGS += --shared -D PORTAL_JSON
 CPPFILES += $(CONNECTALDIR)/cpp/portalPython.cpp
 CPPFILES2 = $(CONNECTALDIR)/cpp/runpython.cpp
 ifneq ($(BOARD),zedboard)
+ifneq ($(BOARD),zedboard_ubuntu)
 CONNECTALFLAGS += -ljsoncpp
+endif
 endif
 
 ifeq ($(BOARD),zedboard)
@@ -144,8 +146,12 @@ CONNECTALFLAGS += --cxxflags=-std=c++11
 CONNECTALFLAGS += -I usr/include
 CONNECTALFLAGS += -L usr/lib/arm-linux-gnueabihf -lpython2.7
 
+CPPFILES  += jsoncpp/dist/jsoncpp.cpp
+CPPFILES2 += jsoncpp/dist/jsoncpp.cpp
+
 prebuild::
-	./ubuntu-python-dev.sh
+	[ -d jsoncpp ] || git clone git://github.com/open-source-parsers/jsoncpp
+	cd jsoncpp; python amalgamate.py; mkdir -p json; cd json; ln -sf ../dist/json/*.h .
 endif # zedboard_ubuntu
 endif # PYFILES
 
