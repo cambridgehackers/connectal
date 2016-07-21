@@ -32,6 +32,8 @@ static int indMsgSource (PortalInternal *pint, const uint32_t portal, const uint
     if (trace_xsim)
 	fprintf(stderr, "%s: portal=%d data=%x pid=%d\n", __FUNCTION__, portal, data, getpid());
     PortalInternal *clientp = pint->mux_ports[portal].pint;
+    if (!clientp)
+	return -1;
     clientp->map_base[indicationIndex[portal]++] = data;
     uint32_t hdr = clientp->map_base[0];
     int numwords = hdr & 0xFF;
