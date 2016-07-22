@@ -236,7 +236,7 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
    BRAM2Port#(Bit#(32),Bit#(PcieDataBusWidth)) bram <- mkBRAM2Server(bramConfig);
 
    let arbIfc <- mkFixedPriority();
-   Arbiter#(2, BRAMRequest#(Bit#(32),Bit#(PcieDataBusWidth)),Bit#(PcieDataBusWidth)) arbiter <- mkArbiter(arbIfc,2);
+   Arbiter#(3, BRAMRequest#(Bit#(32),Bit#(PcieDataBusWidth)),Bit#(PcieDataBusWidth)) arbiter <- mkArbiter(arbIfc,2);
    let arbCnx <- mkConnection(arbiter.master, bram.portB);
 
    MemServer#(PcieDataBusWidth)            bramMemA <- mkMemServerFromBram(bram.portA);
@@ -244,8 +244,11 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
    MemServerPortal          bramMemServerPortal <- mkPhysMemSlavePortal(bramMemB,bramIndication);
 
    let portB1 = arbiter.users[1];
+   let portB2 = arbiter.users[2];
    Reg#(Bit#(16)) requestId <- mkReg(0);
+   Reg#(Bit#(16)) responseId <- mkReg(0);
    Reg#(Bit#(16)) requestQueueEntryCount <- mkReg(8);
+   Reg#(Bool) requestSlotAvailable <- mkReg(True);
    Reg#(Bool) requestInProgress <- mkReg(True);
    Reg#(Vector#(16,Bit#(32))) ioCommand <- mkReg(unpack(0));
    Reg#(Bit#(32)) requestStartTimestamp <- mkReg(0);
@@ -264,7 +267,7 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
    let bramQueryResponse <- mkProbe();
    let requestCompleted <- mkProbe();
 
-   let fsm <- mkAutoFSM(seq
+   let requestFsm <- mkAutoFSM(seq
       while (True) seq
 	 action
 	    let req <- toGet(ioCommandFifo).get();
@@ -281,7 +284,21 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
 	    command[13] = req.dsm;
 	    requestId <= req.requestId;
 	    ioCommand <= command;
+
+	    requestSlotAvailable <= False;
 	 endaction
+
+	 while (!requestSlotAvailable) seq // wait for open request slot
+	    portB1.request.put(BRAMRequest {address: (extend(requestId[2:0]) * fromInteger(responseSize/bytesPerEntry)) + fromInteger(12/bytesPerEntry),
+					    write: False, responseOnWrite: False, datain: 0});
+	    action
+	       let response <- portB1.response.get();
+	       if (response[16+(3*32 % valueOf(PcieDataBusWidth))] == ~phase) begin
+		  requestSlotAvailable <= True;
+	       end
+	    endaction
+	 endseq // wait for open request slot
+
 	 // write a IO read request to BRAM
          for (i <= 0; i < fromInteger(requestSize/bytesPerEntry); i <= i + 1) seq
 	    portB1.request.put(BRAMRequest {address: 'h1000/fromInteger(bytesPerEntry) + (extend(requestId[2:0]) * fromInteger(requestSize/bytesPerEntry)) + i,
@@ -297,18 +314,24 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
 	    requestStartTimestamp <= cycles;
 	    trace.traceData(unpack(0), False, truncate(requestId), cycles);
 	 endaction
+      endseq // while True
+      endseq);
+
+   let responseFsm <- mkAutoFSM(seq
 	 // wait for response queue to be updated
+      while (True) seq
+	 requestInProgress <= True;
 	 while (requestInProgress) seq
-	    portB1.request.put(BRAMRequest {address: (extend(requestId[2:0]) * fromInteger(responseSize/bytesPerEntry)) + fromInteger(12/bytesPerEntry),
+	    portB2.request.put(BRAMRequest {address: (extend(responseId[2:0]) * fromInteger(responseSize/bytesPerEntry)) + fromInteger(12/bytesPerEntry),
 					    write: False, responseOnWrite: False, datain: 0});
-	    bramQueryAddress <= (requestId * fromInteger(responseSize/bytesPerEntry)) + fromInteger(12/bytesPerEntry);
+	    bramQueryAddress <= (responseId * fromInteger(responseSize/bytesPerEntry)) + fromInteger(12/bytesPerEntry);
 	    action
-	       let response <- portB1.response.get();
+	       let response <- portB2.response.get();
 	       bramQueryResponse <= response;
 	       if (response[16+(3*32 % valueOf(PcieDataBusWidth))] == phase) begin
 		  requestCompleted <= response;
 		  // if status field written by NVME
-		  ind.transferCompleted(requestId, truncate(response), cycles - requestStartTimestamp);
+		  ind.transferCompleted(responseId, truncate(response), cycles - requestStartTimestamp);
 		  requestInProgress <= False;
 	       end
 	    endaction
@@ -316,11 +339,11 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
 
 	 // tell the NVME the new response queue head pointer
 	 action
-	    let nextRequestId = (requestId + 1);
+	    let nextRequestId = (responseId + 1);
 	    if (nextRequestId[2:0] == 0) begin
 	       phase <= ~phase;
 	    end
-	    requestId <= nextRequestId;
+	    responseId <= nextRequestId;
 	    awaddrFifo.enq(PhysMemRequest { addr: 'h1000 + (2*2+1)*(4<<0), burstLen: 4, tag: 1 });
 	    wdataFifo.enq(MemData{data: zeroExtend((nextRequestId)[2:0]), tag: 1, last: True});
 	 endaction
