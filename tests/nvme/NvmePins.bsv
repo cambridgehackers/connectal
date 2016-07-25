@@ -23,7 +23,11 @@
 
 `include "ConnectalProjectConfig.bsv"
 
+`ifndef PCIE3
 import AxiPcieRootPort::*;
+`else
+import AxiPcie3RootPort::*;
+`endif
 import NvmeIfc::*;
 
 interface NvmePins;

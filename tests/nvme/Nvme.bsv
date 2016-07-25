@@ -48,7 +48,11 @@ import TraceMemClient::*;
 import XilinxCells::*;
 import MPEngine::*;
 
+`ifndef PCIE3
 import AxiPcieRootPort::*;
+`else
+import AxiPcie3RootPort::*;
+`endif
 import NvmeIfc::*;
 import NvmePins::*;
 
@@ -122,7 +126,11 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
    let axiCtlReset = reset;
 `endif
 
+`ifndef PCIE3
    let axiRootPort <- mkAPRP(pcie_clk_100mhz_buf, reset, axiClock, axiReset, axiCtlClock, axiCtlReset);
+`else
+   let axiRootPort <- mkAPRP(axiCtlClock, pcie_clk_100mhz_buf, reset);
+`endif
 `ifndef TOP_SOURCES_PORTAL_CLOCK
    let axiClockC2B <- mkC2B(axiRootPort.axi.aclk_out);
    let axiCtlClockC2B <- mkC2B(axiRootPort.axi.ctl_aclk_out);
@@ -384,7 +392,12 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
    interface MemServerPortalRequest bramRequest = bramMemServerPortal.request;
    interface NvmeDriverRequest driverRequest;
       method Action status();
-        driverInd.status(axiRootPort.mmcm.lock(), dataCounter);
+`ifndef PCIE3
+	 let mmcmLock = axiRootPort.mmcm.lock();
+`else
+	 let mmcmLock = True;
+`endif
+         driverInd.status(mmcmLock, dataCounter);
       endmethod
       method Action trace(Bool enabled);
 	 traceEnabled <= enabled;
@@ -424,7 +437,11 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
 	 ioCommandFifo.enq(NvmeIoCommand{opcode: opcode, flags: flags, requestId: requestId, startBlock: startBlock, numBlocks: numBlocks, dsm: dsm });
       endmethod
    endinterface
+`ifndef PCIE3
    interface Clock portalClockSource = axiRootPort.axi.aclk_out;
+`else
+   interface Clock portalClockSource = axiRootPort.axi.aclk;
+`endif
    interface NvmePins pins;
       interface deleteme_unused_clock = clock;
       interface pcie_sys_reset_n = reset;
@@ -494,11 +511,11 @@ endinstance
 instance ToAxi4SlaveBits#(Axi4SlaveLiteBits#(32,32), AprpS_axi_ctl);
    function Axi4SlaveLiteBits#(32,32) toAxi4SlaveBits(AprpS_axi_ctl s);
       return (interface Axi4SlaveLiteBits#(32,32);
-	 method araddr = compose(s.araddr, extend);
+	 method araddr = compose(s.araddr, truncate);
 	 method arready = s.arready;
 	 method arvalid = s.arvalid;
 
-	 method awaddr = compose(s.awaddr, extend);
+	 method awaddr = compose(s.awaddr, truncate);
 	 method awready = s.awready;
 	 method awvalid = s.awvalid;
 
