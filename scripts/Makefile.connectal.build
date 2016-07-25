@@ -237,12 +237,12 @@ endif # CONNECTAL_SHARED
 define SIM_C_RULE
 $1/$(notdir $(basename $3)).o: $3
 	mkdir -p $1
-	$(CC) -c $2 -O1 -o $1/$(notdir $(basename $3)).o $3
+	$(CC) -c $2 -o $1/$(notdir $(basename $3)).o $3
 endef
 define SIM_CXX_RULE
 $1/$(notdir $(basename $3)).o: $3
 	mkdir -p $1
-	$(CXX) -c $2 -O1 -o $1/$(notdir $(basename $3)).o $3
+	$(CXX) -c $2 -o $1/$(notdir $(basename $3)).o $3
 endef
 
 $(foreach src, $(filter %.c, $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)), $(eval $(call SIM_C_RULE, $(DTOP)/lib, $(SIM_CFLAGS), $(src))))
