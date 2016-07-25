@@ -44,10 +44,10 @@ else #!android
 OBJCOPY?=$(TOOLCHAIN)objcopy
 BINFILE?=bin/mkTop.bin.gz
 endif #!android
-else
+else #!XILINX
 OBJCOPY?= objcopy
 BINFILE?=bin/mkTop.sof.gz
-endif
+endif #!XILINX
 
 CONNECTAL_EXENAME?=ubuntu.exe
 CONNECTAL_EXENAME2?=ubuntu.exe2
@@ -100,7 +100,7 @@ BLUESPEC_VERILOG+=$(BLUESPECDIR)/Verilog.Quartus
 endif
 ifneq ($(XILINX),)
 BLUESPEC_VERILOG+=$(BLUESPECDIR)/Verilog.Vivado
-endif
+endif #XILINX
 BLUESPEC_VERILOG+=$(BLUESPECDIR)/Verilog
 
 VIVADO=$(shell which vivado)
@@ -249,7 +249,6 @@ $(foreach src, $(filter %.c, $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)), $(eval $(call
 $(foreach src, $(filter %.cpp, $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)), $(eval $(call SIM_CXX_RULE, $(DTOP)/lib, $(SIM_CXXFLAGS), $(src))))
 SIM_OBJECTS = $(addprefix $(DTOP)/lib/, $(addsuffix .o, $(basename $(notdir $(SIM_CXX_LOCAL) $(SIM_CXX_PROJECT)))))
 
-ifneq ($(VIVADO), )
 VIVADODIR=$(realpath $(shell dirname $(VIVADO))/..)
 XSC_CFLAGS= -Wa,-W -fPIC -m64  -I"$(VIVADODIR)/data/xsim/include" -DSYSTEM_VERILOG -DBOARD_xsim -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -Ijni
 
@@ -282,7 +281,6 @@ endif
 	xsc -v  -cc gcc -link $(SIM_OBJECTS) -o xsimtop || echo xsc failed
 	xelab -timescale 1ns/1ps --stats $(XVLOGDEFINES) -cc gcc $(SVLOG) --dpiheader XsimTop.h --debug wave -L unisim -L unifast -L unimacro work.xsimtop -sv_lib xsimtop || echo xelab failed
 	true
-endif #VIVADO
 
 vlsim: $(DTOP)/obj_dir/vlsim
 
@@ -297,8 +295,7 @@ $(DTOP)/obj_dir/vlsim: $(DTOP)/obj_dir/vlsim.mk
 	+$(MAKE) USER_LDLIBS="-lconnectal-sim -lpthread" VM_PARALLEL_BUILDS=1 -C obj_dir -f vlsim.mk
 	cp obj_dir/vlsim bin/vlsim
 
-ifneq ($(MODELSIM), )
-MODELSIMDIR=$(realpath $(shell dirname $(MODELSIM))/..)
+MODELSIMDIR=$(realpath $(dir $(MODELSIM))/..)
 VSIM_CFLAGS= $(CFLAGS_PROJECT) -Wa,-W -fPIC -m64 -I"$(MODELSIMDIR)/include" -DSYSTEM_VERILOG -DBOARD_vsim -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -Ijni
 VSIM_CXXFLAGS= $(CXXFLAGS_PROJECT) -Wa,-W -fPIC -m64 -I"$(MODELSIMDIR)/include" -DSYSTEM_VERILOG -DBOARD_vsim -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -Ijni
 
@@ -320,7 +317,6 @@ vsim: verilog $(VSIM_OBJECTS)
 	vlib work
 	vlog -timescale 1ns/1ps -dpiheader XsimTop.h $(VSIM_DEFINES) $(VSIM_SV) $(VSIM_LIBRARY_FILES) $(VSIM_MISC_FILES) +libext+.sv+.v $(SV_SEARCH_PATH) $(VERILOG_PATH:%=-y %) -sv verilog/*.v
 	$(CXX) $(CXXFLAGS_PROJECT) -O -g -I$(DTOP)/jni -shared -fPIC -g -o xsimtop.so $(VSIM_OBJECTS)
-endif #MODELSIM
 
 obj/%.bvi: verilog/%.v
 	$(CONNECTALDIR)/scripts/extract-bvi-schedule.py -d obj verilog/$(*).v
