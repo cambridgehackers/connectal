@@ -361,14 +361,19 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
    Reg#(Bit#(32))                       dataCounter <- mkReg(0);
    FIFOF#(Bit#(32))                  dataLengthFifo <- mkFIFOF();
    let                                     fifoToMp <- mkFIFOF();
-   MemReadEngine#(DataBusWidth,DataBusWidth,2,1) re <- mkMemReadEngine();
-   MPEngine#(PcieDataBusWidth,DataBusWidth)    mpEngine <- mkMPStreamEngine(toPipeOut(fifoToMp), re.readServers[0]);
+   let                                 needleLenReg <- mkReg(0);
+   MemReadEngine#(DataBusWidth,DataBusWidth,2,3) re <- mkMemReadEngine();
+   MPStreamEngine#(PcieDataBusWidth,DataBusWidth)    mpEngine <- mkMPStreamEngine();
+   mkConnection(re.readServers[0].data, mpEngine.needle);
+   mkConnection(re.readServers[1].data, mpEngine.mpNext);
+   mkConnection(toPipeOut(fifoToMp), mpEngine.haystack);
 
    rule rl_count_data_to_mp;
       let data <- toGet(splitter.data).get();
       if (dataLengthFifo.notEmpty()) begin
 	 data.last = (dataCounter+fromInteger(valueOf(PcieDataBusWidth)/8)) >= dataLengthFifo.first;
-	 fifoToMp.enq(data);
+	 let md = MemDataF {data: data.data, last: data.last};
+	 fifoToMp.enq(md);
       end
       dataCounter <= dataCounter + 1;
    endrule
@@ -425,11 +430,18 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
 	 wdataFifoCtl.enq(MemData {data: truncate(value), tag: 0, last: True});
       endmethod
       method Action setSearchString(Bit#(32) needleSglId, Bit#(32) mpNextSglId, Bit#(32) needleLen);
-	 mpEngine.setsearch.enq(tuple3(needleSglId, mpNextSglId, needleLen));
+	 mpEngine.clear();
+	 needleLenReg <= needleLen;
+   
+	 let burstLen = fromInteger(valueOf(DataBusWidth)/8);
+	 let mask = burstLen - 1;
+	 needleLen = (needleLen + mask) & ~mask;
+	 re.readServers[0].request.put(MemengineCmd {sglId: needleSglId, base: 0, burstLen: burstLen, len: needleLen, tag: 0});
+	 re.readServers[1].request.put(MemengineCmd {sglId: mpNextSglId, base: 0, burstLen: burstLen, len: needleLen*4, tag: 0});
       endmethod
       method Action startSearch(Bit#(32) haystackLen);
+	 mpEngine.start(needleLenReg);
 	 dataLengthFifo.enq(haystackLen);
-	 mpEngine.setsearch.enq(tuple3(/* unused */maxBound, haystackLen, /* unused */0));
       endmethod
    endinterface
    interface NvmeRequest request;
