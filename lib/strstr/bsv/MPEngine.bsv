@@ -34,6 +34,7 @@ import BRAM::*;
 import Gearbox::*;
 import Connectable::*;
 import ConfigReg::*;
+import StmtFSM::*;
 
 import MemUtils::*;
 import MemTypes::*;
@@ -47,10 +48,12 @@ interface MPEngine#(numeric type haystackBusWidth, numeric type configBusWidth);
 endinterface
 
 interface MPStreamEngine#(numeric type haystackBusWidth, numeric type configBusWidth);
-   interface PipeIn#(MemData#(configBusWidth)) needle;
-   interface PipeIn#(MemData#(configBusWidth)) mpNext;
-   interface PipeIn#(MemData#(haystackBusWidth)) haystack;
+   interface PipeIn#(MemDataF#(configBusWidth)) needle;
+   interface PipeIn#(MemDataF#(configBusWidth)) mpNext;
+   interface PipeIn#(MemDataF#(haystackBusWidth)) haystack;
    interface PipeOut#(Int#(32)) locdone;
+   method Action clear();
+   method Action start(Bit#(32) needleLen);
 endinterface
 
 typedef Bit#(8) Char;
@@ -351,28 +354,24 @@ module mkMPStreamEngine(MPStreamEngine#(haystackBusWidth,configBusWidth))
 	    );
    
    FIFOF#(Int#(32)) locf <- mkFIFOF;
-   FIFO#(Bool) conff <- mkSizedFIFO(1);
    
    let verbose = True;
-   let debug = False;
+   let debug = True;
 
    Clock clk <- exposeCurrentClock;
    Reset rst <- exposeCurrentReset;
    BRAM2Port#(NeedleIdx, Char) needleBram  <- mkBRAM2Server(defaultValue);
    BRAM2Port#(NeedleIdx, Bit#(32)) mpNextBram <- mkBRAM2Server(defaultValue);
-   FIFOF#(MemData#(haystackBusWidth)) haystackFifo <- mkFIFOF();
+   FIFOF#(MemDataF#(haystackBusWidth)) haystackFifo <- mkFIFOF();
    Gearbox#(haystackBusBytes,1,Char) haystackGb <- mkNto1Gearbox(clk,rst,clk,rst);
 
    Reg#(Bit#(32)) cycleCnt <- mkReg(0);
    Reg#(Bit#(32)) lastHD <- mkReg(0);
    
-   Reg#(Stage)    stage <- mkReg(Config_needle);
+   Reg#(Stage)    stage <- mkReg(Initialized);
    Reg#(Bit#(32)) needleLenReg <- mkReg(0);
-   Reg#(Bit#(32)) haystackLenReg <- mkReg(0);
-   Reg#(Bit#(32)) haystackBase <- mkReg(0);
-   Reg#(Bit#(32)) jReg <- mkReg(0); // offset in haystack
-   Reg#(Bit#(32)) iReg <- mkReg(0); // offset in needle
-   Reg#(Bit#(2))  epochReg <- mkReg(0);
+   Reg#(Bit#(32)) jReg <- mkReg(1); // offset in haystack
+   Reg#(Bit#(32)) iReg <- mkReg(1); // offset in needle
 
    BRAMPipeIn#(NeedleIdxWidth,configBusWidth) n2b <- mkBRAMPipeIn(0, needleBram.portB);
    BRAMPipeIn#(NeedleIdxWidth,configBusWidth) mp2b <- mkBRAMPipeIn(1, mpNextBram.portB);
@@ -381,168 +380,86 @@ module mkMPStreamEngine(MPStreamEngine#(haystackBusWidth,configBusWidth))
    FIFO#(void) doneFifo <- mkFIFO;
    
    rule countCycles;
-      if (debug) $display("******************************************** %d", cycleCnt);
+      //if (debug) $display("******************************************** %d", cycleCnt);
       cycleCnt <= cycleCnt+1;
    endrule
    
    rule haystackResp;
-      if (debug) $display("mkMPEngine::haystackResp");
       let rv <- toGet(haystackFifo).get;
+      if (debug) $display("mkMPEngine::haystackResp rv=%h", rv.data);
       haystackGb.enq(unpack(rv.data));
-      if (rv.last)
-         conff.deq;
    endrule
    
-   rule haystackDrain(stage != Search);
-      if (debug) $display("mkMPEngine::haystackDrain");
-      haystackGb.deq;
-   endrule
-   
-   rule bramDrain(stage != Search);
-      if (debug) $display("mkMPEngine::mpNextDrain");
-      let x <- mpNextBram.portA.response.get;
-      let y <- needleBram.portA.response.get;
-      efifo.deq;
-   endrule
-  
-   
-`define OPTIMIZE_MISMATCH
-`ifdef OPTIMIZE_MISMATCH
-   rule matchNeedleReq(stage == Search);
-      if (debug) $display("mkMPEngine::matchNeedleReq %d %d", epochReg, iReg);
-      needleBram.portA.request.put(BRAMRequest{write:False, address: truncate(iReg-1), datain:?, responseOnWrite:?});
-      mpNextBram.portA.request.put(BRAMRequest{write:False, address: truncate(iReg), datain:?, responseOnWrite:?});
-      efifo.enq(tuple2(epochReg,iReg));
-      iReg <= 1;
-   endrule
-         
-   rule matchNeedleResp(stage == Search);
-      let nv <- needleBram.portA.response.get;
-      let mp <- mpNextBram.portA.response.get;
-      let epoch = tpl_1(efifo.first);
-      efifo.deq;
-      if (debug) $display("mkMPEngine::matchNeedleResp %d %d", epochReg, epoch);
-      if (epoch == epochReg) begin
-	 Bool deq_haystack = False;
-	 let n = haystackLenReg;
-	 let m = needleLenReg;
-	 let hv = haystackGb.first;
-	 let i = tpl_2(efifo.first);
-	 let j = jReg;
-	 if (debug) $display("mkMPEngine::feck %d %d %d %d %x %x", n, m, i, j, hv[0], nv);
-	 if (j > n) begin
-	    // jReg points to the end of the haystack; we are done
-	    stage <= Config_needle;
-	    if (debug) $display("mkMPEngine::end of search %d", j);
-	    locf.enq(-1);
-	 end
-	 else if (i==m+1) begin
-	    // iReg points to the end of the needle; we have a match
-	    if (debug) $display("mkMPEngine::string match %d", j);
-	    locf.enq(unpack(haystackBase+j-i));
-	 end
-	 else if (nv != hv[0]) begin
-	    // mismatch betwen head of haystack and head of needle; rewind iReg
-	    if (debug) $display("mkMPEngine::char mismatch %d %d MP_Next[i]=%d", i, j, mp);
-	    if (mp == 0) begin
-	       iReg <= 1;
-	       jReg <= j+1;
-	       deq_haystack = True;
+   let x_i <- mkReg(0);
+   let t_j <- mkReg(0);
+   let m = needleLenReg;
+   let i = iReg;
+   let matchFsm <- mkAutoFSM(seq
+      while (stage != Search) seq
+	 iReg <= 1;
+      endseq
+      action
+	 iReg <= 1;
+	 jReg <= 1;
+	 let t = haystackGb.first[0]; haystackGb.deq();
+	 t_j <= t;
+	 needleBram.portA.request.put(BRAMRequest{write:False, address: truncate(iReg-1), datain:?, responseOnWrite:?});
+      endaction
+      action
+	 let xNext <- needleBram.portA.response.get();
+	 x_i <= xNext;
+      endaction
+      while (stage == Search) seq
+	 $display("initial i=%d j=%d x_i=%h t_j=%h", iReg, jReg, x_i, t_j);
+	 while ((i == m + 1) || (i > 0 && x_i != t_j)) seq
+	    action
+	       mpNextBram.portA.request.put(BRAMRequest{write:False, address: truncate(iReg), datain:?, responseOnWrite:?});
+      	    endaction
+	    action
+	       let mpNext <- mpNextBram.portA.response.get();
+	       iReg <= mpNext;
+	       needleBram.portA.request.put(BRAMRequest{write:False, address: truncate(mpNext-1), datain:?, responseOnWrite:?});
+	    endaction
+	    action
+	       let xNext <- needleBram.portA.response.get();
+	       x_i <= xNext;
+	       $display("i=%d m+1=%d x_i=%h t_j=%h", i, m+1, xNext, t_j);
+	    endaction
+	 endseq
+	 action
+	    iReg <= iReg + 1;
+	    jReg <= jReg + 1;
+	    needleBram.portA.request.put(BRAMRequest{write:False, address: truncate(iReg+1-1), datain:?, responseOnWrite:?});
+	    let t = haystackGb.first[0]; haystackGb.deq();
+	    t_j <= t;
+	    if (t == 0)
+	       locf.enq(-1);
+	 endaction
+	 action
+	    let xNext <- needleBram.portA.response.get();
+	    x_i <= xNext;
+	    $display("step    i=%d j=%d x_i=%h t_j=%h", iReg, jReg, xNext, t_j);
+	    if (iReg == m + 1) begin
+	       $display("match at j=%d", jReg - iReg);
+	       locf.enq(unpack(jReg - iReg));
 	    end
-	    else begin
-	       epochReg <= epochReg + 1;
-	       iReg <= mp;
-	    end
-	 end
-	 else begin
-	    // match between head of needle and head of haystack; increment haystack
-	    if (debug) $display("mkMPEngine::char match(%d) %d %d", (nv == hv[0]), i, j);
-	    deq_haystack = True;
-	    jReg <= j+1;
-	    epochReg <= epochReg + 1;
-	    iReg <= i+1;
-	 end
-	 if (deq_haystack) begin
-	    haystackGb.deq;
-	    lastHD <= cycleCnt;
-	    if (debug) $display("mkMPEngine:: deq haystack(%d)", cycleCnt-lastHD);
-	 end
-      end
-      else begin
-	 if (debug) $display("mkMPEngine::discard");
-	 noAction;
-      end
-   endrule
-`else
-   rule matchNeedleReq(stage == Search);
-      if (debug) $display("mkMPEngine::matchNeedleReq %d %d", epochReg, iReg);
-      needleBram.portA.request.put(BRAMRequest{write:False, address: truncate(iReg-1), datain:?, responseOnWrite:?});
-      mpNextBram.portA.request.put(BRAMRequest{write:False, address: truncate(iReg), datain:?, responseOnWrite:?});
-      efifo.enq(tuple2(epochReg,iReg));
-      iReg <= iReg+1;
-   endrule
-         
-   rule matchNeedleResp(stage == Search);
-      let nv <- needleBram.portA.response.get;
-      let mp <- mpNextBram.portA.response.get;
-      let epoch = tpl_1(efifo.first);
-      efifo.deq;
-      if (debug) $display("mkMPEngine::matchNeedleResp %d %d", epochReg, epoch);
-      if (epoch == epochReg) begin
-	 Bool deq_haystack = False;
-	 let n = haystackLenReg;
-	 let m = needleLenReg;
-	 let hv = haystack.first;
-	 let i = tpl_2(efifo.first);
-	 let j = jReg;
-	 if (debug) $display("mkMPEngine::feck %d %d %d %d %x %x", n, m, i, j, hv[0], nv);
-	 if (j > n) begin
-	    // jReg points to the end of the haystack; we are done
-	    stage <= Config_needle;
-	    if (debug) $display("mkMPEngine::end of search %d", j);
-	 end
-	 else if (i==m+1) begin
-	    // iReg points to the end of the needle; we have a match
-	    if (debug) $display("mkMPEngine::string match %d", j);
-	    locf.enq(unpack(haystackBase+j-i));
-	    epochReg <= epochReg + 1;
-	    iReg <= 1;
-	 end
-	 else if (nv != hv[0]) begin
-	    // mismatch betwen head of haystack and head of needle; rewind iReg
-	    if (debug) $display("mkMPEngine::char mismatch %d %d MP_Next[i]=%d", i, j, mp);
-	    epochReg <= epochReg + 1;
-	    if (mp == 0) begin
-	       iReg <= 1;
-	       jReg <= j+1;
-	       deq_haystack = True;
-	    end
-	    else begin
-	       iReg <= mp;
-	    end
-	 end
-	 else begin
-	    // match between head of needle and head of haystack; increment haystack
-	    if (debug) $display("mkMPEngine::char match(%d) %d %d", (nv == hv[0]), i, j);
-	    deq_haystack = True;
-	    jReg <= j+1;
-	 end
-	 if (deq_haystack) begin
-	    haystack.deq;
-	    lastHD <= cycleCnt;
-	    if (debug) $display("mkMPEngine:: deq haystack(%d)", cycleCnt-lastHD);
-	 end
-      end
-      else begin
-	 if (debug) $display("mkMPEngine::discard");
-	 noAction;
-      end
-   endrule
-`endif 
+	 endaction
+      endseq // stage == Search
+      endseq);
   
    interface PipeIn needle = n2b.pipe;
    interface PipeIn mpNext = mp2b.pipe;
    interface PipeIn haystack = toPipeIn(haystackFifo);
    interface PipeOut locdone = toPipeOut(locf);
+
+   method Action clear();
+      stage <= Initialized;
+   endmethod
+   method Action start(Bit#(32) needleLen);
+      stage <= Search;
+      jReg <= 1;
+      iReg <= 1;
+      needleLenReg <= needleLen;
+   endmethod
 
 endmodule
