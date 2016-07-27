@@ -51,13 +51,9 @@ endinterface
 // I can't belive we still have to do this shit
 function Bool my_or(Bool a, Bool b) = a || b;
    
-typedef `DEGPAR DegPar;   
-   
 module mkStrstr#(StrstrIndication indication)(Strstr#(haystackBusWidth, configBusWidth))
-   provisos( Log#(DegPar,logDegPar)
-
-
-   ,Mul#(TDiv#(configBusWidth, 8), 8, configBusWidth)
+   provisos (
+   Mul#(TDiv#(configBusWidth, 8), 8, configBusWidth)
    ,Mul#(TDiv#(haystackBusWidth, 8), 8, haystackBusWidth)
    ,Add#(1, a__, TDiv#(haystackBusWidth, 8))
    ,Add#(b__, TLog#(TDiv#(haystackBusWidth, 8)), 32)
@@ -71,15 +67,13 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(haystackBusWidth, configBu
    ,Add#(1, h__, TDiv#(haystackBusWidth, 32))
    ,Add#(i__, 32, haystackBusWidth)
    ,Add#(j__, 8, haystackBusWidth)
-   ,FunnelPipesPipelined#(1, DegPar, MemData#(haystackBusWidth), MemReadFunnelBPC)
-   ,FunnelPipesPipelined#(1, DegPar, MemData#(configBusWidth), MemReadFunnelBPC)
 	    );
    
    let verbose = True;
 
    Reg#(Bit#(32)) needleLen <- mkReg(0);
-   MemReadEngine#(haystackBusWidth,haystackBusWidth,1,DegPar) haystack_re <- mkMemReadEngineBuff(1024);
-   MemReadEngine#(configBusWidth,configBusWidth,1,DegPar) config_re <- mkMemReadEngineBuff(1024);
+   MemReadEngine#(haystackBusWidth,haystackBusWidth,1,1) haystack_re <- mkMemReadEngineBuff(1024);
+   MemReadEngine#(configBusWidth,configBusWidth,1,2) config_re <- mkMemReadEngineBuff(1024);
    
    Reg#(Bit#(32)) needleSGLId <- mkReg(0);
    Reg#(Bit#(32)) mpNextSGLId <- mkReg(0);
@@ -90,80 +84,17 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(haystackBusWidth, configBu
    Reg#(Bit#(32)) setupCnt <- mkReg(0);
    Reg#(Bit#(32)) doneCnt <- mkReg(0);
 
-   let read_servers = zip(haystack_re.readServers,config_re.readServers);
-   Vector#(DegPar, MPEngine#(haystackBusWidth,configBusWidth)) engines <- mapM(uncurry(mkMPEngine),read_servers);
-   Vector#(DegPar, PipeOut#(Int#(32))) locdonePipes;
-
-   FIFOF#(Triplet#(Bit#(32))) setsearchFIFO <- mkFIFOF;
-   UnFunnelPipe#(1,DegPar,Triplet#(Bit#(32)),1) setsearchPipeUnFunnel <- mkUnFunnelPipesPipelinedRR(vec(toPipeOut(setsearchFIFO)), 1);
-
-   for(Integer i = 0; i < valueOf(DegPar); i=i+1) begin
-      locdonePipes[i] = engines[i].locdone;
-      mkConnection(setsearchPipeUnFunnel[i],engines[i].setsearch);
-   end
-
-   FunnelPipe#(1,DegPar,Int#(32),1) locdonePipe <- mkFunnelPipesPipelined(locdonePipes);
-   let lpv = fromInteger(valueOf(logDegPar));
-   let pv = fromInteger(valueOf(DegPar));
+   MPStreamEngine#(haystackBusWidth,configBusWidth) engine <- mkMPStreamEngine;
+   mkConnection(config_re.readServers[0].data, engine.needle);
+   mkConnection(config_re.readServers[1].data, engine.mpNext);
+   mkConnection(haystack_re.readServers[0].data, engine.haystack);
 
    rule resr;
-      let rv <- toGet(locdonePipe[0]).get;
-      if (rv == -1) begin  
-	 // notify the SW when the search is finished
-	 if (doneCnt+1 == pv) begin
-	    doneCnt <= 0;
-	    indication.searchResult(-1);
-	 end
-	 else begin
-	    doneCnt <= doneCnt+1;
-	 end
-      end
-      else begin    
-	 // send results back to SW
-	 indication.searchResult(rv);
-	 if (verbose) $display("strstr search result %d", rv);
-      end
+      let rv <- toGet(engine.locdone).get;
+      // send results back to SW
+      indication.searchResult(rv);
+      if (verbose) $display("strstr search result %d", rv);
    endrule
-   
-   // setup the MPEngines when new configuration arrives
-   Stmt setupStmt = 
-   seq
-      action
-	 if (verbose) $display("setupStmt (begin)");
-	 setupCnt <= 0;
-      endaction
-      while(setupCnt < pv) action
-	 setupCnt <= setupCnt+1;
-	 let tup = tuple3(needleSGLId, mpNextSGLId, needleLen);
-	 setsearchFIFO.enq(tup);
-	 if (verbose) $display(fshow("setupStmt (mid) ")+fshow(tup));
-      endaction
-      if (verbose) $display("setupStmt (end)");
-   endseq;
-   FSM setupFSM <- mkFSM(setupStmt);
-
-   // start the search;
-   Stmt startStmt = 
-   seq
-      action
-	 if (verbose) $display("startStmt (begin)");
-	 startCnt <= 0;
-	 startBase <= 0;
-      endaction
-      while (startCnt < pv-1) action
-	 let tup = tuple3(haystackSGLId, (haystackLen>>lpv)+needleLen, startBase);
-	 setsearchFIFO.enq(tup);
-	 startBase <= startBase + (haystackLen>>lpv);
-	 startCnt <= startCnt+1;
-	 if (verbose) $display(fshow("startStmt ")+fshow(tup)+fshow(" (mid)"));
-      endaction
-      action
-	 let tup = tuple3(haystackSGLId, haystackLen>>lpv, startBase);
-	 setsearchFIFO.enq(tup);
-	 if (verbose) $display(fshow("startStmt ")+fshow(tup)+fshow(" (end)"));
-      endaction
-   endseq;
-   FSM startFSM <- mkFSM(startStmt);
       
    interface StrstrRequest request;
       method Action setup(Bit#(32) needle_sglId, Bit#(32) mpNext_sglId, Bit#(32) needle_len);
@@ -171,14 +102,26 @@ module mkStrstr#(StrstrIndication indication)(Strstr#(haystackBusWidth, configBu
 	 needleLen <= needle_len;
 	 needleSGLId <= needle_sglId;
 	 mpNextSGLId <= mpNext_sglId;
-	 setupFSM.start();
+	 let burstLen = fromInteger(valueOf(configBusWidth)/8);
+	 let mask = burstLen - 1;
+	 needle_len = (needle_len + mask) & ~mask;
+	 $display("needle_len %d", needle_len);
+	 config_re.readServers[0].request.put(MemengineCmd {sglId: needle_sglId, base: 0, burstLen: burstLen, len: needle_len, tag: 0});
+	 config_re.readServers[1].request.put(MemengineCmd {sglId: mpNext_sglId, base: 0, burstLen: burstLen, len: needle_len*4, tag: 0});
+
+	 engine.clear();
       endmethod
    
       method Action search(Bit#(32) haystack_sglId, Bit#(32) haystack_len);
 	 if (verbose) $display("mkStrstr::search %d %d", haystack_sglId, haystack_len);
 	 haystackLen <= haystack_len;
 	 haystackSGLId <= haystack_sglId;
-	 startFSM.start();
+	 let burstLen = fromInteger(valueOf(haystackBusWidth)/8);
+	 let mask = burstLen - 1;
+	 haystack_len = (haystack_len + mask) & ~mask;
+	 haystack_re.readServers[0].request.put(MemengineCmd {sglId: haystack_sglId, base: 0, burstLen: burstLen, len: haystack_len, tag: 0});
+
+	 engine.start(needleLen);
       endmethod
    endinterface
    interface config_read_client = vec(config_re.dmaClient);
