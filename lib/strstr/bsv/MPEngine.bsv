@@ -416,14 +416,12 @@ module mkMPStreamEngine(MPStreamEngine#(haystackBusWidth,configBusWidth))
 	       mpNextBram.portA.request.put(BRAMRequest{write:False, address: truncate(iReg), datain:?, responseOnWrite:?});
       	    endaction
 	    action
-	       let mpNext <- mpNextBram.portA.response.get();
-	       iReg <= mpNext;
-	       needleBram.portA.request.put(BRAMRequest{write:False, address: truncate(mpNext-1), datain:?, responseOnWrite:?});
-	    endaction
-	    action
-	       let xNext <- needleBram.portA.response.get();
-	       x_i <= xNext;
-	       $display("i=%d m+1=%d x_i=%h t_j=%h", i, m+1, xNext, t_j);
+	       Bit#(32) mpNext <- mpNextBram.portA.response.get();
+	       let iNext = mpNext[15:0];
+	       let xNext = mpNext[31:16];
+	       iReg <= extend(iNext);
+	       x_i <= truncate(xNext);
+	       $display("i=%d iNext=%d m+1=%d x_i=%h t_j=%h mpNext=%h", i, iNext, m+1, xNext, t_j, mpNext);
 	    endaction
 	 endseq
 	 action
