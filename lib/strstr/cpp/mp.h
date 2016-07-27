@@ -31,7 +31,7 @@
  *    begin
  *        i := 1; j := 1;
  *        while j <= n do begin
- *            while (i = m + 1) or (i > 0 and x[i] != t[j]) do j := MP_next[i];
+ *            while (i = m + 1) or (i > 0 and x[i] != t[j]) do i := MP_next[i];
  *            i := i + 1; j := j + 1;
  *            if i = m + 1 then writeln('x occurs in t at position ', j - i + 1);
  *        end;
