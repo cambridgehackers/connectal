@@ -835,7 +835,7 @@ int main(int argc, const char **argv)
     int border[needle_len+1];
 
     compute_borders(nvme.needleBuffer.buffer(), border, needle_len);
-    compute_MP_next(nvme.needleBuffer.buffer(), (int *)nvme.mpNextBuffer.buffer(), needle_len);
+    compute_MP_next(nvme.needleBuffer.buffer(), (struct MP *)nvme.mpNextBuffer.buffer(), needle_len);
     nvme.needleBuffer.cacheInvalidate(0, 1); // flush the whole thing
     nvme.mpNextBuffer.cacheInvalidate(0, 1); // flush the whole thing
 
