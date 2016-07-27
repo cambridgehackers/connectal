@@ -55,13 +55,13 @@ int main(int argc, const char **argv)
     
     const char *needle_text = "ababab";
     const char *haystack_text = "acabcabacababacababababababcacabcabacababacabababc";
-    const int hmul = DEGPAR;
+    const int hmul = 1;
     
     assert(strlen(haystack_text)*hmul < alloc_len);
     assert(strlen(needle_text)*4 < alloc_len);
 
     strncpy(needle, needle_text, alloc_len);
-    for(int i = 0; i < hmul; i++)
+    for (int i = 0; i < hmul; i++)
       strcpy(haystack+(i*strlen(haystack_text)), haystack_text);
 
     int needle_len = strlen(needle);
@@ -73,11 +73,11 @@ int main(int argc, const char **argv)
 
     assert(mpNext[1] == 0);
     assert(border[1] == 0);
-    for(int i = 2; i < needle_len+1; i++)
+    for (int i = 2; i < needle_len+1; i++)
       assert(mpNext[i] == border[i-1]+1);
 
-    for(int i = 0; i < needle_len; i++)
-      fprintf(stderr, "%d %d\n", needle[i], mpNext[i]);
+    for (int i = 0; i < needle_len; i++)
+      fprintf(stderr, "needle[%d]=%d mpNext[%d]=%d\n", i, needle[i], i+1, mpNext[i+1]);
 
     portalTimerStart(0);
     MP(needle, haystack, mpNext, needle_len, haystack_len, &sw_match_cnt);
@@ -93,6 +93,7 @@ int main(int argc, const char **argv)
     fprintf(stderr, "about to invoke device ref_needle=%d ref_mpNext=%d ref_haystack=%d\n",
 	    ref_needle, ref_mpNext, ref_haystack);
     device->setup(ref_needle, ref_mpNext, needle_len);
+    sleep(2);
     portalTimerStart(0);
     device->search(ref_haystack, haystack_len);
     deviceIndication->wait();
@@ -148,7 +149,7 @@ int main(int argc, const char **argv)
 
     assert(mpNext[1] == 0);
     assert(border[1] == 0);
-    for(int i = 2; i < needle_len+1; i++)
+    for (int i = 2; i < needle_len+1; i++)
       assert(mpNext[i] == border[i-1]+1);
 
     fprintf(stderr, "about to invoke device ref_needle=%d ref_mpNext=%d ref_haystack=%d needle_len=%d needle_alloc_len=%d haystack_len=%d\n",
