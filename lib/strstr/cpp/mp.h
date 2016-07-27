@@ -24,6 +24,9 @@
  *    MP algorithm on pages 7-11 from "Pattern Matching Algorithms" by
  *       Alberto Apostolico, Zvi Galil, 1997
  *
+ *    pattern x of length m
+ *    text    t of length n
+ *
  *    procedure MP(x, t: string; m, n: integer);
  *    begin
  *        i := 1; j := 1;
