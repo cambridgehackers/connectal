@@ -262,14 +262,54 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
    Reg#(Bit#(32)) requestStartTimestamp <- mkReg(0);
 
    FIFOF#(NvmeIoCommand) ioCommandFifo <- mkFIFOF();
+   FIFOF#(NvmeIoCommand) ioSegmentFifo <- mkFIFOF(); // max request size 32
 
    Reg#(Bit#(32)) cycles <- mkReg(0);
    rule rl_cycles;
       cycles <= cycles + 1;
    endrule
 
+   let commandStartProbe <- mkProbe();
+   let commandNumBlocksProbe <- mkProbe();
+   let segmentStartProbe <- mkProbe();
+   let segmentNumBlocksProbe <- mkProbe();
+   let completedRequestProbe <- mkProbe();
+
+   Reg#(NvmeIoCommand) ioCommandReg <- mkReg(unpack(0));
+   IteratorWithContext#(Bit#(32),NvmeIoCommand) ioIterator <- mkIteratorWithContext();
+   let segmenterFsm <- mkAutoFSM(seq
+      while (True) seq
+	 action
+	    let command <- toGet(ioCommandFifo).get();
+	    ioIterator.start(IteratorConfig {xbase: 0,
+					     xlimit: command.numBlocks,
+					     xstep: `BlocksPerRequest},
+			     command);
+	    commandStartProbe <= command.startBlock;
+	    commandNumBlocksProbe <= command.numBlocks;
+	 endaction
+         while (ioIterator.ivpipe.notEmpty()) seq
+	    action
+	       let v <- toGet(ioIterator.ivpipe).get();
+	       let command = v.ctxt;
+	       if (v.last) begin
+		  command.numBlocks = command.numBlocks - v.value; //fixme
+	       end
+	       else begin
+		  command.numBlocks = `BlocksPerRequest;
+	       end
+	       command.startBlock = command.startBlock + extend(v.value);
+	       ioSegmentFifo.enq(command);
+
+	       segmentStartProbe <= truncate(command.startBlock) + v.value;
+	       segmentNumBlocksProbe <= command.numBlocks;
+	    endaction
+	 endseq
+         completedRequestProbe <= True;
+      endseq // while True
+      endseq);
+
    Reg#(Bit#(32)) i <- mkReg(0);
-   Reg#(Bit#(1)) phase <- mkReg(1);
 
    let bramQueryAddress <- mkProbe();
    let bramQueryResponse <- mkProbe();
@@ -278,9 +318,9 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
    let requestFsm <- mkAutoFSM(seq
       while (True) seq
 	 action
-	    let req <- toGet(ioCommandFifo).get();
+	    let req <- toGet(ioSegmentFifo).get();
 	    Vector#(16,Bit#(32)) command = unpack(0);
-	    command[0] = { req.requestId, req.flags, req.opcode };
+	    command[0] = { requestId, req.flags, req.opcode };
 	    command[1] = 1; // nsid
 	    // prp1: send data to fifo
 	    command[6] = 32'h30000000;
@@ -290,7 +330,7 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
 	    command[11] = req.startBlock[63:32];
 	    command[12] = req.numBlocks-1;
 	    command[13] = req.dsm;
-	    requestId <= req.requestId;
+	    //requestId <= req.requestId;
 	    ioCommand <= command;
 
 	    requestSlotAvailable <= False;
@@ -301,6 +341,7 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
 					    write: False, responseOnWrite: False, datain: 0});
 	    action
 	       let response <- portB1.response.get();
+	       let phase = ~requestId[3];
 	       if (response[16+(3*32 % valueOf(PcieDataBusWidth))] == ~phase) begin
 		  requestSlotAvailable <= True;
 	       end
@@ -321,6 +362,7 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
 	    requestInProgress <= True;
 	    requestStartTimestamp <= cycles;
 	    trace.traceData(unpack(0), False, truncate(requestId), cycles);
+	    requestId <= requestId + 1;
 	 endaction
       endseq // while True
       endseq);
@@ -336,6 +378,7 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
 	    action
 	       let response <- portB2.response.get();
 	       bramQueryResponse <= response;
+	       let phase = ~responseId[3];
 	       if (response[16+(3*32 % valueOf(PcieDataBusWidth))] == phase) begin
 		  requestCompleted <= response;
 		  // if status field written by NVME
@@ -348,9 +391,6 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
 	 // tell the NVME the new response queue head pointer
 	 action
 	    let nextRequestId = (responseId + 1);
-	    if (nextRequestId[2:0] == 0) begin
-	       phase <= ~phase;
-	    end
 	    responseId <= nextRequestId;
 	    awaddrFifo.enq(PhysMemRequest { addr: 'h1000 + (2*2+1)*(4<<0), burstLen: 4, tag: 1 });
 	    wdataFifo.enq(MemData{data: zeroExtend((nextRequestId)[2:0]), tag: 1, last: True});
@@ -400,7 +440,7 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
 `ifndef PCIE3
 	 let mmcmLock = axiRootPort.mmcm.lock();
 `else
-	 let mmcmLock = True;
+	 let mmcmLock = 1;
 `endif
          driverInd.status(mmcmLock, dataCounter);
       endmethod

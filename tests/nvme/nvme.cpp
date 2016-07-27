@@ -474,7 +474,8 @@ int Nvme::ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue)
 	fprintf(stderr, "%s:%d starting transfer\n", __FUNCTION__, __LINE__);
 	driverRequest.trace(0);
 
-	requestProxy.startTransfer(/* read */ 2, /* flags */ 0, cmd->cid, cmd->cdw10, cmd->cdw12+1, /* dsm */0x71);
+	int numBlocks = cmd->cdw12+1;
+	requestProxy.startTransfer(/* read */ 2, /* flags */ 0, cmd->cid, cmd->cdw10, numBlocks, /* dsm */0x71);
 	//sleep(1);
 
 	if (0) {
@@ -486,8 +487,10 @@ int Nvme::ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue)
 	    }
 	}
 
-	fprintf(stderr, "%s:%d waiting for completion\n", __FUNCTION__, __LINE__);
-	indication.wait();
+	for (int i = 0; i < numBlocks/BlocksPerRequest; i++) {
+	  fprintf(stderr, "%s:%d waiting for completion numBlocks=%d\n", __FUNCTION__, __LINE__, numBlocks);
+	  indication.wait();
+	}
 	dumpTrace();
 	int status = driverIndication.value >> 32;
 	int more = (status >> 30) & 1;
@@ -851,8 +854,8 @@ int main(int argc, const char **argv)
 
     fprintf(stderr, "CSTS %08x\n", nvme.read32( 0x1c));
     int startBlock = 34816; // base and extent of test file in SSD
-    int blocksPerRequest = 32;
-    int numBlocks = 8*blocksPerRequest; // 55; //8177;
+    int blocksPerRequest = 2*BlocksPerRequest;
+    int numBlocks = 16*blocksPerRequest; // 55; //8177;
     if (0)
 	nvme.startSearch(numBlocks*512);
     for (int block = 0; block < numBlocks; block += blocksPerRequest) {

@@ -11,15 +11,22 @@ BSVFILES = NvmeIfc.bsv $(CONNECTALDIR)/bsv/ConnectalConfig.bsv
 CPPFILES += nvme.cpp
 CPPFILES += $(CONNECTALDIR)/cpp/DmaBuffer.cpp
 
+ifeq ($(BOARD),miniitx100)
 PINOUT_FILE += nvme.json
+CONNECTALFLAGS += -D PcieDataBusWidth=128
+else
+#PINOUT_FILE += nfsume.json
+CONNECTALFLAGS += -D PcieDataBusWidth=256
+endif
+CONNECTALFLAGS += -D BlocksPerRequest=8
 PIN_TYPE = NvmePins
 PIN_TYPE_INCLUDE = NvmePins
 AUTOTOP = --interface pins:Nvme.pins
 
 AUTOTOP += --portalclock=lNvme.portalClockSource
+CONNECTALFLAGS += --cxxflags=-std=c++11
 CONNECTALFLAGS += -D USE_ACP
 CONNECTALFLAGS += -D TOP_SOURCES_PORTAL_CLOCK --mainclockperiod=8
-CONNECTALFLAGS += -D PcieDataBusWidth=128
 CONNECTALFLAGS += --stl=c++_static
 
 CONNECTALFLAGS += -I $(CONNECTALDIR)/lib/strstr/cpp
