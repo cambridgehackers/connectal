@@ -97,8 +97,11 @@ module mkNvmeSearch#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTra
       searchIndication.strstrLoc(pack(loc));
    endrule
 
+   interface NvmeRequest                request = nvme.request;
+   interface NvmeDriverRequest    driverRequest = nvme.driverRequest;
    interface MemServerPortalRequest bramRequest = nvme.bramRequest;
-   interface NvmeDriverRequest      driverRequest = nvme.driverRequest;
+   interface NvmeTrace                    trace = nvme.trace;
+   interface NvmePins                      pins = nvme.pins;
    interface StringSearchRequest searchRequest;
       method Action setSearchString(Bit#(32) needleSglId, Bit#(32) mpNextSglId, Bit#(32) needleLen);
 	 mpEngine.clear();
@@ -116,7 +119,6 @@ module mkNvmeSearch#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTra
       endmethod
    endinterface
    interface Clock portalClockSource = nvme.portalClockSource;
-   interface NvmePins           pins = nvme.pins;
    interface Vector dmaReadClient = append(nvme.dmaReadClient, vec(re.dmaClient));
    interface Vector dmaWriteClient = nvme.dmaWriteClient;
 endmodule
