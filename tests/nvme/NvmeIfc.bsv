@@ -66,17 +66,22 @@ interface NvmeDriverRequest;
    method Action writeCtl(Bit#(32) addr, Bit#(DataBusWidth) data);
    method Action status();
    method Action trace(Bool enabled);
-   // FIXME: move to new portal
-   method Action setSearchString(Bit#(32) needleSglId, Bit#(32) mpNextSglId, Bit#(32) needleLen);
-   method Action startSearch(Bit#(32) searchLen);
 endinterface
 
 interface NvmeDriverIndication;
    method Action readDone(Bit#(DataBusWidth) data);
    method Action writeDone();
    method Action status(Bit#(1) mmcm_lock, Bit#(32) dataCounter);
-   method Action strstrLoc(Bit#(32) loc);
    method Action setupComplete();
+endinterface
+
+interface StringSearchRequest;
+   method Action setSearchString(Bit#(32) needleSglId, Bit#(32) mpNextSglId, Bit#(32) needleLen);
+   method Action startSearch(Bit#(32) searchLen);
+endinterface
+
+interface StringSearchResponse;
+   method Action strstrLoc(Bit#(32) loc);
 endinterface
 
 interface NvmeTrace;

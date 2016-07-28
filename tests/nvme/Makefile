@@ -1,7 +1,7 @@
 CONNECTALDIR?=../..
 
-S2H_INTERFACES = NvmeRequest:Nvme.request NvmeDriverRequest:Nvme.driverRequest MemServerPortalRequest:Nvme.bramRequest
-H2S_INTERFACES = Nvme:NvmeIndication,NvmeDriverIndication,NvmeTrace,MemServerPortalIndication
+S2H_INTERFACES = NvmeRequest:Nvme.request NvmeDriverRequest:Nvme.driverRequest MemServerPortalRequest:Nvme.bramRequest StringSearchRequest:Nvme.searchRequest
+H2S_INTERFACES = Nvme:NvmeIndication,NvmeDriverIndication,NvmeTrace,MemServerPortalIndication,StringSearchResponse
 
 MEM_READ_INTERFACES = lNvme.dmaReadClient
 MEM_WRITE_INTERFACES = lNvme.dmaWriteClient

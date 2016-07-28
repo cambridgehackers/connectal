@@ -14,6 +14,8 @@
 #include "NvmeTrace.h"
 #include "MemServerPortalRequest.h"
 #include "MemServerPortalIndication.h"
+#include "StringSearchRequest.h"
+#include "StringSearchResponse.h"
 //#include "ConnectalProjectConfig.h"
 
 const int DataBusWidth = 64;
@@ -224,6 +226,15 @@ public:
     }
 };
 
+class StringSearchResponse : public StringSearchResponseWrapper {
+public:
+    virtual void strstrLoc ( const uint32_t loc ) {
+	fprintf(stderr, "strstr loc loc=%d\n", loc);
+    }
+    StringSearchResponse(int id, PortalPoller *poller = 0) : StringSearchResponseWrapper(id, poller) {
+    }
+};
+
 class Nvme {
     NvmeRequestProxy requestProxy;
     NvmeIndication  indication;
@@ -299,9 +310,6 @@ public:
     uint64_t bramRead(uint32_t addr);
     void bramWrite(uint32_t addr, uint64_t data);
 
-    int setSearchString ( const uint32_t needleSglId, const uint32_t mpNextSglId, const uint32_t needleLen );
-    int startSearch ( const uint32_t searchLen );
-
     int adminCommand(nvme_admin_cmd *cmd, nvme_completion *completion);
     int ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue=1);
     void status() {
@@ -367,20 +375,6 @@ void Nvme::bramWrite(uint32_t addr, uint64_t data)
 {
     bram.write(addr, data);
     //bramIndication.wait();
-}
-
-int Nvme::setSearchString ( const uint32_t needleSglId, const uint32_t mpNextSglId, const uint32_t needleLen )
-{
-    driverRequest.setSearchString(needleSglId, mpNextSglId, needleLen);
-    // completion method is missing
-    //driverIndication.wait();
-    sleep(1);
-    return 0;
-}
-int Nvme::startSearch ( const uint32_t searchLen )
-{
-    driverRequest.startSearch(searchLen);
-    return 0;
 }
 
 void memserverWrite(Nvme *nvme)
@@ -739,6 +733,8 @@ int doIO(Nvme *nvme, int startBlock, int numBlocks, int queue=1)
 int main(int argc, const char **argv)
 {
     Nvme nvme;
+    StringSearchRequestProxy search(IfcNames_StringSearchRequestS2H);
+    StringSearchResponse     searchResponse(IfcNames_StringSearchResponseH2S);
 
     sleep(1);
     fprintf(stderr, "Enabling I/O and Memory, bus master, parity and SERR\n");
@@ -846,7 +842,7 @@ int main(int argc, const char **argv)
     //MP(needle, haystack, mpNext, needle_len, haystack_len, &sw_match_cnt);
 
     // the MPEngine will read in the needle and mpNext
-    nvme.setSearchString(nvme.needleRef, nvme.mpNextRef, needle_len);
+    search.setSearchString(nvme.needleRef, nvme.mpNextRef, needle_len);
 
     identify(&nvme);
     getFeatures(&nvme);
@@ -857,7 +853,7 @@ int main(int argc, const char **argv)
     int blocksPerRequest = 2*BlocksPerRequest;
     int numBlocks = 16*blocksPerRequest; // 55; //8177;
     if (0)
-	nvme.startSearch(numBlocks*512);
+	search.startSearch(numBlocks*512);
     for (int block = 0; block < numBlocks; block += blocksPerRequest) {
       int sc = doIO(&nvme, startBlock, blocksPerRequest, 2);
       nvme.status();

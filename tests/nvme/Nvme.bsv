@@ -93,6 +93,7 @@ interface Nvme;
    interface NvmeRequest request;
    interface NvmeDriverRequest driverRequest;
    interface MemServerPortalRequest bramRequest;
+   interface StringSearchRequest searchRequest;
    interface NvmeTrace trace;
    interface NvmePins pins;
    interface Vector#(2, MemReadClient#(DataBusWidth)) dmaReadClient;
@@ -102,7 +103,8 @@ interface Nvme;
 `endif
 endinterface
 
-module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace trace, MemServerPortalIndication bramIndication)(Nvme);
+module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace trace, MemServerPortalIndication bramIndication,
+	       StringSearchResponse searchIndication)(Nvme);
    let clock <- exposeCurrentClock;
    let reset <- exposeCurrentReset;
    let refclk_p <- mkB2C1();
@@ -422,7 +424,7 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
    let bramMemCnx  <- mkConnection(splitter.bramClient, bramMemA);
    rule rl_locdone;
       let loc <- toGet(mpEngine.locdone).get();
-      driverInd.strstrLoc(pack(loc));
+      searchIndication.strstrLoc(pack(loc));
    endrule
 
 `ifdef NVME_ACCELERATOR_INTERFACE
@@ -469,6 +471,13 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
 	 awaddrFifoCtl.enq(PhysMemRequest { addr: addr, burstLen: 4, tag: 0 });
 	 wdataFifoCtl.enq(MemData {data: truncate(value), tag: 0, last: True});
       endmethod
+   endinterface
+   interface NvmeRequest request;
+      method Action startTransfer(Bit#(8) opcode, Bit#(8) flags, Bit#(16) requestId, Bit#(64) startBlock, Bit#(32) numBlocks, Bit#(32) dsm);
+	 ioCommandFifo.enq(NvmeIoCommand{opcode: opcode, flags: flags, requestId: requestId, startBlock: startBlock, numBlocks: numBlocks, dsm: dsm });
+      endmethod
+   endinterface
+   interface StringSearchRequest searchRequest;
       method Action setSearchString(Bit#(32) needleSglId, Bit#(32) mpNextSglId, Bit#(32) needleLen);
 	 mpEngine.clear();
 	 needleLenReg <= needleLen;
@@ -482,11 +491,6 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
       method Action startSearch(Bit#(32) haystackLen);
 	 mpEngine.start(needleLenReg);
 	 dataLengthFifo.enq(haystackLen);
-      endmethod
-   endinterface
-   interface NvmeRequest request;
-      method Action startTransfer(Bit#(8) opcode, Bit#(8) flags, Bit#(16) requestId, Bit#(64) startBlock, Bit#(32) numBlocks, Bit#(32) dsm);
-	 ioCommandFifo.enq(NvmeIoCommand{opcode: opcode, flags: flags, requestId: requestId, startBlock: startBlock, numBlocks: numBlocks, dsm: dsm });
       endmethod
    endinterface
 `ifndef PCIE3
