@@ -51,7 +51,7 @@ int main(int argc, const char **argv)
 
     char *needle = (char *)portalMmap(needleAlloc, alloc_len);
     char *haystack = (char *)portalMmap(haystackAlloc, alloc_len);
-    int *mpNext = (int *)portalMmap(mpNextAlloc, alloc_len);
+    struct MP *mpNext = (struct MP *)portalMmap(mpNextAlloc, alloc_len);
     
     const char *needle_text = "ababab";
     const char *haystack_text = "acabcabacababacababababababcacabcabacababacabababc";
@@ -71,18 +71,21 @@ int main(int argc, const char **argv)
     compute_borders(needle, border, needle_len);
     compute_MP_next(needle, mpNext, needle_len);
 
-    assert(mpNext[1] == 0);
+    assert(mpNext[1].index == 0);
     assert(border[1] == 0);
     for (int i = 2; i < needle_len+1; i++)
-      assert(mpNext[i] == border[i-1]+1);
+      assert(mpNext[i].index == border[i-1]+1);
 
     for (int i = 0; i < needle_len; i++)
-      fprintf(stderr, "needle[%d]=%d mpNext[%d]=%d\n", i, needle[i], i+1, mpNext[i+1]);
+      fprintf(stderr, "needle[%d]=%x mpNext[%d]=%d\n", i, needle[i], i+1, ((int *)mpNext)[i+1]);
 
     portalTimerStart(0);
     MP(needle, haystack, mpNext, needle_len, haystack_len, &sw_match_cnt);
     fprintf(stderr, "elapsed time (hw cycles): %lld\n", (long long)portalTimerLap(0));
     
+    for (int i = 0; i < needle_len; i++)
+      fprintf(stderr, "needle[%d]=%x mpNext[%d]=%x\n", i, needle[i], i+1, ((int *)mpNext)[i+1]);
+
     portalCacheFlush(needleAlloc, needle, alloc_len, 1);
     portalCacheFlush(mpNextAlloc, mpNext, alloc_len, 1);
 
@@ -127,7 +130,7 @@ int main(int argc, const char **argv)
 
     char *needle = (char *)portalMmap(needleAlloc, needle_alloc_len);
     char *haystack = (char *)portalMmap(haystackAlloc, haystack_alloc_len);
-    int *mpNext = (int *)portalMmap(mpNextAlloc, mpNext_alloc_len);
+    struct MP *mpNext = (struct MP *)portalMmap(mpNextAlloc, mpNext_alloc_len);
 
     int ref_needle = dma->reference(needleAlloc);
     int ref_haystack = dma->reference(haystackAlloc);
@@ -147,10 +150,10 @@ int main(int argc, const char **argv)
     compute_borders(needle, border, needle_len);
     compute_MP_next(needle, mpNext, needle_len);
 
-    assert(mpNext[1] == 0);
+    assert(mpNext[1].index == 0);
     assert(border[1] == 0);
     for (int i = 2; i < needle_len+1; i++)
-      assert(mpNext[i] == border[i-1]+1);
+      assert(mpNext[i].index == border[i-1]+1);
 
     fprintf(stderr, "about to invoke device ref_needle=%d ref_mpNext=%d ref_haystack=%d needle_len=%d needle_alloc_len=%d haystack_len=%d\n",
 	    ref_needle, ref_mpNext, ref_haystack, needle_len, needle_alloc_len, haystack_len);
