@@ -46,7 +46,6 @@ import PhysMemSlaveFromBram::*;
 import Pipe::*;
 import TraceMemClient::*;
 import XilinxCells::*;
-import MPEngine::*;
 
 `ifndef PCIE3
 import AxiPcieRootPort::*;
@@ -93,18 +92,17 @@ interface Nvme;
    interface NvmeRequest request;
    interface NvmeDriverRequest driverRequest;
    interface MemServerPortalRequest bramRequest;
-   interface StringSearchRequest searchRequest;
    interface NvmeTrace trace;
    interface NvmePins pins;
-   interface Vector#(2, MemReadClient#(DataBusWidth)) dmaReadClient;
+   interface PipeOut#(MemData#(PcieDataBusWidth)) dataOut;
+   interface Vector#(1, MemReadClient#(DataBusWidth)) dmaReadClient;
    interface Vector#(1, MemWriteClient#(DataBusWidth)) dmaWriteClient;
 `ifdef TOP_SOURCES_PORTAL_CLOCK
    interface Clock portalClockSource;
 `endif
 endinterface
 
-module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace trace, MemServerPortalIndication bramIndication,
-	       StringSearchResponse searchIndication)(Nvme);
+module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace trace, MemServerPortalIndication bramIndication)(Nvme);
    let clock <- exposeCurrentClock;
    let reset <- exposeCurrentReset;
    let refclk_p <- mkB2C1();
@@ -400,32 +398,8 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
       endseq // while True
       endseq);
 
-   Reg#(Bit#(32))                       dataCounter <- mkReg(0);
-   FIFOF#(Bit#(32))                  dataLengthFifo <- mkFIFOF();
-   let                                     fifoToMp <- mkFIFOF();
-   let                                 needleLenReg <- mkReg(0);
-   MemReadEngine#(DataBusWidth,DataBusWidth,2,3) re <- mkMemReadEngine();
-   MPStreamEngine#(PcieDataBusWidth,DataBusWidth)    mpEngine <- mkMPStreamEngine();
-   mkConnection(re.readServers[0].data, mpEngine.needle);
-   mkConnection(re.readServers[1].data, mpEngine.mpNext);
-   mkConnection(toPipeOut(fifoToMp), mpEngine.haystack);
-
-   rule rl_count_data_to_mp;
-      let data <- toGet(splitter.data).get();
-      if (dataLengthFifo.notEmpty()) begin
-	 data.last = (dataCounter+fromInteger(valueOf(PcieDataBusWidth)/8)) >= dataLengthFifo.first;
-	 let md = MemDataF {data: data.data, last: data.last};
-	 fifoToMp.enq(md);
-      end
-      dataCounter <= dataCounter + 1;
-   endrule
-
    let traceMemCnx <- mkConnection(traceClient, splitter.server);
    let bramMemCnx  <- mkConnection(splitter.bramClient, bramMemA);
-   rule rl_locdone;
-      let loc <- toGet(mpEngine.locdone).get();
-      searchIndication.strstrLoc(pack(loc));
-   endrule
 
 `ifdef NVME_ACCELERATOR_INTERFACE
    FIFOF#(Bit#(32)) msgInFifo <- mkFIFOF();
@@ -444,7 +418,7 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
 `else
 	 let mmcmLock = 1;
 `endif
-         driverInd.status(mmcmLock, dataCounter);
+         driverInd.status(mmcmLock, 0);
       endmethod
       method Action trace(Bool enabled);
 	 traceEnabled <= enabled;
@@ -477,27 +451,12 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
 	 ioCommandFifo.enq(NvmeIoCommand{opcode: opcode, flags: flags, requestId: requestId, startBlock: startBlock, numBlocks: numBlocks, dsm: dsm });
       endmethod
    endinterface
-   interface StringSearchRequest searchRequest;
-      method Action setSearchString(Bit#(32) needleSglId, Bit#(32) mpNextSglId, Bit#(32) needleLen);
-	 mpEngine.clear();
-	 needleLenReg <= needleLen;
-   
-	 let burstLen = fromInteger(valueOf(DataBusWidth)/8);
-	 let mask = burstLen - 1;
-	 needleLen = (needleLen + mask) & ~mask;
-	 re.readServers[0].request.put(MemengineCmd {sglId: needleSglId, base: 0, burstLen: burstLen, len: needleLen, tag: 0});
-	 re.readServers[1].request.put(MemengineCmd {sglId: mpNextSglId, base: 0, burstLen: burstLen, len: needleLen*4, tag: 0});
-      endmethod
-      method Action startSearch(Bit#(32) haystackLen);
-	 mpEngine.start(needleLenReg);
-	 dataLengthFifo.enq(haystackLen);
-      endmethod
-   endinterface
 `ifndef PCIE3
    interface Clock portalClockSource = axiRootPort.axi.aclk_out;
 `else
    interface Clock portalClockSource = axiRootPort.axi.aclk;
 `endif
+   interface PipeOut dataOut = splitter.data;
    interface NvmePins pins;
       interface deleteme_unused_clock = clock;
       interface pcie_sys_reset_n = reset;
@@ -514,7 +473,7 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
       endinterface
 `endif
    endinterface
-   interface Vector dmaReadClient = vec(axiGearbox.client.readClient, re.dmaClient);
+   interface Vector dmaReadClient = vec(axiGearbox.client.readClient);
    interface Vector dmaWriteClient = vec(axiGearbox.client.writeClient);
 endmodule
 

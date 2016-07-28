@@ -75,15 +75,6 @@ interface NvmeDriverIndication;
    method Action setupComplete();
 endinterface
 
-interface StringSearchRequest;
-   method Action setSearchString(Bit#(32) needleSglId, Bit#(32) mpNextSglId, Bit#(32) needleLen);
-   method Action startSearch(Bit#(32) searchLen);
-endinterface
-
-interface StringSearchResponse;
-   method Action strstrLoc(Bit#(32) loc);
-endinterface
-
 interface NvmeTrace;
    method Action traceDmaRequest(DmaChannel channel, Bool write, Bit#(16) objId, Bit#(64) offset, Bit#(16) burstLen, Bit#(8) tag, Bit#(32) timestamp);
    method Action traceDmaData(DmaChannel channel, Bool write, Vector#(TDiv#(PcieDataBusWidth,32),Bit#(32)) data, Bool last, Bit#(8) tag, Bit#(32) timestamp);

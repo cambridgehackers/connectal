@@ -1,13 +1,13 @@
 CONNECTALDIR?=../..
 
-S2H_INTERFACES = NvmeRequest:Nvme.request NvmeDriverRequest:Nvme.driverRequest MemServerPortalRequest:Nvme.bramRequest StringSearchRequest:Nvme.searchRequest
-H2S_INTERFACES = Nvme:NvmeIndication,NvmeDriverIndication,NvmeTrace,MemServerPortalIndication,StringSearchResponse
+S2H_INTERFACES = NvmeRequest:NvmeSearch.request NvmeDriverRequest:NvmeSearch.driverRequest MemServerPortalRequest:NvmeSearch.bramRequest StringSearchRequest:NvmeSearch.searchRequest
+H2S_INTERFACES = NvmeSearch:NvmeIndication,NvmeDriverIndication,NvmeTrace,MemServerPortalIndication,StringSearchResponse
 
-MEM_READ_INTERFACES = lNvme.dmaReadClient
-MEM_WRITE_INTERFACES = lNvme.dmaWriteClient
+MEM_READ_INTERFACES = lNvmeSearch.dmaReadClient
+MEM_WRITE_INTERFACES = lNvmeSearch.dmaWriteClient
 
 BSVPATH = $(CONNECTALDIR)/lib/strstr/bsv
-BSVFILES = NvmeIfc.bsv $(CONNECTALDIR)/bsv/ConnectalConfig.bsv
+BSVFILES = NvmeIfc.bsv StringSearchIfc.bsv $(CONNECTALDIR)/bsv/ConnectalConfig.bsv
 CPPFILES += nvme.cpp
 CPPFILES += $(CONNECTALDIR)/cpp/DmaBuffer.cpp
 
@@ -21,9 +21,9 @@ endif
 CONNECTALFLAGS += -D BlocksPerRequest=8
 PIN_TYPE = NvmePins
 PIN_TYPE_INCLUDE = NvmePins
-AUTOTOP = --interface pins:Nvme.pins
+AUTOTOP = --interface pins:NvmeSearch.pins
 
-AUTOTOP += --portalclock=lNvme.portalClockSource
+AUTOTOP += --portalclock=lNvmeSearch.portalClockSource
 CONNECTALFLAGS += --cxxflags=-std=c++11
 CONNECTALFLAGS += -D USE_ACP
 CONNECTALFLAGS += -D TOP_SOURCES_PORTAL_CLOCK --mainclockperiod=8
