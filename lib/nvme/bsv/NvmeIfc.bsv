@@ -39,13 +39,6 @@ interface MemServerPortalIndication;
    method Action writeDone();
 endinterface
 
-// these ports exposed to a verilog wrapper module
-interface NvmeAccelerator;
-   interface AxiStreamMaster#(32) msgOut;
-   interface AxiStreamSlave#(32) msgIn;
-   interface AxiStreamMaster#(PcieDataBusWidth) dataOut;
-endinterface
-
 interface NvmeRequest;
    method Action startTransfer(Bit#(8) opcode, Bit#(8) flags, Bit#(16) requestId, Bit#(64) startBlock, Bit#(32) numBlocks, Bit#(32) dsm);
    method Action msgOut(Bit#(32) value);

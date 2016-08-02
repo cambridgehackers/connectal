@@ -477,6 +477,25 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
    interface Vector dmaWriteClient = vec(axiGearbox.client.writeClient);
 endmodule
 
+// these ports exposed to a verilog wrapper module
+interface NvmeAccelerator;
+   interface AxiStreamMaster#(32) msgOut;
+   interface AxiStreamSlave#(32) msgIn;
+   interface AxiStreamMaster#(PcieDataBusWidth) dataOut;
+   interface NvmePins pins;
+endinterface
+
+(* synthesize *)
+module mkNvmeAccelerator(NvmeAccelerator);
+   let clock <- exposeCurrentClock;
+   let reset <- exposeCurrentReset;
+   interface NvmePins pins;
+      interface Clock deleteme_unused_clock = clock;
+      interface Reset pcie_sys_reset_n = reset;
+   endinterface
+endmodule
+
+
 instance ToAxi4SlaveBits#(Axi4SlaveBits#(32,PcieDataBusWidth,4,Empty), AprpS_axi);
    function Axi4SlaveBits#(32,PcieDataBusWidth,4,Empty) toAxi4SlaveBits(AprpS_axi s);
       return (interface Axi4SlaveBits#(32,PcieDataBusWidth,4,Empty);
