@@ -23,6 +23,8 @@
 import Connectable::*;
 import GetPut::*;
 import FIFOF::*;
+import ConfigCounter::*;
+import CFFIFO::*;
 
 import ConnectalConfig::*;
 import MemTypes::*;
@@ -55,10 +57,10 @@ module mkPhysMemSlavePortal#(PhysMemSlave#(addrWidth,dataBusWidth) ms, MemServer
 
    FIFOF#(PhysMemRequest#(addrWidth,dataBusWidth)) araddrFifo <- mkFIFOF();
    FIFOF#(PhysMemRequest#(addrWidth,dataBusWidth)) awaddrFifo <- mkFIFOF();
-   FIFOF#(MemData#(dataBusWidth))           rdataFifo <- mkFIFOF();
-   FIFOF#(MemData#(dataBusWidth))           wdataFifo <- mkFIFOF();
+   FIFOF#(MemData#(dataBusWidth))           rdataFifo <- mkCFFIFOF();
+   FIFOF#(MemData#(dataBusWidth))           wdataFifo <- mkCFFIFOF();
    FIFOF#(Bit#(6))                doneFifo <- mkFIFOF();
-   FIFOF#(Bit#(8))                        readLenFifo <- mkFIFOF();
+   FIFOF#(Bit#(8))                        readLenFifo <- mkCFFIFOF();
 
    let araddrCnx <- mkConnection(toGet(araddrFifo), ms.read_server.readReq);
    let awaddrCnx <- mkConnection(toGet(awaddrFifo), ms.write_server.writeReq);
@@ -66,13 +68,24 @@ module mkPhysMemSlavePortal#(PhysMemSlave#(addrWidth,dataBusWidth) ms, MemServer
    let wdataCnx  <- mkConnection(toGet(wdataFifo), ms.write_server.writeData);
    let doneCnx   <- mkConnection(ms.write_server.writeDone, toPut(doneFifo));
 
+   ConfigCounter#(16) timeoutCounter <- mkConfigCounter(0);
+   rule rl_timeout if (readLenFifo.notEmpty() && !rdataFifo.notEmpty());
+      timeoutCounter.increment(1);
+      UInt#(16) timeout = 10;
+      if (timeoutCounter.read() == timeout)
+	 $display("read timeout %d cycles", timeout);
+   endrule
+
+   Reg#(Bit#(32)) readDataCount <- mkReg(0);
    rule rl_rdata32 if (readLenFifo.first == 32);
       let rdata <- toGet(rdataFifo).get();
       readLenFifo.deq();
       Bit#(128) data = extend(rdata.data);
+      if (True) $display("read32done data=%h count=%d", data[31:0], readDataCount);
+      readDataCount <= readDataCount + 1;
       ind.read32Done(truncate(data));
    endrule
-   rule rl_rdata64 if (readLenFifo.first == 32);
+   rule rl_rdata64 if (readLenFifo.first == 64);
       let rdata <- toGet(rdataFifo).get();
       readLenFifo.deq();
       Bit#(128) data = extend(rdata.data);
@@ -84,10 +97,14 @@ module mkPhysMemSlavePortal#(PhysMemSlave#(addrWidth,dataBusWidth) ms, MemServer
       ind.writeDone();
    endrule
 
+   Reg#(Bit#(32)) readCount <- mkReg(0);
    interface MemServerPortalRequest request;
       method Action read32(Bit#(32) addr);
+	 if (True) $display("MemServerPortal.read32 addr=%h count=%d", addr, readCount);
+	 readCount <= readCount + 1;
 	 araddrFifo.enq(PhysMemRequest { addr: truncate(addr), burstLen: fromInteger(valueOf(TDiv#(32,8))), tag: 0 });
 	 readLenFifo.enq(32);
+	 timeoutCounter.decrement(timeoutCounter.read());
       endmethod
       method Action write32(Bit#(32) addr, Bit#(32) value);
 	 awaddrFifo.enq(PhysMemRequest { addr: truncate(addr), burstLen: fromInteger(valueOf(TDiv#(32,8))), tag: 0 });
@@ -98,6 +115,7 @@ module mkPhysMemSlavePortal#(PhysMemSlave#(addrWidth,dataBusWidth) ms, MemServer
       method Action read64(Bit#(32) addr);
 	 araddrFifo.enq(PhysMemRequest { addr: truncate(addr), burstLen: fromInteger(valueOf(TDiv#(64,8))), tag: 0 });
 	 readLenFifo.enq(64);
+	 timeoutCounter.decrement(timeoutCounter.read());
       endmethod
       method Action write64(Bit#(32) addr, Bit#(64) value);
 	 awaddrFifo.enq(PhysMemRequest { addr: truncate(addr), burstLen: fromInteger(valueOf(TDiv#(64,8))), tag: 0 });
