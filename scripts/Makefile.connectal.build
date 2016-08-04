@@ -363,7 +363,8 @@ bsim: prepare_bin_target $(DTOP)/bin/libconnectal-sim.so
 	@echo BSCBSIM [$(DTOP)]
 	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -D SIMULATION -sim -u -g $(MKTOP) $(TOPBSVFILE)
 	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -O -L $(DTOP)/bin  -l connectal-sim -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba
-	$(Q)cp -v generatedbsv/bsim* bin
+	g++ -O -g -o bin/bsim -Iobj -I$(BLUESPECDIR)/Bluesim obj/*.o $(CONNECTALDIR)/cpp/bluesim_main.cxx -L$(BLUESPECDIR)/Bluesim/g++4_64 -lbskernel -lbsprim -lpthread -L bin -lconnectal-sim
+
 
 syntax.timestamp: $(BSVFILES)
 	@#$syntax.py uses environment variables: V INTERFACES BSVDEFINES_LIST DTOP DUT_NAME
