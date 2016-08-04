@@ -20,8 +20,6 @@
 //
 //     $(EXE): model_$(TOPMOD).o $(TOPMOD).o
 //             c++ -O3                                \
-//                 -DNEW_MODEL_MKFOO=new_MODEL_$(TOPMOD)   \    // new_MODEL_mkFoo
-//                 -DMODEL_MKFOO_H=\"model_$(TOPMOD).h\"   \    // "model_mkFoo.h"
 //                 bluesim_main.cxx                        \    // This file
 //                 -o $@                                   \    // Your final executable
 //                 -I.                                     \    // bsc-generated .h files, project .h files
@@ -30,15 +28,6 @@
 //                 $^                                      \    // all your .o's
 //                 -lbskernel -lbsprim -lpthread                // libs
 
-
-#ifndef MODEL_MKFOO_H
-#error MODEL_MKFOO_H not defined
-#endif
-
-#ifndef NEW_MODEL_MKFOO
-#error NEW_MODEL_MKFOO not defined
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -46,8 +35,8 @@
 
 #include "bluesim_kernel_api.h"
 
-// #include "model_mkFoo.h"
-#include MODEL_MKFOO_H
+// #include MODEL_MKFOO_H
+#include "model_mkXsimTop.h"
 
 // ================================================================
 // Process command line args
@@ -114,8 +103,8 @@ int main (int argc, char *argv[])
 {
     process_command_line_args (argc, argv);
 
-    // tModel model = new_MODEL_mkFoo();
-    tModel model = NEW_MODEL_MKFOO ();
+    // tModel model = NEW_MODEL_MKFOO ();
+    tModel model = new_MODEL_mkXsimTop();
 
     tSimStateHdl sim = bk_init (model, true, false);
 
