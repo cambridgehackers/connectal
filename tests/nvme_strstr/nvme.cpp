@@ -245,6 +245,7 @@ class Nvme {
     MemServerPortalIndication   bramIndication;
     int adminRequestNumber;
     int ioRequestNumber[3]; // per queue, io queue 0 unused
+    int verbose;
 public:
     DmaBuffer dummy;
     DmaBuffer transferBuffer;
@@ -273,6 +274,7 @@ public:
 	, bram(IfcNames_MemServerPortalRequestS2H)
 	, bramIndication(IfcNames_MemServerPortalIndicationH2S)
 	, adminRequestNumber(0)
+	, verbose(0)
 	, dummy(4096)
 	, transferBuffer(10*4096)
 	, adminSubmissionQueue(4096)
@@ -289,14 +291,14 @@ public:
 	transferBufferRef = transferBuffer.reference();
 	adminSubmissionQueueRef = adminSubmissionQueue.reference();
 	adminCompletionQueueRef = adminCompletionQueue.reference();
-	fprintf(stderr, "adminSubmissionQueue %d\n", adminSubmissionQueue.reference());
-	fprintf(stderr, "adminCompletionQueue %d\n", adminCompletionQueue.reference());
+	if (verbose) fprintf(stderr, "adminSubmissionQueue %d\n", adminSubmissionQueue.reference());
+	if (verbose) fprintf(stderr, "adminCompletionQueue %d\n", adminCompletionQueue.reference());
 	ioSubmissionQueueRef = ioSubmissionQueue.reference();
 	ioCompletionQueueRef = ioCompletionQueue.reference();
 	needleRef = needleBuffer.reference();
 	mpNextRef = mpNextBuffer.reference();
-	fprintf(stderr, "ioSubmissionQueue %d\n", ioSubmissionQueue.reference());
-	fprintf(stderr, "ioCompletionQueue %d\n", ioCompletionQueue.reference());
+	if (verbose) fprintf(stderr, "ioSubmissionQueue %d\n", ioSubmissionQueue.reference());
+	if (verbose) fprintf(stderr, "ioCompletionQueue %d\n", ioCompletionQueue.reference());
 	driverRequest.status();
 	driverIndication.wait();
 	driverRequest.trace(0);
@@ -380,34 +382,22 @@ void Nvme::bramWrite(uint32_t addr, uint64_t data)
 
 void Nvme::setup()
 {
-    fprintf(stderr, "Enabling I/O and Memory, bus master, parity and SERR\n");
+    if (verbose) fprintf(stderr, "Enabling I/O and Memory, bus master, parity and SERR\n");
     writeCtl(0x004, 0x147);
-    readCtl(0x004);
-    readCtl(0x130);
-    readCtl(0x134);
-    readCtl(0x18);
     // required
     writeCtl(0x18, 0x00070100);
-    readCtl(0x18);
     writeCtl(0x10, 0xFFFFFFFF);
     writeCtl(0x14, 0xFFFFFFFF);
     fprintf(stderr, "Root Port BAR0: %08x\n", readCtl((0 << 20) + 0x10));
     fprintf(stderr, "Root Port BAR1: %08x\n", readCtl((0 << 20) + 0x14));
     writeCtl(0x10, 0x0);
     writeCtl(0x14, 0x0);
-    fprintf(stderr, "Enabling card I/O and Memory, bus master, parity and SERR\n");
+    if (verbose) fprintf(stderr, "Enabling card I/O and Memory, bus master, parity and SERR\n");
     writeCtl((1 << 20) + 4, 0x147);
-    fprintf(stderr, "reading config regs\n");
-    readCtl((1 << 20) + 0);
-    readCtl((1 << 20) + 4);
-    readCtl((1 << 20) + 8);
-    for (int i = 0; i < 6; i++)
-      fprintf(stderr, "Card BAR%d: %08x\n", i, readCtl((1 << 20) + 0x10 + i*4));
-    fprintf(stderr, "reading AXI BAR\n");
-    readCtl(0x208);
-    readCtl(0x20C);
-    readCtl(0x210);
-    fprintf(stderr, "writing card BAR\n");
+    if (verbose)
+	for (int i = 0; i < 6; i++)
+	    fprintf(stderr, "Card BAR%d: %08x\n", i, readCtl((1 << 20) + 0x10 + i*4));
+    fprintf(stderr, "probing card BAR\n");
     for (int i = 0; i < 6; i++) {
 	writeCtl((1 << 20) + 0x10 + 4*i, 0xffffffff);
 	fprintf(stderr, "Card BAR%d: %08x\n", i, readCtl((1 << 20) + 0x10 + 4*i));
@@ -419,20 +409,14 @@ void Nvme::setup()
     writeCtl((1 << 20) + 0x10+5*4, 0); // sata card
     fprintf(stderr, "reading card BARs\n");
     for (int i = 0; i < 6; i++) {
-	fprintf(stderr, "BAR%d: %08x\n", i, readCtl((1 << 20) + 0x10 + 4*i));
+	fprintf(stderr, "Card BAR%d: %08x\n", i, readCtl((1 << 20) + 0x10 + 4*i));
     }
 
-    readCtl((1 << 20) + 0x10);
-    readCtl((1 << 20) + 0x14);
-    fprintf(stderr, "Enabling bridge\n");
-    readCtl(0x148);
+    if (verbose) fprintf(stderr, "Enabling bridge\n");
     writeCtl(0x148, 1);
-    readCtl(0x148);
-    readCtl(0x140);
     writeCtl(0x140, 0x00010000);
-    readCtl(0x140);
 
-    if (1) {
+    if (verbose) {
 	fprintf(stderr, "Reading card memory space\n");
 	for (int i = 0; i < 10; i++)
 	    fprintf(stderr, "CARDMEM[%02x]=%08x\n", i*4, read32(0x00000000 + i*4));
@@ -442,20 +426,15 @@ void Nvme::setup()
     int mpsmin = (cardcap >> 48)&0xF;
     fprintf(stderr, "MPSMAX=%0x %#x bytes\n", mpsmax, 1 << (12+mpsmax));
     fprintf(stderr, "MPSMIN=%0x %#x bytes\n", mpsmin, 1 << (12+mpsmin));
-    fprintf(stderr, "CSTS %08x checking reset bit\n", read32( 0x1c));
     write32(0x1c, 0x10); // clear reset bit
-    fprintf(stderr, "CSTS %08x cleared reset bit\n", read32( 0x1c));
 
     // initialize CC.IOCQES and CC.IOSQES
     write32(0x14, 0x00460000); // completion queue entry size 2^4, submission queue entry size 2^6
-    // reset
-    //write32(0x20, 0x4e564d65);
-    //sleep(1);
-    fprintf(stderr, "Reset reg %08x\n", read32(0x20));
-    fprintf(stderr, "CSTS %08x\n", read32( 0x1c));
 
-    fprintf(stderr, "CMB size     %08x\n", read32(0x38));
-    fprintf(stderr, "CMB location %08x\n", read32(0x3c));
+    if (verbose) {
+      fprintf(stderr, "CMB size     %08x\n", read32(0x38));
+      fprintf(stderr, "CMB location %08x\n", read32(0x3c));
+    }
     uint64_t adminCompletionBaseAddress = adminCompletionQueueRef << 24;
     uint64_t adminSubmissionBaseAddress = adminSubmissionQueueRef << 24;
     fprintf(stderr, "Setting up Admin submission and completion queues %llx %llx\n",
@@ -465,12 +444,9 @@ void Nvme::setup()
     write(0x30, adminCompletionBaseAddress);
     fprintf(stderr, "AdminCompletionBaseAddress %08llx\n", (long long)read(0x30));
     write32(0x24, 0x003f003f);
-    fprintf(stderr, "register 0x20 %x\n", read32(0x20));
 
-    fprintf(stderr, "CSTS %08x\n", read32( 0x1c));
     // CC.enable
     write32(0x14, 0x00460001);
-    fprintf(stderr, "CSTS %08x\n", read32( 0x1c));
 }
 
 void memserverWrite(Nvme *nvme)
