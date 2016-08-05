@@ -301,6 +301,7 @@ public:
 	driverIndication.wait();
 	driverRequest.trace(0);
     }
+    void setup();
     uint32_t readCtl(uint32_t addr);
     void writeCtl(uint32_t addr, uint32_t data);
     uint64_t read(uint32_t addr);
@@ -375,6 +376,101 @@ void Nvme::bramWrite(uint32_t addr, uint64_t data)
 {
     bram.write(addr, data);
     //bramIndication.wait();
+}
+
+void Nvme::setup()
+{
+    fprintf(stderr, "Enabling I/O and Memory, bus master, parity and SERR\n");
+    writeCtl(0x004, 0x147);
+    readCtl(0x004);
+    readCtl(0x130);
+    readCtl(0x134);
+    readCtl(0x18);
+    // required
+    writeCtl(0x18, 0x00070100);
+    readCtl(0x18);
+    writeCtl(0x10, 0xFFFFFFFF);
+    writeCtl(0x14, 0xFFFFFFFF);
+    fprintf(stderr, "Root Port BAR0: %08x\n", readCtl((0 << 20) + 0x10));
+    fprintf(stderr, "Root Port BAR1: %08x\n", readCtl((0 << 20) + 0x14));
+    writeCtl(0x10, 0x0);
+    writeCtl(0x14, 0x0);
+    fprintf(stderr, "Enabling card I/O and Memory, bus master, parity and SERR\n");
+    writeCtl((1 << 20) + 4, 0x147);
+    fprintf(stderr, "reading config regs\n");
+    readCtl((1 << 20) + 0);
+    readCtl((1 << 20) + 4);
+    readCtl((1 << 20) + 8);
+    for (int i = 0; i < 6; i++)
+      fprintf(stderr, "Card BAR%d: %08x\n", i, readCtl((1 << 20) + 0x10 + i*4));
+    fprintf(stderr, "reading AXI BAR\n");
+    readCtl(0x208);
+    readCtl(0x20C);
+    readCtl(0x210);
+    fprintf(stderr, "writing card BAR\n");
+    for (int i = 0; i < 6; i++) {
+	writeCtl((1 << 20) + 0x10 + 4*i, 0xffffffff);
+	fprintf(stderr, "Card BAR%d: %08x\n", i, readCtl((1 << 20) + 0x10 + 4*i));
+    }
+    writeCtl((1 << 20) + 0x10, 0x00000000); // initialize to offset 0
+    writeCtl((1 << 20) + 0x14, 0x00000000);
+    writeCtl((1 << 20) + 0x18, 0x02200000); // BAR2 unused
+    writeCtl((1 << 20) + 0x1c, 0x00000000);
+    writeCtl((1 << 20) + 0x10+5*4, 0); // sata card
+    fprintf(stderr, "reading card BARs\n");
+    for (int i = 0; i < 6; i++) {
+	fprintf(stderr, "BAR%d: %08x\n", i, readCtl((1 << 20) + 0x10 + 4*i));
+    }
+
+    readCtl((1 << 20) + 0x10);
+    readCtl((1 << 20) + 0x14);
+    fprintf(stderr, "Enabling bridge\n");
+    readCtl(0x148);
+    writeCtl(0x148, 1);
+    readCtl(0x148);
+    readCtl(0x140);
+    writeCtl(0x140, 0x00010000);
+    readCtl(0x140);
+
+    if (1) {
+	fprintf(stderr, "Reading card memory space\n");
+	for (int i = 0; i < 10; i++)
+	    fprintf(stderr, "CARDMEM[%02x]=%08x\n", i*4, read32(0x00000000 + i*4));
+    }
+    uint64_t cardcap = read(0);
+    int mpsmax = (cardcap >> 52)&0xF;
+    int mpsmin = (cardcap >> 48)&0xF;
+    fprintf(stderr, "MPSMAX=%0x %#x bytes\n", mpsmax, 1 << (12+mpsmax));
+    fprintf(stderr, "MPSMIN=%0x %#x bytes\n", mpsmin, 1 << (12+mpsmin));
+    fprintf(stderr, "CSTS %08x checking reset bit\n", read32( 0x1c));
+    write32(0x1c, 0x10); // clear reset bit
+    fprintf(stderr, "CSTS %08x cleared reset bit\n", read32( 0x1c));
+
+    // initialize CC.IOCQES and CC.IOSQES
+    write32(0x14, 0x00460000); // completion queue entry size 2^4, submission queue entry size 2^6
+    // reset
+    //write32(0x20, 0x4e564d65);
+    //sleep(1);
+    fprintf(stderr, "Reset reg %08x\n", read32(0x20));
+    fprintf(stderr, "CSTS %08x\n", read32( 0x1c));
+
+    fprintf(stderr, "CMB size     %08x\n", read32(0x38));
+    fprintf(stderr, "CMB location %08x\n", read32(0x3c));
+    uint64_t adminCompletionBaseAddress = adminCompletionQueueRef << 24;
+    uint64_t adminSubmissionBaseAddress = adminSubmissionQueueRef << 24;
+    fprintf(stderr, "Setting up Admin submission and completion queues %llx %llx\n",
+	    (long long)adminCompletionBaseAddress, (long long)adminSubmissionBaseAddress);
+    write(0x28, adminSubmissionBaseAddress);
+    fprintf(stderr, "AdminSubmissionBaseAddress %08llx\n", (long long)read(0x28));
+    write(0x30, adminCompletionBaseAddress);
+    fprintf(stderr, "AdminCompletionBaseAddress %08llx\n", (long long)read(0x30));
+    write32(0x24, 0x003f003f);
+    fprintf(stderr, "register 0x20 %x\n", read32(0x20));
+
+    fprintf(stderr, "CSTS %08x\n", read32( 0x1c));
+    // CC.enable
+    write32(0x14, 0x00460001);
+    fprintf(stderr, "CSTS %08x\n", read32( 0x1c));
 }
 
 void memserverWrite(Nvme *nvme)
@@ -737,97 +833,8 @@ int main(int argc, const char **argv)
     StringSearchResponse     searchResponse(IfcNames_StringSearchResponseH2S);
 
     sleep(1);
-    fprintf(stderr, "Enabling I/O and Memory, bus master, parity and SERR\n");
-    nvme.writeCtl(0x004, 0x147);
-    nvme.readCtl(0x004);
-    nvme.readCtl(0x130);
-    nvme.readCtl(0x134);
-    nvme.readCtl(0x18);
-    // required
-    nvme.writeCtl(0x18, 0x00070100);
-    nvme.readCtl(0x18);
-    nvme.writeCtl(0x10, 0xFFFFFFFF);
-    nvme.writeCtl(0x14, 0xFFFFFFFF);
-    fprintf(stderr, "Root Port BAR0: %08x\n", nvme.readCtl((0 << 20) + 0x10));
-    fprintf(stderr, "Root Port BAR1: %08x\n", nvme.readCtl((0 << 20) + 0x14));
-    nvme.writeCtl(0x10, 0x0);
-    nvme.writeCtl(0x14, 0x0);
-    fprintf(stderr, "Enabling card I/O and Memory, bus master, parity and SERR\n");
-    nvme.writeCtl((1 << 20) + 4, 0x147);
-    fprintf(stderr, "reading config regs\n");
-    nvme.readCtl((1 << 20) + 0);
-    nvme.readCtl((1 << 20) + 4);
-    nvme.readCtl((1 << 20) + 8);
-    for (int i = 0; i < 6; i++)
-      fprintf(stderr, "Card BAR%d: %08x\n", i, nvme.readCtl((1 << 20) + 0x10 + i*4));
-    fprintf(stderr, "reading AXI BAR\n");
-    nvme.readCtl(0x208);
-    nvme.readCtl(0x20C);
-    nvme.readCtl(0x210);
-    fprintf(stderr, "writing card BAR\n");
-    for (int i = 0; i < 6; i++) {
-	nvme.writeCtl((1 << 20) + 0x10 + 4*i, 0xffffffff);
-	fprintf(stderr, "Card BAR%d: %08x\n", i, nvme.readCtl((1 << 20) + 0x10 + 4*i));
-    }
-    nvme.writeCtl((1 << 20) + 0x10, 0x00000000); // initialize to offset 0
-    nvme.writeCtl((1 << 20) + 0x14, 0x00000000);
-    nvme.writeCtl((1 << 20) + 0x18, 0x02200000); // BAR2 unused
-    nvme.writeCtl((1 << 20) + 0x1c, 0x00000000);
-    nvme.writeCtl((1 << 20) + 0x10+5*4, 0); // sata card
-    fprintf(stderr, "reading card BARs\n");
-    for (int i = 0; i < 6; i++) {
-	fprintf(stderr, "BAR%d: %08x\n", i, nvme.readCtl((1 << 20) + 0x10 + 4*i));
-    }
 
-    nvme.readCtl((1 << 20) + 0x10);
-    nvme.readCtl((1 << 20) + 0x14);
-    fprintf(stderr, "Enabling bridge\n");
-    nvme.readCtl(0x148);
-    nvme.writeCtl(0x148, 1);
-    nvme.readCtl(0x148);
-    nvme.readCtl(0x140);
-    nvme.writeCtl(0x140, 0x00010000);
-    nvme.readCtl(0x140);
-
-    if (1) {
-	fprintf(stderr, "Reading card memory space\n");
-	for (int i = 0; i < 10; i++)
-	    fprintf(stderr, "CARDMEM[%02x]=%08x\n", i*4, nvme.read32(0x00000000 + i*4));
-    }
-    uint64_t cardcap = nvme.read(0);
-    int mpsmax = (cardcap >> 52)&0xF;
-    int mpsmin = (cardcap >> 48)&0xF;
-    fprintf(stderr, "MPSMAX=%0x %#x bytes\n", mpsmax, 1 << (12+mpsmax));
-    fprintf(stderr, "MPSMIN=%0x %#x bytes\n", mpsmin, 1 << (12+mpsmin));
-    fprintf(stderr, "CSTS %08x checking reset bit\n", nvme.read32( 0x1c));
-    nvme.write32(0x1c, 0x10); // clear reset bit
-    fprintf(stderr, "CSTS %08x cleared reset bit\n", nvme.read32( 0x1c));
-
-    // initialize CC.IOCQES and CC.IOSQES
-    nvme.write32(0x14, 0x00460000); // completion queue entry size 2^4, submission queue entry size 2^6
-    // reset
-    //nvme.write32(0x20, 0x4e564d65);
-    //sleep(1);
-    fprintf(stderr, "Reset reg %08x\n", nvme.read32(0x20));
-    fprintf(stderr, "CSTS %08x\n", nvme.read32( 0x1c));
-
-    fprintf(stderr, "CMB size     %08x\n", nvme.read32(0x38));
-    fprintf(stderr, "CMB location %08x\n", nvme.read32(0x3c));
-    uint64_t adminCompletionBaseAddress = nvme.adminCompletionQueueRef << 24;
-    uint64_t adminSubmissionBaseAddress = nvme.adminSubmissionQueueRef << 24;
-    fprintf(stderr, "Setting up Admin submission and completion queues %llx %llx\n",
-	    (long long)adminCompletionBaseAddress, (long long)adminSubmissionBaseAddress);
-    nvme.write(0x28, adminSubmissionBaseAddress);
-    fprintf(stderr, "AdminSubmissionBaseAddress %08llx\n", (long long)nvme.read(0x28));
-    nvme.write(0x30, adminCompletionBaseAddress);
-    fprintf(stderr, "AdminCompletionBaseAddress %08llx\n", (long long)nvme.read(0x30));
-    nvme.write32(0x24, 0x003f003f);
-    fprintf(stderr, "register 0x20 %x\n", nvme.read32(0x20));
-
-    fprintf(stderr, "CSTS %08x\n", nvme.read32( 0x1c));
-    // CC.enable
-    nvme.write32(0x14, 0x00460001);
-    fprintf(stderr, "CSTS %08x\n", nvme.read32( 0x1c));
+    nvme.setup();
 
     const char *needle = "property";
     int needle_len = strlen(needle);
