@@ -126,6 +126,8 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
    let axiCtlReset = reset;
 `endif
 
+   Reg#(Bool) inSetup <- mkReg(False);
+
 `ifndef PCIE3
    let axiRootPort <- mkAPRP(pcie_clk_100mhz_buf, reset, axiClock, axiReset, axiCtlClock, axiCtlReset);
 `else
@@ -158,13 +160,13 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
    let wdataCnx  <- mkConnection(toGet(wdataFifo), axiRootPortMemSlave.write_server.writeData);
    let doneCnx   <- mkConnection(axiRootPortMemSlave.write_server.writeDone, toPut(doneFifo));
 
-   rule rl_rdata;
+   rule rl_rdata if (!inSetup);
       let rdata <- toGet(rdataFifo).get();
       if (rdata.tag == 0)
 	 driverInd.readDone(truncate(rdata.data));
    endrule
 
-   rule rl_writeDone;
+   rule rl_writeDone if (!inSetup);
       let tag <- toGet(doneFifo).get();
       if (tag == 0)
 	 driverInd.writeDone();
@@ -182,8 +184,6 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
    let wdataCtlCnx  <- mkConnection(toGet(wdataFifoCtl), axiRootPortMemSlaveCtl.write_server.writeData);
    let doneCtlCnx   <- mkConnection(axiRootPortMemSlaveCtl.write_server.writeDone, toPut(doneFifoCtl));
 
-   Reg#(Bool) inSetup <- mkReg(False);
-
    rule rl_rdata_ctl if (!inSetup);
       let rdata <- toGet(rdataFifoCtl).get();
       driverInd.readDone(extend(rdata.data));
@@ -194,29 +194,71 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
       driverInd.writeDone();
    endrule
 
-   Vector#(12,Tuple2#(Bit#(32),Bit#(32))) initValues = vec( 
-      tuple2(32'h00000004, 32'h00000147)
-      ,tuple2(32'h00000018, 32'h00070100)
-      ,tuple2(32'h00000010, 32'h00000000) // Bridge BAR0
-      ,tuple2(32'h00000014, 32'h00000000) // Bridge BAR1
-      ,tuple2(32'h00100004, 32'h00000147) // enable card I/O, Memory, bus master, parity and SERR
-      ,tuple2(32'h00100010, 32'h00000000) // Card BAR0
-      ,tuple2(32'h00100014, 32'h00000000) // Card BAR1
-      ,tuple2(32'h00100018, 32'h02200000) // Card BAR2
-      ,tuple2(32'h0010001c, 32'h00000000) // Card BAR3
-      ,tuple2(32'h00000148, 32'h00000001) // enable bridge
-      ,tuple2(32'h00000140, 32'h00010000) // enable bridge
-      ,tuple2(0, 0)
-      );
+   let requestSize = 64;
+   let responseSize = 16;
+   let bytesPerEntry = valueOf(TDiv#(PcieDataBusWidth,8));
+   let wordsPerEntry = valueOf(TDiv#(PcieDataBusWidth,32));
+
+   BRAM_Configure bramConfig = defaultValue;
+   bramConfig.latency = 2;
+   bramConfig.memorySize = 4096*4/bytesPerEntry; // 4 pages
+   BRAM2Port#(Bit#(32),Bit#(PcieDataBusWidth)) bram <- mkBRAM2Server(bramConfig);
+
+   let arbIfc <- mkFixedPriority();
+   Arbiter#(4, BRAMRequest#(Bit#(32),Bit#(PcieDataBusWidth)),Bit#(PcieDataBusWidth)) arbiter <- mkArbiter(arbIfc,2);
+   let arbCnx <- mkConnection(arbiter.master, bram.portB);
+
+   MemServer#(PcieDataBusWidth)            bramMemA <- mkMemServerFromBram(bram.portA);
+   PhysMemSlave#(32,PcieDataBusWidth)      bramMemB <- mkPhysMemSlaveFromBram(arbiter.users[0]);
+   MemServerPortal          bramMemServerPortal <- mkPhysMemSlavePortal(bramMemB,bramIndication);
+
+   let portB1 = arbiter.users[1];
+   let portB2 = arbiter.users[2];
+   let portB3 = arbiter.users[3];
+
+   Vector#(18,Tuple3#(Bit#(2), Bit#(32),Bit#(PcieDataBusWidth))) initCtlValues = vec( 
+       tuple3(0, 32'h00000004, 'h00000147)
+      ,tuple3(0, 32'h00000018, 'h00070100)
+      ,tuple3(0, 32'h00000010, 'h00000000) // Bridge BAR0
+      ,tuple3(0, 32'h00000014, 'h00000000) // Bridge BAR1
+      ,tuple3(0, 32'h00100004, 'h00000147) // enable card I/O, Memory, bus master, parity and SERR
+      ,tuple3(0, 32'h00100010, 'h00000000) // Card BAR0
+      ,tuple3(0, 32'h00100014, 'h00000000) // Card BAR1
+      ,tuple3(0, 32'h00100018, 'h02200000) // Card BAR2
+      ,tuple3(0, 32'h0010001c, 'h00000000) // Card BAR3
+      ,tuple3(0, 32'h00000148, 'h00000001) // enable bridge
+      ,tuple3(0, 32'h00000140, 'h00010000) // enable bridge
+
+      ,tuple3(1, 32'h00000014, 'h00460000)
+      ,tuple3(1, 0, 0) // skip the rest for now
+      ,tuple3(1, 32'h00000028, 'h00000000) // admin submission queue in BRAM
+      ,tuple3(1, 32'h00000030, 'h00000000) // admin response queue in BRAM
+      ,tuple3(1, 32'h00000024, 'h003f003f) // queue sizes?
+      ,tuple3(1, 32'h00000014, 'h00460001) // enable the admin queues
+      ,tuple3(1, 0, 0));
 
    let index <- mkReg(0);
    let setupFsm <- mkFSMWithPred(seq
       index <= 0;
-      while (tpl_1(initValues[index]) != 32'h0) seq
-	 awaddrFifoCtl.enq(PhysMemRequest {addr: tpl_1(initValues[index]), burstLen: 4, tag: index });
-	 wdataFifoCtl.enq(MemData {data: tpl_2(initValues[index]), tag: index, last: True });
+      while (tpl_2(initCtlValues[index]) != 32'h0) seq
 	 action
-	    let t <- toGet(doneFifoCtl).get();
+	    match { .kind, .addr, .data } = initCtlValues[index];
+	    if (kind == 0) awaddrFifoCtl.enq(PhysMemRequest {addr: addr, burstLen: 4, tag: index });
+	    if (kind == 1) awaddrFifo.enq(PhysMemRequest {addr: addr, burstLen: 4, tag: index });
+	    if (kind == 2) portB3.request.put(BRAMRequest { address: addr, write: True, responseOnWrite: True, datain: data });
+	 endaction
+	 action
+	    match { .kind, .addr, .data } = initCtlValues[index];
+	    if (kind == 0) wdataFifoCtl.enq(MemData {data: truncate(data), tag: index, last: True });
+	    if (kind == 1) wdataFifo.enq(MemData {data: data, tag: index, last: True });
+	 endaction
+	 action
+	    match { .kind, .addr, .data } = initCtlValues[index];
+	    let tag = 0;
+	    if (kind == 0) doneFifoCtl.deq();
+	    if (kind == 1) doneFifo.deq();
+	    if (kind == 2) 
+	       tag <- portB3.response.get();
 	    index <= index + 1;
 	 endaction
       endseq
@@ -266,26 +308,6 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
    MemServerGearbox#(PcieDataBusWidth,DataBusWidth) axiGearbox <- mk1toNMemServerGearbox();
    let gearboxCnx <- mkConnection(splitter.busClient, axiGearbox.server);
 
-   let requestSize = 64;
-   let responseSize = 16;
-   let bytesPerEntry = valueOf(TDiv#(PcieDataBusWidth,8));
-   let wordsPerEntry = valueOf(TDiv#(PcieDataBusWidth,32));
-
-   BRAM_Configure bramConfig = defaultValue;
-   bramConfig.latency = 2;
-   bramConfig.memorySize = 4096*4/bytesPerEntry; // 4 pages
-   BRAM2Port#(Bit#(32),Bit#(PcieDataBusWidth)) bram <- mkBRAM2Server(bramConfig);
-
-   let arbIfc <- mkFixedPriority();
-   Arbiter#(3, BRAMRequest#(Bit#(32),Bit#(PcieDataBusWidth)),Bit#(PcieDataBusWidth)) arbiter <- mkArbiter(arbIfc,2);
-   let arbCnx <- mkConnection(arbiter.master, bram.portB);
-
-   MemServer#(PcieDataBusWidth)            bramMemA <- mkMemServerFromBram(bram.portA);
-   PhysMemSlave#(32,PcieDataBusWidth)      bramMemB <- mkPhysMemSlaveFromBram(arbiter.users[0]);
-   MemServerPortal          bramMemServerPortal <- mkPhysMemSlavePortal(bramMemB,bramIndication);
-
-   let portB1 = arbiter.users[1];
-   let portB2 = arbiter.users[2];
    Reg#(Bit#(16)) requestId <- mkReg(0);
    Reg#(Bit#(16)) responseId <- mkReg(0);
    Reg#(Bit#(16)) requestQueueEntryCount <- mkReg(8);
@@ -460,17 +482,17 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
       method Action trace(Bool enabled);
 	 traceEnabled <= enabled;
       endmethod
-      method Action read32(Bit#(32) addr);
+      method Action read32(Bit#(32) addr) if (!inSetup);
 	 araddrFifo.enq(PhysMemRequest { addr: addr, burstLen: 4, tag: 0 });
       endmethod
-      method Action write32(Bit#(32) addr, Bit#(32) value);
+      method Action write32(Bit#(32) addr, Bit#(32) value) if (!inSetup);
 	 awaddrFifo.enq(PhysMemRequest { addr: addr, burstLen: 4, tag: 0 });
 	 wdataFifo.enq(MemData {data: extend(value), tag: 0, last: True});
       endmethod
-      method Action read(Bit#(32) addr);
+      method Action read(Bit#(32) addr) if (!inSetup);
 	 araddrFifo.enq(PhysMemRequest { addr: addr, burstLen: fromInteger(valueOf(TDiv#(DataBusWidth,8))), tag: 0 });
       endmethod
-      method Action write(Bit#(32) addr, Bit#(DataBusWidth) value);
+      method Action write(Bit#(32) addr, Bit#(DataBusWidth) value) if (!inSetup);
 	 awaddrFifo.enq(PhysMemRequest { addr: addr, burstLen: fromInteger(valueOf(TDiv#(DataBusWidth,8))), tag: 0 });
 	 wdataFifo.enq(MemData {data: extend(value), tag: 0, last: True});
       endmethod
