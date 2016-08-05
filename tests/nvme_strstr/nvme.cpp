@@ -158,6 +158,11 @@ public:
     uint64_t value;
     uint32_t requests;
     uint32_t cycles;
+    virtual void setupDone (  ) {
+	fprintf(stderr, "%s:%d\n", __FUNCTION__, __LINE__);
+	sem_post(&sem);
+    }
+
     virtual void readDone ( const uint64_t data ) {
 	//fprintf(stderr, "%s:%d data=%08llx\n", __FUNCTION__, __LINE__, (long long)data);
 	value = data;
@@ -382,6 +387,10 @@ void Nvme::bramWrite(uint32_t addr, uint64_t data)
 
 void Nvme::setup()
 {
+    driverRequest.setup();
+    driverIndication.wait();
+
+    if (0) {
     if (verbose) fprintf(stderr, "Enabling I/O and Memory, bus master, parity and SERR\n");
     writeCtl(0x004, 0x147);
     // required
@@ -420,6 +429,7 @@ void Nvme::setup()
 	fprintf(stderr, "Reading card memory space\n");
 	for (int i = 0; i < 10; i++)
 	    fprintf(stderr, "CARDMEM[%02x]=%08x\n", i*4, read32(0x00000000 + i*4));
+    }
     }
     uint64_t cardcap = read(0);
     int mpsmax = (cardcap >> 52)&0xF;

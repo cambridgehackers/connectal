@@ -51,6 +51,7 @@ endinterface
 
 // internal interfaces
 interface NvmeDriverRequest;
+   method Action setup();
    method Action read32(Bit#(32) addr);
    method Action write32(Bit#(32) addr, Bit#(32) data);
    method Action read(Bit#(32) addr);
@@ -62,6 +63,7 @@ interface NvmeDriverRequest;
 endinterface
 
 interface NvmeDriverIndication;
+   method Action setupDone();
    method Action readDone(Bit#(DataBusWidth) data);
    method Action writeDone();
    method Action status(Bit#(1) mmcm_lock, Bit#(32) dataCounter);

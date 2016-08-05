@@ -182,15 +182,48 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
    let wdataCtlCnx  <- mkConnection(toGet(wdataFifoCtl), axiRootPortMemSlaveCtl.write_server.writeData);
    let doneCtlCnx   <- mkConnection(axiRootPortMemSlaveCtl.write_server.writeDone, toPut(doneFifoCtl));
 
-   rule rl_rdata_ctl;
+   Reg#(Bool) inSetup <- mkReg(False);
+
+   rule rl_rdata_ctl if (!inSetup);
       let rdata <- toGet(rdataFifoCtl).get();
       driverInd.readDone(extend(rdata.data));
    endrule
 
-   rule rl_writeDone_ctl;
+   rule rl_writeDone_ctl if (!inSetup);
       let tag <- toGet(doneFifoCtl).get();
       driverInd.writeDone();
    endrule
+
+   Vector#(12,Tuple2#(Bit#(32),Bit#(32))) initValues = vec( 
+      tuple2(32'h00000004, 32'h00000147)
+      ,tuple2(32'h00000018, 32'h00070100)
+      ,tuple2(32'h00000010, 32'h00000000) // Bridge BAR0
+      ,tuple2(32'h00000014, 32'h00000000) // Bridge BAR1
+      ,tuple2(32'h00100004, 32'h00000147) // enable card I/O, Memory, bus master, parity and SERR
+      ,tuple2(32'h00100010, 32'h00000000) // Card BAR0
+      ,tuple2(32'h00100014, 32'h00000000) // Card BAR1
+      ,tuple2(32'h00100018, 32'h02200000) // Card BAR2
+      ,tuple2(32'h0010001c, 32'h00000000) // Card BAR3
+      ,tuple2(32'h00000148, 32'h00000001) // enable bridge
+      ,tuple2(32'h00000140, 32'h00010000) // enable bridge
+      ,tuple2(0, 0)
+      );
+
+   let index <- mkReg(0);
+   let setupFsm <- mkFSMWithPred(seq
+      index <= 0;
+      while (tpl_1(initValues[index]) != 32'h0) seq
+	 awaddrFifoCtl.enq(PhysMemRequest {addr: tpl_1(initValues[index]), burstLen: 4, tag: index });
+	 wdataFifoCtl.enq(MemData {data: tpl_2(initValues[index]), tag: index, last: True });
+	 action
+	    let t <- toGet(doneFifoCtl).get();
+	    index <= index + 1;
+	 endaction
+      endseq
+      driverInd.setupDone();
+      inSetup <= False;
+      endseq,
+      inSetup);
 
    Axi4MasterBits#(32,PcieDataBusWidth,MemTagSize,Empty) m_axi_mm = toAxi4MasterBits(axiRootPort.m_axi);
    let getObjId = (interface GetObjId;
@@ -412,6 +445,10 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
 
    interface MemServerPortalRequest bramRequest = bramMemServerPortal.request;
    interface NvmeDriverRequest driverRequest;
+      method Action setup();
+	 inSetup <= True;
+         setupFsm.start();
+      endmethod
       method Action status();
 `ifndef PCIE3
 	 let mmcmLock = axiRootPort.mmcm.lock();
@@ -438,10 +475,10 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
 	 wdataFifo.enq(MemData {data: extend(value), tag: 0, last: True});
       endmethod
 
-      method Action readCtl(Bit#(32) addr);
+      method Action readCtl(Bit#(32) addr) if (!inSetup);
 	 araddrFifoCtl.enq(PhysMemRequest { addr: addr, burstLen: 4, tag: 0 });
       endmethod
-      method Action writeCtl(Bit#(32) addr, Bit#(DataBusWidth) value);
+      method Action writeCtl(Bit#(32) addr, Bit#(DataBusWidth) value) if (!inSetup);
 	 awaddrFifoCtl.enq(PhysMemRequest { addr: addr, burstLen: 4, tag: 0 });
 	 wdataFifoCtl.enq(MemData {data: truncate(value), tag: 0, last: True});
       endmethod
