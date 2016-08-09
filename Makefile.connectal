@@ -43,7 +43,10 @@ gen.%:
 ifeq ($(BOARD),)
 	$(eval BOARD := $*)
 endif
-	+BOARD=$(BOARD) PROJECTDIR=$* $(MAKE) --no-print-directory gentarget prebuild $(VARIANT_PROJECTS)
+ifeq ($(PROJECTDIR),)
+	$(eval PROJECTDIR := $*)
+endif
+	+BOARD=$(BOARD) PROJECTDIR=$(PROJECTDIR) $(MAKE) --no-print-directory gentarget prebuild $(VARIANT_PROJECTS)
 
 variantgen.%:
 	BOARD=$(BOARD) PROJECTDIR=variant$* \
@@ -51,13 +54,13 @@ variantgen.%:
 	    $(MAKE) --no-print-directory gentarget prebuild
 
 build.%: gen.%
-	$(MAKE) -C $* --no-print-directory all
+	$(MAKE) -C $(PROJECTDIR) --no-print-directory all
 
 verilog.%: gen.%
-	$(MAKE) -C $* --no-print-directory verilog
+	$(MAKE) -C $(PROJECTDIR) --no-print-directory verilog
 
 run.%:
-	$(MAKE) -C $* --no-print-directory run
+	$(MAKE) -C $(PROJECTDIR) --no-print-directory run
 
 IPDIR?=$(CONNECTALDIR)/out
 NUMBER_OF_USER_TILES?=1
