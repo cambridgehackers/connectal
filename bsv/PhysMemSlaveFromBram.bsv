@@ -198,7 +198,7 @@ module mkPhysMemSlaveFromBramBE#(BRAMServerBE#(Bit#(bramAddrWidth), Bit#(busData
 	 method Action put(MemData#(busDataWidth) resp);
 	    let addrBeat <- writeAddrGenerator.addrBeat.get();
 	    let addr = addrBeat.addr;
-	    Bit#(bramAddrWidth) regFileAddr = truncate(addr << fromInteger(valueOf(TLog#(TDiv#(busDataWidth,8)))));
+	    Bit#(bramAddrWidth) regFileAddr = truncate(addr/fromInteger(valueOf(TDiv#(busDataWidth,8))));
             let writeBE = writeByteEnableFifo.first;
             Bit#(dataWidthBytes) byteEnable = addrBeat.last ? writeBE : maxBound;
             req_aws.enq(BRAMRequestBE{writeen:byteEnable, responseOnWrite:False, address:regFileAddr, datain:resp.data});
