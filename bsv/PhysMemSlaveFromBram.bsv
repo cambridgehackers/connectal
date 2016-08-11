@@ -138,7 +138,7 @@ module mkPhysMemSlaveFromBramBE#(BRAMServerBE#(Bit#(bramAddrWidth), Bit#(busData
       let burstCount = addrBeat.bc;
       readTagFifo.enq(tag);
       readLastFifo.enq(addrBeat.last);
-      Bit#(bramAddrWidth) regFileAddr = truncate(addr << fromInteger(valueOf(TLog#(dataWidthBytes))));
+      Bit#(bramAddrWidth) regFileAddr = truncate(addr/fromInteger(valueOf(TDiv#(busDataWidth,8))));
       req_addr.enq(regFileAddr);
       if (verbose) $display("%d read_server.readData (a) %h %d last=%d", cycles, addr, burstCount, addrBeat.last);
    endrule
