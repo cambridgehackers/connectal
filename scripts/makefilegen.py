@@ -160,7 +160,7 @@ BOARD=%(boardname)s
 PROJECTDIR=%(project_dir)s
 MKTOP=%(topbsvmod)s
 OS=%(OS)s
-TOOLCHAIN=%(toolchain)s
+TOOLCHAIN?=%(toolchain)s
 DUT=%(dut)s
 
 export INTERFACES = %(interfaces)s
@@ -239,9 +239,11 @@ linuxmakefile_template='''
 CONNECTALDIR?=%(connectaldir)s
 DTOP?=%(project_dir)s
 
-TOOLCHAIN=%(toolchain)s
-CC?=$(TOOLCHAIN)gcc
-CXX?=$(TOOLCHAIN)g++
+TOOLCHAIN?=%(toolchain)s
+ifneq ($(TOOLCHAIN),)
+CC=$(TOOLCHAIN)gcc
+CXX=$(TOOLCHAIN)g++
+endif
 CFLAGS_COMMON = -O -g %(cflags)s -Wall %(werr)s %(cxxflags)s
 CFLAGS = $(CFLAGS_COMMON)
 CFLAGS2 = %(cdefines2)s
