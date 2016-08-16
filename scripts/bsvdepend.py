@@ -72,10 +72,8 @@ if __name__=='__main__':
     makef.write('OBJMAKEFILE_DEP = %s\n' % ' '.join(['$(wildcard %s/*.bsv)' % path for path in bsvpath]))
     makef.write('\n')
     for bsvfilename,packages,includes,synthesizedModules in bsvdep:
-        vf = open(bsvfilename, 'r')
         basename = os.path.basename(bsvfilename)
         (name, ext) = os.path.splitext(basename)
-        source = vf.read()
         makef.write(makefiletemplate % {
                 'name': name,
                 'bsvfilename': bsvfilename,
@@ -92,4 +90,3 @@ if __name__=='__main__':
                     })
         pass
     makef.close()
-    vf.close()
