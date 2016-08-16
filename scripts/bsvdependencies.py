@@ -115,4 +115,5 @@ def bsvDependencies(bsvfile, allBsv=False, bluespecdir=None, argbsvpath=[], bsvd
                 synthesize = False
             pass
         generated.append((bsvfilename,packages,includes,synthesizedModules))
+        vf.close()
     return (generated,bsvpath)
