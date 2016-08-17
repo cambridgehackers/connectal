@@ -796,12 +796,19 @@ int doIO(Nvme *nvme, nvme_io_opcode opcode, int startBlock, int numBlocks, int q
     cmd.opcode = opcode;
     cmd.nsid = 1;
     cmd.flags = 0x00; // PRP used for this transfer
-    cmd.prp1 = 0x30000000ul; // send data to the FIFO
+    if (opcode == nvme_read)
+      cmd.prp1 = 0x30000000ul; // send data to the FIFO
+    else
+      cmd.prp1 = (transferBufferId << 24);
+    fprintf(stderr, "cmd.prp1=%llx\n", cmd.prp1);
     cmd.prp2 = (transferBufferId << 24) + 0;
     if (queue == 1) { 
       uint64_t *prplist = (uint64_t *)nvme->transferBuffer.buffer();
       for (int i = 0; i < numBlocks/blocksPerPage; i++) {
-	prplist[i] = (uint64_t)(0x30000000ul + 0x1000*i + 0x1000); // send data to the FIFO
+	if (opcode == nvme_read)
+	  prplist[i] = (uint64_t)(0x30000000ul + 0x1000*i + 0x1000); // send data to the FIFO
+	else
+	  prplist[i] = (uint64_t)((transferBufferId << 24) + 0x1000*i + 0x1000); // read data from DRAM
       }
 
       nvme->transferBuffer.cacheInvalidate(8*512, 1);
