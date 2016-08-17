@@ -564,11 +564,11 @@ int Nvme::ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue)
     cmd->cid = ioRequestNumber[queue]++;
 
     if (queue == 2) {
-	fprintf(stderr, "%s:%d starting transfer\n", __FUNCTION__, __LINE__);
+	fprintf(stderr, "%s:%d starting transfer opcode=%d\n", __FUNCTION__, __LINE__, cmd->opcode);
 	driverRequest.trace(0);
 
 	int numBlocks = cmd->cdw12+1;
-	requestProxy.startTransfer(/* read */ 2, /* flags */ 0, cmd->cid, cmd->cdw10, numBlocks, /* dsm */0x71);
+	requestProxy.startTransfer(/* read */ cmd->opcode, /* flags */ 0, cmd->cid, cmd->cdw10, numBlocks, /* dsm */0x71);
 	//sleep(1);
 
 	if (0) {
