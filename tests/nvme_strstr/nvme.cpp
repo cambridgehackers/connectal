@@ -28,6 +28,20 @@ enum nvme_admin_opcode {
     nvme_get_features = 10,
 };
 
+enum nvme_io_opcode {
+    nvme_flush = 0,
+    nvme_write = 1,
+    nvme_read = 2,
+    nvme_write_uncorrectable = 4,
+    nvme_compare = 5,
+    nvme_write_zeros = 8,
+    nvme_manage_dataset = 9,
+    nvme_register_reservation = 13,
+    nvme_report_reservation = 14,
+    nvme_acquire_reservation = 17,
+    nvme_release_reservation = 21
+};
+
 // queue size in create I/O completion/submission queue is specified as a 0 based value
 int queueSizeDelta = 1;
 
@@ -764,7 +778,7 @@ void allocIOQueues(Nvme *nvme, int entry=0)
 
 }
 
-int doIO(Nvme *nvme, int startBlock, int numBlocks, int queue=1)
+int doIO(Nvme *nvme, nvme_io_opcode opcode, int startBlock, int numBlocks, int queue=1)
 {
     int blocksPerPage = 4096 / 512;
     int transferBufferId = (queue == 1) ? nvme->transferBufferRef : 2;
@@ -779,7 +793,7 @@ int doIO(Nvme *nvme, int startBlock, int numBlocks, int queue=1)
     nvme_io_cmd cmd;
     nvme_completion completion;
     memset(&cmd, 0, sizeof(cmd));
-    cmd.opcode = 2; // read
+    cmd.opcode = opcode;
     cmd.nsid = 1;
     cmd.flags = 0x00; // PRP used for this transfer
     cmd.prp1 = 0x30000000ul; // send data to the FIFO
@@ -851,11 +865,11 @@ int main(int argc, const char **argv)
     if (0)
 	search.startSearch(numBlocks*512);
     for (int block = 0; block < numBlocks; block += blocksPerRequest) {
-      int sc = doIO(&nvme, startBlock, blocksPerRequest, 2);
-      nvme.status();
-      if (sc != 0)
-	break;
-      startBlock += blocksPerRequest;
+	int sc = doIO(&nvme, nvme_read, startBlock, blocksPerRequest, 2);
+	nvme.status();
+	if (sc != 0)
+	    break;
+	startBlock += blocksPerRequest;
     }
 
     nvme.dumpTrace();
