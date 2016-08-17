@@ -94,6 +94,7 @@ interface Nvme;
    interface MemServerPortalRequest bramRequest;
    interface NvmeTrace trace;
    interface NvmePins pins;
+   interface PipeIn#(MemData#(PcieDataBusWidth)) dataIn;
    interface PipeOut#(MemData#(PcieDataBusWidth)) dataOut;
    interface Vector#(1, MemReadClient#(DataBusWidth)) dmaReadClient;
    interface Vector#(1, MemWriteClient#(DataBusWidth)) dmaWriteClient;
@@ -460,9 +461,11 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
    FIFOF#(Bit#(32)) msgInFifo <- mkFIFOF();
    FIFOF#(Bit#(32)) msgOutFifo <- mkFIFOF();
    FIFOF#(Bit#(PcieDataBusWidth)) dataOutFifo <- mkFIFOF();
+   FIFOF#(Bit#(PcieDataBusWidth)) dataInFifo <- mkFIFOF();
    AxiStreamSlave#(32)                msgInStream <- mkAxiStream(msgInFifo);
    AxiStreamMaster#(32)               msgOutStream <- mkAxiStream(msgOutFifo);
    AxiStreamMaster#(PcieDataBusWidth) dataOutStream <- mkAxiStream(dataOutFifo);
+   AxiStreamSlave#(PcieDataBusWidth)  dataInStream  <- mkAxiStream(dataOutFifo);
 `endif
 
    interface MemServerPortalRequest bramRequest = bramMemServerPortal.request;
@@ -515,7 +518,8 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
 `else
    interface Clock portalClockSource = axiRootPort.axi.aclk;
 `endif
-   interface PipeOut dataOut = splitter.data;
+   interface PipeOut dataOut = splitter.dataOut;
+   interface PipeOut dataIn  = splitter.dataIn;
    interface NvmePins pins;
       interface deleteme_unused_clock = clock;
       interface pcie_sys_reset_n = reset;
@@ -680,8 +684,15 @@ interface SplitMemServer#(numeric type dataBusWidth);
    interface MemServer#(dataBusWidth) server;
    interface MemClient#(dataBusWidth) busClient;
    interface MemClient#(dataBusWidth) bramClient;
-   interface PipeOut#(MemData#(dataBusWidth)) data;
+   interface PipeOut#(MemData#(dataBusWidth)) dataOut;
+   interface PipeIn#(MemData#(dataBusWidth))  dataIn;
 endinterface
+
+`ifndef DATA_FIFO_DEPTH
+typedef 4096 DataFifoDepth;
+`else
+typedef `DATA_FIFO_DEPTH DataFifoDepth;
+`endif
 
 module mkSplitMemServer(SplitMemServer#(dataBusWidth));
    let readReqFifo   <- mkFIFOF();
@@ -704,7 +715,8 @@ module mkSplitMemServer(SplitMemServer#(dataBusWidth));
 
    let doneFifo <- mkFIFOF();
 
-   let dataFifo <- mkSizedBRAMFIFOF(4096);
+   let dataOutFifo <- mkSizedBRAMFIFOF(valueOf(DataFifoDepth));
+   let dataInFifo <- mkSizedBRAMFIFOF(valueOf(DataFifoDepth));
    let readDestFifo <- mkFIFOF();
    let writeDestFifo <- mkFIFOF();
 
@@ -713,6 +725,9 @@ module mkSplitMemServer(SplitMemServer#(dataBusWidth));
       let dest = req.sglId[5:4];
       if (dest == 2)
 	 bramReadReqFifo.enq(req);
+      else if (dest == 3) begin
+	 // reading from dataInFifo
+      end
       else
 	 busReadReqFifo.enq(req);
       readDestFifo.enq(dest);
@@ -723,6 +738,8 @@ module mkSplitMemServer(SplitMemServer#(dataBusWidth));
       MemData#(dataBusWidth) md;
       if (dest == 2)
 	 md <- toGet(bramReadDataFifo).get();
+      else if (dest == 3)
+	 md <- toGet(dataInFifo).get();
       else
 	 md <- toGet(busReadDataFifo).get();
       if (md.last)
@@ -748,7 +765,7 @@ module mkSplitMemServer(SplitMemServer#(dataBusWidth));
       if (dest == 2)
 	 bramWriteDataFifo.enq(md);
       else if (dest == 3)
-	 dataFifo.enq(md);
+	 dataOutFifo.enq(md);
       else
 	 busWriteDataFifo.enq(md);
       if (md.last) begin
@@ -806,7 +823,8 @@ module mkSplitMemServer(SplitMemServer#(dataBusWidth));
 	 interface writeDone = toPut(bramWriteDoneFifo);
       endinterface
    endinterface
-   interface PipeOut data = toPipeOut(dataFifo);
+   interface PipeOut dataOut = toPipeOut(dataOutFifo);
+   interface PipeOut dataIn  = toPipeIn(dataInFifo);
 endmodule
 
 interface MemServerGearbox#(numeric type serverDataBusWidth, numeric type clientDataBusWidth);
