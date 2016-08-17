@@ -22,7 +22,10 @@ const int DataBusWidth = 64;
 const int DataBusBytes = DataBusWidth/8;
 
 enum nvme_admin_opcode {
-    nvme_identify = 0xe2 // 6?
+    nvme_create_submission_queue = 1,
+    nvme_create_completion_queue = 5,
+    nvme_identify     = 6,
+    nvme_get_features = 10,
 };
 
 // queue size in create I/O completion/submission queue is specified as a 0 based value
@@ -644,7 +647,7 @@ void identify(Nvme *nvme)
     nvme_admin_cmd buffer;
     nvme_admin_cmd *cmd = &buffer;
     memset(cmd, 0, sizeof(*cmd));
-    cmd->opcode = 6; //nvme_identify;
+    cmd->opcode = nvme_identify;
     cmd->nsid = 0;
     cmd->prp1 = (nvme->transferBufferRef << 24) + 0;
     cmd->prp2 = (nvme->transferBufferRef << 24) + 4096;
@@ -719,7 +722,7 @@ void allocIOQueues(Nvme *nvme, int entry=0)
     fprintf(stderr, "%s:%d allocating completion queue with %d entries\n", __FUNCTION__, __LINE__, (Nvme::ioQueueSize / 16));
     // create I/O completion queue
     memset(cmd, 0, sizeof(*cmd));
-    cmd->opcode = 5; //create I/O completion queue
+    cmd->opcode = nvme_create_completion_queue; //5;
     cmd->nsid = 0;
     cmd->prp1 = (nvme->ioCompletionQueueRef << 24) + 0;
     cmd->cdw10 = ((Nvme::ioQueueSize / 16 - queueSizeDelta) << 16) | 1; // size, completion queue 1
@@ -729,7 +732,7 @@ void allocIOQueues(Nvme *nvme, int entry=0)
     fprintf(stderr, "%s:%d allocating request queue with %d entries\n", __FUNCTION__, __LINE__, (Nvme::ioQueueSize / 64));
     // create I/O submission queue
     memset(cmd, 0, sizeof(*cmd));
-    cmd->opcode = 1; //create I/O submission queue
+    cmd->opcode = nvme_create_submission_queue; //1;
     cmd->nsid = 0;
     cmd->prp1 = (nvme->ioSubmissionQueueRef << 24) + 0;
     cmd->cdw10 = ((Nvme::ioQueueSize / 64 - queueSizeDelta) << 16) | 1; // size, submission queue 1
@@ -742,7 +745,7 @@ void allocIOQueues(Nvme *nvme, int entry=0)
     fprintf(stderr, "%s:%d allocating completion queue with %d entries\n", __FUNCTION__, __LINE__, numBramEntries);
     // create I/O completion queue
     memset(cmd, 0, sizeof(*cmd));
-    cmd->opcode = 5; //create I/O completion queue
+    cmd->opcode = nvme_create_completion_queue;
     cmd->nsid = 0;
     cmd->prp1 = (0x20 << 24) + 0;
     cmd->cdw10 = ((numBramEntries-queueSizeDelta)<<16) | 2; // size, completion queue 2
@@ -752,7 +755,7 @@ void allocIOQueues(Nvme *nvme, int entry=0)
     fprintf(stderr, "%s:%d allocating request queue with %d entries\n", __FUNCTION__, __LINE__, numBramEntries);
     // create I/O submission queue
     memset(cmd, 0, sizeof(*cmd));
-    cmd->opcode = 1; //create I/O submission queue
+    cmd->opcode = nvme_create_submission_queue;
     cmd->nsid = 0;
     cmd->prp1 = (0x20 << 24) + 0x1000;
     cmd->cdw10 = ((numBramEntries-queueSizeDelta)<<16) | 2; // size, submission queue 2
@@ -843,8 +846,8 @@ int main(int argc, const char **argv)
 
     fprintf(stderr, "CSTS %08x\n", nvme.read32( 0x1c));
     int startBlock = 34816; // base and extent of test file in SSD
-    int blocksPerRequest = 2*BlocksPerRequest;
-    int numBlocks = 16*blocksPerRequest; // 55; //8177;
+    int blocksPerRequest = 12*BlocksPerRequest;
+    int numBlocks = 1*blocksPerRequest; // 55; //8177;
     if (0)
 	search.startSearch(numBlocks*512);
     for (int block = 0; block < numBlocks; block += blocksPerRequest) {
