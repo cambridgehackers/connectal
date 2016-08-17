@@ -33,7 +33,7 @@ enum nvme_io_opcode {
     nvme_read = 2,
     nvme_write_uncorrectable = 4,
     nvme_compare = 5,
-    nvme_write_zeros = 8,
+    nvme_write_zeroes = 8,
     nvme_manage_dataset = 9,
     nvme_register_reservation = 13,
     nvme_report_reservation = 14,
