@@ -8,7 +8,7 @@ MEM_WRITE_INTERFACES = lNvmeSearch.dmaWriteClient
 
 BSVPATH = $(CONNECTALDIR)/lib/strstr/bsv
 BSVFILES = $(CONNECTALDIR)/lib/nvme/bsv/NvmeIfc.bsv StringSearchIfc.bsv $(CONNECTALDIR)/bsv/ConnectalConfig.bsv
-CPPFILES += nvme.cpp
+CPPFILES += nvme.cpp main.cpp
 CPPFILES += $(CONNECTALDIR)/cpp/DmaBuffer.cpp
 
 ifeq ($(BOARD),miniitx100)
