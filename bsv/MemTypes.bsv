@@ -393,8 +393,10 @@ endfunction
 instance MkAxiStream#(AxiStreamMaster#(dsize), FIFOF#(MemDataF#(dsize)));
    module mkAxiStream#(FIFOF#(MemDataF#(dsize)) f)(AxiStreamMaster#(dsize));
       Wire#(Bool) readyWire <- mkDWire(False);
+      Wire#(Bool) lastWire <- mkDWire(False);
       rule rl_deq if (readyWire && f.notEmpty);
 	 f.deq();
+	 lastWire <= f.first().last;
       endrule
      method Bit#(dsize)              tdata();
 	if (f.notEmpty())
@@ -403,7 +405,7 @@ instance MkAxiStream#(AxiStreamMaster#(dsize), FIFOF#(MemDataF#(dsize)));
 	  return 0;
      endmethod
      method Bit#(TDiv#(dsize,8))     tkeep(); return maxBound; endmethod
-     method Bit#(1)                tlast(); return pack(f.first().last); endmethod
+     method Bit#(1)                tlast(); return pack(lastWire); endmethod
      method Action                 tready(Bit#(1) v);
 	readyWire <= unpack(v);
      endmethod
