@@ -118,3 +118,15 @@ AXI Stream Type Classes and Instances
    .. bsv:module:: mkAxiStream#(FIFOF#(MemDataF#(dsize)) f)(AxiStreamSlave#(dsize));
 
       Create an AXI Stream slave from a FIFOF of MemDataF
+
+.. bsv:instance:: MkAxiStream#(AxiStreamMaster#(dsize), PipeOut#(dtype))
+
+   .. bsv:module:: mkAxiStream#(PipeOut#(dtype) f)(AxiStreamMaster#(dsize));
+
+   Create an AXI Stream master from a PipeOut#(dtype)
+
+.. bsv:instance:: MkAxiStream#(AxiStreamSlave#(dsize), FIFOF#(PipeIn#(dtype))
+
+   .. bsv:module:: mkAxiStream#(PipeIn#(dtype) f)(AxiStreamSlave#(dsize));
+
+      Create an AXI Stream slave from a PipeIn#(dtype)
