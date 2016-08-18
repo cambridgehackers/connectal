@@ -39,14 +39,28 @@ interface MemServerPortalIndication;
    method Action writeDone();
 endinterface
 
+typedef enum {
+    NvmeFlush = 0,
+    NvmeWrite = 1,
+    NvmeRead = 2,
+    NvmeWriteUncorrectable = 4,
+    NvmeCompare = 5,
+    NvmeWriteZeros = 8,
+    NvmeManageDataset = 9,
+    NvmeRegisterReservation = 13,
+    NvmeReportReservation = 14,
+    NvmeAcquireReservation = 17,
+    NvmeReleaseReservation = 21
+   }  NvmeOpcode deriving (Bits,Eq,FShow);
+
 interface NvmeRequest;
    method Action startTransfer(Bit#(8) opcode, Bit#(8) flags, Bit#(16) requestId, Bit#(64) startBlock, Bit#(32) numBlocks, Bit#(32) dsm);
-   method Action msgOut(Bit#(32) value);
+   method Action msgFromSoftware(Bit#(32) value);
 endinterface
 
 interface NvmeIndication;
    method Action transferCompleted(Bit#(16) requestId, Bit#(64) sc, Bit#(32) cycles);
-   method Action msgIn(Bit#(32) value);
+   method Action msgToSoftware(Bit#(32) value);
 endinterface
 
 // internal interfaces
@@ -94,10 +108,10 @@ typedef struct {
 
 // these ports exposed to a verilog wrapper module
 interface NvmeAccelerator;
-   interface AxiStreamMaster#(32) msgOut;
-   interface AxiStreamSlave#(32) msgIn;
-   interface AxiStreamMaster#(PcieDataBusWidth) dataOut;
-   interface AxiStreamSlave#(PcieDataBusWidth) dataIn;
+   interface AxiStreamMaster#(32) msgFromSoftware;
+   interface AxiStreamSlave#(32) msgToSoftware;
+   interface AxiStreamMaster#(PcieDataBusWidth) dataFromNvme;
+   interface AxiStreamSlave#(PcieDataBusWidth) dataToNvme;
    interface AxiStreamSlave#(SizeOf#(NvmeIoCommand)) request;
    interface AxiStreamMaster#(SizeOf#(NvmeIoResponse)) response;
    interface Clock clock;
@@ -105,10 +119,10 @@ interface NvmeAccelerator;
 endinterface
 
 interface NvmeAcceleratorClient;
-   interface AxiStreamSlave#(32) msgOut;
-   interface AxiStreamMaster#(32) msgIn;
-   interface AxiStreamSlave#(PcieDataBusWidth) dataOut;
-   interface AxiStreamMaster#(PcieDataBusWidth) dataIn;
+   interface AxiStreamSlave#(32) msgFromSoftware;
+   interface AxiStreamMaster#(32) msgToSoftware;
+   interface AxiStreamSlave#(PcieDataBusWidth) dataFromNvme;
+   interface AxiStreamMaster#(PcieDataBusWidth) dataToNvme;
    interface AxiStreamMaster#(SizeOf#(NvmeIoCommand)) request;
    interface AxiStreamSlave#(SizeOf#(NvmeIoResponse)) response;
 endinterface

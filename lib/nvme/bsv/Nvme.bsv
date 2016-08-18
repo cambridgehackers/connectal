@@ -85,8 +85,10 @@ interface Nvme;
    interface MemServerPortalRequest bramRequest;
    interface NvmeTrace trace;
    interface NvmePins pins;
-   interface PipeIn#(MemData#(PcieDataBusWidth)) dataIn;
-   interface PipeOut#(MemData#(PcieDataBusWidth)) dataOut;
+`ifndef NVME_ACCELERATOR_INTERFACE
+   interface PipeIn#(MemData#(PcieDataBusWidth)) dataToNvme;
+   interface PipeOut#(MemData#(PcieDataBusWidth)) dataFromNvme;
+`endif
    interface Vector#(1, MemReadClient#(DataBusWidth)) dmaReadClient;
    interface Vector#(1, MemWriteClient#(DataBusWidth)) dmaWriteClient;
 `ifdef TOP_SOURCES_PORTAL_CLOCK
@@ -94,7 +96,7 @@ interface Nvme;
 `endif
 endinterface
 
-module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace trace, MemServerPortalIndication bramIndication)(Nvme);
+module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace trace, MemServerPortalIndication bramIndication)(Nvme);
    let clock <- exposeCurrentClock;
    let reset <- exposeCurrentReset;
    let refclk_p <- mkB2C1();
@@ -310,6 +312,9 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
 
    FIFOF#(NvmeIoCommand) ioCommandFifo <- mkFIFOF();
    FIFOF#(NvmeIoCommand) ioSegmentFifo <- mkFIFOF(); // max request size 32
+`ifdef NVME_ACCELERATOR_INTERFACE
+   FIFOF#(NvmeIoResponse) ioResponseFifo <- mkFIFOF();
+`endif
 
    Reg#(Bit#(32)) cycles <- mkReg(0);
    rule rl_cycles;
@@ -429,7 +434,11 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
 	       if (response[16+(3*32 % valueOf(PcieDataBusWidth))] == phase) begin
 		  requestCompleted <= response;
 		  // if status field written by NVME
-		  ind.transferCompleted(responseId, truncate(response), cycles - requestStartTimestamp);
+`ifdef NVME_ACCELERATOR_INTERFACE
+		  ioResponseFifo.enq(NvmeIoResponse {});
+`else
+		  nvmeInd.transferCompleted(responseId, truncate(response), cycles - requestStartTimestamp);
+`endif
 		  requestInProgress <= False;
 	       end
 	    endaction
@@ -449,14 +458,19 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
    let bramMemCnx  <- mkConnection(splitter.bramClient, bramMemA);
 
 `ifdef NVME_ACCELERATOR_INTERFACE
-   FIFOF#(Bit#(32)) msgInFifo <- mkFIFOF();
-   FIFOF#(Bit#(32)) msgOutFifo <- mkFIFOF();
-   FIFOF#(Bit#(PcieDataBusWidth)) dataOutFifo <- mkFIFOF();
-   FIFOF#(Bit#(PcieDataBusWidth)) dataInFifo <- mkFIFOF();
-   AxiStreamSlave#(32)                msgInStream <- mkAxiStream(msgInFifo);
-   AxiStreamMaster#(32)               msgOutStream <- mkAxiStream(msgOutFifo);
-   AxiStreamMaster#(PcieDataBusWidth) dataOutStream <- mkAxiStream(dataOutFifo);
-   AxiStreamSlave#(PcieDataBusWidth)  dataInStream  <- mkAxiStream(dataOutFifo);
+   FIFOF#(Bit#(32)) msgToSoftwareFifo <- mkFIFOF();
+   FIFOF#(Bit#(32)) msgFromSoftwareFifo <- mkFIFOF();
+   AxiStreamSlave#(32)                msgToSoftwareStream <- mkAxiStream(msgToSoftwareFifo);
+   AxiStreamMaster#(32)               msgFromSoftwareStream <- mkAxiStream(msgFromSoftwareFifo);
+   AxiStreamMaster#(PcieDataBusWidth) dataFromNvmeStream <- mkAxiStream(splitter.dataFromNvme);
+   AxiStreamSlave#(PcieDataBusWidth)  dataToNvmeStream   <- mkAxiStream(splitter.dataToNvme);
+   AxiStreamSlave#(SizeOf#(NvmeIoCommand))     requestStream      <- mkAxiStream(mapPipeIn(unpack,toPipeIn(ioCommandFifo)));
+   AxiStreamMaster#(SizeOf#(NvmeIoResponse))   responseStream     <- mkAxiStream(mapPipe(pack,toPipeOut(ioResponseFifo)));
+
+   rule rl_msgToSoftware;
+      let msg <- toGet(msgToSoftwareFifo).get();
+      nvmeInd.msgToSoftware(msg);
+   endrule
 `endif
 
    interface MemServerPortalRequest bramRequest = bramMemServerPortal.request;
@@ -503,14 +517,21 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
       method Action startTransfer(Bit#(8) opcode, Bit#(8) flags, Bit#(16) requestId, Bit#(64) startBlock, Bit#(32) numBlocks, Bit#(32) dsm);
 	 ioCommandFifo.enq(NvmeIoCommand{opcode: opcode, flags: flags, requestId: requestId, startBlock: startBlock, numBlocks: numBlocks, dsm: dsm });
       endmethod
+      method Action msgFromSoftware(Bit#(32) value);
+`ifdef NVME_ACCELERATOR_INTERFACE
+	 msgFromSoftwareFifo.enq(value);
+`endif
+      endmethod
    endinterface
 `ifndef PCIE3
    interface Clock portalClockSource = axiRootPort.axi.aclk_out;
 `else
    interface Clock portalClockSource = axiRootPort.axi.aclk;
 `endif
-   interface PipeOut dataOut = splitter.dataOut;
-   interface PipeOut dataIn  = splitter.dataIn;
+`ifndef NVME_ACCELERATOR_INTERFACE
+   interface PipeOut dataFromNvme = splitter.dataFromNvme;
+   interface PipeOut dataToNvme  = splitter.dataToNvme;
+`endif
    interface NvmePins pins;
       interface deleteme_unused_clock = clock;
       interface pcie_sys_reset_n = reset;
@@ -521,9 +542,12 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
       endmethod
 `ifdef NVME_ACCELERATOR_INTERFACE
       interface NvmeAccelerator accel;
-	 interface msgIn = msgInStream;
-	 interface msgOut = msgOutStream;
-	 interface dataOut = dataOutStream;
+	 interface msgToSoftware = msgToSoftwareStream;
+	 interface msgFromSoftware = msgFromSoftwareStream;
+	 interface dataFromNvme = dataFromNvmeStream;
+         interface dataToNvme = dataToNvmeStream;
+         interface request = requestStream;
+         interface response = responseStream;
          interface clock = clock;
          interface reset = reset;
       endinterface
@@ -537,27 +561,6 @@ interface NvmeAcceleratorModule;
    interface NvmeAccelerator accelerator;
    interface NvmePins pins;
 endinterface
-
-(* synthesize *)
-module mkNvmeAcceleratorStub(NvmeAcceleratorModule);
-   let _clock <- exposeCurrentClock;
-   let _reset <- exposeCurrentReset;
-   interface NvmeAccelerator accelerator;
-      interface Clock clock = _clock;
-      interface Reset reset = _reset;
-   endinterface
-   interface NvmePins pins;
-`ifdef NVME_ACCELERATOR_INTERFACE
-       interface NvmeAccelerator accel;
-	  interface Clock clock = _clock;
-	  interface Reset reset = _reset;
-       endinterface
-`endif
-      interface Clock deleteme_unused_clock = _clock;
-      interface Reset pcie_sys_reset_n      = _reset;
-   endinterface
-endmodule
-
 
 instance ToAxi4SlaveBits#(Axi4SlaveBits#(32,PcieDataBusWidth,4,Empty), AprpS_axi);
    function Axi4SlaveBits#(32,PcieDataBusWidth,4,Empty) toAxi4SlaveBits(AprpS_axi s);
@@ -684,8 +687,8 @@ interface SplitMemServer#(numeric type dataBusWidth);
    interface MemServer#(dataBusWidth) server;
    interface MemClient#(dataBusWidth) busClient;
    interface MemClient#(dataBusWidth) bramClient;
-   interface PipeOut#(MemData#(dataBusWidth)) dataOut;
-   interface PipeIn#(MemData#(dataBusWidth))  dataIn;
+   interface PipeOut#(MemData#(dataBusWidth)) dataFromNvme;
+   interface PipeIn#(MemData#(dataBusWidth))  dataToNvme;
 endinterface
 
 `ifndef DATA_FIFO_DEPTH
@@ -715,8 +718,8 @@ module mkSplitMemServer(SplitMemServer#(dataBusWidth));
 
    let doneFifo <- mkFIFOF();
 
-   let dataOutFifo <- mkSizedBRAMFIFOF(valueOf(DataFifoDepth));
-   let dataInFifo <- mkSizedBRAMFIFOF(valueOf(DataFifoDepth));
+   let dataFromNvmeFifo <- mkSizedBRAMFIFOF(valueOf(DataFifoDepth));
+   let dataToNvmeFifo <- mkSizedBRAMFIFOF(valueOf(DataFifoDepth));
    let readDestFifo <- mkFIFOF();
    let writeDestFifo <- mkFIFOF();
 
@@ -726,7 +729,7 @@ module mkSplitMemServer(SplitMemServer#(dataBusWidth));
       if (dest == 2)
 	 bramReadReqFifo.enq(req);
       else if (dest == 3) begin
-	 // reading from dataInFifo
+	 // reading from dataToNvmeFifo
       end
       else
 	 busReadReqFifo.enq(req);
@@ -739,7 +742,7 @@ module mkSplitMemServer(SplitMemServer#(dataBusWidth));
       if (dest == 2)
 	 md <- toGet(bramReadDataFifo).get();
       else if (dest == 3)
-	 md <- toGet(dataInFifo).get();
+	 md <- toGet(dataToNvmeFifo).get();
       else
 	 md <- toGet(busReadDataFifo).get();
       if (md.last)
@@ -765,7 +768,7 @@ module mkSplitMemServer(SplitMemServer#(dataBusWidth));
       if (dest == 2)
 	 bramWriteDataFifo.enq(md);
       else if (dest == 3)
-	 dataOutFifo.enq(md);
+	 dataFromNvmeFifo.enq(md);
       else
 	 busWriteDataFifo.enq(md);
       if (md.last) begin
@@ -823,8 +826,8 @@ module mkSplitMemServer(SplitMemServer#(dataBusWidth));
 	 interface writeDone = toPut(bramWriteDoneFifo);
       endinterface
    endinterface
-   interface PipeOut dataOut = toPipeOut(dataOutFifo);
-   interface PipeOut dataIn  = toPipeIn(dataInFifo);
+   interface PipeOut dataFromNvme = toPipeOut(dataFromNvmeFifo);
+   interface PipeOut dataToNvme  = toPipeIn(dataToNvmeFifo);
 endmodule
 
 interface MemServerGearbox#(numeric type serverDataBusWidth, numeric type clientDataBusWidth);
