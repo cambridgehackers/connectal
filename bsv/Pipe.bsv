@@ -30,6 +30,7 @@ import MIMO::*;
 import DefaultValue::*;
 import Gearbox::*;
 import Clocks::*;
+import AxiStream::*;
 
 typedef Tuple3#(x,x,x) Triplet#(type x);
 typedef Tuple2#(x,x)   Pair#(type x);
@@ -1111,3 +1112,43 @@ module mkXYIterator(XYIteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#
       $display("XYIterator x=%d xlimit=%d y=%d ylimit=%d xstep=%d ystep=%d", x, xlimit, xstep, y, ylimit, ystep);
    endmethod
 endmodule: mkXYIterator
+
+instance MkAxiStream#(AxiStreamMaster#(dsize), PipeOut#(dtype)) provisos (Bits#(dtype,dsize));
+   module mkAxiStream#(PipeOut#(dtype) f)(AxiStreamMaster#(dsize));
+      Wire#(Bool) readyWire <- mkDWire(False);
+      rule rl_deq if (readyWire && f.notEmpty);
+	 f.deq();
+      endrule
+     method Bit#(dsize)              tdata();
+	if (f.notEmpty())
+	  return pack(f.first());
+	else
+	  return 0;
+     endmethod
+     method Bit#(TDiv#(dsize,8))     tkeep(); return maxBound; endmethod
+     method Bit#(1)                tlast(); return 0; endmethod
+     method Action                 tready(Bit#(1) v);
+	readyWire <= unpack(v);
+     endmethod
+     method Bit#(1)                tvalid(); return pack(f.notEmpty()); endmethod
+   endmodule
+endinstance
+
+instance MkAxiStream#(AxiStreamSlave#(dsize), PipeIn#(dtype)) provisos (Bits#(dtype,dsize));
+   module mkAxiStream#(PipeIn#(dtype) f)(AxiStreamSlave#(dsize));
+      Wire#(Bit#(dsize)) dataWire <- mkDWire(unpack(0));
+      Wire#(Bool) validWire <- mkDWire(False);
+      rule enq if (validWire && f.notFull());
+	 f.enq(unpack(dataWire));
+      endrule
+      method Action      tdata(Bit#(dsize) v);
+	 dataWire <= v;
+      endmethod
+      method Action      tkeep(Bit#(TDiv#(dsize,8)) v); endmethod
+      method Action      tlast(Bit#(1) v); endmethod
+      method Bit#(1)     tready(); return pack(f.notFull()); endmethod
+      method Action      tvalid(Bit#(1) v);
+	 validWire <= unpack(v);
+      endmethod
+   endmodule
+endinstance

@@ -105,14 +105,15 @@ endtypeclass
 instance MkAxiStream#(AxiStreamMaster#(dsize), FIFOF#(Bit#(dsize)));
    module mkAxiStream#(FIFOF#(Bit#(dsize)) f)(AxiStreamMaster#(dsize));
       Wire#(Bool) readyWire <- mkDWire(False);
+      Wire#(Bit#(dsize)) dataWire <- mkDWire(0);
+      rule rl_data if (f.notEmpty());
+	 dataWire <= f.first();
+      endrule
       rule rl_deq if (readyWire && f.notEmpty);
 	 f.deq();
       endrule
      method Bit#(dsize)              tdata();
-	if (f.notEmpty())
-	  return f.first();
-	else
-	  return 0;
+	return dataWire;
      endmethod
      method Bit#(TDiv#(dsize,8))     tkeep(); return maxBound; endmethod
      method Bit#(1)                tlast(); return pack(False); endmethod
