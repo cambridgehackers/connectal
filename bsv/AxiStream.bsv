@@ -30,17 +30,21 @@ interface AxiStreamMaster#(numeric type dsz);
     method Bit#(dsz)              tdata();
     method Bit#(TDiv#(dsz,8))     tkeep();
     method Bit#(1)                tlast();
-    method Action                 tready(Bit#(1) v);
+    (* prefix = "" *)method Action                 tready((* port="tready" *) Bit#(1) v);
     method Bit#(1)                tvalid();
 endinterface
 
 (* always_ready, always_enabled *)
 interface AxiStreamSlave#(numeric type dsz);
-    method Action      tdata(Bit#(dsz) v);
-    method Action      tkeep(Bit#(TDiv#(dsz,8)) v);
-    method Action      tlast(Bit#(1) v);
+    (* prefix = "" *)
+    method Action      tdata((* port = "tdata" *) Bit#(dsz) v);
+    (* prefix = "" *)
+    method Action      tkeep((* port = "tkeep" *) Bit#(TDiv#(dsz,8)) v);
+    (* prefix = "" *)
+    method Action      tlast((* port = "tlast" *) Bit#(1) v);
     method Bit#(1)     tready();
-    method Action      tvalid(Bit#(1) v);
+    (* prefix = "" *)
+    method Action      tvalid((* port = "tvalid" *)Bit#(1) v);
 endinterface
 
 instance Connectable#(AxiStreamMaster#(dataWidth), AxiStreamSlave#(dataWidth));
