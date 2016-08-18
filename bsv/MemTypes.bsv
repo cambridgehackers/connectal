@@ -31,6 +31,7 @@ import ConnectalConfig::*;
 import Pipe::*;
 import ConnectalMemory::*;
 import DefaultValue::*;
+import AxiStream::*;
 
 `include "ConnectalProjectConfig.bsv"
 
@@ -388,3 +389,46 @@ function  MemReadClient#(busWidth) null_mem_read_client();
               interface Put readData = null_put;
            endinterface);
 endfunction
+
+instance MkAxiStream#(AxiStreamMaster#(dsize), FIFOF#(MemDataF#(dsize)));
+   module mkAxiStream#(FIFOF#(MemDataF#(dsize)) f)(AxiStreamMaster#(dsize));
+      Wire#(Bool) readyWire <- mkDWire(False);
+      rule rl_deq if (readyWire && f.notEmpty);
+	 f.deq();
+      endrule
+     method Bit#(dsize)              tdata();
+	if (f.notEmpty())
+	  return f.first().data;
+	else
+	  return 0;
+     endmethod
+     method Bit#(TDiv#(dsize,8))     tkeep(); return maxBound; endmethod
+     method Bit#(1)                tlast(); return pack(f.first().last); endmethod
+     method Action                 tready(Bit#(1) v);
+	readyWire <= unpack(v);
+     endmethod
+     method Bit#(1)                tvalid(); return pack(f.notEmpty()); endmethod
+   endmodule
+endinstance
+
+instance MkAxiStream#(AxiStreamSlave#(dsize), FIFOF#(MemDataF#(dsize)));
+   module mkAxiStream#(FIFOF#(MemDataF#(dsize)) f)(AxiStreamSlave#(dsize));
+      Reg#(Bool) first <- mkReg(True);
+      Wire#(Bit#(dsize)) dataWire <- mkDWire(unpack(0));
+      Wire#(Bool) validWire <- mkDWire(False);
+      Wire#(Bool) lastWire <- mkDWire(False);
+      rule enq if (validWire && f.notFull());
+	 f.enq(MemDataF { data: dataWire, last: lastWire, first: first, tag: 0 });
+	 first <= lastWire;
+      endrule
+      method Action      tdata(Bit#(dsize) v);
+	 dataWire <= v;
+      endmethod
+      method Action      tkeep(Bit#(TDiv#(dsize,8)) v); endmethod
+      method Action      tlast(Bit#(1) v); lastWire <= unpack(v); endmethod
+      method Bit#(1)     tready(); return pack(f.notFull()); endmethod
+      method Action      tvalid(Bit#(1) v);
+	 validWire <= unpack(v);
+      endmethod
+   endmodule
+endinstance
