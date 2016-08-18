@@ -84,6 +84,7 @@ AXI Stream Type Classes and Instances
 ----------------------------------------
 
 .. bsv:typeclass:: ToAxiStream#(type atype, type btype)
+
    .. bsv:function:: atype toAxiStream(btype b)
 
       Convert to an AXI stream interface.
