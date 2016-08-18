@@ -55,15 +55,6 @@ import AxiPcie3RootPort::*;
 import NvmeIfc::*;
 import NvmePins::*;
 
-typedef struct {
-   Bit#(8)  opcode;
-   Bit#(8)  flags;
-   Bit#(16) requestId;
-   Bit#(64) startBlock;
-   Bit#(32) numBlocks;
-   Bit#(32) dsm;
-   } NvmeIoCommand deriving (Bits);
-
 `ifndef TOP_SOURCES_PORTAL_CLOCK
 import ConnectalBramFifo::*;
 `else
@@ -533,6 +524,8 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
 	 interface msgIn = msgInStream;
 	 interface msgOut = msgOutStream;
 	 interface dataOut = dataOutStream;
+         interface clock = clock;
+         interface reset = reset;
       endinterface
 `endif
    endinterface
@@ -540,21 +533,28 @@ module mkNvme#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace tra
    interface Vector dmaWriteClient = vec(axiGearbox.client.writeClient);
 endmodule
 
-// these ports exposed to a verilog wrapper module
-interface NvmeAccelerator;
-   interface AxiStreamMaster#(32) msgOut;
-   interface AxiStreamSlave#(32) msgIn;
-   interface AxiStreamMaster#(PcieDataBusWidth) dataOut;
+interface NvmeAcceleratorModule;
+   interface NvmeAccelerator accelerator;
    interface NvmePins pins;
 endinterface
 
 (* synthesize *)
-module mkNvmeAccelerator(NvmeAccelerator);
-   let clock <- exposeCurrentClock;
-   let reset <- exposeCurrentReset;
+module mkNvmeAcceleratorStub(NvmeAcceleratorModule);
+   let _clock <- exposeCurrentClock;
+   let _reset <- exposeCurrentReset;
+   interface NvmeAccelerator accelerator;
+      interface Clock clock = _clock;
+      interface Reset reset = _reset;
+   endinterface
    interface NvmePins pins;
-      interface Clock deleteme_unused_clock = clock;
-      interface Reset pcie_sys_reset_n = reset;
+`ifdef NVME_ACCELERATOR_INTERFACE
+       interface NvmeAccelerator accel;
+	  interface Clock clock = _clock;
+	  interface Reset reset = _reset;
+       endinterface
+`endif
+      interface Clock deleteme_unused_clock = _clock;
+      interface Reset pcie_sys_reset_n      = _reset;
    endinterface
 endmodule
 

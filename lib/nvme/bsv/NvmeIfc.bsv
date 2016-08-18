@@ -76,3 +76,39 @@ interface NvmeTrace;
    method Action traceDmaDone(DmaChannel channel, Bit#(8) tag, Bit#(32) timestamp);
    method Action traceData(Vector#(TDiv#(PcieDataBusWidth,32),Bit#(32)) data, Bool last, Bit#(8) tag, Bit#(32) timestamp);
 endinterface
+
+typedef struct {
+   Bit#(8)  opcode;
+   Bit#(8)  flags;
+   Bit#(16) requestId;
+   Bit#(64) startBlock;
+   Bit#(32) numBlocks;
+   Bit#(32) dsm;
+   } NvmeIoCommand deriving (Bits);
+
+typedef struct {
+   Bit#(16) requestId;
+   Bit#(16) statusCode;
+   Bit#(16) statusCodeType;
+   } NvmeIoResponse deriving (Bits);
+
+// these ports exposed to a verilog wrapper module
+interface NvmeAccelerator;
+   interface AxiStreamMaster#(32) msgOut;
+   interface AxiStreamSlave#(32) msgIn;
+   interface AxiStreamMaster#(PcieDataBusWidth) dataOut;
+   interface AxiStreamSlave#(PcieDataBusWidth) dataIn;
+   interface AxiStreamSlave#(SizeOf#(NvmeIoCommand)) request;
+   interface AxiStreamMaster#(SizeOf#(NvmeIoResponse)) response;
+   interface Clock clock;
+   interface Reset reset;
+endinterface
+
+interface NvmeAcceleratorClient;
+   interface AxiStreamSlave#(32) msgOut;
+   interface AxiStreamMaster#(32) msgIn;
+   interface AxiStreamSlave#(PcieDataBusWidth) dataOut;
+   interface AxiStreamMaster#(PcieDataBusWidth) dataIn;
+   interface AxiStreamMaster#(SizeOf#(NvmeIoCommand)) request;
+   interface AxiStreamSlave#(SizeOf#(NvmeIoResponse)) response;
+endinterface
