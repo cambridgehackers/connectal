@@ -692,7 +692,7 @@ interface SplitMemServer#(numeric type dataBusWidth);
 endinterface
 
 `ifndef DATA_FIFO_DEPTH
-typedef 4096 DataFifoDepth;
+typedef 64 DataFifoDepth;
 `else
 typedef `DATA_FIFO_DEPTH DataFifoDepth;
 `endif
