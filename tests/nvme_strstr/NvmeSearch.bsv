@@ -67,35 +67,162 @@ interface NvmeSearch;
 `endif
 endinterface
 
+typedef enum {
+   Loopback,
+   Needle,
+   MpNext,
+   Clear,
+   Opcode,
+   StartBlock,
+   NumBlocks,
+   Start
+   } MsgFromSoftwareTag deriving (Bits,Eq);
+
+typedef struct {
+   Bool     last;
+   MsgFromSoftwareTag tag;
+   Bit#(24)  data;
+   } MsgFromSoftware deriving (Bits);
+
+typedef enum {
+   Loopback,
+   LocDone,
+   TransferDone
+   } MsgToSoftwareTag deriving (Bits,Eq);
+
+typedef struct {
+   Bool     last;
+   MsgToSoftwareTag tag;
+   Bit#(24)  data;
+   } MsgToSoftware deriving (Bits);
+
+
+(* synthesize *)
+module mkSearchAcceleratorClient(NvmeAcceleratorClient);
+   Reg#(Bit#(32))                       dataCounter <- mkReg(0);
+   FIFOF#(Bit#(32))                  dataLengthFifo <- mkFIFOF();
+   Reg#(Bit#(24))                      needleLenReg <- mkReg(0);
+   MPStreamEngine#(PcieDataBusWidth,DataBusWidth)    mpEngine <- mkMPStreamEngine();
+
+   FIFOF#(Bit#(32)) msgFromSoftwareFifo <- mkFIFOF();
+   FIFOF#(Bit#(32)) msgToSoftwareFifo <- mkFIFOF();
+   FIFOF#(MemDataF#(PcieDataBusWidth)) dataFromNvmeFifo <- mkFIFOF();
+   FIFOF#(MemDataF#(PcieDataBusWidth)) dataToNvmeFifo <- mkFIFOF();
+   FIFOF#(Bit#(SizeOf#(NvmeIoCommand))) requestFifo <- mkFIFOF();
+   FIFOF#(Bit#(SizeOf#(NvmeIoResponse))) responseFifo <- mkFIFOF();
+
+   mkConnection(toPipeOut(dataFromNvmeFifo), mpEngine.haystack);
+
+   Reg#(Bit#(8)) opcode <- mkReg(extend(pack(NvmeRead)));
+   Reg#(Bit#(32)) startBlock <- mkReg(0);
+   Reg#(Bit#(32))  numBlocks <- mkReg(0);
+   Reg#(Bit#(16)) requestId <- mkReg(0);
+
+   let inmsgTagProbe <- mkProbe();
+   let inmsgDataProbe <- mkProbe();
+   let outmsgTagProbe <- mkProbe();
+   let outmsgDataProbe <- mkProbe();
+   rule rl_msg_from_software;
+      let m <- toGet(msgFromSoftwareFifo).get();
+      MsgFromSoftware msg = unpack(truncate(m));
+      inmsgTagProbe <= msg.tag;
+      inmsgDataProbe <= msg.data;
+      case (msg.tag) matches
+	 Loopback: begin
+		      MsgToSoftware msg = MsgToSoftware { tag: Loopback, data: msg.data, last: msg.last};
+		      outmsgTagProbe <= msg.tag;
+		      outmsgDataProbe <= msg.data;
+		      msgToSoftwareFifo.enq(extend(pack(msg)));
+		   end
+	 Needle: mpEngine.needle.enq(MemDataF { data: extend(msg.data), first: False, last: msg.last, tag: 0 });
+	 MpNext: mpEngine.mpNext.enq(MemDataF { data: extend(msg.data), first: False, last: msg.last, tag: 0 });
+	 Clear:  mpEngine.clear();
+	 Opcode:         opcode <= truncate(msg.data);
+	 StartBlock: startBlock <= extend(msg.data);
+	 NumBlocks:   numBlocks <= extend(msg.data);
+	 Start: begin
+		   mpEngine.start(extend(msg.data));
+		   needleLenReg <= msg.data;
+		   requestFifo.enq(pack(NvmeIoCommand {
+		      opcode: opcode,
+		      flags: 0,
+		      requestId: requestId,
+		      startBlock: extend(startBlock),
+		      numBlocks: numBlocks,
+		      dsm: 'h71 // FIXME copied value from nvme.cpp, but where did this come from?
+		      }));
+		   requestId <= requestId + 1;
+		end
+      endcase
+   endrule
+   rule rl_response;
+      let r <- toGet(responseFifo).get();
+      NvmeIoResponse response = unpack(r);
+      Bit#(8) sct = truncate(response.statusCodeType);
+      
+      MsgToSoftware msg = MsgToSoftware { tag: TransferDone, data: { sct, response.statusCode }, last: True};
+      outmsgTagProbe <= msg.tag;
+      outmsgDataProbe <= msg.data;
+      msgToSoftwareFifo.enq(extend(pack(msg)));
+   endrule
+   rule rl_match;
+      let loc <- toGet(mpEngine.locdone).get();
+      MsgToSoftware msg = MsgToSoftware { tag: LocDone, data: truncate(pack(loc)), last: loc == -1 };
+      outmsgTagProbe <= msg.tag;
+      outmsgDataProbe <= msg.data;
+      msgToSoftwareFifo.enq(extend(pack(msg)));
+   endrule
+
+   AxiStreamSlave#(32) msgFromSoftwareStream <- mkAxiStream(msgFromSoftwareFifo);
+   AxiStreamMaster#(32) msgToSoftwareStream <- mkAxiStream(msgToSoftwareFifo);
+   AxiStreamSlave#(PcieDataBusWidth) dataFromNvmeStream <- mkAxiStream(dataFromNvmeFifo);
+   AxiStreamMaster#(PcieDataBusWidth) dataToNvmeStream <- mkAxiStream(dataToNvmeFifo);
+   AxiStreamMaster#(SizeOf#(NvmeIoCommand)) requestStream <- mkAxiStream(requestFifo);
+   AxiStreamSlave#(SizeOf#(NvmeIoResponse)) responseStream <- mkAxiStream(responseFifo);
+
+   interface AxiStreamSlave msgFromSoftware = msgFromSoftwareStream;
+   interface AxiStreamMaster msgToSoftware = msgToSoftwareStream;
+   interface AxiStreamSlave dataFromNvme = dataFromNvmeStream;
+   interface AxiStreamMaster dataToNvme = dataToNvmeStream;
+   interface AxiStreamMaster request = requestStream;
+   interface AxiStreamSlave response = responseStream;
+
+endmodule
+
 module mkNvmeSearch#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace trace, MemServerPortalIndication bramIndication,
 	       StringSearchResponse searchIndication)(NvmeSearch);
 
    let nvme <- mkNvme(ind, driverInd, trace, bramIndication);
 
+   MemReadEngine#(DataBusWidth,DataBusWidth,2,3) re <- mkMemReadEngine();
+
+`ifndef NVME_ACCELERATOR_INTERFACE
    Reg#(Bit#(32))                       dataCounter <- mkReg(0);
    FIFOF#(Bit#(32))                  dataLengthFifo <- mkFIFOF();
-   let                                     fifoToMp <- mkFIFOF();
+   FIFOF#(MemDataF#(PcieDataBusWidth))     fifoToMp <- mkFIFOF();
    let                                 needleLenReg <- mkReg(0);
-   MemReadEngine#(DataBusWidth,DataBusWidth,2,3) re <- mkMemReadEngine();
    MPStreamEngine#(PcieDataBusWidth,DataBusWidth)    mpEngine <- mkMPStreamEngine();
    mkConnection(re.readServers[0].data, mpEngine.needle);
    mkConnection(re.readServers[1].data, mpEngine.mpNext);
    mkConnection(toPipeOut(fifoToMp), mpEngine.haystack);
 
+   Reg#(Bool) firstReg <- mkReg(True);
    rule rl_count_data_to_mp;
-      let data <- toGet(nvme.dataOut).get();
+      let data <- toGet(nvme.dataFromNvme).get();
       if (dataLengthFifo.notEmpty()) begin
 	 data.last = (dataCounter+fromInteger(valueOf(PcieDataBusWidth)/8)) >= dataLengthFifo.first;
-	 let md = MemDataF {data: data.data, last: data.last};
+	 let md = MemDataF {data: data.data, last: data.last, first: firstReg, tag: 0};
+	 firstReg <= data.last;
 	 fifoToMp.enq(md);
       end
       dataCounter <= dataCounter + 1;
    endrule
-
+	 
    rule rl_locdone;
       let loc <- toGet(mpEngine.locdone).get();
       searchIndication.strstrLoc(pack(loc));
    endrule
+`endif
 
    interface NvmeRequest                request = nvme.request;
    interface NvmeDriverRequest    driverRequest = nvme.driverRequest;
@@ -104,6 +231,7 @@ module mkNvmeSearch#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTra
    interface NvmePins                      pins = nvme.pins;
    interface StringSearchRequest searchRequest;
       method Action setSearchString(Bit#(32) needleSglId, Bit#(32) mpNextSglId, Bit#(32) needleLen);
+`ifndef NVME_ACCELERATOR_INTERFACE
 	 mpEngine.clear();
 	 needleLenReg <= needleLen;
    
@@ -112,10 +240,13 @@ module mkNvmeSearch#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTra
 	 needleLen = (needleLen + mask) & ~mask;
 	 re.readServers[0].request.put(MemengineCmd {sglId: needleSglId, base: 0, burstLen: burstLen, len: needleLen, tag: 0});
 	 re.readServers[1].request.put(MemengineCmd {sglId: mpNextSglId, base: 0, burstLen: burstLen, len: needleLen*4, tag: 0});
+`endif
       endmethod
       method Action startSearch(Bit#(32) haystackLen);
+`ifndef NVME_ACCELERATOR_INTERFACE
 	 mpEngine.start(needleLenReg);
 	 dataLengthFifo.enq(haystackLen);
+`endif
       endmethod
    endinterface
    interface Clock portalClockSource = nvme.portalClockSource;

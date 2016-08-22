@@ -9,15 +9,16 @@
 # Log file: /home/jamey/connectal/tests/nvme_strstr/miniitx100/vivado.log
 # Journal file: /home/jamey/connectal/tests/nvme_strstr/miniitx100/vivado.jou
 #-----------------------------------------------------------
-create_project nvmecore /home/jamey/connectal/tests/nvme_strstr/miniitx100/nvmecore -part xc7z100ffg900-2
+file delete -force -- nvmecore
+create_project nvmecore nvmecore -part xc7z100ffg900-2
 #set_property board_part xilinx.com:zc706:part0:1.3 [current_project]
-add_files /home/jamey/connectal/tests/nvme_strstr/miniitx100/verilog
-add_files -norecurse /home/jamey/connectal/tests/nvme_strstr/cores/miniitx100/axi_pcie_rp/axi_pcie_rp.xci
+add_files ../miniitx100/verilog
+add_files -norecurse ../cores/miniitx100/axi_pcie_rp/axi_pcie_rp.xci
 export_ip_user_files -of_objects  [get_files  /home/jamey/connectal/tests/nvme_strstr/cores/miniitx100/axi_pcie_rp/axi_pcie_rp.xci] -force -quiet
 update_compile_order -fileset sources_1
 update_compile_order -fileset sim_1
 update_compile_order -fileset sources_1
-ipx::package_project -root_dir /home/jamey/connectal/tests/nvme_strstr -vendor user.org -library user -taxonomy /UserIP
+ipx::package_project -root_dir . -vendor user.org -library user -taxonomy /UserIP
 set_property library {} [ipx::current_core]
 set_property vendor accelerated.tech [ipx::current_core]
 set_property library user [ipx::current_core]
@@ -186,3 +187,36 @@ set_property  ip_repo_paths  {/home/jamey/connectal/tests/nvme_strstr /home/jame
 update_ip_catalog
 ipx::check_integrity -quiet [ipx::current_core]
 ipx::archive_core /home/jamey/connectal/tests/nvme_strstr/accelerated.tech_user_nvme100_1.0.zip [ipx::current_core]
+update_compile_order -fileset sources_1
+ipx::infer_bus_interface FIXED_IO_ddr_vrp xilinx.com:signal:data_rtl:1.0 [ipx::current_core]
+ipx::infer_bus_interface FIXED_IO_ps_porb xilinx.com:signal:data_rtl:1.0 [ipx::current_core]
+ipx::infer_bus_interface FIXED_IO_ps_srstb xilinx.com:signal:data_rtl:1.0 [ipx::current_core]
+ipx::infer_bus_interface MIO xilinx.com:signal:video_frame_sync_rtl:1.0 [ipx::current_core]
+ipx::add_bus_interface accel_request [ipx::current_core]
+set_property abstraction_type_vlnv xilinx.com:interface:axis_rtl:1.0 [ipx::get_bus_interfaces accel_request -of_objects [ipx::current_core]]
+set_property bus_type_vlnv xilinx.com:interface:axis:1.0 [ipx::get_bus_interfaces accel_request -of_objects [ipx::current_core]]
+ipx::add_port_map TDATA [ipx::get_bus_interfaces accel_request -of_objects [ipx::current_core]]
+set_property physical_name accel_request_tdata_v [ipx::get_port_maps TDATA -of_objects [ipx::get_bus_interfaces accel_request -of_objects [ipx::current_core]]]
+ipx::add_port_map TLAST [ipx::get_bus_interfaces accel_request -of_objects [ipx::current_core]]
+set_property physical_name accel_request_tlast_v [ipx::get_port_maps TLAST -of_objects [ipx::get_bus_interfaces accel_request -of_objects [ipx::current_core]]]
+ipx::add_port_map TVALID [ipx::get_bus_interfaces accel_request -of_objects [ipx::current_core]]
+set_property physical_name accel_request_tvalid_v [ipx::get_port_maps TVALID -of_objects [ipx::get_bus_interfaces accel_request -of_objects [ipx::current_core]]]
+ipx::add_port_map TKEEP [ipx::get_bus_interfaces accel_request -of_objects [ipx::current_core]]
+set_property physical_name accel_request_tkeep_v [ipx::get_port_maps TKEEP -of_objects [ipx::get_bus_interfaces accel_request -of_objects [ipx::current_core]]]
+ipx::add_port_map TREADY [ipx::get_bus_interfaces accel_request -of_objects [ipx::current_core]]
+set_property physical_name accel_request_tready [ipx::get_port_maps TREADY -of_objects [ipx::get_bus_interfaces accel_request -of_objects [ipx::current_core]]]
+ipx::infer_bus_interface {accel_msgIn_tdata_v accel_msgIn_tkeep_v accel_msgIn_tlast_v accel_msgIn_tready accel_msgIn_tvalid_v} xilinx.com:interface:axis_rtl:1.0 [ipx::current_core]
+ipx::infer_bus_interface {accel_dataIn_tdata_v accel_dataIn_tkeep_v accel_dataIn_tlast_v accel_dataIn_tready accel_dataIn_tvalid_v} xilinx.com:interface:axis_rtl:1.0 [ipx::current_core]
+set_property name MIO [ipx::get_bus_interfaces video_frame_sync_1 -of_objects [ipx::current_core]]
+ipx::add_port_map TREADY [ipx::get_bus_interfaces accel_msgOut -of_objects [ipx::current_core]]
+set_property physical_name accel_msgOut_tready_v [ipx::get_port_maps TREADY -of_objects [ipx::get_bus_interfaces accel_msgOut -of_objects [ipx::current_core]]]
+ipx::add_port_map TREADY [ipx::get_bus_interfaces accel_dataOut -of_objects [ipx::current_core]]
+set_property physical_name accel_dataOut_tready_v [ipx::get_port_maps TREADY -of_objects [ipx::get_bus_interfaces accel_dataOut -of_objects [ipx::current_core]]]
+ipx::add_port_map TREADY [ipx::get_bus_interfaces accel_response -of_objects [ipx::current_core]]
+set_property physical_name accel_response_tready_v [ipx::get_port_maps TREADY -of_objects [ipx::get_bus_interfaces accel_response -of_objects [ipx::current_core]]]
+set_property core_revision 3 [ipx::current_core]
+ipx::create_xgui_files [ipx::current_core]
+ipx::update_checksums [ipx::current_core]
+ipx::save_core [ipx::current_core]
+set_property  ip_repo_paths  /home/jamey/connectal.bisect/tests/nvme_strstr/miniitx100 [current_project]
+update_ip_catalog

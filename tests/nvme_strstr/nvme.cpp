@@ -69,6 +69,9 @@ public:
       sem_post(&sem);
     }
 
+  virtual void msgToSoftware ( const uint32_t msg ) {
+    fprintf(stderr, "%s:%d msg=%x\n", __FUNCTION__, __LINE__, msg);
+  }
     void wait() {
 	sem_wait(&sem);
     }
@@ -249,6 +252,8 @@ Nvme::Nvme()
 
 void Nvme::setup()
 {
+  requestProxy.msgFromSoftware(22);
+
     driverRequest.setup();
     driverIndication->wait();
 

@@ -34,4 +34,6 @@ CONNECTALFLAGS += --bsvpath=../spikehw
 CONNECTALFLAGS += --xci=cores/$(BOARD)/axi_pcie_rp/axi_pcie_rp.xci
 CONNECTALFLAGS += --implconstraint=nvme.xdc
 
+CONNECTALFLAGS += -DNVME_ACCELERATOR_INTERFACE=1
+
 include $(CONNECTALDIR)/Makefile.connectal
