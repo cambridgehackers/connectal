@@ -206,6 +206,24 @@ void memserverWrite(Nvme *nvme)
     nvme->write32(0x02200000 + 0x41000 + 0x20, byteEnable|(((unsigned long)burstLen)<<8));
 }
 
+void Nvme::status() {
+    driverRequest.status();
+    driverIndication.wait();
+}
+
+void Nvme::transferStats()
+{
+    uint32_t cycles = driverIndication.cycles;
+    uint32_t requests = driverIndication.requests;
+    fprintf(stderr, "transfer stats: requests=%d cycles=%d average cycles/request=%5.2f\n",
+	    requests, cycles, (double)cycles/(double)requests);
+}
+
+void Nvme::dumpTrace()
+{
+    trace.dumpTrace();
+}
+
 int Nvme::adminCommand(nvme_admin_cmd *cmd, nvme_completion *completion)
 {
     nvme_admin_cmd *requests = (nvme_admin_cmd *)adminSubmissionQueue.buffer();

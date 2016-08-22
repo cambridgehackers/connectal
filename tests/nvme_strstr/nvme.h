@@ -288,19 +288,9 @@ public:
 
     int adminCommand(nvme_admin_cmd *cmd, nvme_completion *completion);
     int ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue=1, int dotrace=0);
-    void status() {
-	driverRequest.status();
-	driverIndication.wait();
-    }
-    void transferStats() {
-	uint32_t cycles = driverIndication.cycles;
-	uint32_t requests = driverIndication.requests;
-	fprintf(stderr, "transfer stats: requests=%d cycles=%d average cycles/request=%5.2f\n",
-		requests, cycles, (double)cycles/(double)requests);
-    }
-    void dumpTrace() {
-	trace.dumpTrace();
-    }
+    void status();
+    void transferStats();
+    void dumpTrace();
 };
 
 enum FeatureId {
