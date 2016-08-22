@@ -321,8 +321,9 @@ void Nvme::setup()
     write32(0x14, 0x00460001);
 }
 
-void memserverWrite(Nvme *nvme)
+void Nvme::memserverWrite()
 {
+    Nvme *nvme = this;
     // identify portals
     int numTiles = nvme->read32(0x02200000 + 0x08);
     int numPortals = nvme->read32(0x02200000 + 0x14);
@@ -517,8 +518,9 @@ int Nvme::ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue, in
     return status ? sc : -1;
 }
 
-void identify(Nvme *nvme)
+void Nvme::identify()
 {
+    Nvme *nvme = this;
     fprintf(stderr, "sizeof(nvmd_id_cmd)=%ld\n", (long)sizeof(nvme_admin_cmd));
     // write an identify command
     nvme_completion completion;
@@ -564,8 +566,9 @@ void identify(Nvme *nvme)
     }
 }
 
-void getFeatures(Nvme *nvme, FeatureId featureId)
+void Nvme::getFeatures(FeatureId featureId)
 {
+    Nvme *nvme = this;
     fprintf(stderr, "sizeof(nvmd_id_cmd)=%ld\n", (long)sizeof(nvme_admin_cmd));
     nvme_completion completion;
     nvme_admin_cmd buffer;
@@ -587,8 +590,10 @@ void getFeatures(Nvme *nvme, FeatureId featureId)
     }
 }
 
-void allocIOQueues(Nvme *nvme, int entry)
+void Nvme::allocIOQueues(int entry)
 {
+    Nvme *nvme = this;
+
     nvme_completion completion;
     nvme_admin_cmd buffer;
     nvme_admin_cmd *cmd = &buffer;
@@ -638,8 +643,9 @@ void allocIOQueues(Nvme *nvme, int entry)
 
 }
 
-int doIO(Nvme *nvme, nvme_io_opcode opcode, int startBlock, int numBlocks, int queue, int dotrace)
+int Nvme::doIO(nvme_io_opcode opcode, int startBlock, int numBlocks, int queue, int dotrace)
 {
+    Nvme *nvme = this;
     int blocksPerPage = 4096 / 512;
     int transferBufferId = (queue == 1) ? nvme->transferBufferRef : 2;
     uint32_t bramBuffer = (2 << 24) + 0x2000;

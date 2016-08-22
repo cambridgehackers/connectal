@@ -88,9 +88,9 @@ int main(int argc, char * const *argv)
     }
 
     if (doidentify)
-	identify(&nvme);
-    getFeatures(&nvme);
-    allocIOQueues(&nvme, 0);
+	nvme.identify();
+    nvme.getFeatures();
+    nvme.allocIOQueues(0);
 
     fprintf(stderr, "CSTS %08x\n", nvme.read32( 0x1c));
     int startBlock = 100000; // base and extent of test file in SSD
@@ -129,7 +129,7 @@ int main(int argc, char * const *argv)
 		    buffer[i] = i;
 	    }
 	}
-	int sc = doIO(&nvme, opcode, startBlock, blocksPerRequest, (opcode == nvme_read ? 2 : 1), dotrace);
+	int sc = nvme.doIO(opcode, startBlock, blocksPerRequest, (opcode == nvme_read ? 2 : 1), dotrace);
 	nvme.status();
 	if (sc != 0)
 	    break;
