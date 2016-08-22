@@ -14,8 +14,8 @@
 class StringSearchResponse : public StringSearchResponseWrapper {
 public:
     virtual void strstrLoc ( const uint32_t pos ) {
-	if (loc != -1)
-	    fprintf(stderr, "string search at character pos=%d\n", po);
+	if (pos != -1)
+	    fprintf(stderr, "string search at character pos=%d\n", pos);
     }
     StringSearchResponse(int id, PortalPoller *poller = 0) : StringSearchResponseWrapper(id, poller) {
     }
