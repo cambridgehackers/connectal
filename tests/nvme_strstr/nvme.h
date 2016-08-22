@@ -91,52 +91,7 @@ struct sgl_data_block_descriptor {
 };
 
 
-class NvmeTrace : public NvmeTraceWrapper {
-  std::multimap<int,std::string> traceValues;
-public:
-    void traceDmaRequest(const DmaChannel chan, const int write, const uint16_t objId, const uint64_t offset, const uint16_t burstLen, const uint8_t tag, const uint32_t timestamp) {
-	char msg[128];
-	snprintf(msg, sizeof(msg), "%08x: traceDmaRequest chan=%d write=%d objId=%d offset=%08lx burstLen=%d tag=%x\n", timestamp, chan, write, objId, (long)offset, burstLen, tag);
-	traceValues.insert(std::pair<int, std::string>(timestamp, std::string(msg)));
-    }
-    void traceDmaData ( const DmaChannel chan, const int write, const bsvvector_Luint32_t_L4 data, const int last, const uint8_t tag, const uint32_t timestamp ) {
-	char msg[128];
-	char datastr[128];
-	int offset = 0;
-	for (int i = 0; i < PcieDataBusWidth/32; i++)
-	    offset += snprintf(datastr+offset, sizeof(datastr)-offset-1, " %08x", data[i]);
-
-	snprintf(msg, sizeof(msg), "%08x: traceDmaData chan=%d write=%d data=%s last=%d tag=%x\n",
-		timestamp, chan, write, datastr, last, tag);
-	traceValues.insert(std::pair<int, std::string>(timestamp, std::string(msg)));
-    }
-    virtual void traceDmaDone ( const DmaChannel chan, const uint8_t tag, const uint32_t timestamp ) {
-	char msg[128];
-	snprintf(msg, sizeof(msg), "%08x: traceDmaDone chan=%d tag=%x\n", timestamp, chan, tag);
-	traceValues.insert(std::pair<int, std::string>(timestamp, std::string(msg)));
-    }
-    void traceData ( const bsvvector_Luint32_t_L4 data, const int last, const uint8_t tag, const uint32_t timestamp ) {
-	char datastr[128];
-	int offset = 0;
-	for (int i = 0; i < PcieDataBusWidth/32; i++)
-	    offset += snprintf(datastr+offset, sizeof(datastr)-offset-1, " %08x", data[i]);
-	char msg[128];
-	snprintf(msg, sizeof(msg), "traceData data=%s last=%d tag=%x\n", datastr, last, tag);
-	traceValues.insert(std::pair<int,std::string>(timestamp, std::string(msg)));
-    }
-
-    void dumpTrace() {
-	int prev = 0;
-	for (auto it=traceValues.begin(); it!=traceValues.end(); ++it) {
-	    fprintf(stderr, "%08d %4d %s", it->first, it->first - prev, it->second.c_str());
-	    prev = it->first;
-	}
-	traceValues.clear();
-    }
-
-    NvmeTrace(int id, PortalPoller *poller = 0) : NvmeTraceWrapper(id, poller) {
-    }
-};
+class NvmeTrace;
 
 class NvmeIndication : public NvmeIndicationWrapper {
     sem_t sem;
@@ -250,7 +205,7 @@ class Nvme {
     NvmeIndication  indication;
     NvmeDriverRequestProxy driverRequest;
     NvmeDriverIndication  driverIndication;
-    NvmeTrace       trace;
+    NvmeTrace       *trace;
     MemServerPortalRequestProxy bram;
     MemServerPortalIndication   bramIndication;
     int adminRequestNumber;
