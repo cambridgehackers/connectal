@@ -71,6 +71,6 @@ void DmaBuffer::cacheInvalidate(int size, int flush)
       portalCacheFlush(fd, buf, size, flush);
     }
 #else
-    fprintf(stderr, "cacheInvalidate skipped due to use of ACP\n");
+    //fprintf(stderr, "cacheInvalidate skipped due to use of ACP\n");
 #endif
 }
