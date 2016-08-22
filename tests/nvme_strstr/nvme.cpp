@@ -54,6 +54,45 @@ void Nvme::bramWrite(uint32_t addr, uint64_t data)
     //bramIndication.wait();
 }
 
+Nvme::Nvme()
+    : requestProxy(IfcNames_NvmeRequestS2H)
+    , indication(IfcNames_NvmeIndicationH2S)
+    , driverRequest(IfcNames_NvmeDriverRequestS2H)
+    , driverIndication(IfcNames_NvmeDriverIndicationH2S)
+    , trace(IfcNames_NvmeTraceH2S)
+    , bram(IfcNames_MemServerPortalRequestS2H)
+    , bramIndication(IfcNames_MemServerPortalIndicationH2S)
+    , adminRequestNumber(0)
+    , verbose(0)
+    , dummy(4096)
+    , transferBuffer(10*4096)
+    , adminSubmissionQueue(4096)
+    , adminCompletionQueue(4096)
+    , ioSubmissionQueue(ioQueueSize)
+    , ioCompletionQueue(ioQueueSize)
+    , needleBuffer(8192)
+    , mpNextBuffer(8192)
+{
+	
+    memset(ioRequestNumber, 0, sizeof(ioRequestNumber));
+
+    dummy.reference();
+    transferBufferRef = transferBuffer.reference();
+    adminSubmissionQueueRef = adminSubmissionQueue.reference();
+    adminCompletionQueueRef = adminCompletionQueue.reference();
+    if (verbose) fprintf(stderr, "adminSubmissionQueue %d\n", adminSubmissionQueue.reference());
+    if (verbose) fprintf(stderr, "adminCompletionQueue %d\n", adminCompletionQueue.reference());
+    ioSubmissionQueueRef = ioSubmissionQueue.reference();
+    ioCompletionQueueRef = ioCompletionQueue.reference();
+    needleRef = needleBuffer.reference();
+    mpNextRef = mpNextBuffer.reference();
+    if (verbose) fprintf(stderr, "ioSubmissionQueue %d\n", ioSubmissionQueue.reference());
+    if (verbose) fprintf(stderr, "ioCompletionQueue %d\n", ioCompletionQueue.reference());
+    driverRequest.status();
+    driverIndication.wait();
+    driverRequest.trace(0);
+}
+
 void Nvme::setup()
 {
     driverRequest.setup();
