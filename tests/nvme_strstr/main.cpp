@@ -14,7 +14,8 @@
 class StringSearchResponse : public StringSearchResponseWrapper {
 public:
     virtual void strstrLoc ( const uint32_t loc ) {
-	fprintf(stderr, "strstr loc loc=%d\n", loc);
+	if (loc != -1)
+	    fprintf(stderr, "strstr loc loc=%d\n", loc);
     }
     StringSearchResponse(int id, PortalPoller *poller = 0) : StringSearchResponseWrapper(id, poller) {
     }
@@ -136,7 +137,7 @@ int main(int argc, char * const *argv)
     }
 
     nvme.dumpTrace();
-    nvme.transferStats();
+    //nvme.transferStats();
     fprintf(stderr, "CSTS %08x\n", nvme.read32( 0x1c));
 
     return 0;
