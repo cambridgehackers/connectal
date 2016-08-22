@@ -92,122 +92,19 @@ struct sgl_data_block_descriptor {
 
 
 class NvmeTrace;
+class NvmeIndication;
+class NvmeDriverIndication;
+class MemServerPortalIndication;
 
-class NvmeIndication : public NvmeIndicationWrapper {
-    sem_t sem;
-    
-public:
-    uint64_t value;
-    uint32_t requests;
-    uint32_t cycles;
-  virtual void msgIn ( const uint32_t value ) {
-  }
-
-  virtual void transferCompleted ( const uint16_t requestId, const uint64_t status, const uint32_t cycles ) {
-      fprintf(stderr, "%s:%d requestId=%08x status=%08llx cycles=%d\n", __FUNCTION__, __LINE__, requestId, (long long)status, cycles);
-      value = status;
-      this->requests++;
-      this->cycles += cycles;
-      sem_post(&sem);
-    }
-
-    void wait() {
-	sem_wait(&sem);
-    }
-    NvmeIndication(int id, PortalPoller *poller = 0) : NvmeIndicationWrapper(id, poller), value(0), requests(0), cycles(0) {
-	sem_init(&sem, 0, 0);
-    }
-  
-};
-
-class NvmeDriverIndication : public NvmeDriverIndicationWrapper {
-    sem_t sem, wsem;
-    
-public:
-    uint64_t value;
-    uint32_t requests;
-    uint32_t cycles;
-    virtual void setupDone (  ) {
-	fprintf(stderr, "%s:%d\n", __FUNCTION__, __LINE__);
-	sem_post(&sem);
-    }
-
-    virtual void readDone ( const uint64_t data ) {
-	//fprintf(stderr, "%s:%d data=%08llx\n", __FUNCTION__, __LINE__, (long long)data);
-	value = data;
-	sem_post(&sem);
-    }
-    virtual void writeDone (  ) {
-	//fprintf(stderr, "%s:%d\n", __FUNCTION__, __LINE__);
-	sem_post(&wsem);
-    }
-    virtual void status ( const uint8_t mmcm_lock, const uint32_t counter ) {
-	fprintf(stderr, "%s:%d mmcm_lock=%d counter=%d\n", __FUNCTION__, __LINE__, mmcm_lock, counter);
-	sem_post(&sem);
-    }	
-    virtual void setupComplete() {
-	fprintf(stderr, "%s\n", __FUNCTION__);
-	sem_post(&sem);
-    }
-    virtual void strstrLoc ( const uint32_t loc ) {
-	fprintf(stderr, "strstr loc loc=%d\n", loc);
-    }
-
-  virtual void transferCompleted ( const uint16_t requestId, const uint64_t status, const uint32_t cycles ) {
-      fprintf(stderr, "%s:%d requestId=%08x status=%08llx cycles=%d\n", __FUNCTION__, __LINE__, requestId, (long long)status, cycles);
-      value = status;
-      this->requests++;
-      this->cycles += cycles;
-      sem_post(&sem);
-    }
-
-    void wait() {
-	sem_wait(&sem);
-    }
-    void waitwrite() {
-	sem_wait(&wsem);
-    }
-
-    NvmeDriverIndication(int id, PortalPoller *poller = 0) : NvmeDriverIndicationWrapper(id, poller), value(0), requests(0), cycles(0) {
-	sem_init(&sem, 0, 0);
-	sem_init(&wsem, 0, 0);
-    }
-  
-};
-
-class MemServerPortalIndication : public MemServerPortalIndicationWrapper {
-    sem_t sem;
-    sem_t wsem;
-public:
-    uint64_t value;
-    MemServerPortalIndication(int id, PortalPoller *poller = 0)
-	: MemServerPortalIndicationWrapper(id, poller) {
-	sem_init(&sem, 0, 0);
-	sem_init(&wsem, 0, 0);
-    }
-    virtual void readDone ( const uint64_t data ) {
-	value = data;
-	sem_post(&sem);
-    }
-    virtual void writeDone (  ) {
-	sem_post(&wsem);
-    }
-    void wait() {
-	sem_wait(&sem);
-    }
-    void waitw() {
-	sem_wait(&sem);
-    }
-};
 
 class Nvme {
     NvmeRequestProxy requestProxy;
-    NvmeIndication  indication;
+    NvmeIndication  *indication;
     NvmeDriverRequestProxy driverRequest;
-    NvmeDriverIndication  driverIndication;
+    NvmeDriverIndication  *driverIndication;
     NvmeTrace       *trace;
     MemServerPortalRequestProxy bram;
-    MemServerPortalIndication   bramIndication;
+    MemServerPortalIndication   *bramIndication;
     int adminRequestNumber;
     int ioRequestNumber[3]; // per queue, io queue 0 unused
     int verbose;
