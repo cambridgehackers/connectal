@@ -1,7 +1,11 @@
 #include <stdio.h>
 //#include "jsoncpp/json/json.h"
 #include <map>
+#include <errno.h>
+#include <fcntl.h>
 #include <string>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "nvme.h"
@@ -25,6 +29,8 @@ int main(int argc, char * const *argv)
     int flags, opt;
     const char *filename;
     const char *needle = "needle";
+    int source_fd = -1;
+
     int doidentify;
     int dosearch = 0;
     int dotrace = 0;
@@ -45,6 +51,18 @@ int main(int argc, char * const *argv)
 	    filename = optarg;
 	    dowrite = 1;
 	    break;
+	}
+    }
+
+    if (dowrite) {
+	struct stat statbuf;
+	int rc = stat(filename, &statbuf);
+	if (rc < 0) {
+	    fprintf(stderr, "%s:%d File %s does not exist %d:%s\n", __FILE__, __LINE__, filename, errno, strerror(errno));
+	    char pwd[128];
+	    getcwd(pwd, sizeof(pwd));
+	    fprintf(stderr, "cwd = %s\n", pwd);
+	    return rc;
 	}
     }
 
@@ -74,7 +92,7 @@ int main(int argc, char * const *argv)
     allocIOQueues(&nvme, 0);
 
     fprintf(stderr, "CSTS %08x\n", nvme.read32( 0x1c));
-    int startBlock = 34816; // base and extent of test file in SSD
+    int startBlock = 100000; // base and extent of test file in SSD
     int blocksPerRequest = 8; //12*BlocksPerRequest;
     int numBlocks = 1*blocksPerRequest; // 55; //8177;
     if (dosearch) {
@@ -82,12 +100,33 @@ int main(int argc, char * const *argv)
     } else {
       // if search is not running, then data read below will be discarded
     }
+    if (dowrite) {
+	struct stat statbuf;
+	int rc = stat(filename, &statbuf);
+	if (rc < 0) {
+	    fprintf(stderr, "%s:%d File %s does not exist %d:%s\n", __FILE__, __LINE__, filename, errno, strerror(errno));
+	    char pwd[128];
+	    getcwd(pwd, sizeof(pwd));
+	    fprintf(stderr, "cwd = %s\n", pwd);
+	    return rc;
+	}
+	numBlocks = statbuf.st_blocks;
+	numBlocks -= (numBlocks % blocksPerRequest);
+	fprintf(stderr, "Writing %d blocks from file %s to flash at block %d\n", numBlocks, filename, startBlock);
+	source_fd = open(filename, O_RDONLY);
+    }
+
     for (int block = 0; block < numBlocks; block += blocksPerRequest) {
 	nvme_io_opcode opcode = (dowrite) ? nvme_write : nvme_read;
+	fprintf(stderr, "starting transfer dowrite=%d opcode=%d\n", dowrite, opcode);
 	if (opcode == nvme_write) {
-	    int *buffer = (int *)nvme.transferBuffer.buffer();
-	    for (int i = 0; i < numBlocks*512/4; i ++)
-		buffer[i] = i;
+	    if (filename) {
+		read(source_fd, (char *)nvme.transferBuffer.buffer(), 512*blocksPerRequest);
+	    } else {
+		    int *buffer = (int *)nvme.transferBuffer.buffer();
+		for (int i = 0; i < numBlocks*512/4; i ++)
+		    buffer[i] = i;
+	    }
 	}
 	int sc = doIO(&nvme, opcode, startBlock, blocksPerRequest, (opcode == nvme_read ? 2 : 1), dotrace);
 	nvme.status();
