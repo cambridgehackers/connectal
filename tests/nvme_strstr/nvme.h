@@ -324,7 +324,7 @@ public:
     void bramWrite(uint32_t addr, uint64_t data);
 
     int adminCommand(nvme_admin_cmd *cmd, nvme_completion *completion);
-    int ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue=1);
+    int ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue=1, int dotrace=0);
     void status() {
 	driverRequest.status();
 	driverIndication.wait();
@@ -347,5 +347,5 @@ enum FeatureId {
 void identify(Nvme *nvme);
 void getFeatures(Nvme *nvme, FeatureId featureId=FID_NumberOfQueues);
 void allocIOQueues(Nvme *nvme, int entry=0);
-int doIO(Nvme *nvme, nvme_io_opcode opcode, int startBlock, int numBlocks, int queue=1);
+int doIO(Nvme *nvme, nvme_io_opcode opcode, int startBlock, int numBlocks, int queue=1, int dotrace=0);
 
