@@ -90,12 +90,14 @@ struct sgl_data_block_descriptor {
     uint8_t sglid;
 };
 
+enum FeatureId {
+    FID_NumberOfQueues = 7
+};
 
 class NvmeTrace;
 class NvmeIndication;
 class NvmeDriverIndication;
 class MemServerPortalIndication;
-
 
 class Nvme {
     NvmeRequestProxy requestProxy;
@@ -129,6 +131,21 @@ public:
 
     Nvme();
     void setup();
+
+    int adminCommand(nvme_admin_cmd *cmd, nvme_completion *completion);
+    int ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue=1, int dotrace=0);
+    void status();
+    void transferStats();
+    void dumpTrace();
+
+    void identify();
+    void getFeatures(FeatureId featureId=FID_NumberOfQueues);
+    void allocIOQueues(int entry=0);
+
+    int doIO(nvme_io_opcode opcode, int startBlock, int numBlocks, int queue=1, int dotrace=0);
+
+
+    // private:
     uint32_t readCtl(uint32_t addr);
     void writeCtl(uint32_t addr, uint32_t data);
     uint64_t read(uint32_t addr);
@@ -138,19 +155,6 @@ public:
     uint64_t bramRead(uint32_t addr);
     void bramWrite(uint32_t addr, uint64_t data);
 
-    int adminCommand(nvme_admin_cmd *cmd, nvme_completion *completion);
-    int ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue=1, int dotrace=0);
-    void status();
-    void transferStats();
-    void dumpTrace();
+    void memserverWrite();
 };
-
-enum FeatureId {
-    FID_NumberOfQueues = 7
-};
-
-void identify(Nvme *nvme);
-void getFeatures(Nvme *nvme, FeatureId featureId=FID_NumberOfQueues);
-void allocIOQueues(Nvme *nvme, int entry=0);
-int doIO(Nvme *nvme, nvme_io_opcode opcode, int startBlock, int numBlocks, int queue=1, int dotrace=0);
 
