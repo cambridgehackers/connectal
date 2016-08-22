@@ -200,7 +200,7 @@ int Nvme::adminCommand(nvme_admin_cmd *cmd, nvme_completion *completion)
     return sc;
 }
 
-int Nvme::ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue)
+int Nvme::ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue, int dotrace)
 {
     nvme_io_cmd *requests = (nvme_io_cmd *)ioSubmissionQueue.buffer();
     int requestNumber        = ioRequestNumber[queue] % (Nvme::ioQueueSize / sizeof(nvme_io_cmd));
@@ -215,7 +215,7 @@ int Nvme::ioCommand(nvme_io_cmd *cmd, nvme_completion *completion, int queue)
 
     cmd->cid = ioRequestNumber[queue]++;
 
-    driverRequest.trace(1);
+    driverRequest.trace(dotrace);
 
     if (queue == 2) {
 	fprintf(stderr, "%s:%d starting transfer opcode=%d\n", __FUNCTION__, __LINE__, cmd->opcode);
@@ -427,7 +427,7 @@ void allocIOQueues(Nvme *nvme, int entry)
 
 }
 
-int doIO(Nvme *nvme, nvme_io_opcode opcode, int startBlock, int numBlocks, int queue)
+int doIO(Nvme *nvme, nvme_io_opcode opcode, int startBlock, int numBlocks, int queue, int dotrace)
 {
     int blocksPerPage = 4096 / 512;
     int transferBufferId = (queue == 1) ? nvme->transferBufferRef : 2;
@@ -474,7 +474,7 @@ int doIO(Nvme *nvme, nvme_io_opcode opcode, int startBlock, int numBlocks, int q
 
     fprintf(stderr, "IO cmd opcode=%02x flags=%02x cid=%04x %08x\n", cmd.opcode, cmd.flags, cmd.cid, *(int *)&cmd);
 
-    int sc = nvme->ioCommand(&cmd, &completion, queue);
+    int sc = nvme->ioCommand(&cmd, &completion, queue, dotrace);
     if (sc) {
 	int *buffer = (int *)nvme->transferBuffer.buffer();
 	for (int i = 0; i < numBlocks*512/4; i++) {
