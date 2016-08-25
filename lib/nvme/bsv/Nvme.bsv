@@ -313,8 +313,13 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
    FIFOF#(NvmeIoCommand) ioCommandFifo <- mkFIFOF();
    FIFOF#(NvmeIoCommand) ioSegmentFifo <- mkFIFOF(); // max request size 32
 `ifdef NVME_ACCELERATOR_INTERFACE
-   FIFOF#(NvmeIoResponse) ioResponseFifo <- mkFIFOF();
+   FIFOF#(NvmeIoCommand) ioCommandFifoAccel <- mkFIFOF();
+   FIFOF#(NvmeIoResponse) ioResponseFifoAccel <- mkFIFOF();
 `endif
+
+   FIFOF#(Bit#(1)) ioCommandSourceFifo <- mkFIFOF();
+   FIFOF#(Bit#(1)) ioSegmentSourceFifo <- mkFIFOF();
+   FIFOF#(Bit#(1)) ioResponseSourceFifo <- mkSizedFIFOF(8);
 
    Reg#(Bit#(32)) cycles <- mkReg(0);
    rule rl_cycles;
@@ -331,13 +336,30 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
    let segmenterFsm <- mkAutoFSM(seq
       while (True) seq
 	 action
-	    let command <- toGet(ioCommandFifo).get();
-	    ioIterator.start(IteratorConfig {xbase: 0,
-					     xlimit: command.numBlocks,
-					     xstep: `BlocksPerRequest},
-			     command);
-	    commandStartProbe <= command.startBlock;
-	    commandNumBlocksProbe <= command.numBlocks;
+	    NvmeIoCommand command = unpack(0);
+	    Bit#(1) commandSource = 0;
+	    Bool commandValid = False;
+	    if (ioCommandFifo.notEmpty) begin
+	       command <- toGet(ioCommandFifo).get();
+	       commandValid = True;
+	       commandSource = 0;
+	    end
+`ifdef NVME_ACCELERATOR_INTERFACE
+	    else if (ioCommandFifoAccel.notEmpty) begin
+	       command <- toGet(ioCommandFifoAccel).get();
+	       commandValid = True;
+	       commandSource = 1;
+	    end
+`endif
+	    if (commandValid) begin
+	       ioIterator.start(IteratorConfig {xbase: 0,
+						xlimit: command.numBlocks,
+						xstep: `BlocksPerRequest},
+				command);
+	       commandStartProbe <= command.startBlock;
+	       commandNumBlocksProbe <= command.numBlocks;
+	       ioCommandSourceFifo.enq(commandSource);
+	    end
 	 endaction
          while (ioIterator.ivpipe.notEmpty()) seq
 	    action
@@ -345,12 +367,14 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
 	       let command = v.ctxt;
 	       if (v.last) begin
 		  command.numBlocks = command.numBlocks - v.value; //fixme
+		  ioCommandSourceFifo.deq();
 	       end
 	       else begin
 		  command.numBlocks = `BlocksPerRequest;
 	       end
 	       command.startBlock = command.startBlock + extend(v.value);
 	       ioSegmentFifo.enq(command);
+	       ioSegmentSourceFifo.enq(ioCommandSourceFifo.first);
 
 	       segmentStartProbe <= truncate(command.startBlock) + v.value;
 	       segmentNumBlocksProbe <= command.numBlocks;
@@ -370,6 +394,7 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
       while (True) seq
 	 action
 	    let req <- toGet(ioSegmentFifo).get();
+	    let source <- toGet(ioSegmentSourceFifo).get();
 	    Vector#(16,Bit#(32)) command = unpack(0);
 	    command[0] = { requestId, req.flags, req.opcode };
 	    command[1] = 1; // nsid
@@ -385,6 +410,7 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
 	    ioCommand <= command;
 
 	    requestSlotAvailable <= False;
+	    ioResponseSourceFifo.enq(source);
 	 endaction
 
 	 while (!requestSlotAvailable) seq // wait for open request slot
@@ -433,10 +459,13 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
 	       if (response[16+(3*32 % valueOf(PcieDataBusWidth))] == phase) begin
 		  requestCompleted <= response;
 		  // if status field written by NVME
+		  let source <- toGet(ioResponseSourceFifo).get();
 `ifdef NVME_ACCELERATOR_INTERFACE
-		  ioResponseFifo.enq(NvmeIoResponse {});
+		  if (source == 1)
+		     ioResponseFifoAccel.enq(NvmeIoResponse {requestId: responseId, statusCode: 'h5a5a, statusCodeType: 'h5a5a });
+		  else
 `else
-		  nvmeInd.transferCompleted(responseId, truncate(response), cycles - requestStartTimestamp);
+		     nvmeInd.transferCompleted(responseId, truncate(response), cycles - requestStartTimestamp);
 `endif
 		  requestInProgress <= False;
 	       end
@@ -463,8 +492,8 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
    AxiStreamMaster#(32)               msgFromSoftwareStream <- mkAxiStream(msgFromSoftwareFifo);
    AxiStreamMaster#(PcieDataBusWidth) dataFromNvmeStream <- mkAxiStream(splitter.dataFromNvme);
    AxiStreamSlave#(PcieDataBusWidth)  dataToNvmeStream   <- mkAxiStream(splitter.dataToNvme);
-   AxiStreamSlave#(SizeOf#(NvmeIoCommand))     requestStream      <- mkAxiStream(mapPipeIn(unpack,toPipeIn(ioCommandFifo)));
-   AxiStreamMaster#(SizeOf#(NvmeIoResponse))   responseStream     <- mkAxiStream(mapPipe(pack,toPipeOut(ioResponseFifo)));
+   AxiStreamSlave#(SizeOf#(NvmeIoCommand))     requestStream      <- mkAxiStream(mapPipeIn(unpack,toPipeIn(ioCommandFifoAccel)));
+   AxiStreamMaster#(SizeOf#(NvmeIoResponse))   responseStream     <- mkAxiStream(mapPipe(pack,toPipeOut(ioResponseFifoAccel)));
 
    rule rl_msgToSoftware;
       let msg <- toGet(msgToSoftwareFifo).get();
