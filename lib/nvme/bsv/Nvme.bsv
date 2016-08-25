@@ -458,8 +458,8 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
    let bramMemCnx  <- mkConnection(splitter.bramClient, bramMemA);
 
 `ifdef NVME_ACCELERATOR_INTERFACE
-   FIFOF#(Bit#(32)) msgToSoftwareFifo <- mkFIFOF();
-   FIFOF#(Bit#(32)) msgFromSoftwareFifo <- mkFIFOF();
+   FIFOF#(Bit#(32)) msgToSoftwareFifo <- mkSizedFIFOF(128);
+   FIFOF#(Bit#(32)) msgFromSoftwareFifo <- mkSizedFIFOF(16);
    AxiStreamSlave#(32)                msgToSoftwareStream <- mkAxiStream(msgToSoftwareFifo);
    AxiStreamMaster#(32)               msgFromSoftwareStream <- mkAxiStream(msgFromSoftwareFifo);
    AxiStreamMaster#(PcieDataBusWidth) dataFromNvmeStream <- mkAxiStream(splitter.dataFromNvme);
