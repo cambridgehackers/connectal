@@ -327,7 +327,6 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
    let segmentNumBlocksProbe <- mkProbe();
    let completedRequestProbe <- mkProbe();
 
-   Reg#(NvmeIoCommand) ioCommandReg <- mkReg(unpack(0));
    IteratorWithContext#(Bit#(32),NvmeIoCommand) ioIterator <- mkIteratorWithContext();
    let segmenterFsm <- mkAutoFSM(seq
       while (True) seq
