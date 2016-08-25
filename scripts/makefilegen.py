@@ -393,8 +393,8 @@ if __name__=='__main__':
         'clibs': ' '.join(['-l%s' % l for l in options.clib]),
         'clibfiles': ' '.join(['%s' % l for l in options.clibfiles]),
         'clibdirs': ' '.join([ '-L%s' % os.path.abspath(l) for l in options.clibdir ]),
-        'cdefines': ' '.join([ '-D%s' % d for d in bsvdefines ]),
-        'cdefines2': ' '.join([ '-D%s' % d for d in options.bsvdefine2 ]),
+        'cdefines': '', #' '.join([ '-D%s' % d for d in bsvdefines ]),
+        'cdefines2': '', #' '.join([ '-D%s' % d for d in options.bsvdefine2 ]),
         'cincludes': ' '.join([ '-I%s' % os.path.abspath(i) for i in options.cinclude ]),
         'werr': '-Werror' if not options.nonstrict else '-Wall'
     }
@@ -523,7 +523,7 @@ if __name__=='__main__':
                                    'dut' : dutname.lower(),
                                    'Dut': dutname,
                                    'clibs': ' '.join(['-l%s' % l for l in options.clib]),
-                                   'cdefines': ' '.join([ '-D%s' % d for d in bsvdefines ]),
+                                   'cdefines': '', #' '.join([ '-D%s' % d for d in bsvdefines ]),
                                    'mdefines': '\n'.join(['%s=%s' % (var,val or var) for (var,val) in map(util.splitBinding, bsvdefines)]),
                                    'dump_map': ('export PORTAL_DUMP_MAP=' + options.dump_map + '\n') if options.dump_map else '',
                                    'bscflags': ' '.join(options.bscflags),

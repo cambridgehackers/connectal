@@ -48,6 +48,8 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
 #include <poll.h>
 #endif
 
+#include "ConnectalProjectConfig.h"
+
 extern int simulator_dump_vcd;
 extern const char *simulator_vcd_name;
 extern int noprogram;
