@@ -7,6 +7,8 @@
 #include <sys/utsname.h>
 #include <libgen.h>
 
+#include <ConnectalProjectConfig.h>
+
 #define STR_VALUE_(arg)      #arg
 #define STR_VALUE(arg)      STR_VALUE_(arg)
 
