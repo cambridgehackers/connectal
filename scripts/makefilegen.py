@@ -401,7 +401,7 @@ if __name__=='__main__':
     includelist = ['-I$(DTOP)/jni', '-I$(CONNECTALDIR)', \
                    '-I$(CONNECTALDIR)/cpp', '-I$(CONNECTALDIR)/lib/cpp', \
                    #'%(sourceincludes)s',
-                   '%(cincludes)s', '%(cdefines)s']
+                   '%(cincludes)s']
     substs['toolchain'] = option_info['toolchain'] if 'toolchain' in option_info else ''
     substs['cflags'] = util.escapequotes('%s %s' % ((' '.join(includelist) % substs), ' '.join(options.cflags)))
     substs['cxxflags'] = util.escapequotes('%s %s' % ((' '.join(includelist) % substs), ' '.join(options.cxxflags)))
