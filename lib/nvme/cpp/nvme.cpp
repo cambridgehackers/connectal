@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include "nvme.h"
 
+#include <ConnectalProjectConfig.h> // PcieDataBusWidth
+
 // queue size in create I/O completion/submission queue is specified as a 0 based value
 static const int queueSizeDelta = 1;
 
@@ -252,8 +254,6 @@ Nvme::Nvme()
 
 void Nvme::setup()
 {
-  requestProxy.msgFromSoftware(22);
-
     driverRequest.setup();
     driverIndication->wait();
 
@@ -706,4 +706,3 @@ int Nvme::doIO(nvme_io_opcode opcode, int startBlock, int numBlocks, int queue, 
     }
     return sc;
 }
-
