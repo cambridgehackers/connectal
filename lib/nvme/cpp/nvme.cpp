@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <queue>
 #include "nvme.h"
 
 #include <ConnectalProjectConfig.h> // PcieDataBusWidth
@@ -55,7 +56,11 @@ public:
 
 class NvmeIndication : public NvmeIndicationWrapper {
     sem_t sem;
-    
+    pthread_cond_t cond;
+    pthread_mutex_t mutex;
+    std::queue<int> msgs;
+    std::queue<int> lastmsgs;
+    int waiters;
 public:
     uint64_t value;
     uint32_t requests;
@@ -71,14 +76,43 @@ public:
       sem_post(&sem);
     }
 
-  virtual void msgToSoftware ( const uint32_t msg ) {
-    fprintf(stderr, "%s:%d msg=%x\n", __FUNCTION__, __LINE__, msg);
-  }
+    virtual void msgToSoftware ( const uint32_t msg, uint8_t last ) {
+	fprintf(stderr, "%s:%d msg=%x\n", __FUNCTION__, __LINE__, msg);
+	pthread_mutex_lock(&mutex);
+	msgs.push(msg);
+	lastmsgs.push(last);
+	if (waiters)
+	    pthread_cond_signal(&cond);
+	pthread_mutex_unlock(&mutex);
+    }
+    bool messageToSoftware(uint32_t *msg, bool *last, bool nonBlocking=true) {
+	bool hasMsg = false;
+	pthread_mutex_lock(&mutex);
+	do {
+	    bool hasMsg = !msgs.empty();
+	    if (msgs.size()) {
+		if (*msg)
+		    *msg = msgs.front();
+		if (last)
+		    *last = lastmsgs.front();
+		msgs.pop();
+		lastmsgs.pop();
+	    } else if (!nonBlocking) {
+		waiters++;
+		pthread_cond_wait(&cond, &mutex);
+		waiters--;
+	    }
+	} while (!hasMsg);
+      pthread_mutex_unlock(&mutex);
+      return hasMsg;
+    }
     void wait() {
 	sem_wait(&sem);
     }
-    NvmeIndication(int id, PortalPoller *poller = 0) : NvmeIndicationWrapper(id, poller), value(0), requests(0), cycles(0) {
+    NvmeIndication(int id, PortalPoller *poller = 0) : NvmeIndicationWrapper(id, poller), waiters(0), value(0), requests(0), cycles(0) {
 	sem_init(&sem, 0, 0);
+	pthread_mutex_init(&mutex, 0);
+	pthread_cond_init(&cond, 0);
     }
   
 };
@@ -705,4 +739,14 @@ int Nvme::doIO(nvme_io_opcode opcode, int startBlock, int numBlocks, int queue, 
 	}
     }
     return sc;
+}
+
+void Nvme::messageFromSoftware(uint32_t msg, bool last)
+{
+  requestProxy.msgFromSoftware(msg, last);
+}
+
+bool Nvme::messageToSoftware(uint32_t *msgp, bool *lastp, bool nonBlocking)
+{
+    return indication->messageToSoftware(msgp, lastp, nonBlocking);
 }

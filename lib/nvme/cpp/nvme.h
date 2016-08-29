@@ -144,6 +144,8 @@ public:
 
     int doIO(nvme_io_opcode opcode, int startBlock, int numBlocks, int queue=1, int dotrace=0);
 
+    void messageFromSoftware(uint32_t msg, bool last=false);
+    bool messageToSoftware(uint32_t *msg, bool *last, bool nonBlocking=false);
 
     // private:
     uint32_t readCtl(uint32_t addr);
