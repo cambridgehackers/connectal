@@ -21,7 +21,7 @@ $(IPDIR)/$(BOARD)/axiddr3/axiddr3.xci: $(CONNECTALDIR)/scripts/connectal-synth-a
 	cd $(BOARD); vivado -mode batch -source $(CONNECTALDIR)/scripts/connectal-synth-axiddr3.tcl
 
 ip.%:
-	make gen.$(*)
-	BOARD=$(*) make IPDIR=$(IPDIR) $(IPDIR)/$(*)/axiddr3/axiddr3.xci
+	make BOARD=$(*) gen.$(*)
+	make BOARD=$(*) IPDIR=$(IPDIR) $(IPDIR)/$(*)/axiddr3/axiddr3.xci
 
 include $(CONNECTALDIR)/Makefile.connectal
