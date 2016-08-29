@@ -331,6 +331,10 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
    let segmentStartProbe <- mkProbe();
    let segmentNumBlocksProbe <- mkProbe();
    let completedRequestProbe <- mkProbe();
+   let commandSourceProbe <- mkProbe();
+   let segmentSourceProbe <- mkProbe();
+   let requestSourceProbe <- mkProbe();
+   let responseSourceProbe <- mkProbe();
 
    IteratorWithContext#(Bit#(32),NvmeIoCommand) ioIterator <- mkIteratorWithContext();
    let segmenterFsm <- mkAutoFSM(seq
@@ -359,6 +363,7 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
 	       commandStartProbe <= command.startBlock;
 	       commandNumBlocksProbe <= command.numBlocks;
 	       ioCommandSourceFifo.enq(commandSource);
+	       commandSourceProbe <= commandSource;
 	    end
 	 endaction
          while (ioIterator.ivpipe.notEmpty()) seq
@@ -375,6 +380,7 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
 	       command.startBlock = command.startBlock + extend(v.value);
 	       ioSegmentFifo.enq(command);
 	       ioSegmentSourceFifo.enq(ioCommandSourceFifo.first);
+	       segmentSourceProbe <= ioCommandSourceFifo.first;
 
 	       segmentStartProbe <= truncate(command.startBlock) + v.value;
 	       segmentNumBlocksProbe <= command.numBlocks;
@@ -395,6 +401,7 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
 	 action
 	    let req <- toGet(ioSegmentFifo).get();
 	    let source <- toGet(ioSegmentSourceFifo).get();
+	    requestSourceProbe <= source;
 	    Vector#(16,Bit#(32)) command = unpack(0);
 	    command[0] = { requestId, req.flags, req.opcode };
 	    command[1] = 1; // nsid
@@ -460,13 +467,13 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
 		  requestCompleted <= response;
 		  // if status field written by NVME
 		  let source <- toGet(ioResponseSourceFifo).get();
+		  responseSourceProbe <= source;
 `ifdef NVME_ACCELERATOR_INTERFACE
 		  if (source == 1)
 		     ioResponseFifoAccel.enq(NvmeIoResponse {requestId: responseId, statusCode: 'h5a5a, statusCodeType: 'h5a5a });
 		  else
-`else
-		     nvmeInd.transferCompleted(responseId, truncate(response), cycles - requestStartTimestamp);
 `endif
+		     nvmeInd.transferCompleted(responseId, truncate(response), cycles - requestStartTimestamp);
 		  requestInProgress <= False;
 	       end
 	    endaction
@@ -486,8 +493,8 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
    let bramMemCnx  <- mkConnection(splitter.bramClient, bramMemA);
 
 `ifdef NVME_ACCELERATOR_INTERFACE
-   FIFOF#(Bit#(32)) msgToSoftwareFifo <- mkSizedFIFOF(128);
-   FIFOF#(Bit#(32)) msgFromSoftwareFifo <- mkSizedFIFOF(16);
+   FIFOF#(MemData#(32)) msgToSoftwareFifo <- mkSizedFIFOF(128);
+   FIFOF#(MemData#(32)) msgFromSoftwareFifo <- mkSizedFIFOF(16);
    AxiStreamSlave#(32)                msgToSoftwareStream <- mkAxiStream(msgToSoftwareFifo);
    AxiStreamMaster#(32)               msgFromSoftwareStream <- mkAxiStream(msgFromSoftwareFifo);
    AxiStreamMaster#(PcieDataBusWidth) dataFromNvmeStream <- mkAxiStream(splitter.dataFromNvme);
@@ -497,7 +504,7 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
 
    rule rl_msgToSoftware;
       let msg <- toGet(msgToSoftwareFifo).get();
-      nvmeInd.msgToSoftware(msg);
+      nvmeInd.msgToSoftware(msg.data, pack(msg.last));
    endrule
 `endif
 
@@ -545,9 +552,9 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
       method Action startTransfer(Bit#(8) opcode, Bit#(8) flags, Bit#(16) requestId, Bit#(64) startBlock, Bit#(32) numBlocks, Bit#(32) dsm);
 	 ioCommandFifo.enq(NvmeIoCommand{opcode: opcode, flags: flags, requestId: requestId, startBlock: startBlock, numBlocks: numBlocks, dsm: dsm });
       endmethod
-      method Action msgFromSoftware(Bit#(32) value);
+      method Action msgFromSoftware(Bit#(32) value, Bit#(1) last);
 `ifdef NVME_ACCELERATOR_INTERFACE
-	 msgFromSoftwareFifo.enq(value);
+	 msgFromSoftwareFifo.enq(MemData { data:value, last: unpack(last), tag: 0 });
 `endif
       endmethod
    endinterface

@@ -55,12 +55,12 @@ typedef enum {
 
 interface NvmeRequest;
    method Action startTransfer(Bit#(8) opcode, Bit#(8) flags, Bit#(16) requestId, Bit#(64) startBlock, Bit#(32) numBlocks, Bit#(32) dsm);
-   method Action msgFromSoftware(Bit#(32) value);
+   method Action msgFromSoftware(Bit#(32) value, Bit#(1) last);
 endinterface
 
 interface NvmeIndication;
    method Action transferCompleted(Bit#(16) requestId, Bit#(64) sc, Bit#(32) cycles);
-   method Action msgToSoftware(Bit#(32) value);
+   method Action msgToSoftware(Bit#(32) value, Bit#(1) last);
 endinterface
 
 // internal interfaces
