@@ -11,3 +11,8 @@ set_max_delay -to   [get_clocks {clkgen_pll_CLKOUT1}] -from [get_clocks {userclk
 set_max_delay -from [get_clocks {clkgen_pll_CLKOUT2}] -to   [get_clocks {userclk2}] [get_property PERIOD [get_clocks {userclk2}]] -datapath_only
 set_max_delay -to   [get_clocks {clkgen_pll_CLKOUT2}] -from [get_clocks {userclk2}] [get_property PERIOD [get_clocks {userclk2}]]           -datapath_only
 
+set_max_delay -from [get_clocks {userclk2}] -to   [get_clocks {sys_clk}] 4.0 -datapath_only
+set_max_delay -to   [get_clocks {userclk2}] -from [get_clocks {sys_clk}] 4.0 -datapath_only
+
+set_max_delay -from [get_clocks {userclk2}] -to   [get_clocks {clk_pll_i}] 4.0 -datapath_only
+set_max_delay -to   [get_clocks {userclk2}] -from [get_clocks {clk_pll_i}] 4.0 -datapath_only
