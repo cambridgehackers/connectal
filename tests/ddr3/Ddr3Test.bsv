@@ -113,6 +113,7 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
    endrule
 
    rule rl_b;
+      // consume the writeDone
       let b <- toGet(bfifo).get();
       // let's see an indication, but we should be counting how many words were sent
       indication.writeDone(extend(b.id));
@@ -124,7 +125,7 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
       dramWriteLimit <= 1024/fromInteger(valueOf(Ddr3DataWidth));
       re.readServers[0].request.put(MemengineCmd { sglId: sglId,
 						  base: 0,
-						  burstLen: fromInteger(valueOf(TDiv#(Ddr3DataWidth,8))),
+						  burstLen: 128,
 						  len: 1024,
 						  tag: 0
 						  });
@@ -173,10 +174,15 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
       dramReadLimit <= 1024/fromInteger(valueOf(Ddr3DataWidth));
       we.writeServers[0].request.put(MemengineCmd { sglId: sglId,
 						   base: 0,
-						   burstLen: fromInteger(valueOf(TDiv#(Ddr3DataWidth,8))),
+						   burstLen: 128,
 						   len: 1024,
 						   tag: 0
 						   });
+   endrule
+
+   rule rl_read_done;
+      let done <- we.writeServers[0].done.get();
+      indication.readDone(0);
    endrule
 
    interface Ddr3TestRequest request;

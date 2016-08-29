@@ -50,14 +50,25 @@ int main(int argc, const char **argv)
     return -1;
   }
   int srcAlloc = portalAlloc(alloc_sz, 0);
-  //unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
+  int dstAlloc = portalAlloc(alloc_sz, 0);
+  unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
+  unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
+  for (int i = 0; i < 1024/4; i++) {
+      srcBuffer[i] = i;
+      fprintf(stderr, "src dram[%04x]=%08x\n", i*4, srcBuffer[i]);
+  }
   int ref_srcAlloc = dma->reference(srcAlloc);
+  int ref_dstAlloc = dma->reference(dstAlloc);
 
-  if (0) {
+  if (1) {
       testRequest->startWriteDram(ref_srcAlloc);
+      for (int i = 0; i < 1024; i += 128) // one write done indication per 128 bytes
+	  sem_wait(&test_sem);
+      testRequest->startReadDram(ref_dstAlloc);
       sem_wait(&test_sem);
-      testRequest->startWriteDram(ref_srcAlloc);
-      sem_wait(&test_sem);
+  }
+  for (int i = 0; i < 1024/4; i++) {
+      fprintf(stderr, "dst dram[%04x]=%08x\n", i*4, dstBuffer[i]);
   }
   return 0;
 }
