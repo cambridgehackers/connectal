@@ -390,6 +390,48 @@ function  MemReadClient#(busWidth) null_mem_read_client();
            endinterface);
 endfunction
 
+instance MkAxiStream#(AxiStreamMaster#(dsize), FIFOF#(MemData#(dsize)));
+   module mkAxiStream#(FIFOF#(MemData#(dsize)) f)(AxiStreamMaster#(dsize));
+      Wire#(Bool) readyWire <- mkDWire(False);
+      Wire#(MemData#(dsize)) dataWire <- mkDWire(unpack(0));
+      rule rl_data if (f.notEmpty());
+	 dataWire <= f.first();
+      endrule
+      rule rl_deq if (readyWire && f.notEmpty);
+	 f.deq();
+      endrule
+     method Bit#(dsize)              tdata();
+	return dataWire.data;
+     endmethod
+     method Bit#(TDiv#(dsize,8))     tkeep(); return maxBound; endmethod
+     method Bit#(1)                tlast(); return pack(dataWire.last); endmethod
+     method Action                 tready(Bit#(1) v);
+	readyWire <= unpack(v);
+     endmethod
+     method Bit#(1)                tvalid(); return pack(f.notEmpty()); endmethod
+   endmodule
+endinstance
+
+instance MkAxiStream#(AxiStreamSlave#(dsize), FIFOF#(MemData#(dsize)));
+   module mkAxiStream#(FIFOF#(MemData#(dsize)) f)(AxiStreamSlave#(dsize));
+      Wire#(Bit#(dsize)) dataWire <- mkDWire(unpack(0));
+      Wire#(Bit#(1))     lastWire <- mkDWire(unpack(0));
+      Wire#(Bool) validWire <- mkDWire(False);
+      rule enq if (validWire && f.notFull());
+	 f.enq(MemData { data: dataWire, last: unpack(lastWire), tag: 0 });
+      endrule
+      method Action      tdata(Bit#(dsize) v);
+	 dataWire <= v;
+      endmethod
+      method Action      tkeep(Bit#(TDiv#(dsize,8)) v); endmethod
+      method Action      tlast(Bit#(1) v); endmethod
+      method Bit#(1)     tready(); return pack(f.notFull()); endmethod
+      method Action      tvalid(Bit#(1) v);
+	 validWire <= unpack(v);
+      endmethod
+   endmodule
+endinstance
+
 instance MkAxiStream#(AxiStreamMaster#(dsize), FIFOF#(MemDataF#(dsize)));
    module mkAxiStream#(FIFOF#(MemDataF#(dsize)) f)(AxiStreamMaster#(dsize));
       Wire#(Bool) readyWire <- mkDWire(False);
