@@ -156,9 +156,14 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
       Vector#(BusRatio, Bit#(DataBusWidth)) data = unpack(resp.data);
       dramReadGearbox.enq(data);
    endrule
+   FIFOF#(Bit#(DataBusWidth)) slackFifo <- mkFIFOF();
    rule rl_rdata_gb;
       Bit#(DataBusWidth) rdata <- toGet(dramReadGearbox).get();
-      //fixme last
+      slackFifo.enq(rdata);
+   endrule
+   rule rl_rdata_slack;
+      let rdata <- toGet(slackFifo).get();
+      //fixme last field
       we.writeServers[0].data.enq(rdata);
    endrule
 
