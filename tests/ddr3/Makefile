@@ -1,7 +1,7 @@
 CONNECTALDIR?=../..
 S2H_INTERFACES = Ddr3TestRequest:Ddr3Test.request
 H2S_INTERFACES = Ddr3Test:Ddr3TestIndication:host
-#MEM_READ_INTERFACES = lDdr3Test.readClient
+MEM_READ_INTERFACES = lDdr3Test.readClient
 MEM_WRITE_INTERFACES = lDdr3Test.writeClient
 
 ifneq ($(BOARD),zc706)
