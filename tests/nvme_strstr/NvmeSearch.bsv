@@ -79,19 +79,17 @@ typedef enum {
    } MsgFromSoftwareTag deriving (Bits,Eq);
 
 typedef struct {
-   Bool     last;
    MsgFromSoftwareTag tag;
    Bit#(24)  data;
    } MsgFromSoftware deriving (Bits);
 
 typedef enum {
-   Loopback,
-   LocDone,
-   TransferDone
+   Loopback=1,
+   LocDone=2,
+   TransferDone=3
    } MsgToSoftwareTag deriving (Bits,Eq);
 
 typedef struct {
-   Bool     last;
    MsgToSoftwareTag tag;
    Bit#(24)  data;
    } MsgToSoftware deriving (Bits);
@@ -104,8 +102,8 @@ module mkSearchAcceleratorClient(NvmeAcceleratorClient);
    Reg#(Bit#(24))                      needleLenReg <- mkReg(0);
    MPStreamEngine#(PcieDataBusWidth,DataBusWidth)    mpEngine <- mkMPStreamEngine();
 
-   FIFOF#(Bit#(32)) msgFromSoftwareFifo <- mkFIFOF();
-   FIFOF#(Bit#(32)) msgToSoftwareFifo <- mkFIFOF();
+   FIFOF#(MemData#(32)) msgFromSoftwareFifo <- mkFIFOF();
+   FIFOF#(MemData#(32)) msgToSoftwareFifo <- mkFIFOF();
    FIFOF#(MemDataF#(PcieDataBusWidth)) dataFromNvmeFifo <- mkFIFOF();
    FIFOF#(MemDataF#(PcieDataBusWidth)) dataToNvmeFifo <- mkFIFOF();
    FIFOF#(Bit#(SizeOf#(NvmeIoCommand))) requestFifo <- mkFIFOF();
@@ -122,20 +120,21 @@ module mkSearchAcceleratorClient(NvmeAcceleratorClient);
    let inmsgDataProbe <- mkProbe();
    let outmsgTagProbe <- mkProbe();
    let outmsgDataProbe <- mkProbe();
+   let responseProbe <- mkProbe();
    rule rl_msg_from_software;
-      let m <- toGet(msgFromSoftwareFifo).get();
-      MsgFromSoftware msg = unpack(truncate(m));
+      let md <- toGet(msgFromSoftwareFifo).get();
+      MsgFromSoftware msg = unpack(truncate(md.data));
       inmsgTagProbe <= msg.tag;
       inmsgDataProbe <= msg.data;
       case (msg.tag) matches
 	 Loopback: begin
-		      MsgToSoftware msg = MsgToSoftware { tag: Loopback, data: msg.data, last: msg.last};
-		      outmsgTagProbe <= msg.tag;
-		      outmsgDataProbe <= msg.data;
-		      msgToSoftwareFifo.enq(extend(pack(msg)));
+		      MsgToSoftware outmsg = MsgToSoftware { tag: Loopback, data: msg.data };
+		      outmsgTagProbe <= outmsg.tag;
+		      outmsgDataProbe <= outmsg.data;
+		      msgToSoftwareFifo.enq(MemData { data: extend(pack(outmsg)), last: md.last });
 		   end
-	 Needle: mpEngine.needle.enq(MemDataF { data: extend(msg.data), first: False, last: msg.last, tag: 0 });
-	 MpNext: mpEngine.mpNext.enq(MemDataF { data: extend(msg.data), first: False, last: msg.last, tag: 0 });
+	 Needle: mpEngine.needle.enq(MemDataF { data: extend(msg.data), first: False, last: md.last, tag: 0 });
+	 MpNext: mpEngine.mpNext.enq(MemDataF { data: extend(msg.data), first: False, last: md.last, tag: 0 });
 	 Clear:  mpEngine.clear();
 	 Opcode:         opcode <= truncate(msg.data);
 	 StartBlock: startBlock <= extend(msg.data);
@@ -159,18 +158,19 @@ module mkSearchAcceleratorClient(NvmeAcceleratorClient);
       let r <- toGet(responseFifo).get();
       NvmeIoResponse response = unpack(r);
       Bit#(8) sct = truncate(response.statusCodeType);
+      responseProbe <= response.statusCode;
       
-      MsgToSoftware msg = MsgToSoftware { tag: TransferDone, data: { sct, response.statusCode }, last: True};
-      outmsgTagProbe <= msg.tag;
-      outmsgDataProbe <= msg.data;
-      msgToSoftwareFifo.enq(extend(pack(msg)));
+      MsgToSoftware outmsg = MsgToSoftware { tag: TransferDone, data: { sct, response.statusCode }};
+      outmsgTagProbe <= outmsg.tag;
+      outmsgDataProbe <= outmsg.data;
+      msgToSoftwareFifo.enq(MemData { data: extend(pack(outmsg)), last: True });
    endrule
    rule rl_match;
       let loc <- toGet(mpEngine.locdone).get();
-      MsgToSoftware msg = MsgToSoftware { tag: LocDone, data: truncate(pack(loc)), last: loc == -1 };
-      outmsgTagProbe <= msg.tag;
-      outmsgDataProbe <= msg.data;
-      msgToSoftwareFifo.enq(extend(pack(msg)));
+      MsgToSoftware outmsg = MsgToSoftware { tag: LocDone, data: truncate(pack(loc)) };
+      outmsgTagProbe <= outmsg.tag;
+      outmsgDataProbe <= outmsg.data;
+      msgToSoftwareFifo.enq(MemData { data: extend(pack(outmsg)), last: (loc == -1) });
    endrule
 
    AxiStreamSlave#(32) msgFromSoftwareStream <- mkAxiStream(msgFromSoftwareFifo);
