@@ -35,6 +35,7 @@ import Gearbox::*;
 import Connectable::*;
 import ConfigReg::*;
 import StmtFSM::*;
+import Probe::*;
 
 import MemUtils::*;
 import MemTypes::*;
@@ -431,7 +432,7 @@ module mkMPStreamEngine(MPStreamEngine#(haystackBusWidth,configBusWidth))
 	    let t = haystackGb.first[0]; haystackGb.deq();
 	    t_j <= t;
 	    if (t == 0)
-	       locf.enq(-1);
+	       locf.enq('hdeadbf);
 	 endaction
 	 action
 	    let xNext <- needleBram.portA.response.get();
