@@ -61,11 +61,14 @@ int main(int argc, const char **argv)
   int ref_dstAlloc = dma->reference(dstAlloc);
 
   if (1) {
-      testRequest->startWriteDram(ref_srcAlloc);
-      for (int i = 0; i < 1024; i += 128) // one write done indication per 128 bytes
+    testRequest->startWriteDram(ref_srcAlloc, 256);
+      fprintf(stderr, "Started writing dram\n");
+      //for (int i = 0; i < 1024; i += 128) // one write done indication per 128 bytes
+      for (int i = 0; i < 2; i++)
 	  sem_wait(&test_sem);
-      testRequest->startReadDram(ref_dstAlloc);
-      sem_wait(&test_sem);
+      testRequest->startReadDram(ref_dstAlloc, 256);
+      for (int i = 0; i < 2; i++)
+	sem_wait(&test_sem);
   }
   for (int i = 0; i < 1024/4; i++) {
       fprintf(stderr, "dst dram[%04x]=%08x\n", i*4, dstBuffer[i]);

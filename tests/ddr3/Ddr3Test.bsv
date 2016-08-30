@@ -44,8 +44,8 @@ import HostInterface::*;
 import Probe::*;
 
 interface Ddr3TestRequest;
-   method Action startWriteDram(Bit#(32) sglId);
-   method Action startReadDram(Bit#(32) sglId);
+   method Action startWriteDram(Bit#(32) sglId, Bit#(32) transferBytes);
+   method Action startReadDram(Bit#(32) sglId, Bit#(32) transferBytes);
 endinterface
 
 interface Ddr3TestIndication;
@@ -68,7 +68,7 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
    let clock <- exposeCurrentClock();
    let reset <- exposeCurrentReset();
 
-   let transferLen = 256;
+   Reg#(Bit#(Ddr3AddrWidth)) transferLen <- mkReg(256);
 
    Clock clk200 = host.tsys_clk_200mhz_buf;
 
@@ -129,7 +129,7 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
 	 };
       awfifo.enq(req);
       aw_req_probe <= req.address;
-      dramWriteOffset <= dramWriteOffset + 1;
+      dramWriteOffset <= dramWriteOffset + fromInteger(valueOf(Ddr3DataBytes));
    endrule
 
    rule rl_wdata_gb;
@@ -157,12 +157,12 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
    rule rl_write_start;
       let sglId <- toGet(writeReqFifo).get();
       dramWriteOffset <= 0;
-      dramWriteLimit <= transferLen/fromInteger(valueOf(Ddr3DataBytes));
-      dramWriteLimitProbe <= transferLen/fromInteger(valueOf(Ddr3DataBytes));
+      dramWriteLimit <= transferLen;
+      dramWriteLimitProbe <= transferLen;
       re.readServers[0].request.put(MemengineCmd { sglId: sglId,
 						  base: 0,
 						  burstLen: 128,
-						  len: transferLen,
+						  len: extend(transferLen),
 						  tag: 0
 						  });
    endrule
@@ -193,7 +193,7 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
 	 qos: 4'b0000    //ignored
 	 };
       arfifo.enq(req);
-      dramReadOffset <= dramReadOffset + 1;
+      dramReadOffset <= dramReadOffset + fromInteger(valueOf(Ddr3DataBytes));
    endrule
 
    rule rl_rdata;
@@ -216,12 +216,12 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
    rule rl_read_start;
       let sglId <- toGet(readReqFifo).get();
       dramReadOffset <= 0;
-      dramReadLimit <= transferLen/fromInteger(valueOf(Ddr3DataBytes));
-      dramReadLimitProbe <= transferLen/fromInteger(valueOf(Ddr3DataBytes));
+      dramReadLimit <= transferLen;
+      dramReadLimitProbe <= transferLen;
       we.writeServers[0].request.put(MemengineCmd { sglId: sglId,
 						   base: 0,
 						   burstLen: 128,
-						   len: transferLen,
+						   len: extend(transferLen),
 						   tag: 0
 						   });
    endrule
@@ -232,12 +232,14 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
    endrule
 
    interface Ddr3TestRequest request;
-      method Action startWriteDram(Bit#(32) sglId);
+      method Action startWriteDram(Bit#(32) sglId, Bit#(32) transferBytes);
 	 sglWriteProbe <= sglId;
+	 transferLen <= truncate(transferBytes);
 	 writeReqFifo.enq(sglId);
       endmethod
-      method Action startReadDram(Bit#(32) sglId);
+      method Action startReadDram(Bit#(32) sglId, Bit#(32) transferBytes);
 	 sglReadProbe <= sglId;
+	 transferLen <= truncate(transferBytes);
 	 readReqFifo.enq(sglId);
       endmethod
    endinterface
