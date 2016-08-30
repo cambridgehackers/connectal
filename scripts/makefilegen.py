@@ -135,6 +135,7 @@ synth.%%:fpgamake.mk
 
 hw/mkTop.bit: prepare_bin_target %(genxdc_dep)s fpgamake.mk
 	$(Q)mkdir -p hw
+	$(Q)if [ -f ../synth-ip.tcl ]; then vivado -mode batch -source ../synth-ip.tcl; fi
 	$(Q)$(MAKE) -f fpgamake.mk
 ifneq ($(XILINX),)
 	$(Q)rsync -rav --include="*/" --include="*.rpt" --exclude="*" Impl/ bin
