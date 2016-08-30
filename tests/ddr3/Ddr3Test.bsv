@@ -41,6 +41,7 @@ import AxiDdr3Wrapper  ::*;
 import AxiDma::*;
 import ConnectalConfig::*;
 import HostInterface::*;
+import Probe::*;
 
 interface Ddr3TestRequest;
    method Action startWriteDram(Bit#(32) sglId);
@@ -78,18 +79,46 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
    FIFOF#(Bit#(32))   writeReqFifo <- mkFIFOF();
    FIFOF#(Bit#(32))   readReqFifo <- mkFIFOF();
 
+   Probe#(Bit#(Ddr3AddrWidth)) aw_req_probe <- mkProbe();
+   Reg#(Bit#(Ddr3AddrWidth)) dramWriteLimitProbe <- mkReg(0);
+   Reg#(Bit#(Ddr3AddrWidth)) dramReadLimitProbe <- mkReg(0);
+
+   Probe#(Bit#(Ddr3AddrWidth)) awAddrProbe <- mkProbe(clocked_by ddr3Controller.uiClock, reset_by ddr3Controller.uiReset);
+   Probe#(Bit#(8)) awLenProbe <- mkProbe(clocked_by ddr3Controller.uiClock, reset_by ddr3Controller.uiReset);
+   Probe#(Bit#(3)) awSizeProbe <- mkProbe(clocked_by ddr3Controller.uiClock, reset_by ddr3Controller.uiReset);
+   Probe#(Vector#(BusRatio,Bit#(DataBusWidth))) wdataProbe <- mkProbe(clocked_by ddr3Controller.uiClock, reset_by ddr3Controller.uiReset);
+   Probe#(Axi4WriteResponse#(6)) bProbe <- mkProbe(clocked_by ddr3Controller.uiClock, reset_by ddr3Controller.uiReset);
+   Probe#(Bit#(Ddr3AddrWidth)) arAddrProbe <- mkProbe(clocked_by ddr3Controller.uiClock, reset_by ddr3Controller.uiReset);
+   Probe#(Bit#(8)) arLenProbe <- mkProbe(clocked_by ddr3Controller.uiClock, reset_by ddr3Controller.uiReset);
+   Probe#(Bit#(3)) arSizeProbe <- mkProbe(clocked_by ddr3Controller.uiClock, reset_by ddr3Controller.uiReset);
+   Probe#(Vector#(BusRatio,Bit#(DataBusWidth))) rdataProbe <- mkProbe(clocked_by ddr3Controller.uiClock, reset_by ddr3Controller.uiReset);
+   let sglWriteProbe <- mkProbe();
+   let sglReadProbe <- mkProbe();
+
    Gearbox#(1,BusRatio,Bit#(DataBusWidth)) dramWriteGearbox <- mk1toNGearbox(clock, reset, ddr3Controller.uiClock, ddr3Controller.uiReset);
    SyncFIFOIfc#(Axi4WriteRequest#(Ddr3AddrWidth,6)) awfifo <- mkSyncFIFO(8, clock, reset, ddr3Controller.uiClock);
    SyncFIFOIfc#(Axi4WriteResponse#(6)) bfifo <- mkSyncFIFO(8, ddr3Controller.uiClock, ddr3Controller.uiReset, clock);
-   mkConnection(toGet(awfifo), ddr3Controller.slave.req_aw);
-   mkConnection(ddr3Controller.slave.resp_b, toPut(bfifo));
+   //mkConnection(toGet(awfifo), ddr3Controller.slave.req_aw);
+   //mkConnection(ddr3Controller.slave.resp_b, toPut(bfifo));
+   rule rl_awfifo;
+      let req <- toGet(awfifo).get();
+      awAddrProbe <= req.address;
+      awLenProbe <= req.len;
+      awSizeProbe <= req.size;
+      ddr3Controller.slave.req_aw.put(req);
+   endrule
+   rule rl_bfifo;
+      let b <- ddr3Controller.slave.resp_b.get();
+      bProbe <= b;
+      bfifo.enq(b);
+   endrule
 
    Reg#(Bit#(Ddr3AddrWidth)) dramWriteOffset <- mkReg(0);
    Reg#(Bit#(Ddr3AddrWidth)) dramWriteLimit <- mkReg(0);
    rule rl_req_aw if (dramWriteOffset < dramWriteLimit);
-      awfifo.enq(Axi4WriteRequest {
+      Axi4WriteRequest#(Ddr3AddrWidth,6) req = Axi4WriteRequest {
 	 address: truncate(dramWriteOffset),
-	 len: 1,
+	 len: 0, // indicates 1 beat of data
 	 size: axiBusSize(valueOf(Ddr3DataWidth)),
 	 id: 0,
 	 burst: 2'b01,
@@ -97,7 +126,9 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
 	 cache: 4'b0011, //ignored
 	 lock: 2'b00,    //ignored
 	 qos: 4'b0000    //ignored
-	 });
+	 };
+      awfifo.enq(req);
+      aw_req_probe <= req.address;
       dramWriteOffset <= dramWriteOffset + 1;
    endrule
 
@@ -107,6 +138,7 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
    endrule
    rule rl_wdata;
       let mds <- toGet(dramWriteGearbox).get();
+      wdataProbe <= mds;
       ddr3Controller.slave.resp_write.put(Axi4WriteData {
 	 data: pack(mds),
 	 byteEnable: maxBound,
@@ -137,12 +169,19 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
 
    Gearbox#(BusRatio,1,Bit#(DataBusWidth)) dramReadGearbox <- mkNto1Gearbox(ddr3Controller.uiClock, ddr3Controller.uiReset, clock, reset);
    SyncFIFOIfc#(Axi4ReadRequest#(Ddr3AddrWidth,6)) arfifo <- mkSyncFIFO(8, clock, reset, ddr3Controller.uiClock);
-   mkConnection(toGet(arfifo), ddr3Controller.slave.req_ar);
+   //mkConnection(toGet(arfifo), ddr3Controller.slave.req_ar);
+   rule rl_arfifo;
+      let req <- toGet(arfifo).get();
+      arAddrProbe <= req.address;
+      arLenProbe <= req.len;
+      arSizeProbe <= req.size;
+      ddr3Controller.slave.req_ar.put(req);
+   endrule
 
    Reg#(Bit#(Ddr3AddrWidth)) dramReadOffset <- mkReg(0);
    Reg#(Bit#(Ddr3AddrWidth)) dramReadLimit <- mkReg(0);
    rule rl_req_ar if (dramReadOffset < dramReadLimit);
-      arfifo.enq(Axi4ReadRequest {
+      Axi4ReadRequest#(Ddr3AddrWidth,6) req = Axi4ReadRequest {
 	 address: truncate(dramReadOffset),
 	 len: 0, // indicates one beat of data
 	 size: axiBusSize(valueOf(Ddr3DataWidth)),
@@ -152,13 +191,15 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
 	 cache: 4'b0011, //ignored
 	 lock: 2'b00,    //ignored
 	 qos: 4'b0000    //ignored
-	 });
+	 };
+      arfifo.enq(req);
       dramReadOffset <= dramReadOffset + 1;
    endrule
 
    rule rl_rdata;
       let resp <- ddr3Controller.slave.resp_read.get();
       Vector#(BusRatio, Bit#(DataBusWidth)) data = unpack(resp.data);
+      rdataProbe <= data;
       dramReadGearbox.enq(data);
    endrule
    FIFOF#(Bit#(DataBusWidth)) slackFifo <- mkFIFOF();
@@ -192,9 +233,11 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
 
    interface Ddr3TestRequest request;
       method Action startWriteDram(Bit#(32) sglId);
+	 sglWriteProbe <= sglId;
 	 writeReqFifo.enq(sglId);
       endmethod
       method Action startReadDram(Bit#(32) sglId);
+	 sglReadProbe <= sglId;
 	 readReqFifo.enq(sglId);
       endmethod
    endinterface
