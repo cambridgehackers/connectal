@@ -60,11 +60,14 @@ interface Ddr3Test;
 endinterface
 
 typedef TDiv#(Ddr3DataWidth,DataBusWidth) BusRatio;
+typedef TDiv#(Ddr3DataWidth,8) Ddr3DataBytes;
 
 module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
 
    let clock <- exposeCurrentClock();
    let reset <- exposeCurrentReset();
+
+   let transferLen = 256;
 
    Clock clk200 = host.tsys_clk_200mhz_buf;
 
@@ -122,11 +125,12 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
    rule rl_write_start;
       let sglId <- toGet(writeReqFifo).get();
       dramWriteOffset <= 0;
-      dramWriteLimit <= 1024/fromInteger(valueOf(Ddr3DataWidth));
+      dramWriteLimit <= transferLen/fromInteger(valueOf(Ddr3DataBytes));
+      dramWriteLimitProbe <= transferLen/fromInteger(valueOf(Ddr3DataBytes));
       re.readServers[0].request.put(MemengineCmd { sglId: sglId,
 						  base: 0,
 						  burstLen: 128,
-						  len: 1024,
+						  len: transferLen,
 						  tag: 0
 						  });
    endrule
@@ -140,7 +144,7 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
    rule rl_req_ar if (dramReadOffset < dramReadLimit);
       arfifo.enq(Axi4ReadRequest {
 	 address: truncate(dramReadOffset),
-	 len: 1,
+	 len: 0, // indicates one beat of data
 	 size: axiBusSize(valueOf(Ddr3DataWidth)),
 	 id: 0,
 	 burst: 2'b01,
@@ -171,11 +175,12 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
    rule rl_read_start;
       let sglId <- toGet(readReqFifo).get();
       dramReadOffset <= 0;
-      dramReadLimit <= 1024/fromInteger(valueOf(Ddr3DataWidth));
+      dramReadLimit <= transferLen/fromInteger(valueOf(Ddr3DataBytes));
+      dramReadLimitProbe <= transferLen/fromInteger(valueOf(Ddr3DataBytes));
       we.writeServers[0].request.put(MemengineCmd { sglId: sglId,
 						   base: 0,
 						   burstLen: 128,
-						   len: 1024,
+						   len: transferLen,
 						   tag: 0
 						   });
    endrule
