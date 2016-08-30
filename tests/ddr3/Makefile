@@ -17,11 +17,4 @@ PIN_TYPE = Ddr3Pins
 PIN_TYPE_INCLUDE = AxiDdr3Controller
 AUTOTOP = --interface pins:Ddr3Test.ddr3
 
-$(IPDIR)/$(BOARD)/axiddr3/axiddr3.xci: $(CONNECTALDIR)/scripts/connectal-synth-axiddr3.tcl
-	cd $(BOARD); vivado -mode batch -source $(CONNECTALDIR)/scripts/connectal-synth-axiddr3.tcl
-
-ip.%:
-	make BOARD=$(*) gen.$(*)
-	make BOARD=$(*) IPDIR=$(IPDIR) $(IPDIR)/$(*)/axiddr3/axiddr3.xci
-
 include $(CONNECTALDIR)/Makefile.connectal
