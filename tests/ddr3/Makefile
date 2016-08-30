@@ -5,7 +5,9 @@ MEM_READ_INTERFACES = lDdr3Test.readClient
 MEM_WRITE_INTERFACES = lDdr3Test.writeClient
 
 ifneq ($(BOARD),zc706)
+ifneq ($(BOARD),miniitx100)
 CONNECTALFLAGS += -D DataBusWidth=128
+endif
 endif
 CONNECTALFLAGS += -D IMPORT_HOSTIF -D XILINX_SYS_CLK
 CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/axiddr3/axiddr3.xci
