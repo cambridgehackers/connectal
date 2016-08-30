@@ -22,7 +22,8 @@
 #include "Ddr3TestIndication.h"
 #include "Ddr3TestRequest.h"
 
-sem_t test_sem;
+sem_t write_sem;
+sem_t read_sem;
 unsigned int alloc_sz = 1<<10;
 
 class Ddr3TestIndication : public Ddr3TestIndicationWrapper
@@ -31,11 +32,11 @@ public:
   Ddr3TestIndication(unsigned int id) : Ddr3TestIndicationWrapper(id){}
   virtual void writeDone(uint32_t v) {
     fprintf(stderr, "writeDone %d\n", v);
-    sem_post(&test_sem);
+    sem_post(&write_sem);
   }
   virtual void readDone(uint32_t v) {
     fprintf(stderr, "readDone %d\n", v);
-    sem_post(&test_sem);
+    sem_post(&read_sem);
   }
 };
 
@@ -45,8 +46,12 @@ int main(int argc, const char **argv)
   Ddr3TestRequestProxy *testRequest = new Ddr3TestRequestProxy(IfcNames_Ddr3TestRequestS2H);
   Ddr3TestIndication testIndication(IfcNames_Ddr3TestIndicationH2S);
 
-  if(sem_init(&test_sem, 1, 0)){
-    fprintf(stderr, "failed to init test_sem\n");
+  if(sem_init(&write_sem, 1, 0)){
+    fprintf(stderr, "failed to init write_sem\n");
+    return -1;
+  }
+  if(sem_init(&read_sem, 1, 0)){
+    fprintf(stderr, "failed to init read_sem\n");
     return -1;
   }
   int srcAlloc = portalAlloc(alloc_sz, 0);
@@ -61,14 +66,16 @@ int main(int argc, const char **argv)
   int ref_dstAlloc = dma->reference(dstAlloc);
 
   if (1) {
-    testRequest->startWriteDram(ref_srcAlloc, 256);
+      int transferLen = 1024;
+      testRequest->startWriteDram(ref_srcAlloc, transferLen);
       fprintf(stderr, "Started writing dram\n");
-      //for (int i = 0; i < 1024; i += 128) // one write done indication per 128 bytes
-      for (int i = 0; i < 2; i++)
-	  sem_wait(&test_sem);
-      testRequest->startReadDram(ref_dstAlloc, 256);
-      for (int i = 0; i < 2; i++)
-	sem_wait(&test_sem);
+      for (int i = 0; i < transferLen; i += 128)
+	  sem_wait(&write_sem);
+
+      sleep(10);
+
+      testRequest->startReadDram(ref_dstAlloc, transferLen);
+      sem_wait(&read_sem);
   }
   for (int i = 0; i < 1024/4; i++) {
       fprintf(stderr, "dst dram[%04x]=%08x\n", i*4, dstBuffer[i]);
