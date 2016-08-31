@@ -56,8 +56,8 @@ int main(int argc, const char **argv)
   }
   int srcAlloc = portalAlloc(alloc_sz, 0);
   int dstAlloc = portalAlloc(alloc_sz, 0);
-  unsigned int *srcBuffer = (unsigned int *)portalMmap(srcAlloc, alloc_sz);
-  unsigned int *dstBuffer = (unsigned int *)portalMmap(dstAlloc, alloc_sz);
+  int *srcBuffer = (int *)portalMmap(srcAlloc, alloc_sz);
+  int *dstBuffer = (int *)portalMmap(dstAlloc, alloc_sz);
   for (int i = 0; i < 1024/4; i++) {
       srcBuffer[i] = i;
       fprintf(stderr, "src dram[%04x]=%08x\n", i*4, srcBuffer[i]);
@@ -69,10 +69,8 @@ int main(int argc, const char **argv)
       int transferLen = 1024;
       testRequest->startWriteDram(ref_srcAlloc, transferLen);
       fprintf(stderr, "Started writing dram\n");
-      for (int i = 0; i < transferLen; i += 128)
+      for (int i = 0; i < transferLen; i += DataBusWidth)
 	  sem_wait(&write_sem);
-
-      sleep(10);
 
       testRequest->startReadDram(ref_dstAlloc, transferLen);
       sem_wait(&read_sem);
@@ -80,5 +78,13 @@ int main(int argc, const char **argv)
   for (int i = 0; i < 1024/4; i++) {
       fprintf(stderr, "dst dram[%04x]=%08x\n", i*4, dstBuffer[i]);
   }
-  return 0;
+  int mismatches = 0;
+  for (int i = 0; i < 1024/4; i++) {
+      if (i != dstBuffer[i]) {
+	  mismatches++;
+	  fprintf(stderr, "mismatch dram[%04x]=%08x expected %08x\n", i*4, dstBuffer[i], i);
+      }
+  }
+  fprintf(stderr, "%d mismatches\n", mismatches);
+  return mismatches ? 1 : 0;
 }
