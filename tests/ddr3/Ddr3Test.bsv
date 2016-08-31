@@ -26,6 +26,7 @@ import GetPut::*;
 import Connectable::*;
 import ClientServer::*;
 import ConnectalMemory::*;
+import ConnectalBramFifo::*;
 import FIFOF::*;
 import Gearbox::*;
 import GearboxGetPut::*;
@@ -95,9 +96,10 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
    let sglWriteProbe <- mkProbe();
    let sglReadProbe <- mkProbe();
 
-   Gearbox#(1,BusRatio,Bit#(DataBusWidth)) dramWriteGearbox <- mk1toNGearbox(clock, reset, ddr3Controller.uiClock, ddr3Controller.uiReset);
-   SyncFIFOIfc#(Axi4WriteRequest#(Ddr3AddrWidth,6)) awfifo <- mkSyncFIFO(8, clock, reset, ddr3Controller.uiClock);
-   SyncFIFOIfc#(Axi4WriteResponse#(6)) bfifo <- mkSyncFIFO(8, ddr3Controller.uiClock, ddr3Controller.uiReset, clock);
+   Gearbox#(1,BusRatio,Bit#(DataBusWidth)) dramWriteGearbox <- mk1toNGearbox(clock, reset, clock, reset);
+   FIFOF#(Vector#(BusRatio,Bit#(DataBusWidth))) dramWriteFifo <- mkDualClockBramFIFOF(clock, reset, ddr3Controller.uiClock, ddr3Controller.uiReset);
+   FIFOF#(Axi4WriteRequest#(Ddr3AddrWidth,6)) awfifo <- mkDualClockBramFIFOF(clock, reset, ddr3Controller.uiClock, ddr3Controller.uiReset);
+   FIFOF#(Axi4WriteResponse#(6)) bfifo <- mkDualClockBramFIFOF(ddr3Controller.uiClock, ddr3Controller.uiReset, clock, reset);
    //mkConnection(toGet(awfifo), ddr3Controller.slave.req_aw);
    //mkConnection(ddr3Controller.slave.resp_b, toPut(bfifo));
    rule rl_awfifo;
@@ -138,6 +140,10 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
    endrule
    rule rl_wdata;
       let mds <- toGet(dramWriteGearbox).get();
+      dramWriteFifo.enq(mds);
+   endrule
+   rule rl_writeDataFifo;
+      let mds <- toGet(dramWriteFifo).get();
       wdataProbe <= mds;
       ddr3Controller.slave.resp_write.put(Axi4WriteData {
 	 data: pack(mds),
@@ -167,8 +173,9 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
 						  });
    endrule
 
-   Gearbox#(BusRatio,1,Bit#(DataBusWidth)) dramReadGearbox <- mkNto1Gearbox(ddr3Controller.uiClock, ddr3Controller.uiReset, clock, reset);
-   SyncFIFOIfc#(Axi4ReadRequest#(Ddr3AddrWidth,6)) arfifo <- mkSyncFIFO(8, clock, reset, ddr3Controller.uiClock);
+   Gearbox#(BusRatio,1,Bit#(DataBusWidth)) dramReadGearbox <- mkNto1Gearbox(ddr3Controller.uiClock, ddr3Controller.uiReset, ddr3Controller.uiClock, ddr3Controller.uiReset);
+   FIFOF#(Bit#(DataBusWidth)) dramReadFifo <- mkDualClockBramFIFOF(ddr3Controller.uiClock, ddr3Controller.uiReset, clock, reset);
+   FIFOF#(Axi4ReadRequest#(Ddr3AddrWidth,6)) arfifo <- mkDualClockBramFIFOF(clock, reset, ddr3Controller.uiClock, ddr3Controller.uiReset);
    //mkConnection(toGet(arfifo), ddr3Controller.slave.req_ar);
    rule rl_arfifo;
       let req <- toGet(arfifo).get();
@@ -202,13 +209,12 @@ module mkDdr3Test#(HostInterface host, Ddr3TestIndication indication)(Ddr3Test);
       rdataProbe <= data;
       dramReadGearbox.enq(data);
    endrule
-   FIFOF#(Bit#(DataBusWidth)) slackFifo <- mkFIFOF();
    rule rl_rdata_gb;
       Bit#(DataBusWidth) rdata <- toGet(dramReadGearbox).get();
-      slackFifo.enq(rdata);
+      dramReadFifo.enq(rdata);
    endrule
    rule rl_rdata_slack;
-      let rdata <- toGet(slackFifo).get();
+      let rdata <- toGet(dramReadFifo).get();
       //fixme last field
       we.writeServers[0].data.enq(rdata);
    endrule
