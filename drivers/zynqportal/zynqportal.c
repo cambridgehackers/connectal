@@ -30,6 +30,10 @@
 #include <linux/scatterlist.h>
 #include <linux/workqueue.h>
 #include <linux/delay.h>
+#ifdef __arm__
+#include <asm/cacheflush.h> // cache_flush_all
+#include <asm/outercache.h> // outer_flush_*
+#endif
 
 #include "zynqportal.h"
 #define CONNECTAL_DRIVER_CODE
