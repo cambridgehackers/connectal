@@ -8,6 +8,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "ConnectalProjectConfig.h"
+
 #include "nvme.h"
 #include "mp.h"
 
