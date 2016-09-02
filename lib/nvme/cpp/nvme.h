@@ -100,6 +100,7 @@ class NvmeDriverIndication;
 class MemServerPortalIndication;
 
 class Nvme {
+    bool verbose;
     NvmeRequestProxy requestProxy;
     NvmeIndication  *indication;
     NvmeDriverRequestProxy driverRequest;
@@ -109,9 +110,8 @@ class Nvme {
     MemServerPortalIndication   *bramIndication;
     int adminRequestNumber;
     int ioRequestNumber[3]; // per queue, io queue 0 unused
-    int verbose;
 public:
-    DmaBuffer dummy;
+    DmaBuffer adminBuffer;
     DmaBuffer transferBuffer;
     DmaBuffer adminSubmissionQueue;
     DmaBuffer adminCompletionQueue;
@@ -119,6 +119,7 @@ public:
     DmaBuffer ioCompletionQueue;
     DmaBuffer needleBuffer;
     DmaBuffer mpNextBuffer;
+    int adminBufferRef;
     int transferBufferRef;
     int adminSubmissionQueueRef;
     int adminCompletionQueueRef;
@@ -129,7 +130,8 @@ public:
 
     static const int ioQueueSize = 4096;
 
-    Nvme();
+    Nvme(int transferBuffeSize = BlocksPerRequest*512, bool verbose=false);
+    Nvme(bool verbose=false);
     void setup();
 
     int adminCommand(nvme_admin_cmd *cmd, nvme_completion *completion);

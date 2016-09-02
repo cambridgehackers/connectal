@@ -247,8 +247,14 @@ void Nvme::bramWrite(uint32_t addr, uint64_t data)
     //bramIndication->wait();
 }
 
-Nvme::Nvme()
-    : requestProxy(IfcNames_NvmeRequestS2H)
+Nvme::Nvme(bool verbose)
+    : Nvme(BlocksPerRequest*512, verbose) {
+}
+
+
+Nvme::Nvme(int transferBufferSize, bool verbose)
+    : verbose(verbose)
+    , requestProxy(IfcNames_NvmeRequestS2H)
     , indication(new NvmeIndication(IfcNames_NvmeIndicationH2S))
     , driverRequest(IfcNames_NvmeDriverRequestS2H)
     , driverIndication(new NvmeDriverIndication(IfcNames_NvmeDriverIndicationH2S))
@@ -256,9 +262,8 @@ Nvme::Nvme()
     , bram(IfcNames_MemServerPortalRequestS2H)
     , bramIndication(new MemServerPortalIndication(IfcNames_MemServerPortalIndicationH2S))
     , adminRequestNumber(0)
-    , verbose(0)
-    , dummy(4096)
-    , transferBuffer(10*4096)
+    , adminBuffer(4096)
+    , transferBuffer(transferBufferSize)
     , adminSubmissionQueue(4096)
     , adminCompletionQueue(4096)
     , ioSubmissionQueue(ioQueueSize)
@@ -269,7 +274,7 @@ Nvme::Nvme()
 	
     memset(ioRequestNumber, 0, sizeof(ioRequestNumber));
 
-    dummy.reference();
+    adminBufferRef = adminBuffer.reference();
     transferBufferRef = transferBuffer.reference();
     adminSubmissionQueueRef = adminSubmissionQueue.reference();
     adminCompletionQueueRef = adminCompletionQueue.reference();
@@ -307,19 +312,21 @@ void Nvme::setup()
     if (verbose)
 	for (int i = 0; i < 6; i++)
 	    fprintf(stderr, "Card BAR%d: %08x\n", i, readCtl((1 << 20) + 0x10 + i*4));
-    fprintf(stderr, "probing card BAR\n");
+    if (verbose) fprintf(stderr, "probing card BAR\n");
     for (int i = 0; i < 6; i++) {
 	writeCtl((1 << 20) + 0x10 + 4*i, 0xffffffff);
-	fprintf(stderr, "Card BAR%d: %08x\n", i, readCtl((1 << 20) + 0x10 + 4*i));
+	if (verbose) fprintf(stderr, "Card BAR%d: %08x\n", i, readCtl((1 << 20) + 0x10 + 4*i));
     }
     writeCtl((1 << 20) + 0x10, 0x00000000); // initialize to offset 0
     writeCtl((1 << 20) + 0x14, 0x00000000);
     writeCtl((1 << 20) + 0x18, 0x02200000); // BAR2 unused
     writeCtl((1 << 20) + 0x1c, 0x00000000);
     writeCtl((1 << 20) + 0x10+5*4, 0); // sata card
-    fprintf(stderr, "reading card BARs\n");
-    for (int i = 0; i < 6; i++) {
-	fprintf(stderr, "Card BAR%d: %08x\n", i, readCtl((1 << 20) + 0x10 + 4*i));
+    if (verbose) {
+	fprintf(stderr, "reading card BARs\n");
+	for (int i = 0; i < 6; i++) {
+	    fprintf(stderr, "Card BAR%d: %08x\n", i, readCtl((1 << 20) + 0x10 + 4*i));
+	}
     }
 
     if (verbose) fprintf(stderr, "Enabling bridge\n");
@@ -335,8 +342,8 @@ void Nvme::setup()
     uint64_t cardcap = read(0);
     int mpsmax = (cardcap >> 52)&0xF;
     int mpsmin = (cardcap >> 48)&0xF;
-    fprintf(stderr, "MPSMAX=%0x %#x bytes\n", mpsmax, 1 << (12+mpsmax));
-    fprintf(stderr, "MPSMIN=%0x %#x bytes\n", mpsmin, 1 << (12+mpsmin));
+    if (verbose) fprintf(stderr, "MPSMAX=%0x %#x bytes\n", mpsmax, 1 << (12+mpsmax));
+    if (verbose) fprintf(stderr, "MPSMIN=%0x %#x bytes\n", mpsmin, 1 << (12+mpsmin));
     write32(0x1c, 0x10); // clear reset bit
 
     // initialize CC.IOCQES and CC.IOSQES
@@ -348,12 +355,12 @@ void Nvme::setup()
     }
     uint64_t adminCompletionBaseAddress = adminCompletionQueueRef << 24;
     uint64_t adminSubmissionBaseAddress = adminSubmissionQueueRef << 24;
-    fprintf(stderr, "Setting up Admin submission and completion queues %llx %llx\n",
-	    (long long)adminCompletionBaseAddress, (long long)adminSubmissionBaseAddress);
+    if (verbose) fprintf(stderr, "Setting up Admin submission and completion queues %llx %llx\n",
+			 (long long)adminCompletionBaseAddress, (long long)adminSubmissionBaseAddress);
     write(0x28, adminSubmissionBaseAddress);
-    fprintf(stderr, "AdminSubmissionBaseAddress %08llx\n", (long long)read(0x28));
+    if (verbose) fprintf(stderr, "AdminSubmissionBaseAddress %08llx\n", (long long)read(0x28));
     write(0x30, adminCompletionBaseAddress);
-    fprintf(stderr, "AdminCompletionBaseAddress %08llx\n", (long long)read(0x30));
+    if (verbose) fprintf(stderr, "AdminCompletionBaseAddress %08llx\n", (long long)read(0x30));
     write32(0x24, 0x003f003f);
 
     // CC.enable
@@ -427,7 +434,7 @@ int Nvme::adminCommand(nvme_admin_cmd *cmd, nvme_completion *completion)
     int responseNumber       = adminRequestNumber % (4096 / 16);
     int *response            = &responses[responseNumber * 4];
 
-    fprintf(stderr, "%s:%d requestNumber=%d responseNumber = %d\n", __FUNCTION__, __LINE__, requestNumber, responseNumber);
+    if (verbose) fprintf(stderr, "%s:%d requestNumber=%d responseNumber = %d\n", __FUNCTION__, __LINE__, requestNumber, responseNumber);
 
     cmd->cid = adminRequestNumber++;
     *request = *cmd;
@@ -439,15 +446,16 @@ int Nvme::adminCommand(nvme_admin_cmd *cmd, nvme_completion *completion)
     write32(0x1000 + ((2*0 + 0) * (4 << 0)), requestNumber+1);
     sleep(1);
 
-    for (int i = 0; i < 4; i++) {
-	fprintf(stderr, "    response[%02x]=%08x\n", i*4, response[i]);
+    if (verbose) {
+	for (int i = 0; i < 4; i++)
+	    fprintf(stderr, "    response[%02x]=%08x\n", i*4, response[i]);
     }
     int status = response[3];
     int more = (status >> 30) & 1;
     int sc = (status >> 17) & 0xff;
     int sct = (status >> 25) & 0x7;
     write32(0x1000 + ((2*0 + 1) * (4 << 0)), responseNumber+1);
-    fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
+    if (verbose) fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
     return sc;
 }
 
@@ -701,19 +709,19 @@ int Nvme::doIO(nvme_io_opcode opcode, int startBlock, int numBlocks, int queue, 
     cmd.opcode = opcode;
     cmd.nsid = 1;
     cmd.flags = 0x00; // PRP used for this transfer
-    if (opcode == nvme_read)
+    if (queue == 2)
       cmd.prp1 = 0x30000000ul; // send data to the FIFO
     else
       cmd.prp1 = (transferBufferId << 24);
     fprintf(stderr, "cmd.prp1=%llx\n", cmd.prp1);
     cmd.prp2 = (transferBufferId << 24) + 0;
     if (queue == 1) { 
-      uint64_t *prplist = (uint64_t *)nvme->transferBuffer.buffer();
+      uint64_t *prplist = (uint64_t *)nvme->adminBuffer.buffer();
       for (int i = 0; i < numBlocks/blocksPerPage; i++) {
 	if (opcode == nvme_read)
-	  prplist[i] = (uint64_t)(0x30000000ul + 0x1000*i + 0x1000); // send data to the FIFO
+	  prplist[i] = (uint64_t)(0x30000000ul + 0x1000*i + 0x1000); // enqueue/dequeue FIFO data
 	else
-	  prplist[i] = (uint64_t)((transferBufferId << 24) + 0x1000*i + 0x1000); // read data from DRAM
+	  prplist[i] = (uint64_t)((transferBufferId << 24) + 0x1000*i + 0x1000); // read/write DRAM data
       }
 
       nvme->transferBuffer.cacheInvalidate(8*512, 1);
