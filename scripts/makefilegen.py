@@ -128,6 +128,7 @@ export VERILOG_PATH=verilog %(verilog)s $(BLUESPEC_VERILOG)
 MODELSIM_FILES= %(modelsim)s
 FPGAMAKE=$(CONNECTALDIR)/../fpgamake/fpgamake
 fpgamake.mk: $(VFILE) Makefile prepare_bin_target
+	$(Q)if [ -f ../synth-ip.tcl ]; then vivado -mode batch -source ../synth-ip.tcl; fi
 	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk --board=%(boardname)s --part=%(partname)s %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s %(qsf)s %(chipscope)s -t $(MKTOP) %(FPGAMAKE_DEFINE)s %(cachedir)s -b hw/mkTop.bit %(prtop)s %(reconfig)s $(VERILOG_PATH)
 
 synth.%%:fpgamake.mk
@@ -135,7 +136,6 @@ synth.%%:fpgamake.mk
 
 hw/mkTop.bit: prepare_bin_target %(genxdc_dep)s fpgamake.mk
 	$(Q)mkdir -p hw
-	$(Q)if [ -f ../synth-ip.tcl ]; then vivado -mode batch -source ../synth-ip.tcl; fi
 	$(Q)$(MAKE) -f fpgamake.mk
 ifneq ($(XILINX),)
 	$(Q)rsync -rav --include="*/" --include="*.rpt" --exclude="*" Impl/ bin
