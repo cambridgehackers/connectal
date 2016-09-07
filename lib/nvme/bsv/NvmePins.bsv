@@ -32,6 +32,7 @@ import NvmeIfc::*;
 
 interface NvmePins;
    interface AprpPci pcie;
+   (* always_ready, always_enabled *)
    method Action pcie_refclk(Bit#(1) p, Bit#(1) n);
    interface Clock deleteme_unused_clock;
    interface Reset pcie_sys_reset_n;
