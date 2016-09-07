@@ -22,6 +22,7 @@
 
 import Arbitrate::*;
 import BRAM::*;
+import BRAMFIFO::*;
 import BuildVector::*;
 import Clocks::*;
 import Connectable::*;
@@ -39,6 +40,7 @@ import ConnectalClocks::*;
 import ConnectalConfig::*;
 import DefaultValue::*;
 import GearboxGetPut::*;
+import GetPutWithClocks::*;
 import HostInterface::*;
 import MemReadEngine::*;
 import MemTypes::*;
@@ -110,9 +112,9 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
    let axiClockB2C    <- mkB2C1();
    let axiCtlClockB2C <- mkB2C1();
    let axiClock = axiClockB2C.c;
-   let axiCtlClock = axiCtlClockB2C.c;
+   let axiCtlClock = axiClock; //axiCtlClockB2C.c;
    let axiReset <- mkSyncReset(10, reset, axiClock);
-   let axiCtlReset <- mkSyncReset(10, reset, axiCtlClock);
+   let axiCtlReset = axiReset; //mkSyncReset(10, reset, axiCtlClock);
 `else
    let axiClock = clock;
    let axiCtlClock = clock;
@@ -124,12 +126,16 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
 
 `ifndef PCIE3
    let axiRootPort <- mkAPRP(pcie_clk_100mhz_buf, reset, axiClock, axiReset, axiCtlClock, axiCtlReset);
-`else
-   let axiRootPort <- mkAPRP(axiCtlClock, pcie_clk_100mhz_buf, reset);
-`endif
 `ifndef TOP_SOURCES_PORTAL_CLOCK
    let axiClockC2B <- mkC2B(axiRootPort.axi.aclk_out);
-   let axiCtlClockC2B <- mkC2B(axiRootPort.axi.ctl_aclk_out);
+   rule rl_connect_clocks;
+      axiClockB2C.inputclock(axiClockC2B.o);
+      axiCtlClockB2C.inputclock(axiClockC2B.o);
+   endrule
+`endif
+`else
+   let axiRootPort <- mkAPRP(axiClock, axiReset, pcie_clk_100mhz_buf, reset);
+   let axiClockC2B <- mkC2B(axiRootPort.axi.aclk);
    rule rl_connect_clocks;
       axiClockB2C.inputclock(axiClockC2B.o);
       axiCtlClockB2C.inputclock(axiClockC2B.o);
@@ -148,11 +154,24 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
    FIFOF#(MemData#(PcieDataBusWidth))           wdataFifo <- mkFIFOF();
    FIFOF#(Bit#(6))                           doneFifo <- mkFIFOF();
 
+`ifndef PCIE
    let araddrCnx <- mkConnection(toGet(araddrFifo), axiRootPortMemSlave.read_server.readReq);
    let awaddrCnx <- mkConnection(toGet(awaddrFifo), axiRootPortMemSlave.write_server.writeReq);
    let rdataCnx  <- mkConnection(axiRootPortMemSlave.read_server.readData, toPut(rdataFifo));
    let wdataCnx  <- mkConnection(toGet(wdataFifo), axiRootPortMemSlave.write_server.writeData);
    let doneCnx   <- mkConnection(axiRootPortMemSlave.write_server.writeDone, toPut(doneFifo));
+`else
+   let araddrCnx <- GetPutWithClocks::mkConnectionWithClocks(toGet(araddrFifo), axiRootPortMemSlave.read_server.readReq,
+							     clock, reset, axiClock, axiReset);
+   let awaddrCnx <- GetPutWithClocks::mkConnectionWithClocks(toGet(awaddrFifo), axiRootPortMemSlave.write_server.writeReq,
+							     clock, reset, axiClock, axiReset);
+   let rdataCnx  <- GetPutWithClocks::mkConnectionWithClocks(axiRootPortMemSlave.read_server.readData, toPut(rdataFifo),
+							     axiClock, axiReset, clock, reset);
+   let wdataCnx  <- GetPutWithClocks::mkConnectionWithClocks(toGet(wdataFifo), axiRootPortMemSlave.write_server.writeData,
+							     clock, reset, axiClock, axiReset);
+   let doneCnx   <- GetPutWithClocks::mkConnectionWithClocks(axiRootPortMemSlave.write_server.writeDone, toPut(doneFifo),
+							     axiClock, axiReset, clock, reset);
+`endif
 
    rule rl_rdata if (!inSetup);
       let rdata <- toGet(rdataFifo).get();
@@ -172,11 +191,24 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
    FIFOF#(MemData#(32))           wdataFifoCtl <- mkFIFOF();
    FIFOF#(Bit#(6))                doneFifoCtl <- mkFIFOF();
 
+`ifndef PCIE
    let araddrCtlCnx <- mkConnection(toGet(araddrFifoCtl), axiRootPortMemSlaveCtl.read_server.readReq);
    let awaddrCtlCnx <- mkConnection(toGet(awaddrFifoCtl), axiRootPortMemSlaveCtl.write_server.writeReq);
    let rdataCtlCnx  <- mkConnection(axiRootPortMemSlaveCtl.read_server.readData, toPut(rdataFifoCtl));
    let wdataCtlCnx  <- mkConnection(toGet(wdataFifoCtl), axiRootPortMemSlaveCtl.write_server.writeData);
    let doneCtlCnx   <- mkConnection(axiRootPortMemSlaveCtl.write_server.writeDone, toPut(doneFifoCtl));
+`else
+   let araddrCtlCnx <- GetPutWithClocks::mkConnectionWithClocks(toGet(araddrFifoCtl), axiRootPortMemSlaveCtl.read_server.readReq,
+								clock, reset, axiCtlClock, axiCtlReset);
+   let awaddrCtlCnx <- GetPutWithClocks::mkConnectionWithClocks(toGet(awaddrFifoCtl), axiRootPortMemSlaveCtl.write_server.writeReq,
+								clock, reset, axiCtlClock, axiCtlReset);
+   let rdataCtlCnx  <- GetPutWithClocks::mkConnectionWithClocks(axiRootPortMemSlaveCtl.read_server.readData, toPut(rdataFifoCtl),
+								axiCtlClock, axiCtlReset, clock, reset);
+   let wdataCtlCnx  <- GetPutWithClocks::mkConnectionWithClocks(toGet(wdataFifoCtl), axiRootPortMemSlaveCtl.write_server.writeData,
+								clock, reset, axiCtlClock, axiCtlReset);
+   let doneCtlCnx   <- GetPutWithClocks::mkConnectionWithClocks(axiRootPortMemSlaveCtl.write_server.writeDone, toPut(doneFifoCtl),
+								axiCtlClock, axiCtlReset, clock, reset);
+`endif
 
    rule rl_rdata_ctl if (!inSetup);
       let rdata <- toGet(rdataFifoCtl).get();
@@ -558,10 +590,8 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
 `endif
       endmethod
    endinterface
-`ifndef PCIE3
+`ifdef TOP_SOURCES_PORTAL_CLOCK
    interface Clock portalClockSource = axiRootPort.axi.aclk_out;
-`else
-   interface Clock portalClockSource = axiRootPort.axi.aclk;
 `endif
 `ifndef NVME_ACCELERATOR_INTERFACE
    interface PipeOut dataFromNvme = splitter.dataFromNvme;
