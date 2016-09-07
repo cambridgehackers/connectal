@@ -16,7 +16,7 @@
 class StringSearchResponse : public StringSearchResponseWrapper {
 public:
     virtual void strstrLoc ( const uint32_t pos ) {
-	if (pos != -1)
+	if (pos != (uint32_t)-1)
 	    fprintf(stderr, "string search at character pos=%d\n", pos);
     }
     StringSearchResponse(int id, PortalPoller *poller = 0) : StringSearchResponseWrapper(id, poller) {
@@ -29,7 +29,7 @@ int main(int argc, char * const *argv)
     StringSearchRequestProxy search(IfcNames_StringSearchRequestS2H);
     StringSearchResponse     searchResponse(IfcNames_StringSearchResponseH2S);
 
-    int flags, opt;
+    int opt;
     const char *filename;
     const char *needle = "needle";
     int source_fd = -1;
@@ -62,9 +62,6 @@ int main(int argc, char * const *argv)
 	int rc = stat(filename, &statbuf);
 	if (rc < 0) {
 	    fprintf(stderr, "%s:%d File %s does not exist %d:%s\n", __FILE__, __LINE__, filename, errno, strerror(errno));
-	    char pwd[128];
-	    getcwd(pwd, sizeof(pwd));
-	    fprintf(stderr, "cwd = %s\n", pwd);
 	    return rc;
 	}
     }
@@ -108,9 +105,6 @@ int main(int argc, char * const *argv)
 	int rc = stat(filename, &statbuf);
 	if (rc < 0) {
 	    fprintf(stderr, "%s:%d File %s does not exist %d:%s\n", __FILE__, __LINE__, filename, errno, strerror(errno));
-	    char pwd[128];
-	    getcwd(pwd, sizeof(pwd));
-	    fprintf(stderr, "cwd = %s\n", pwd);
 	    return rc;
 	}
 	numBlocks = statbuf.st_blocks;
@@ -124,7 +118,18 @@ int main(int argc, char * const *argv)
 	fprintf(stderr, "starting transfer dowrite=%d opcode=%d\n", dowrite, opcode);
 	if (opcode == nvme_write) {
 	    if (filename) {
-		read(source_fd, (char *)nvme.transferBuffer.buffer(), 512*blocksPerRequest);
+		size_t bytesToRead = 512*blocksPerRequest;
+		char *buffer = (char *)nvme.transferBuffer.buffer();
+		do {
+		    size_t bytesRead = read(source_fd, buffer, bytesToRead);
+		    if (bytesRead <= 0) {
+			fprintf(stderr, "%s:%d Requested %ld bytes, received %ld bytes errno=%d:%s\n",
+				__FUNCTION__, __LINE__, bytesToRead, bytesRead, errno, strerror(errno));
+			break;
+		    }
+		    bytesToRead -= bytesRead;
+		    buffer += bytesRead;
+		} while (bytesToRead);
 	    } else {
 		    int *buffer = (int *)nvme.transferBuffer.buffer();
 		for (int i = 0; i < numBlocks*512/4; i ++)
