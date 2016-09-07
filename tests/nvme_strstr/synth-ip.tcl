@@ -1,5 +1,4 @@
-set ipdir {cores}
-set boardname {miniitx100}
+source "board.tcl"
 
 if {$boardname == {nfsume}} {
     set partname {xc7vx690tffg1761-2}
@@ -18,6 +17,7 @@ if {$boardname == {zc706}} {
     set databuswidth 64
 }
 puts "partname=$partname"
+puts "databuswidth=$databuswidth"
 
 create_project -name local_synthesized_ip -in_memory -part $partname
 if {$boardname == {nfsume}} {
