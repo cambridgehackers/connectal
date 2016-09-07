@@ -131,7 +131,7 @@ public:
     static const int ioQueueSize = 4096;
 
     Nvme(int transferBuffeSize = BlocksPerRequest*512, bool verbose=false);
-    Nvme(bool verbose=false);
+    Nvme(bool verbose);
     void setup();
 
     int adminCommand(nvme_admin_cmd *cmd, nvme_completion *completion);

@@ -89,7 +89,7 @@ public:
 	bool hasMsg = false;
 	pthread_mutex_lock(&mutex);
 	do {
-	    bool hasMsg = !msgs.empty();
+	    hasMsg = !msgs.empty();
 	    if (msgs.size()) {
 		if (*msg)
 		    *msg = msgs.front();
@@ -713,7 +713,7 @@ int Nvme::doIO(nvme_io_opcode opcode, int startBlock, int numBlocks, int queue, 
       cmd.prp1 = 0x30000000ul; // send data to the FIFO
     else
       cmd.prp1 = (transferBufferId << 24);
-    fprintf(stderr, "cmd.prp1=%llx\n", cmd.prp1);
+    fprintf(stderr, "cmd.prp1=%llx\n", (long long)cmd.prp1);
     cmd.prp2 = (transferBufferId << 24) + 0;
     if (queue == 1) { 
       uint64_t *prplist = (uint64_t *)nvme->adminBuffer.buffer();
