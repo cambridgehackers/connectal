@@ -249,7 +249,9 @@ module mkNvmeSearch#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTra
 `endif
       endmethod
    endinterface
+`ifdef TOP_SOURCES_PORTAL_CLOCK
    interface Clock portalClockSource = nvme.portalClockSource;
+`endif
    interface Vector dmaReadClient = append(nvme.dmaReadClient, vec(re.dmaClient));
    interface Vector dmaWriteClient = nvme.dmaWriteClient;
 endmodule
