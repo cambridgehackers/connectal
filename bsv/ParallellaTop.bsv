@@ -126,7 +126,7 @@ module mkZynqTop(ZynqTop);
    endrule
 
    module bufferClock#(Integer i)(Clock); let bc <- mkClockBUFG(clocked_by ps7.fclkclk[i]); return bc; endmodule
-   module bufferReset#(Integer i)(Reset); let rc <- mkAsyncReset(2, ps7.fclkreset[i], ps7.fclkclk[0]); return rc; endmodule
+   module bufferReset#(Integer i)(Reset); let rc <- mkSyncReset(5, ps7.fclkreset[i], ps7.fclkclk[0]); return rc; endmodule
    Vector#(4, Clock) unused_clock <- genWithM(bufferClock);
    Vector#(4, Reset) unused_reset <- genWithM(bufferReset);
 

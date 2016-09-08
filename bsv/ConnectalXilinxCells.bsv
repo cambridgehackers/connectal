@@ -650,7 +650,7 @@ module mkClockGenerator7Adv#(ClockGenerator7AdvParams params)(XClockGenerator7);
       clk_buffered = clk;
    end
 
-   //Reset                                     rst_n               <- mkAsyncResetFromCR(params.reset_stages, clk_buffered);
+   //Reset                                     rst_n               <- mkSyncResetFromCR(params.reset_stages, clk_buffered);
    //Reset                                     rst                 <- mkResetInverter(rst_n);
 
    ////////////////////////////////////////////////////////////////////////////////

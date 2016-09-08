@@ -21,7 +21,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package Pcie3EndpointX7;
+package Pcie3RootPortX7;
 
 import BRAMFIFO          ::*;
 import Clocks            ::*;
@@ -49,14 +49,16 @@ import ConnectalClocks   ::*;
 import ConnectalXilinxCells   ::*;
 import XilinxCells       ::*;
 import PCIE              ::*;
-import PCIEWRAPPER3      ::*;
+import ROOTPCIEWRAPPER3  ::*;
 import Bufgctrl           ::*;
 import PcieGearbox       :: *;
 import Pipe              :: *;
 
-interface PcieEndpointX7#(numeric type lanes);
-   interface PciewrapPci_exp#(lanes)           pcie;
-   interface PciewrapUser#(lanes)              user;
+interface PcieRootPortX7#(numeric type lanes);
+   interface PcieRpPci_exp#(lanes)           pcie;
+   interface PcieRpUser#(lanes)              user;
+   interface PcieRpPipe#(lanes)              pipe;
+   interface PcieRpCommon#(lanes)            common;
    interface Server#(TLPData#(16), TLPData#(16)) tlpr;
    interface Server#(TLPData#(16), TLPData#(16)) tlpc;
    interface Put#(Tuple2#(Bit#(64),Bit#(32)))  interruptRequest;
@@ -188,17 +190,17 @@ typedef enum {
    } Pcie3CfgType deriving (Bits,Eq);
 
 (* synthesize *)
-module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
+module mkPcieRootPortX7(PcieRootPortX7#(PcieLanes));
 
    PCIEParams params = defaultValue;
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
    Reset defaultResetInverted <- mkResetInverter(defaultReset, clocked_by defaultClock);
-   PcieWrap#(PcieLanes) pcie_ep <- mkPcieWrap(defaultClock, defaultResetInverted);
+   PcieRp#(PcieLanes) pcie_rp <- mkPcieRp(defaultClock, defaultResetInverted);
 
-   // The PCIe endpoint exports full (250MHz) and half-speed (125MHz) clocks
-   Clock pcieClock250 = pcie_ep.user_clk;
-   Reset user_reset_n <- mkResetInverter(pcie_ep.user_reset, clocked_by pcie_ep.user_clk);
+   // The PCIe rootport exports full (250MHz) and half-speed (125MHz) clocks
+   Clock pcieClock250 = pcie_rp.user_clk;
+   Reset user_reset_n <- mkResetInverter(pcie_rp.user_reset, clocked_by pcie_rp.user_clk);
    Reset pcieReset250 <- mkSyncReset(5, user_reset_n, pcieClock250);
 
    ClockGenerator7Params     clkgenParams = defaultValue;
@@ -215,62 +217,72 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    Reset mainReset <- mkSyncReset(5, pcieReset250, mainClock);
    Clock derivedClock = clkgen.clkout0;
    Reset derivedReset <- mkSyncReset(5, pcieReset250, derivedClock);
-   Reset user_reset <- mkSyncReset(5, pcie_ep.user_reset, pcie_ep.user_clk);
+   Reset user_reset <- mkSyncReset(5, pcie_rp.user_reset, pcie_rp.user_clk);
 
    // FIFOS
-   FIFOF#(AxiStCq) fAxiCq <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   FIFOF#(AxiStRc) fAxiRc <- mkCFFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   FIFOF#(AxiStCq) fAxiCq <- mkFIFOF(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   FIFOF#(AxiStRc) fAxiRc <- mkCFFIFOF(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
 
-   FIFOF#(AxiStRq) fAxiRq <- mkCFFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   FIFOF#(AxiStCc) fAxiCc <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   FIFOF#(AxiStRq) fAxiRq <- mkCFFIFOF(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   FIFOF#(AxiStCc) fAxiCc <- mkFIFOF(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
 
-   FIFOF#(TLPData#(16)) fcq <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   FIFOF#(TLPData#(16)) frc <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   FIFOF#(TLPData#(16)) fcc <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   FIFOF#(TLPData#(16)) frq <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   FIFOF#(TLPData#(16)) fcq <- mkFIFOF(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   FIFOF#(TLPData#(16)) frc <- mkFIFOF(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   FIFOF#(TLPData#(16)) fcc <- mkFIFOF(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   FIFOF#(TLPData#(16)) frq <- mkFIFOF(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
 
-   FIFOF#(Tuple2#(Bit#(64),Bit#(32))) intrFifo <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   FIFOF#(Tuple2#(Bit#(64),Bit#(32))) intrFifo <- mkFIFOF(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
 
    // Drive s_axis_rq
-   let rq_txready = (pcie_ep.s_axis_rq.tready != 0 && fAxiRq.notEmpty);
+   let rq_txready = (pcie_rp.s_axis_rq.tready != 0 && fAxiRq.notEmpty);
 
    //(* fire_when_enabled, no_implicit_conditions *)
-   rule drive_axi_rq;
-      let tvalid = 0;
-      let tlast = 0;
-      let tdata = 0;
-      let tkeep = 0;
-      let tuser = 0;
-      if (rq_txready) begin
-	 let info = fAxiRq.first; fAxiRq.deq;
-	 tvalid = 1;
-	 tlast = pack(info.last);
-	 tdata = info.data;
-	 tkeep = info.keep;
-	 tuser = {0, info.last_be, info.first_be};
-      end
-
-      pcie_ep.s_axis_rq.tvalid(tvalid);
-      pcie_ep.s_axis_rq.tlast(tlast);
-      pcie_ep.s_axis_rq.tdata(tdata);
-      pcie_ep.s_axis_rq.tkeep(tkeep);
-      pcie_ep.s_axis_rq.tuser(tuser);
+   rule drive_axi_rq if (rq_txready);
+      let info = fAxiRq.first; fAxiRq.deq;
+      pcie_rp.s_axis_rq.tvalid(1);
+      pcie_rp.s_axis_rq.tlast(pack(info.last));
+      pcie_rp.s_axis_rq.tdata(info.data);
+      pcie_rp.s_axis_rq.tkeep(info.keep);
+      pcie_rp.s_axis_rq.tuser({0, info.last_be, info.first_be});
    endrule
 
-   Reg#(Bit#(16)) rqBackpressureCycles <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   Reg#(Bit#(16)) rqBackpressureCount <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   Reg#(Bool)     rqBackpressure       <- mkReg(False, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   Reg#(Bit#(32)) rqBackpressureCountSum <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   Reg#(Bit#(32)) rqBackpressureEvents   <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   (* fire_when_enabled, no_implicit_conditions *)
+   rule drive_axi_rq2 if (!rq_txready);
+      pcie_rp.s_axis_rq.tvalid(0);
+      pcie_rp.s_axis_rq.tlast(0);
+      pcie_rp.s_axis_rq.tdata(0);
+      pcie_rp.s_axis_rq.tkeep(0);
+      pcie_rp.s_axis_rq.tuser(0);
+   endrule
+
+   Reg#(Bit#(16)) rqBackpressureCycles <- mkReg(0, clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   Reg#(Bit#(16)) rqBackpressureCount <- mkReg(0, clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   Reg#(Bool)     rqBackpressure       <- mkReg(False, clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   Reg#(Bit#(32)) rqBackpressureCountSum <- mkReg(0, clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   Reg#(Bit#(32)) rqBackpressureEvents   <- mkReg(0, clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_rqBackpressureCycles <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_rqBackpressureCount <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_rqBackpressure       <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   Probe#(Bit#(32)) probe_rqBackpressureCountSum <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   Probe#(Bit#(32)) probe_rqBackpressureEvents   <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_fAxiRqNotEmpty       <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_SAxsiRqTReady        <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   rule rltready;
+      probe_fAxiRqNotEmpty <= fAxiRq.notEmpty();
+      probe_SAxsiRqTReady <= pcie_rp.s_axis_rq.tready;
+   endrule
    rule rlBackpressureEnter if (!rqBackpressure);
-      if (pcie_ep.s_axis_rq.tready == 0 && fAxiRq.notEmpty) begin
+      if (pcie_rp.s_axis_rq.tready == 0 && fAxiRq.notEmpty) begin
 	 rqBackpressure <= True;
 	 rqBackpressureCycles <= 0;
+	 probe_rqBackpressure <= True;
+	 probe_rqBackpressureCycles <= 0;
       end
    endrule
    rule rlBackpressureExit if (rqBackpressure);
       rqBackpressureCycles <= rqBackpressureCycles + 1;
-      if (pcie_ep.s_axis_rq.tready != 0 || !fAxiRq.notEmpty) begin
+      probe_rqBackpressureCycles <= rqBackpressureCycles + 1;
+      if (pcie_rp.s_axis_rq.tready != 0 || !fAxiRq.notEmpty) begin
 	 rqBackpressure <= False;
 	 let count = rqBackpressureCycles;
 	 count[15] = ~rqBackpressureCount[15];
@@ -278,61 +290,68 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
 	    rqBackpressureCount <= count;
 	 rqBackpressureCountSum <= rqBackpressureCountSum + extend(count);
 	 rqBackpressureEvents <= rqBackpressureEvents + 1;
+	 probe_rqBackpressure <= False;
+	 probe_rqBackpressureCount <= count;
+	 probe_rqBackpressureCountSum <= rqBackpressureCountSum + extend(count);
+	 probe_rqBackpressureEvents <= rqBackpressureEvents + 1;
+      end
+      else begin
+	 probe_rqBackpressure <= True;
       end
    endrule
 
    // Drive s_axis_cc
-   let cc_txready = (pcie_ep.s_axis_cc.tready != 0 && fAxiCc.notEmpty);
+   let cc_txready = (pcie_rp.s_axis_cc.tready != 0 && fAxiCc.notEmpty);
 
    //(* fire_when_enabled, no_implicit_conditions *)
    rule drive_axi_cc if (cc_txready);
       let info = fAxiCc.first; fAxiCc.deq;
       $display("drive axi_cc, data: %h, keep: %h, last: %h", info.data, info.keep, info.last);
-      pcie_ep.s_axis_cc.tvalid(1);
-      pcie_ep.s_axis_cc.tlast(pack(info.last));
-      pcie_ep.s_axis_cc.tdata(info.data);
-      pcie_ep.s_axis_cc.tkeep(info.keep);
-      pcie_ep.s_axis_cc.tuser(0);
+      pcie_rp.s_axis_cc.tvalid(1);
+      pcie_rp.s_axis_cc.tlast(pack(info.last));
+      pcie_rp.s_axis_cc.tdata(info.data);
+      pcie_rp.s_axis_cc.tkeep(info.keep);
+      pcie_rp.s_axis_cc.tuser(0);
    endrule
 
    (* fire_when_enabled, no_implicit_conditions *)
    rule drive_axi_cc2 if (!cc_txready);
-      pcie_ep.s_axis_cc.tvalid(0);
-      pcie_ep.s_axis_cc.tlast(0);
-      pcie_ep.s_axis_cc.tdata(0);
-      pcie_ep.s_axis_cc.tkeep(0);
-      pcie_ep.s_axis_cc.tuser(0);
+      pcie_rp.s_axis_cc.tvalid(0);
+      pcie_rp.s_axis_cc.tlast(0);
+      pcie_rp.s_axis_cc.tdata(0);
+      pcie_rp.s_axis_cc.tkeep(0);
+      pcie_rp.s_axis_cc.tuser(0);
    endrule
 
    (* fire_when_enabled, no_implicit_conditions *)
    rule drive_axi_rc_ready;
-      pcie_ep.m_axis_rc.tready (duplicate (pack (fAxiRc.notFull)));
+      pcie_rp.m_axis_rc.tready (duplicate (pack (fAxiRc.notFull)));
    endrule
  
    // Drive m_axis_rc
    (* fire_when_enabled *)
-   rule sink_axi_rc if (pcie_ep.m_axis_rc.tvalid != 0 && fAxiRc.notFull);
-      let rc = AxiStRc {data:pcie_ep.m_axis_rc.tdata,
-			sop: unpack (pcie_ep.m_axis_rc.tuser [32]),         // tuser.is_sof_0
-			eop: unpack (pcie_ep.m_axis_rc.tlast),
-			keep:pcie_ep.m_axis_rc.tkeep,
-			be:  truncate (pcie_ep.m_axis_rc.tuser [31:0])};    // tuser.byte_en
+   rule sink_axi_rc if (pcie_rp.m_axis_rc.tvalid != 0 && fAxiRc.notFull);
+      let rc = AxiStRc {data:pcie_rp.m_axis_rc.tdata,
+			sop: unpack (pcie_rp.m_axis_rc.tuser [32]),         // tuser.is_sof_0
+			eop: unpack (pcie_rp.m_axis_rc.tlast),
+			keep:pcie_rp.m_axis_rc.tkeep,
+			be:  truncate (pcie_rp.m_axis_rc.tuser [31:0])};    // tuser.byte_en
       fAxiRc.enq (rc);
    endrule
 
    (* fire_when_enabled, no_implicit_conditions *)
    rule drive_axi_cq_ready;
-      pcie_ep.m_axis_cq.tready (duplicate (pack (fAxiCq.notFull)));
+      pcie_rp.m_axis_cq.tready (duplicate (pack (fAxiCq.notFull)));
    endrule
 
    (* fire_when_enabled *)
-   rule sink_axi_cq if (pcie_ep.m_axis_cq.tvalid != 0 && fAxiCq.notFull);
-      let cq = AxiStCq {data:     pcie_ep.m_axis_cq.tdata,
-			sop:      unpack (pcie_ep.m_axis_cq.tuser [40]),  // tuser.sop
-			eop:      unpack (pcie_ep.m_axis_cq.tlast),
-			keep:     pcie_ep.m_axis_cq.tkeep,
-			first_be: pcie_ep.m_axis_cq.tuser [3:0],    // tuser.first_be,
-			last_be:  pcie_ep.m_axis_cq.tuser [7:4]};   // tuser.last_be
+   rule sink_axi_cq if (pcie_rp.m_axis_cq.tvalid != 0 && fAxiCq.notFull);
+      let cq = AxiStCq {data:     pcie_rp.m_axis_cq.tdata,
+			sop:      unpack (pcie_rp.m_axis_cq.tuser [40]),  // tuser.sop
+			eop:      unpack (pcie_rp.m_axis_cq.tlast),
+			keep:     pcie_rp.m_axis_cq.tkeep,
+			first_be: pcie_rp.m_axis_cq.tuser [3:0],    // tuser.first_be,
+			last_be:  pcie_rp.m_axis_cq.tuser [7:4]};   // tuser.last_be
       fAxiCq.enq (cq);
    endrule
 
@@ -366,8 +385,8 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    endrule
 
    // RC.
-   Reg#(DWCount) rc_dwcount <- mkRegU(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   Reg#(Bool) rc_even <- mkReg(True, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   Reg#(DWCount) rc_dwcount <- mkRegU(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   Reg#(Bool) rc_even <- mkReg(True, clocked_by pcie_rp.user_clk, reset_by user_reset_n);
 
    rule rl_rc_header (fAxiRc.first.sop && rc_even);
       RCDescriptor rc_desc = unpack(fAxiRc.first.data [95:0]);
@@ -409,8 +428,8 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       rc_even <= (last) ? True : !rc_even;
    endrule
 
-   Reg#(DWCount) cc_dwcount <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   FIFOF#(TLPData#(16)) fcc_tlps <- mkFIFOF (clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   Reg#(DWCount) cc_dwcount <- mkReg(0, clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   FIFOF#(TLPData#(16)) fcc_tlps <- mkFIFOF (clocked_by pcie_rp.user_clk, reset_by user_reset_n);
    // CC.
    rule get_cc_tlps;
       let tlp <- toGet(fcc).get;
@@ -435,13 +454,12 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    endrule
 
    // RQ.
-   FIFOF#(TLPData#(16)) frq_tlps <- mkFIFOF (clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   Reg#(Bit#(4)) rq_first_be <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   Reg#(Bit#(4)) rq_last_be <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   Reg#(Bool)    rq_even    <- mkRegU(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   Reg#(DWCount) rq_dwcount <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   Reg#(AxiStRq) rq_rq <- mkRegU(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-
+   FIFOF#(TLPData#(16)) frq_tlps <- mkFIFOF (clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   Reg#(Bit#(4)) rq_first_be <- mkReg(0, clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   Reg#(Bit#(4)) rq_last_be <- mkReg(0, clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   Reg#(Bool)    rq_even    <- mkRegU(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   Reg#(DWCount) rq_dwcount <- mkReg(0, clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   Reg#(AxiStRq) rq_rq <- mkRegU(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
    rule rl_rq_tlps;
       let tlp <- toGet(frq).get;
       frq_tlps.enq(tlp);
@@ -499,7 +517,6 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       rq.first_be = rq_first_be;
       rq.last_be = rq_last_be;
       rq.keep = keep;
-
       if (!rq_even || last)
 	 fAxiRq.enq(rq);
       if (rq_even)
@@ -508,27 +525,63 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       rq_even <= (last) ? False : !rq_even;
    endrule
 
-   FIFO#(Bool) intrMutex <- mkFIFO1(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   Wire#(Bool) msix_int_enable <- mkDWire(False, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   FIFO#(Bool) intrMutex <- mkFIFO1(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
 
-   rule rl_intr;
-      if (pcie_ep.cfg.interrupt_msix_enable[0] == 1) begin
-	 match { .addr, .data } <- toGet(intrFifo).get();
-	 pcie_ep.cfg.interrupt_msix_address(addr);
-	 pcie_ep.cfg.interrupt_msix_data(data);
-	 msix_int_enable <= True;
-	 intrMutex.enq(True);
-      end
-   endrule: rl_intr
-   rule rl_intr_enable;
-      pcie_ep.cfg.interrupt_msix_int(pack(msix_int_enable));
+   let probe_current_speed <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_dpa_substate_change <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_err_cor_out <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_err_fatal_out <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_err_nonfatal_out <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_flr_in_process <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_function_power_state <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_function_status <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_hot_reset_out <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_link_power_state <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_ltr_enable <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_ltssm_state <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_max_payload <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_max_read_req <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_negotiated_width <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_obff_enable <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_phy_link_down <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_phy_link_status <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_pl_status_change <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_power_state_change_interrupt <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_rcb_status <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_tph_requester_enable <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_tph_st_mode <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_rq_seq_num <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   let probe_rq_seq_num_vld <- mkProbe(clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   rule rl_drive_probes;
+      probe_current_speed <= pcie_rp.cfg.current_speed;
+      probe_dpa_substate_change <= pcie_rp.cfg.dpa_substate_change;
+      probe_err_cor_out <= pcie_rp.cfg.err_cor_out;
+      probe_err_fatal_out <= pcie_rp.cfg.err_fatal_out;
+      probe_err_nonfatal_out <= pcie_rp.cfg.err_nonfatal_out;
+      probe_flr_in_process <= pcie_rp.cfg.flr_in_process;
+      probe_function_power_state <= pcie_rp.cfg.function_power_state;
+      probe_function_status <= pcie_rp.cfg.function_status;
+      probe_hot_reset_out <= pcie_rp.cfg.hot_reset_out;
+      probe_link_power_state <= pcie_rp.cfg.link_power_state;
+      probe_ltr_enable <= pcie_rp.cfg.ltr_enable;
+      probe_ltssm_state <= pcie_rp.cfg.ltssm_state;
+      probe_max_payload <= pcie_rp.cfg.max_payload;
+      probe_max_read_req <= pcie_rp.cfg.max_read_req;
+      probe_negotiated_width <= pcie_rp.cfg.negotiated_width;
+      probe_obff_enable <= pcie_rp.cfg.obff_enable;
+      probe_phy_link_down <= pcie_rp.cfg.phy_link_down;
+      probe_phy_link_status <= pcie_rp.cfg.phy_link_status;
+      probe_pl_status_change <= pcie_rp.cfg.pl_status_change;
+      probe_power_state_change_interrupt <= pcie_rp.cfg.power_state_change_interrupt;
+      probe_rcb_status <= pcie_rp.cfg.rcb_status;
+      probe_tph_requester_enable <= pcie_rp.cfg.tph_requester_enable;
+      probe_tph_st_mode <= pcie_rp.cfg.tph_st_mode;
+
+      probe_rq_seq_num <= pcie_rp.pcie.rq_seq_num;
+      probe_rq_seq_num_vld <= pcie_rp.pcie.rq_seq_num_vld;
    endrule
 
-   rule rl_intr_sent if (pcie_ep.cfg.interrupt_msix_sent() == 1|| pcie_ep.cfg.interrupt_msix_fail() == 1);
-      intrMutex.deq();
-   endrule
-
-   Reg#(Bit#(32)) cyclesReg <- mkReg(0, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   Reg#(Bit#(32)) cyclesReg <- mkReg(0, clocked_by pcie_rp.user_clk, reset_by user_reset_n);
    rule rl_cycles;
       cyclesReg <= cyclesReg + 1;
    endrule
@@ -537,73 +590,74 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       match { .src, .v } = tpl;
       let snapshot <- mkReg(0);
       let changeFifo <- mkFIFOF1();
+      let probe_snapshot <- mkProbe();
       rule rl_update if (v != snapshot);
 	 if (changeFifo.notFull) begin
 	    changeFifo.enq(RegChange { timestamp: cyclesReg, src: extend(pack(src)), value: extend(v) });
 	    snapshot <= v;
+	    probe_snapshot <= v;
 	 end
       endrule
       return toPipeOut(changeFifo);
    endmodule
 
-`ifdef DebugPcieStateMachine
-   Vector#(21,Tuple2#(Pcie3CfgType,Bit#(24))) changeValues = vec(
-      tuple2(Pcie3Cfg_rq_backpressure, extend(rqBackpressureCount)),
-      tuple2(Pcie3Cfg_current_speed, extend(pcie_ep.cfg.current_speed)),
-      tuple2(Pcie3Cfg_dpa_substate_change, extend(pcie_ep.cfg.dpa_substate_change)),
-      tuple2(Pcie3Cfg_err_cor_out, extend(pcie_ep.cfg.err_cor_out)),
-      tuple2(Pcie3Cfg_err_fatal_out, extend(pcie_ep.cfg.err_fatal_out)),
-      tuple2(Pcie3Cfg_err_nonfatal_out, extend(pcie_ep.cfg.err_nonfatal_out)),
-      tuple2(Pcie3Cfg_flr_in_process, extend(pcie_ep.cfg.flr_in_process)),
-      tuple2(Pcie3Cfg_function_power_state, extend(pcie_ep.cfg.function_power_state)),
-      tuple2(Pcie3Cfg_function_status, extend(pcie_ep.cfg.function_status)),
-      tuple2(Pcie3Cfg_hot_reset_out, extend(pcie_ep.cfg.hot_reset_out)),
-      tuple2(Pcie3Cfg_link_power_state, extend(pcie_ep.cfg.link_power_state)),
-      tuple2(Pcie3Cfg_ltr_enable, extend(pcie_ep.cfg.ltr_enable)),
-//      tuple2(Pcie3Cfg_ltssm_state, extend(pcie_ep.cfg.ltssm_state)),
-      tuple2(Pcie3Cfg_max_payload, extend(pcie_ep.cfg.max_payload)),
-      tuple2(Pcie3Cfg_max_read_req, extend(pcie_ep.cfg.max_read_req)),
-      tuple2(Pcie3Cfg_negotiated_width, extend(pcie_ep.cfg.negotiated_width)),
-      tuple2(Pcie3Cfg_obff_enable, extend(pcie_ep.cfg.obff_enable)),
-      tuple2(Pcie3Cfg_phy_link_down, extend(pcie_ep.cfg.phy_link_down)),
-      tuple2(Pcie3Cfg_phy_link_status, extend(pcie_ep.cfg.phy_link_status)),
-      tuple2(Pcie3Cfg_pl_status_change, extend(pcie_ep.cfg.pl_status_change)),
-      tuple2(Pcie3Cfg_power_state_change_interrupt, extend(pcie_ep.cfg.power_state_change_interrupt)),
-      tuple2(Pcie3Cfg_rcb_status, extend(pcie_ep.cfg.rcb_status)));
-   let change_pipes <- mapM(mkChangeSource, changeValues, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+`ifndef FOO
+   Vector#(22,Tuple2#(Pcie3CfgType,Bit#(24))) changeValues = vec(tuple2(Pcie3Cfg_current_speed, extend(pcie_rp.cfg.current_speed)),
+      tuple2(Pcie3Cfg_dpa_substate_change, extend(pcie_rp.cfg.dpa_substate_change)),
+      tuple2(Pcie3Cfg_err_cor_out, extend(pcie_rp.cfg.err_cor_out)),
+      tuple2(Pcie3Cfg_err_fatal_out, extend(pcie_rp.cfg.err_fatal_out)),
+      tuple2(Pcie3Cfg_err_nonfatal_out, extend(pcie_rp.cfg.err_nonfatal_out)),
+      tuple2(Pcie3Cfg_flr_in_process, extend(pcie_rp.cfg.flr_in_process)),
+      tuple2(Pcie3Cfg_function_power_state, extend(pcie_rp.cfg.function_power_state)),
+      tuple2(Pcie3Cfg_function_status, extend(pcie_rp.cfg.function_status)),
+      tuple2(Pcie3Cfg_hot_reset_out, extend(pcie_rp.cfg.hot_reset_out)),
+      tuple2(Pcie3Cfg_link_power_state, extend(pcie_rp.cfg.link_power_state)),
+      tuple2(Pcie3Cfg_ltr_enable, extend(pcie_rp.cfg.ltr_enable)),
+      tuple2(Pcie3Cfg_ltssm_state, extend(pcie_rp.cfg.ltssm_state)),
+      tuple2(Pcie3Cfg_max_payload, extend(pcie_rp.cfg.max_payload)),
+      tuple2(Pcie3Cfg_max_read_req, extend(pcie_rp.cfg.max_read_req)),
+      tuple2(Pcie3Cfg_negotiated_width, extend(pcie_rp.cfg.negotiated_width)),
+      tuple2(Pcie3Cfg_obff_enable, extend(pcie_rp.cfg.obff_enable)),
+      tuple2(Pcie3Cfg_phy_link_down, extend(pcie_rp.cfg.phy_link_down)),
+      tuple2(Pcie3Cfg_phy_link_status, extend(pcie_rp.cfg.phy_link_status)),
+      tuple2(Pcie3Cfg_pl_status_change, extend(pcie_rp.cfg.pl_status_change)),
+      tuple2(Pcie3Cfg_power_state_change_interrupt, extend(pcie_rp.cfg.power_state_change_interrupt)),
+      tuple2(Pcie3Cfg_rcb_status, extend(pcie_rp.cfg.rcb_status)),
+      tuple2(Pcie3Cfg_rq_backpressure, extend(rqBackpressureCount)));
+   let change_pipes <- mapM(mkChangeSource, changeValues, clocked_by pcie_rp.user_clk, reset_by user_reset_n);
 
-   FunnelPipe#(1,21,RegChange,3) changePipe <- mkFunnelPipesPipelined(change_pipes, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   FIFOF#(RegChange) changeFifo <- mkSizedBRAMFIFOF(128, clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   mkConnection(changePipe[0], toPipeIn(changeFifo), clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   FunnelPipe#(1,22,RegChange,3) changePipe <- mkFunnelPipesPipelined(change_pipes, clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   FIFOF#(RegChange) changeFifo <- mkSizedBRAMFIFOF(128, clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   mkConnection(changePipe[0], toPipeIn(changeFifo), clocked_by pcie_rp.user_clk, reset_by user_reset_n);
 `else
-   let cs <- mkChangeSource(tuple2(Pcie3Cfg_rq_backpressure, extend(rqBackpressureCount)), clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   FIFOF#(RegChange) changeFifo <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);
-   mkConnection(cs, toPipeIn(changeFifo), clocked_by pcie_ep.user_clk, reset_by user_reset_n);
+   let cs <- mkChangeSource(tuple2(Pcie3Cfg_rq_backpressure, extend(rqBackpressureCount)), clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   FIFOF#(RegChange) changeFifo <- mkSizedBRAMFIFOF(128, clocked_by pcie_rp.user_clk, reset_by user_reset_n);
+   mkConnection(cs, toPipeIn(changeFifo), clocked_by pcie_rp.user_clk, reset_by user_reset_n);
 `endif
 
    rule rl_drive_cfg_status_if;
-      pcie_ep.cfg.config_space_enable(1);
-      pcie_ep.cfg.dsn(64'hf001ba7700000000);
-      pcie_ep.cfg.ds_bus_number(0);
-      pcie_ep.cfg.ds_device_number(0);
-      pcie_ep.cfg.ds_port_number(0);
-      pcie_ep.cfg.err_cor_in(0);
-      pcie_ep.cfg.err_uncor_in(0);
-      pcie_ep.cfg.flr_done(0);
-      pcie_ep.cfg.hot_reset_in(0);
-      pcie_ep.cfg.link_training_enable(1);
-      pcie_ep.cfg.per_function_number(0);
-      pcie_ep.cfg.per_function_output_request(0);
-      pcie_ep.cfg.power_state_change_ack(1);
-      pcie_ep.cfg.subsys_vend_id(16'h1be8);
-      pcie_ep.cfg.vf_flr_done(0);
+      pcie_rp.cfg.config_space_enable(1);
+      pcie_rp.cfg.dsn(64'hf001ba7700000000);
+      pcie_rp.cfg.ds_bus_number(0);
+      pcie_rp.cfg.ds_device_number(0);
+      pcie_rp.cfg.ds_port_number(0);
+      pcie_rp.cfg.err_cor_in(0);
+      pcie_rp.cfg.err_uncor_in(0);
+      pcie_rp.cfg.flr_done(0);
+      pcie_rp.cfg.hot_reset_in(0);
+      pcie_rp.cfg.link_training_enable(1);
+      pcie_rp.cfg.per_function_number(0);
+      pcie_rp.cfg.per_function_output_request(0);
+      pcie_rp.cfg.power_state_change_ack(0);
+      pcie_rp.cfg.subsys_vend_id(16'h1be8);
+      pcie_rp.cfg.vf_flr_done(0);
 
-      pcie_ep.pcie.cq_np_req(1);
+      pcie_rp.pcie.cq_np_req(1);
 
-      pcie_ep.cfg_req_pm_transition.l23_ready(0);
+      pcie_rp.cfg_req_pm_transition.l23_ready(0);
    endrule
 
-   // The PCIE endpoint is processing Gen3 descriptors at 250MHz. The
+   // The PCIE rootport is processing Gen3 descriptors at 250MHz. The
    // AXI bridge is accepting TLPData#(16)s at 250 MHz. The
    // conversion uses half of Gen3 descriptor.
    //mkConnection(tlp8, gb.tlp, clocked_by portalClock, reset_by portalReset);
@@ -621,8 +675,10 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       interface response = toGet(fcq);
    endinterface
    interface interruptRequest = toPut(intrFifo);
-   interface pcie    = pcie_ep.pci_exp;
-   interface Pcie3wrapUser user = pcie_ep.user;
+   interface pcie    = pcie_rp.pci_exp;
+   interface Pcie3wrapUser user = pcie_rp.user;
+   interface PcieRpPipe pipe = pcie_rp.pipe;
+   interface PcieRpCommon common= pcie_rp.common;
    interface regChanges = mapPipe(pack, toPipeOut(changeFifo));
    interface Clock epPcieClock = pcieClock250;
    interface Reset epPcieReset = pcieReset250;
@@ -630,6 +686,6 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    interface Reset epPortalReset = portalReset;
    interface Clock epDerivedClock = derivedClock;
    interface Reset epDerivedReset = derivedReset;
-endmodule: mkPcieEndpointX7
+endmodule: mkPcieRootPortX7
 
-endpackage: Pcie3EndpointX7
+endpackage: Pcie3RootPortX7
