@@ -20,7 +20,7 @@ CONNECTALFLAGS += -D USE_ACP
 CONNECTALFLAGS += -D TOP_SOURCES_PORTAL_CLOCK
 CONNECTALFLAGS +=  --mainclockperiod=8
 else
-#PINOUT_FILE += nfsume.json
+PINOUT_FILE += nfsume.json
 CONNECTALFLAGS += -D PcieDataBusWidth=128
 endif
 CONNECTALFLAGS += -D BlocksPerRequest=8
