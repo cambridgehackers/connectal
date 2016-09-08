@@ -67,6 +67,14 @@
         }
     },
     "FMC": {
+	"FMC_GBTCLK_P[00]": {
+	    "DIFF_TERM": "TRUE",
+            "PACKAGE_PIN": "AT8"
+	},
+	"FMC_GBTCLK_N[00]": {
+	    "DIFF_TERM": "TRUE",
+            "PACKAGE_PIN": "AT7"
+	},
         "FMC_CLK0_M2C_N": {
             "IOSTANDARD": "LVDS",
 	    "DIFF_TERM": "TRUE",
