@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 
+`include "ConnectalProjectConfig.bsv"
 import FloatingPoint::*;
 
 typedef 20 MMSize;

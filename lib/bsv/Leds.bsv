@@ -21,6 +21,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+`include "ConnectalProjectConfig.bsv"
 `ifdef NUMBER_OF_LEDS
 typedef `NUMBER_OF_LEDS LedsWidth;
 `else

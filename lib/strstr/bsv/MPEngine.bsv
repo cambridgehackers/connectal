@@ -26,6 +26,7 @@
  *       Alberto Apostolico, Zvi Galil, 1997
  */
 
+`include "ConnectalProjectConfig.bsv"
 import FIFO::*;
 import FIFOF::*;
 import SpecialFIFOs::*;

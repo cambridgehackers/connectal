@@ -1,4 +1,5 @@
 
+`include "ConnectalProjectConfig.bsv"
 import Connectable::*;
 import GetPut::*;
 import FIFOF::*;

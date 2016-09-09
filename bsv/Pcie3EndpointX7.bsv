@@ -23,6 +23,7 @@
 
 package Pcie3EndpointX7;
 
+`include "ConnectalProjectConfig.bsv"
 import BRAMFIFO          ::*;
 import Clocks            ::*;
 import Vector            ::*;

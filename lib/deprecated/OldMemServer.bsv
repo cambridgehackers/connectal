@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 // BSV Libraries
+`include "ConnectalProjectConfig.bsv"
 import FIFO::*;
 import Vector::*;
 import GetPut::*;

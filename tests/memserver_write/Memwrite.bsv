@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+`include "ConnectalProjectConfig.bsv"
 import Vector::*;
 import BuildVector::*;
 import FIFO::*;

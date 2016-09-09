@@ -23,6 +23,7 @@
 
 package Pcie3RootPortX7;
 
+`include "ConnectalProjectConfig.bsv"
 import BRAMFIFO          ::*;
 import Clocks            ::*;
 import Vector            ::*;

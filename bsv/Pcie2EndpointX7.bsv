@@ -24,6 +24,7 @@
 
 package Pcie2EndpointX7;
 
+`include "ConnectalProjectConfig.bsv"
 import ConnectalConfig   ::*;
 import BRAMFIFO          ::*;
 import Clocks            ::*;
