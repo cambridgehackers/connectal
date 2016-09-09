@@ -97,10 +97,10 @@ interface AprpMsi;
 endinterface
 (* always_ready, always_enabled *)
 interface AprpPci;
-    method Action      exp_rxn(Bit#(8) v);
-    method Action      exp_rxp(Bit#(8) v);
-    method Bit#(8)     exp_txn();
-    method Bit#(8)     exp_txp();
+    method Action      exp_rxn(Bit#(4) v);
+    method Action      exp_rxp(Bit#(4) v);
+    method Bit#(4)     exp_txn();
+    method Bit#(4)     exp_txp();
 endinterface
 (* always_ready, always_enabled *)
 interface AprpS_axi;
