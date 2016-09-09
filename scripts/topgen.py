@@ -57,9 +57,9 @@ import MemReadEngine::*;
 import MemWriteEngine::*;
 import MemTypes::*;
 import MemServer::*;
+`include "ConnectalProjectConfig.bsv"
 import %(ifcnames)s::*;
 %(generatedImport)s
-`include "ConnectalProjectConfig.bsv"
 
 %(pinsInterfaceDecl)s
 
@@ -122,10 +122,10 @@ import Portal::*;
 import CnocPortal::*;
 import Connectable::*;
 import HostInterface::*;
-import %(ifcnames)s::*;
 import MemTypes::*;
-%(generatedImport)s
 `include "ConnectalProjectConfig.bsv"
+import %(ifcnames)s::*;
+%(generatedImport)s
 
 %(generatedTypedefs)s
 
