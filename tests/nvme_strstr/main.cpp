@@ -30,7 +30,7 @@ int main(int argc, char * const *argv)
     StringSearchResponse     searchResponse(IfcNames_StringSearchResponseH2S);
 
     int opt;
-    const char *filename;
+    const char *filename = NULL;
     const char *needle = "needle";
     int source_fd = -1;
 
