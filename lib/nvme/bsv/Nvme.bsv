@@ -49,6 +49,8 @@ import Pipe::*;
 import TraceMemClient::*;
 import XilinxCells::*;
 
+`include "ConnectalProjectConfig.bsv"
+
 `ifndef PCIE3
 import AxiPcieRootPort::*;
 `else
@@ -549,10 +551,12 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
       method Action status();
 `ifndef PCIE3
 	 let mmcmLock = axiRootPort.mmcm.lock();
+	 let ltssm_state = 0;
 `else
-	 let mmcmLock = 1;
+	 let mmcmLock = axiRootPort.user.link_up();
+	 let ltssm_state = axiRootPort.cfg.ltssm_state();
 `endif
-         driverInd.status(mmcmLock, 0);
+         driverInd.status(mmcmLock, extend(ltssm_state));
       endmethod
       method Action trace(Bool enabled);
 	 traceEnabled <= enabled;
