@@ -49,10 +49,10 @@ int main(int argc, char * const *argv)
     fprintf(stderr, "LD_LIBRARY_PATH: %s\n", library_path);
     setenv("LD_LIBRARY_PATH", library_path, 1);
 #ifdef PYTHONPATH
-    fprintf(stderr, "PYTHONPATH=%s\n", STR_VALUE(PYTHONPATH));
-    fprintf(stderr, "CONNECTALDIR=%s\n", STR_VALUE(CONNECTALDIR));
+    fprintf(stderr, "PYTHONPATH=%s\n", PYTHONPATH);
+    fprintf(stderr, "CONNECTALDIR=%s\n", CONNECTALDIR);
     static char pythonpath[1024];
-    snprintf(pythonpath, sizeof(pythonpath), "%s:%s/scripts", STR_VALUE(PYTHONPATH), STR_VALUE(CONNECTALDIR));
+    snprintf(pythonpath, sizeof(pythonpath), "%s:%s/scripts", PYTHONPATH, CONNECTALDIR);
     fprintf(stderr, "using PYTHONPATH=%s\n", pythonpath);
     setenv("PYTHONPATH", pythonpath, 1);
 #endif
