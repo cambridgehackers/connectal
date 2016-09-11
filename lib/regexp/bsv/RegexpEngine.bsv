@@ -34,6 +34,8 @@ import MemReadEngine::*;
 import Pipe::*;
 import Dma2BRAM::*;
 
+`include "ConnectalProjectConfig.bsv"
+
 typedef union tagged {
    Tuple2#(Bit#(t),Int#(32)) Loc;
    Bit#(t) Done;

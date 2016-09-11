@@ -35,6 +35,8 @@ import Pipe::*;
 import Dma2BRAM::*;
 import RegexpEngine::*;
 
+`include "ConnectalProjectConfig.bsv"
+
 interface RegexpRequest;
    method Action setup(Bit#(32) mapSGLId, Bit#(32) mapLen);
    method Action search(Bit#(32) token, Bit#(32) haystackSGLId, Bit#(32) haystackLen);
