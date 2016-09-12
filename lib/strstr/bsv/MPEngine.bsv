@@ -396,6 +396,7 @@ module mkMPStreamEngine(MPStreamEngine#(haystackBusWidth,configBusWidth))
    let t_j <- mkReg(0);
    let m = needleLenReg;
    let i = iReg;
+   let iReg_minus_1 <- mkReg(0);
    let matchFsm <- mkAutoFSM(seq
       while (stage != Search) seq
 	 iReg <= 1;
@@ -405,7 +406,10 @@ module mkMPStreamEngine(MPStreamEngine#(haystackBusWidth,configBusWidth))
 	 jReg <= 1;
 	 let t = haystackGb.first[0]; haystackGb.deq();
 	 t_j <= t;
-	 needleBram.portA.request.put(BRAMRequest{write:False, address: truncate(iReg-1), datain:?, responseOnWrite:?});
+         iReg_minus_1 <= iReg-1;
+      endaction
+      action
+	 needleBram.portA.request.put(BRAMRequest{write:False, address: truncate(iReg_minus_1), datain:?, responseOnWrite:?});
       endaction
       action
 	 let xNext <- needleBram.portA.response.get();
@@ -432,8 +436,10 @@ module mkMPStreamEngine(MPStreamEngine#(haystackBusWidth,configBusWidth))
 	    needleBram.portA.request.put(BRAMRequest{write:False, address: truncate(iReg+1-1), datain:?, responseOnWrite:?});
 	    let t = haystackGb.first[0]; haystackGb.deq();
 	    t_j <= t;
-	    if (t == 0) begin
-	       $display("iReg=%d jReg=%d t==0 locf.enq(-1)", iReg, jReg, t);
+      endaction
+      action
+	    if (t_j == 0) begin
+	       $display("iReg=%d jReg=%d t==0 locf.enq(-1)", iReg-1, jReg-1, t_j);
 	       locf.enq(-1); // this seems to be needed for the strstr example to terminate
 	    end
 	 endaction
