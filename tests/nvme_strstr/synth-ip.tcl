@@ -114,12 +114,11 @@ if {$partname != {xc7vx690tffg1761-2} && $partname != {xc7vx690tffg1761-3}} {
 						  CONFIG.shared_logic_in_core {true} \
 						 ]
 } else {
-    fpgamake_ipcore axi_pcie3 2.1 axi_pcie_rp [list \
-						   CONFIG.PCIE_BOARD_INTERFACE {Custom} \
-						   CONFIG.SYS_RST_N_BOARD_INTERFACE {Custom} \
+    fpgamake_ipcore axi_pcie3 2.1 axi_pcie_rp [list
+					       CONFIG.pcie_blk_locn $pcie_blk_locn \
 						   CONFIG.axi_data_width {128_bit} \
 						   CONFIG.axibar_highaddr_0 {0xffffffffffffffff} \
-						   CONFIG.axisten_freq {250} \
+						   CONFIG.axisten_freq {125} \
 						   CONFIG.dedicate_perst {false} \
 						   CONFIG.device_port_type {Root_Port_of_PCI_Express_Root_Complex} \
 						   CONFIG.mode_selection {Advanced} \
@@ -131,10 +130,12 @@ if {$partname != {xc7vx690tffg1761-2} && $partname != {xc7vx690tffg1761-3}} {
 						   CONFIG.pf0_class_code_base {06} \
 						   CONFIG.pf0_class_code_sub {07} \
 						   CONFIG.pf0_device_id {7131} \
+						   CONFIG.pf0_link_status_slot_clock_config {true} \
 						   CONFIG.pf0_sub_class_interface_menu {CardBus_bridge} \
 						   CONFIG.pl_link_cap_max_link_speed {5.0_GT/s} \
-						   CONFIG.pl_link_cap_max_link_width {X8} \
-						   CONFIG.plltype {CPLL} \
+						   CONFIG.pl_link_cap_max_link_width {X4} \
+						   CONFIG.plltype {QPLL1} \
+						   CONFIG.s_axi_id_width {4} \
 						  ]
 }
 
