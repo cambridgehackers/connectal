@@ -131,3 +131,83 @@ instance Connectable#(Axi4Master#(addrWidth, busWidth,idWidth), Axi4Slave#(addrW
    endmodule
 endinstance
 
+function Axi4ReadRequest#(axiAddrWidth,idWidth) toAxi4ReadRequest(PhysMemRequest#(addrWidth,dataBusWidth) req)
+   provisos (Add#(axiAddrWidth,a__,addrWidth)
+	     ,Add#(b__, idWidth, 6));
+   Axi4ReadRequest#(axiAddrWidth,idWidth) axireq  = unpack(0);
+   axireq.address = truncate(req.addr);
+   axireq.id   = truncate(req.tag);
+   let dataWidthBytes = valueOf(TDiv#(dataBusWidth,8));
+   let dataSizeMask = dataWidthBytes-1;
+   let size = req.burstLen & fromInteger(dataSizeMask);
+   let beats = (req.burstLen + fromInteger(dataWidthBytes-1)) / fromInteger(dataWidthBytes);
+   axireq.len = truncate(beats-1);
+   axireq.size = (beats == 0) ? axiBusSizeBytes(size) : axiBusSizeBytes(dataWidthBytes);
+   axireq.burst = 2'b01;
+   axireq.cache = 4'b1111;
+   return axireq;
+endfunction
+function Axi4WriteRequest#(axiAddrWidth,idWidth) toAxi4WriteRequest(PhysMemRequest#(addrWidth,dataBusWidth) req)
+   provisos (Add#(axiAddrWidth,a__,addrWidth)
+	     ,Add#(b__, idWidth, 6));
+   Axi4WriteRequest#(axiAddrWidth,idWidth) axireq  = unpack(0);
+   axireq.address = truncate(req.addr);
+   axireq.id   = truncate(req.tag);
+   let dataWidthBytes = valueOf(TDiv#(dataBusWidth,8));
+   let dataSizeMask = dataWidthBytes-1;
+   let size = req.burstLen & fromInteger(dataSizeMask);
+   let beats = (req.burstLen + fromInteger(dataWidthBytes-1)) / fromInteger(dataWidthBytes);
+   axireq.len = truncate(beats-1);
+   axireq.size = (beats == 0) ? axiBusSizeBytes(size) : axiBusSizeBytes(dataWidthBytes);
+   axireq.burst = 2'b01;
+   axireq.cache = 4'b1111;
+   return axireq;
+endfunction
+
+instance MkPhysMemSlave#(Axi4Slave#(axiAddrWidth,dataWidth,idWidth),addrWidth,dataWidth)
+      provisos (Add#(axiAddrWidth,a__,addrWidth),Add#(b__, idWidth, 6));
+   module mkPhysMemSlave#(Axi4Slave#(axiAddrWidth,dataWidth,idWidth) axiSlave)(PhysMemSlave#(addrWidth,dataWidth));
+      FIFOF#(PhysMemRequest#(addrWidth,dataWidth)) arfifo <- mkFIFOF();
+      FIFOF#(MemData#(dataWidth)) rfifo <- mkFIFOF();
+      FIFOF#(PhysMemRequest#(addrWidth,dataWidth)) awfifo <- mkFIFOF();
+      FIFOF#(MemData#(dataWidth)) wfifo <- mkFIFOF();
+      FIFOF#(Bit#(MemTagSize)) bfifo <- mkFIFOF();
+      FIFOF#(Bit#(MemTagSize)) rtagfifo <- mkFIFOF();
+      FIFOF#(Bit#(MemTagSize)) wtagfifo <- mkFIFOF();
+
+      rule rl_arfifo;
+	 let req <- toGet(arfifo).get();
+	 Axi4ReadRequest#(axiAddrWidth,idWidth) axireq = toAxi4ReadRequest(req);
+	 axiSlave.req_ar.put(axireq);
+      endrule
+      rule rl_rdata;
+	 let rdata <- axiSlave.resp_read.get();
+	 rfifo.enq(MemData { data: rdata.data, tag: extend(rdata.id) } );
+      endrule
+
+      rule rl_awfifo;
+	 let req <- toGet(awfifo).get();
+	 Axi4WriteRequest#(axiAddrWidth,idWidth) axireq = toAxi4WriteRequest(req);
+	 axiSlave.req_aw.put(axireq);
+      endrule
+      rule rl_wdata;
+	 let md <- toGet(wfifo).get();
+	 //FIXME byteEnable
+	 axiSlave.resp_write.put(Axi4WriteData {data: md.data, byteEnable:maxBound, last:pack(md.last), id:truncate(md.tag)});
+      endrule
+      rule rl_done;
+	 let b <- axiSlave.resp_b.get();
+	 bfifo.enq(extend(b.id));
+      endrule
+
+      interface PhysMemReadServer read_server;
+	 interface Put readReq = toPut(arfifo);
+	 interface Get readData = toGet(rfifo);
+      endinterface
+      interface PhysMemWriteServer write_server;
+	 interface Put writeReq = toPut(awfifo);
+	 interface Put writeData = toPut(wfifo);
+	 interface Get writeDone = toGet(bfifo);
+      endinterface
+   endmodule
+endinstance

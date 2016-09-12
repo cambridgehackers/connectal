@@ -362,10 +362,6 @@ module mkAxiFifoF(FIFOF#(t)) provisos(Bits#(t, tSz));
   endmethod
 endmodule
 
-typeclass MkPhysMemSlave#(type srctype, numeric type addrWidth, numeric type dataWidth);
-   module mkPhysMemSlave#(srctype axiSlave)(PhysMemSlave#(addrWidth,dataWidth));
-endtypeclass
-
 instance MkPhysMemSlave#(Axi4SlaveLiteBits#(axiAddrWidth,dataWidth),addrWidth,dataWidth)
       provisos (Add#(axiAddrWidth,a__,addrWidth));
    module mkPhysMemSlave#(Axi4SlaveLiteBits#(axiAddrWidth,dataWidth) axiSlave)(PhysMemSlave#(addrWidth,dataWidth));
@@ -436,23 +432,6 @@ instance MkPhysMemSlave#(Axi4SlaveLiteBits#(axiAddrWidth,dataWidth),addrWidth,da
       endinterface   
    endmodule   
 endinstance
-
-function Axi4ReadRequest#(axiAddrWidth,idWidth) toAxi4ReadRequest(PhysMemRequest#(addrWidth,dataBusWidth) req)
-   provisos (Add#(axiAddrWidth,a__,addrWidth)
-	     ,Add#(b__, idWidth, 6));
-   Axi4ReadRequest#(axiAddrWidth,idWidth) axireq  = unpack(0);
-   axireq.address = truncate(req.addr);
-   axireq.id   = truncate(req.tag);
-   let dataWidthBytes = valueOf(TDiv#(dataBusWidth,8));
-   let dataSizeMask = dataWidthBytes-1;
-   let size = req.burstLen & fromInteger(dataSizeMask);
-   let beats = (req.burstLen + fromInteger(dataWidthBytes-1)) / fromInteger(dataWidthBytes);
-   axireq.len = truncate(beats-1);
-   axireq.size = (beats == 0) ? axiBusSizeBytes(size) : axiBusSizeBytes(dataWidthBytes);
-   axireq.burst = 2'b01;
-   axireq.cache = 4'b1111;
-   return axireq;
-endfunction
 
 `ifdef BLUECHECK
 import BlueCheck::*;

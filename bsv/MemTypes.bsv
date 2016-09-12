@@ -566,3 +566,8 @@ instance MkAxiStream#(AxiStreamSlave#(dsize), PipeIn#(MemData#(dsize)));
       endmethod
    endmodule
 endinstance
+
+typeclass MkPhysMemSlave#(type srctype, numeric type addrWidth, numeric type dataWidth);
+   module mkPhysMemSlave#(srctype axiSlave)(PhysMemSlave#(addrWidth,dataWidth));
+endtypeclass
+
