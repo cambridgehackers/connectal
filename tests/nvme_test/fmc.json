@@ -1,0 +1,13 @@
+{
+    "pcie_refclk_p": {
+	"FMC": "FMC_GBTCLK_P[00]"
+    },
+    "pcie_refclk_n": {
+	"FMC": "FMC_GBTCLK_N[00]"
+    },
+    "RST_N_pcie_sys_reset_n": {
+	"FMC": "FMC_LA_P[00]",
+	"IOSTANDARD": "LVCMOS18",
+	"PIO_DIRECTION": "OUTPUT"
+    }
+}

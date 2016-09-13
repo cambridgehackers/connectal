@@ -1,0 +1,11 @@
+{
+    "pcie_refclk_p": {
+	"pcie": "sys_clk_p"
+    },
+    "pcie_refclk_n": {
+	"pcie": "sys_clk_n"
+    },
+    "RST_N_pcie_sys_reset_n": {
+	"pcie": "sys_reset_n"
+    }
+}
