@@ -13,8 +13,6 @@
 #include "NvmeTrace.h"
 #include "MemServerPortalRequest.h"
 #include "MemServerPortalIndication.h"
-#include "StringSearchRequest.h"
-#include "StringSearchResponse.h"
 //#include "ConnectalProjectConfig.h"
 
 const int DataBusWidth = 64;
