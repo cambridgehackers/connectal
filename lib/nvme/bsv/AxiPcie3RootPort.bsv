@@ -191,58 +191,58 @@ module mkAPRP#(Clock axi_aclk_in, Reset axi_aresetn_in, Clock refclk, Reset sys_
         output_reset ctl_aresetn(axi_ctl_aresetn) clocked_by (axi_aclk_in);
     endinterface
     interface AprpCfg     cfg;
-        method cfg_ltssm_state ltssm_state();
+        method cfg_ltssm_state ltssm_state() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
     endinterface
     interface AprpInterrupt     interrupt;
-        method interrupt_out out();
+        method interrupt_out out() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
     endinterface
     interface AprpIntx     intx;
-        method intx_msi_grant msi_grant();
-        method msi_request(intx_msi_request) enable((*inhigh*) EN_intx_msi_request);
+        method intx_msi_grant msi_grant() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method msi_request(intx_msi_request) enable((*inhigh*) EN_intx_msi_request) clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
     endinterface
     interface AprpM_axi     m_axi;
-        method m_axi_araddr araddr();
-        method m_axi_arburst arburst();
-        method m_axi_arcache arcache();
-        method m_axi_arid arid();
-        method m_axi_arlen arlen();
-        method m_axi_arlock arlock();
-        method m_axi_arprot arprot();
-        method arready(m_axi_arready) enable((*inhigh*) EN_m_axi_arready);
-        method m_axi_arsize arsize();
-        method m_axi_arvalid arvalid();
-        method m_axi_awaddr awaddr();
-        method m_axi_awburst awburst();
-        method m_axi_awcache awcache();
-        method m_axi_awid awid();
-        method m_axi_awlen awlen();
-        method m_axi_awlock awlock();
-        method m_axi_awprot awprot();
-        method awready(m_axi_awready) enable((*inhigh*) EN_m_axi_awready);
-        method m_axi_awsize awsize();
-        method m_axi_awvalid awvalid();
-        method bid(m_axi_bid) enable((*inhigh*) EN_m_axi_bid);
-        method m_axi_bready bready();
-        method bresp(m_axi_bresp) enable((*inhigh*) EN_m_axi_bresp);
-        method bvalid(m_axi_bvalid) enable((*inhigh*) EN_m_axi_bvalid);
-        method rdata(m_axi_rdata) enable((*inhigh*) EN_m_axi_rdata);
-        method rid(m_axi_rid) enable((*inhigh*) EN_m_axi_rid);
-        method rlast(m_axi_rlast) enable((*inhigh*) EN_m_axi_rlast);
-        method m_axi_rready rready();
-        method rresp(m_axi_rresp) enable((*inhigh*) EN_m_axi_rresp);
-        method ruser(m_axi_ruser) enable((*inhigh*) EN_m_axi_ruser);
-        method rvalid(m_axi_rvalid) enable((*inhigh*) EN_m_axi_rvalid);
-        method m_axi_wdata wdata();
-        method m_axi_wlast wlast();
-        method wready(m_axi_wready) enable((*inhigh*) EN_m_axi_wready);
-        method m_axi_wstrb wstrb();
-        method m_axi_wuser wuser();
-        method m_axi_wvalid wvalid();
+        method m_axi_araddr araddr()  clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_arburst arburst()  clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_arcache arcache() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_arid arid() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_arlen arlen() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_arlock arlock() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_arprot arprot() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method arready(m_axi_arready) enable((*inhigh*) EN_m_axi_arready) clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_arsize arsize() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_arvalid arvalid() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_awaddr awaddr() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_awburst awburst() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_awcache awcache() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_awid awid() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_awlen awlen() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_awlock awlock() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_awprot awprot() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method awready(m_axi_awready) enable((*inhigh*) EN_m_axi_awready) clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_awsize awsize() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_awvalid awvalid() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method bid(m_axi_bid) enable((*inhigh*) EN_m_axi_bid) clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_bready bready() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method bresp(m_axi_bresp) enable((*inhigh*) EN_m_axi_bresp) clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method bvalid(m_axi_bvalid) enable((*inhigh*) EN_m_axi_bvalid) clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method rdata(m_axi_rdata) enable((*inhigh*) EN_m_axi_rdata) clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method rid(m_axi_rid) enable((*inhigh*) EN_m_axi_rid) clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method rlast(m_axi_rlast) enable((*inhigh*) EN_m_axi_rlast) clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_rready rready() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method rresp(m_axi_rresp) enable((*inhigh*) EN_m_axi_rresp) clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method ruser(m_axi_ruser) enable((*inhigh*) EN_m_axi_ruser) clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method rvalid(m_axi_rvalid) enable((*inhigh*) EN_m_axi_rvalid) clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_wdata wdata() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_wlast wlast() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method wready(m_axi_wready) enable((*inhigh*) EN_m_axi_wready) clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_wstrb wstrb() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_wuser wuser() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method m_axi_wvalid wvalid() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
     endinterface
     interface AprpMsi     msi;
-        method msi_enable enable();
-        method vector_num(msi_vector_num) enable((*inhigh*) EN_msi_vector_num);
-        method msi_vector_width vector_width();
+        method msi_enable enable() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method vector_num(msi_vector_num) enable((*inhigh*) EN_msi_vector_num) clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
+        method msi_vector_width vector_width() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
     endinterface
     interface AprpPci     pci;
         method exp_rxn(pci_exp_rxn) enable((*inhigh*) EN_pci_exp_rxn);
@@ -305,7 +305,7 @@ module mkAPRP#(Clock axi_aclk_in, Reset axi_aresetn_in, Clock refclk, Reset sys_
         method wvalid(s_axi_ctl_wvalid) enable((*inhigh*) EN_s_axi_ctl_wvalid) clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
     endinterface
     interface AprpUser     user;
-        method user_link_up link_up();
+        method user_link_up link_up() clocked_by (axi_aclk_in) reset_by (axi_aresetn_in);
     endinterface
     schedule (cfg.ltssm_state, interrupt.out, intx.msi_grant, intx.msi_request, m_axi.araddr, m_axi.arburst, m_axi.arcache, m_axi.arid, m_axi.arlen, m_axi.arlock, m_axi.arprot, m_axi.arready, m_axi.arsize, m_axi.arvalid, m_axi.awaddr, m_axi.awburst, m_axi.awcache, m_axi.awid, m_axi.awlen, m_axi.awlock, m_axi.awprot, m_axi.awready, m_axi.awsize, m_axi.awvalid, m_axi.bid, m_axi.bready, m_axi.bresp, m_axi.bvalid, m_axi.rdata, m_axi.rid, m_axi.rlast, m_axi.rready, m_axi.rresp, m_axi.ruser, m_axi.rvalid, m_axi.wdata, m_axi.wlast, m_axi.wready, m_axi.wstrb, m_axi.wuser, m_axi.wvalid, msi.enable, msi.vector_num, msi.vector_width, pci.exp_rxn, pci.exp_rxp, pci.exp_txn, pci.exp_txp, s_axi.araddr, s_axi.arburst, s_axi.arid, s_axi.arlen, s_axi.arready, s_axi.arregion, s_axi.arsize, s_axi.arvalid, s_axi.awaddr, s_axi.awburst, s_axi.awid, s_axi.awlen, s_axi.awready, s_axi.awregion, s_axi.awsize, s_axi.awvalid, s_axi.bid, s_axi.bready, s_axi.bresp, s_axi.bvalid, s_axi.rdata, s_axi.rid, s_axi.rlast, s_axi.rready, s_axi.rresp, s_axi.ruser, s_axi.rvalid, s_axi.wdata, s_axi.wlast, s_axi.wready, s_axi.wstrb, s_axi.wuser, s_axi.wvalid, s_axi_ctl.araddr, s_axi_ctl.arready, s_axi_ctl.arvalid, s_axi_ctl.awaddr, s_axi_ctl.awready, s_axi_ctl.awvalid, s_axi_ctl.bready, s_axi_ctl.bresp, s_axi_ctl.bvalid, s_axi_ctl.rdata, s_axi_ctl.rready, s_axi_ctl.rresp, s_axi_ctl.rvalid, s_axi_ctl.wdata, s_axi_ctl.wready, s_axi_ctl.wstrb, s_axi_ctl.wvalid, user.link_up) CF (cfg.ltssm_state, interrupt.out, intx.msi_grant, intx.msi_request, m_axi.araddr, m_axi.arburst, m_axi.arcache, m_axi.arid, m_axi.arlen, m_axi.arlock, m_axi.arprot, m_axi.arready, m_axi.arsize, m_axi.arvalid, m_axi.awaddr, m_axi.awburst, m_axi.awcache, m_axi.awid, m_axi.awlen, m_axi.awlock, m_axi.awprot, m_axi.awready, m_axi.awsize, m_axi.awvalid, m_axi.bid, m_axi.bready, m_axi.bresp, m_axi.bvalid, m_axi.rdata, m_axi.rid, m_axi.rlast, m_axi.rready, m_axi.rresp, m_axi.ruser, m_axi.rvalid, m_axi.wdata, m_axi.wlast, m_axi.wready, m_axi.wstrb, m_axi.wuser, m_axi.wvalid, msi.enable, msi.vector_num, msi.vector_width, pci.exp_rxn, pci.exp_rxp, pci.exp_txn, pci.exp_txp, s_axi.araddr, s_axi.arburst, s_axi.arid, s_axi.arlen, s_axi.arready, s_axi.arregion, s_axi.arsize, s_axi.arvalid, s_axi.awaddr, s_axi.awburst, s_axi.awid, s_axi.awlen, s_axi.awready, s_axi.awregion, s_axi.awsize, s_axi.awvalid, s_axi.bid, s_axi.bready, s_axi.bresp, s_axi.bvalid, s_axi.rdata, s_axi.rid, s_axi.rlast, s_axi.rready, s_axi.rresp, s_axi.ruser, s_axi.rvalid, s_axi.wdata, s_axi.wlast, s_axi.wready, s_axi.wstrb, s_axi.wuser, s_axi.wvalid, s_axi_ctl.araddr, s_axi_ctl.arready, s_axi_ctl.arvalid, s_axi_ctl.awaddr, s_axi_ctl.awready, s_axi_ctl.awvalid, s_axi_ctl.bready, s_axi_ctl.bresp, s_axi_ctl.bvalid, s_axi_ctl.rdata, s_axi_ctl.rready, s_axi_ctl.rresp, s_axi_ctl.rvalid, s_axi_ctl.wdata, s_axi_ctl.wready, s_axi_ctl.wstrb, s_axi_ctl.wvalid, user.link_up);
 endmodule
