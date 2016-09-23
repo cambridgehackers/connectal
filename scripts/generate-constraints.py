@@ -54,7 +54,7 @@ if __name__=='__main__':
     print(options.fpga)
     if options.fpga == "xilinx":
         template='''\
-    set_property LOC "%(LOC)s" [get_ports "%(name)s"]
+    set_property PACKAGE_PIN "%(PACKAGE_PIN)s" [get_ports "%(name)s"]
     set_property PIO_DIRECTION "%(PIO_DIRECTION)s" [get_ports "%(name)s"]
         '''
         setPropertyTemplate='''\
@@ -108,9 +108,9 @@ if __name__=='__main__':
                 pinInfo = copy.copy(boardPinInfo[pinName])
             else:
                 print('Missing pin description for', pin, pinName, projectPinInfo, file=sys.stderr)
-                pinInfo['LOC'] = 'fmc.%s' % (pinName)
+                pinInfo['PACKAGE_PIN'] = 'fmc.%s' % (pinName)
                 errorDetected = True
-            pinInfo['name'] = pin
+            pinInfo[u'name'] = pin
             for prop in projectPinInfo:
                 if projectPinInfo.has_key(prop):
                     pinInfo[prop] = projectPinInfo[prop]
@@ -121,7 +121,7 @@ if __name__=='__main__':
                 print(template)
                 print(pinInfo)
             for k in pinInfo:
-                if k in used+['name', 'LOC', 'PIO_DIRECTION']: continue
+                if k in used+['name', 'PACKAGE_PIN', 'PIO_DIRECTION']: continue
                 out.write(setPropertyTemplate % {
                         'name': pin,
                         'prop': k,
