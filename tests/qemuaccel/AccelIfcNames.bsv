@@ -1,0 +1,13 @@
+
+typedef enum {AccelIfcNamesNone=0,
+PlatformAccelIfcNames_MemServerRequestS2H=1,
+PlatformAccelIfcNames_MMURequestS2H=2,
+PlatformAccelIfcNames_MemServerIndicationH2S=3,
+PlatformAccelIfcNames_MMUIndicationH2S=4,
+AccelIfcNames_SerialIndicationH2S=5,
+AccelIfcNames_SimpleRequestH2S=6,
+AccelIfcNames_BlockDevResponseH2S=7,
+AccelIfcNames_SerialRequestS2H=8,
+AccelIfcNames_SimpleRequestS2H=9,
+AccelIfcNames_BlockDevRequestS2H=10
+} AccelIfcNames deriving (Eq,Bits);
