@@ -99,9 +99,9 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
        end
    end
    else begin
-       GetPutWithClocks::mkConnectionWithClocks(host.tpciehost.master, portalTop.slave, host.pcieClock, host.pcieReset, host.portalClock, host.portalReset);
+       GetPutWithClocks::mkConnectionWithClocks(host.tpciehost.master, portalTop.slave);
        if (valueOf(NumberOfMasters) > 0) begin
-	  zipWithM_(mkConnectionWithClocksFirst(host.portalClock, host.portalReset, host.pcieClock, host.pcieReset),
+	  zipWithM_(mkConnectionWithClocks,
 		    portalTop.masters, host.tpciehost.slave);
        end
    end
