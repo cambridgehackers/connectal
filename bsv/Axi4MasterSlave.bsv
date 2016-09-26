@@ -142,7 +142,8 @@ function Axi4ReadRequest#(axiAddrWidth,idWidth) toAxi4ReadRequest(PhysMemRequest
    let size = req.burstLen & fromInteger(dataSizeMask);
    let beats = (req.burstLen + fromInteger(dataWidthBytes-1)) / fromInteger(dataWidthBytes);
    axireq.len = truncate(beats-1);
-   axireq.size = (beats == 0) ? axiBusSizeBytes(size) : axiBusSizeBytes(dataWidthBytes);
+   //axireq.size = (beats == 1) ? axiBusSizeBytes(size) : axiBusSizeBytes(dataWidthBytes);
+   axireq.size = axiBusSizeBytes(size);
    axireq.burst = 2'b01;
    axireq.cache = 4'b1111;
    return axireq;
@@ -158,7 +159,8 @@ function Axi4WriteRequest#(axiAddrWidth,idWidth) toAxi4WriteRequest(PhysMemReque
    let size = req.burstLen & fromInteger(dataSizeMask);
    let beats = (req.burstLen + fromInteger(dataWidthBytes-1)) / fromInteger(dataWidthBytes);
    axireq.len = truncate(beats-1);
-   axireq.size = (beats == 0) ? axiBusSizeBytes(size) : axiBusSizeBytes(dataWidthBytes);
+   //axireq.size = (beats == 1) ? axiBusSizeBytes(size) : axiBusSizeBytes(dataWidthBytes);
+   axireq.size = axiBusSizeBytes(size);
    axireq.burst = 2'b01;
    axireq.cache = 4'b1111;
    return axireq;
