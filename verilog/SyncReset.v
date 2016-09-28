@@ -40,7 +40,7 @@
 // A synchronization module for resets.   Output resets are held for
 // RSTDELAY+1 cycles, RSTDELAY >= 0.   Both assertion and deassertions is
 // synchronized to the clock.
-module PositiveReset (
+module SyncReset (
                   IN_RST,
                   CLK,
                   OUT_RST
@@ -52,24 +52,23 @@ module PositiveReset (
    input              IN_RST ;
    output             OUT_RST ;
 
-   (* ASYNC_REG = "true" *)
-   reg                reset_meta ;
+   (* ASYNC_REG = "TRUE" *)
+   reg                reset_meta;
    reg [RSTDELAY:1]   reset_hold ;
-   wire [RSTDELAY+1:0] next_reset = {reset_hold, reset_meta, 1'b0} ;
-
+   wire [RSTDELAY+1:0] next_reset = {reset_hold, reset_meta, ~ `BSV_RESET_VALUE};
+   
    assign  OUT_RST = reset_hold[RSTDELAY] ;
 
    always @( posedge CLK )      // reset is read synchronous with clock
      begin
         if (IN_RST == `BSV_RESET_VALUE)
            begin
-
-              reset_meta <= 1;
-              reset_hold <= `BSV_ASSIGNMENT_DELAY -1 ;
+              reset_meta <= `BSV_ASSIGNMENT_DELAY `BSV_RESET_VALUE ;
+              reset_hold <= `BSV_ASSIGNMENT_DELAY {(RSTDELAY) {`BSV_RESET_VALUE}} ;
            end
         else
           begin
-	     reset_meta <= next_reset[0];
+	     reset_meta <= `BSV_ASSIGNMENT_DELAY next_reset[0];	     
              reset_hold <= `BSV_ASSIGNMENT_DELAY next_reset[RSTDELAY:1];
           end
      end // always @ ( posedge CLK )
@@ -81,9 +80,9 @@ module PositiveReset (
      begin
         #0 ;
         // initialize out of reset forcing the designer to do one
-        reset_hold = 0 ;
+        reset_hold = {(RSTDELAY + 1) {~ `BSV_RESET_VALUE }} ;
      end
    // synopsys translate_on
 `endif // BSV_NO_INITIAL_BLOCKS
 
-endmodule // PositiveReset
+endmodule // SyncReset
