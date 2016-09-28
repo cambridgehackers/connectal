@@ -33,12 +33,12 @@ import Probe::*;
 /// Typeclass Definition
 ////////////////////////////////////////////////////////////////////////////////
 typeclass ConnectableWithClocks#(type a, type b);
-   module mkConnectionWithClocks#(a x1, b x2)(Empty);
-   module mkConnectionWithClocks2#(Clock inClock, Reset inReset, Clock outClock, Reset outReset, a x1, b x2)(Empty);
+   module mkConnectionWithClocks2#(a x1, b x2)(Empty);
+   module mkConnectionWithClocks#(Clock inClock, Reset inReset, Clock outClock, Reset outReset, a x1, b x2)(Empty);
 endtypeclass
 
 instance ConnectableWithClocks#(Get#(a), Put#(a)) provisos (Bits#(a, awidth), Add#(1, a__, awidth));
-   module mkConnectionWithClocks2#(Clock inClock, Reset inReset, Clock outClock, Reset outReset, Get#(a) in, Put#(a) out)(Empty) provisos (Bits#(a, awidth), Add#(1, a__, awidth));
+   module mkConnectionWithClocks#(Clock inClock, Reset inReset, Clock outClock, Reset outReset, Get#(a) in, Put#(a) out)(Empty) provisos (Bits#(a, awidth), Add#(1, a__, awidth));
       //SyncFIFOIfc#(a) synchronizer <- mkSyncFIFO(8, inClock, inReset, outClock);
       FIFOF#(a) synchronizer <- mkDualClockBramFIFOF(inClock, inReset, outClock, outReset);
        rule mcwc_doGet;
@@ -52,26 +52,26 @@ instance ConnectableWithClocks#(Get#(a), Put#(a)) provisos (Bits#(a, awidth), Ad
        endrule
    endmodule
 
-   module mkConnectionWithClocks#(Get#(a) in, Put#(a) out)(Empty) provisos (Bits#(a, awidth), Add#(1, a__, awidth));
+   module mkConnectionWithClocks2#(Get#(a) in, Put#(a) out)(Empty) provisos (Bits#(a, awidth), Add#(1, a__, awidth));
       Clock inClock = clockOf(in);
       Reset inReset = resetOf(in);
       Clock outClock = clockOf(out);
       Reset outReset = resetOf(out);
 
-      mkConnectionWithClocks2(inClock, inReset, outClock, outReset, in, out);
-   endmodule: mkConnectionWithClocks
+      mkConnectionWithClocks(inClock, inReset, outClock, outReset, in, out);
+   endmodule: mkConnectionWithClocks2
 endinstance: ConnectableWithClocks
 
 instance ConnectableWithClocks#(Client#(a,b), Server#(a,b)) provisos (Bits#(a, awidth), Bits#(b, bwidth), Add#(1, a__, awidth), Add#(1, b__, bwidth));
-   module mkConnectionWithClocks2#(Clock inClock, Reset inReset, Clock outClock, Reset outReset, Client#(a,b) client, Server#(a,b) server)(Empty)
+   module mkConnectionWithClocks#(Clock inClock, Reset inReset, Clock outClock, Reset outReset, Client#(a,b) client, Server#(a,b) server)(Empty)
       provisos (ConnectableWithClocks#(Get#(a), Put#(a)),
 		ConnectableWithClocks#(Get#(b), Put#(b)),
 		Bits#(a, awidth),
 		Bits#(b, bwidth));
-      let reqCnx <- mkConnectionWithClocks(client.request, server.request);
-      let respCnx <- mkConnectionWithClocks(server.response, client.response);
+      let reqCnx <- mkConnectionWithClocks(inClock, inReset, outClock, outReset, client.request, server.request);
+      let respCnx <- mkConnectionWithClocks(inClock, inReset, outClock, outReset, server.response, client.response);
    endmodule
-   module mkConnectionWithClocks#(Client#(a,b) client, Server#(a,b) server)(Empty)
+   module mkConnectionWithClocks2#(Client#(a,b) client, Server#(a,b) server)(Empty)
       provisos (ConnectableWithClocks#(Get#(a), Put#(a)),
 		ConnectableWithClocks#(Get#(b), Put#(b)),
 		Bits#(a, awidth),
@@ -81,61 +81,61 @@ instance ConnectableWithClocks#(Client#(a,b), Server#(a,b)) provisos (Bits#(a, a
       Clock outClock = clockOf(server);
       Reset outReset = resetOf(server);
 
-      mkConnectionWithClocks2(inClock, inReset, outClock, outReset, client, server);
+      mkConnectionWithClocks(inClock, inReset, outClock, outReset, client, server);
    endmodule
 endinstance
 
 instance ConnectableWithClocks#(PhysMemReadClient#(addrWidth, dataWidth),
 				PhysMemReadServer#(addrWidth, dataWidth));
-   module mkConnectionWithClocks2#(Clock inClock, Reset inReset, Clock outClock, Reset outReset,
+   module mkConnectionWithClocks#(Clock inClock, Reset inReset, Clock outClock, Reset outReset,
 				   PhysMemReadClient#(addrWidth, dataWidth) client,
 				   PhysMemReadServer#(addrWidth, dataWidth) server)(Empty);
-      let reqCnx <- mkConnectionWithClocks(client.readReq, server.readReq);
-      let dataCnx <- mkConnectionWithClocks(server.readData, client.readData);
+      let reqCnx <- mkConnectionWithClocks(inClock, inReset, outClock, outReset, client.readReq, server.readReq);
+      let dataCnx <- mkConnectionWithClocks(outClock, outReset, inClock, inReset, server.readData, client.readData);
    endmodule
-   module mkConnectionWithClocks#(PhysMemReadClient#(addrWidth, dataWidth) client,
+   module mkConnectionWithClocks2#(PhysMemReadClient#(addrWidth, dataWidth) client,
 				  PhysMemReadServer#(addrWidth, dataWidth) server)(Empty);
       Clock inClock = clockOf(client);
       Reset inReset = resetOf(client);
       Clock outClock = clockOf(server);
       Reset outReset = resetOf(server);
-      mkConnectionWithClocks2(inClock, inReset, outClock, outReset, client, server);
+      mkConnectionWithClocks(inClock, inReset, outClock, outReset, client, server);
    endmodule
 endinstance
 
 instance ConnectableWithClocks#(PhysMemWriteClient#(addrWidth, dataWidth),
 				PhysMemWriteServer#(addrWidth, dataWidth));
-   module mkConnectionWithClocks2#(Clock inClock, Reset inReset, Clock outClock, Reset outReset, 
+   module mkConnectionWithClocks#(Clock inClock, Reset inReset, Clock outClock, Reset outReset, 
 				   PhysMemWriteClient#(addrWidth, dataWidth) client,
 				   PhysMemWriteServer#(addrWidth, dataWidth) server)(Empty);
-      let reqCnx <- mkConnectionWithClocks(client.writeReq, server.writeReq);
-      let dataCnx <- mkConnectionWithClocks(client.writeData, server.writeData);
-      let doneCnx <- mkConnectionWithClocks(server.writeDone, client.writeDone);
+      let reqCnx <- mkConnectionWithClocks(inClock, inReset, outClock, outReset, client.writeReq, server.writeReq);
+      let dataCnx <- mkConnectionWithClocks(inClock, inReset, outClock, outReset, client.writeData, server.writeData);
+      let doneCnx <- mkConnectionWithClocks(outClock, outReset, inClock, inReset, server.writeDone, client.writeDone);
    endmodule
-   module mkConnectionWithClocks#(PhysMemWriteClient#(addrWidth, dataWidth) client,
+   module mkConnectionWithClocks2#(PhysMemWriteClient#(addrWidth, dataWidth) client,
 				  PhysMemWriteServer#(addrWidth, dataWidth) server)(Empty);
       Clock inClock = clockOf(client);
       Reset inReset = resetOf(client);
       Clock outClock = clockOf(server);
       Reset outReset = resetOf(server);
-      mkConnectionWithClocks2(inClock, inReset, outClock, outReset, client, server);
+      mkConnectionWithClocks(inClock, inReset, outClock, outReset, client, server);
    endmodule
 endinstance
 
 instance ConnectableWithClocks#(PhysMemMaster#(addrWidth, dataWidth), PhysMemSlave#(addrWidth, dataWidth));
-   module mkConnectionWithClocks2#(Clock inClock, Reset inReset, Clock outClock, Reset outReset, 
+   module mkConnectionWithClocks#(Clock inClock, Reset inReset, Clock outClock, Reset outReset, 
 				   PhysMemMaster#(addrWidth, dataWidth) client,
 				   PhysMemSlave#(addrWidth, dataWidth) server)(Empty);
-      let readCnx <- mkConnectionWithClocks(client.read_client, server.read_server);
-      let writeCnx <- mkConnectionWithClocks(client.write_client, server.write_server);
+      let readCnx <- mkConnectionWithClocks(inClock, inReset, outClock, outReset, client.read_client, server.read_server);
+      let writeCnx <- mkConnectionWithClocks(inClock, inReset, outClock, outReset, client.write_client, server.write_server);
    endmodule
-   module mkConnectionWithClocks#(PhysMemMaster#(addrWidth, dataWidth) client,
+   module mkConnectionWithClocks2#(PhysMemMaster#(addrWidth, dataWidth) client,
 				  PhysMemSlave#(addrWidth, dataWidth) server)(Empty);
       Clock inClock = clockOf(client);
       Reset inReset = resetOf(client);
       Clock outClock = clockOf(server);
       Reset outReset = resetOf(server);
-      mkConnectionWithClocks2(inClock, inReset, outClock, outReset, client, server);
+      mkConnectionWithClocks(inClock, inReset, outClock, outReset, client, server);
    endmodule
 endinstance
 
