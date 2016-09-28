@@ -52,7 +52,7 @@ module PositiveReset (
    input              IN_RST ;
    output             OUT_RST ;
 
-   //(* keep = "true" *)
+   (* ASYNC_REG = "true" *)
    reg [RSTDELAY:0]   reset_hold ;
    wire [RSTDELAY+1:0] next_reset = {reset_hold, 1'b0} ;
 
