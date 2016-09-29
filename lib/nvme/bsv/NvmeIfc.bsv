@@ -54,7 +54,7 @@ typedef enum {
    }  NvmeOpcode deriving (Bits,Eq,FShow);
 
 interface NvmeRequest;
-   method Action startTransfer(Bit#(8) opcode, Bit#(8) flags, Bit#(16) requestId, Bit#(64) startBlock, Bit#(32) numBlocks, Bit#(32) dsm);
+   method Action startTransfer(Bit#(8) opcode, Bit#(8) flags, Bit#(16) requestId, Bit#(32) startBlock, Bit#(32) numBlocks, Bit#(32) dsm);
    method Action msgFromSoftware(Bit#(32) value, Bit#(1) last);
 endinterface
 
@@ -65,9 +65,15 @@ endinterface
 
 // internal interfaces
 interface NvmeDriverRequest;
+   method Action reset(Bit#(8) count);
+   method Action nvmeReset(Bit#(8) count);
    method Action setup();
    method Action read32(Bit#(32) addr);
    method Action write32(Bit#(32) addr, Bit#(32) data);
+   method Action read64(Bit#(32) addr);
+   method Action write64(Bit#(32) addr, Bit#(64) data);
+   method Action read128(Bit#(32) addr);
+   method Action write128(Bit#(32) addr, Bit#(64) udata, Bit#(64) ldata);
    method Action read(Bit#(32) addr);
    method Action write(Bit#(32) addr, Bit#(DataBusWidth) data);
    method Action readCtl(Bit#(32) addr);
@@ -85,7 +91,7 @@ interface NvmeDriverIndication;
 endinterface
 
 interface NvmeTrace;
-   method Action traceDmaRequest(DmaChannel channel, Bool write, Bit#(16) objId, Bit#(64) offset, Bit#(16) burstLen, Bit#(8) tag, Bit#(32) timestamp);
+   method Action traceDmaRequest(DmaChannel channel, Bool write, Bit#(16) objId, Bit#(32) offset, Bit#(16) burstLen, Bit#(8) tag, Bit#(32) timestamp);
    method Action traceDmaData(DmaChannel channel, Bool write, Vector#(TDiv#(PcieDataBusWidth,32),Bit#(32)) data, Bool last, Bit#(8) tag, Bit#(32) timestamp);
    method Action traceDmaDone(DmaChannel channel, Bit#(8) tag, Bit#(32) timestamp);
    method Action traceData(Vector#(TDiv#(PcieDataBusWidth,32),Bit#(32)) data, Bool last, Bit#(8) tag, Bit#(32) timestamp);
@@ -95,7 +101,7 @@ typedef struct {
    Bit#(8)  opcode;
    Bit#(8)  flags;
    Bit#(16) requestId;
-   Bit#(64) startBlock;
+   Bit#(32) startBlock;
    Bit#(32) numBlocks;
    Bit#(32) dsm;
    } NvmeIoCommand deriving (Bits);

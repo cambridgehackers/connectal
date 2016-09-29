@@ -154,6 +154,9 @@ public:
     void write(uint32_t addr, uint64_t data);
     uint32_t read32(uint32_t addr);
     void write32(uint32_t addr, uint32_t data);
+    uint64_t read64(uint32_t addr);
+    void write64(uint32_t addr, uint64_t data);
+    void write128(uint32_t addr, uint64_t udata, uint64_t ldata);
     uint64_t bramRead(uint32_t addr);
     void bramWrite(uint32_t addr, uint64_t data);
 

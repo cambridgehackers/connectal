@@ -14,8 +14,6 @@
 
 int main(int argc, char * const *argv)
 {
-    Nvme nvme;
-
     int opt;
     const char *filename = NULL;
     int source_fd = -1;
@@ -23,13 +21,17 @@ int main(int argc, char * const *argv)
     int doidentify;
     int dotrace = 0;
     int dowrite = 0;
-    while ((opt = getopt(argc, argv, "iw:t")) != -1) {
+    bool verbose = false;
+    while ((opt = getopt(argc, argv, "iw:tv")) != -1) {
 	switch (opt) {
 	case 'i':
 	    doidentify = 1;
 	    break;
 	case 't':
 	    dotrace = 1;
+	    break;
+	case 'v':
+	    verbose = true;
 	    break;
 	case 'w':
 	    filename = optarg;
@@ -46,6 +48,8 @@ int main(int argc, char * const *argv)
 	    return rc;
 	}
     }
+
+    Nvme nvme(verbose);
 
     sleep(1);
 

@@ -40,6 +40,7 @@ CONNECTALFLAGS += --stl=c++_static
 CONNECTALFLAGS += -I $(CONNECTALDIR)/lib/strstr/cpp
 CONNECTALFLAGS += --bsvpath=../spikehw
 CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/axi_pcie_rp/axi_pcie_rp.xci
+CONNECTALFLAGS += -D GET_PUT_WITH_CLOCKS_USE_XILINX_FIFO
 CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/dual_clock_axis_fifo_32x8/dual_clock_axis_fifo_32x8.xci
 CONNECTALFLAGS += --implconstraint=nvme.xdc
 

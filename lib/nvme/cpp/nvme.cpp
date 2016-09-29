@@ -10,7 +10,7 @@ static const int queueSizeDelta = 1;
 class NvmeTrace : public NvmeTraceWrapper {
   std::multimap<int,std::string> traceValues;
 public:
-    void traceDmaRequest(const DmaChannel chan, const int write, const uint16_t objId, const uint64_t offset, const uint16_t burstLen, const uint8_t tag, const uint32_t timestamp) {
+    void traceDmaRequest(const DmaChannel chan, const int write, const uint16_t objId, const uint32_t offset, const uint16_t burstLen, const uint8_t tag, const uint32_t timestamp) {
 	char msg[128];
 	snprintf(msg, sizeof(msg), "%08x: traceDmaRequest chan=%d write=%d objId=%d offset=%08lx burstLen=%d tag=%x\n", timestamp, chan, write, objId, (long)offset, burstLen, tag);
 	traceValues.insert(std::pair<int, std::string>(timestamp, std::string(msg)));
@@ -43,6 +43,7 @@ public:
 
     void dumpTrace() {
 	int prev = 0;
+	fprintf(stderr, "%ld traceValues\n", traceValues.size());
 	for (auto it=traceValues.begin(); it!=traceValues.end(); ++it) {
 	    fprintf(stderr, "%08d %4d %s", it->first, it->first - prev, it->second.c_str());
 	    prev = it->first;
@@ -199,25 +200,27 @@ public:
 
 uint32_t Nvme::readCtl(uint32_t addr)
 {
+    // if (verbose) fprintf(stderr, "readCtl %x\n", addr);
     driverRequest.readCtl(addr);
     driverIndication->wait();
     return (uint32_t)driverIndication->value;
 }
 void Nvme::writeCtl(uint32_t addr, uint32_t data)
 {
+    //if (verbose) fprintf(stderr, "writeCtl %x\n", addr);
     driverRequest.writeCtl(addr, data);
     driverIndication->waitwrite();
 }
 uint64_t Nvme::read(uint32_t addr)
 {
-    driverRequest.read(addr);
+    driverRequest.read64(addr);
     driverIndication->wait();
     return driverIndication->value;
 }
 void Nvme::write(uint32_t addr, uint64_t data)
 {
-    driverRequest.write(addr, data);
-    //driverIndication->wait();
+    driverRequest.write64(addr, data);
+    driverIndication->waitwrite();
 }
 uint32_t Nvme::read32(uint32_t addr)
 {
@@ -233,7 +236,26 @@ void Nvme::write32(uint32_t addr, uint32_t data)
     //fixme byte enables
     //driverRequest.write(addr & ~7, v << ((addr & 4) ? 32 : 0));
     driverRequest.write32(addr, v);
-    //driverIndication->wait();
+    driverIndication->waitwrite();
+}
+uint64_t Nvme::read64(uint32_t addr)
+{
+    driverRequest.read64(addr);
+    driverIndication->wait();
+    uint64_t v = driverIndication->value;
+    return v;
+}
+void Nvme::write64(uint32_t addr, uint64_t data)
+{
+    uint64_t v = data;
+    //fixme byte enables
+    driverRequest.write64(addr, v);
+    driverIndication->waitwrite();
+}
+void Nvme::write128(uint32_t addr, uint64_t udata, uint64_t ldata)
+{
+    driverRequest.write128(addr, udata, ldata);
+    driverIndication->waitwrite();
 }
 uint64_t Nvme::bramRead(uint32_t addr)
 {
@@ -249,6 +271,7 @@ void Nvme::bramWrite(uint32_t addr, uint64_t data)
 
 Nvme::Nvme(bool verbose)
     : Nvme(BlocksPerRequest*512, verbose) {
+  fprintf(stderr, "Nvme verbose=%d\n", verbose);
 }
 
 
@@ -293,12 +316,17 @@ Nvme::Nvme(int transferBufferSize, bool verbose)
 
 void Nvme::setup()
 {
+    driverRequest.reset(16);
+    sleep(1);
+    driverRequest.nvmeReset(16);
+    sleep(1);
     driverRequest.setup();
     driverIndication->wait();
 
-    if (0) {
+    if (1) {
     if (verbose) fprintf(stderr, "Enabling I/O and Memory, bus master, parity and SERR\n");
     writeCtl(0x004, 0x147);
+    if (verbose) fprintf(stderr, "bridge control %08x\n", readCtl(0x004));
     // required
     writeCtl(0x18, 0x00070100);
     writeCtl(0x10, 0xFFFFFFFF);
@@ -309,6 +337,7 @@ void Nvme::setup()
     writeCtl(0x14, 0x0);
     if (verbose) fprintf(stderr, "Enabling card I/O and Memory, bus master, parity and SERR\n");
     writeCtl((1 << 20) + 4, 0x147);
+    if (verbose) fprintf(stderr, "card bridge control %08x\n", readCtl((1 << 20) + 4));
     if (verbose)
 	for (int i = 0; i < 6; i++)
 	    fprintf(stderr, "Card BAR%d: %08x\n", i, readCtl((1 << 20) + 0x10 + i*4));
@@ -329,22 +358,46 @@ void Nvme::setup()
 	}
     }
 
+    fprintf(stderr, "PHY Status/Control: %08x\n", readCtl(0x144));
+    fprintf(stderr, "Configuration Control (should be zero): %08x\n", readCtl(0x168));
+    for (int i = 0; i < 6; i++)
+	fprintf(stderr, "AXI Bar%d %08x.%08x\n", i, readCtl(0x208 + i*8), readCtl(0x208 + i*8+4));
     if (verbose) fprintf(stderr, "Enabling bridge\n");
+    fprintf(stderr, "0x148: %08x\n", readCtl(0x148));
+    writeCtl(0x140, 0x00000100);
+    fprintf(stderr, "Bus Location Register: %08x\n", readCtl(0x140));
     writeCtl(0x148, 1);
-    writeCtl(0x140, 0x00010000);
+    fprintf(stderr, "0x148: %08x\n", readCtl(0x148));
+
+    fprintf(stderr, "before: contents of 0x30 %08lx.%08lx\n", read64(0x38), read64(0x30));
+    write128(0x30, 0x11ffeeddccbbaa99l, 0x8877665544332211);
+    fprintf(stderr, "after:  contents of 0x30 %08lx.%08lx\n", read64(0x38), read64(0x30));
+    write64(0x30, 0x8877665544332211);
+    write64(0x38, 0x11ffeeddccbbaa99l);
+    fprintf(stderr, "after2: contents of 0x30 %08lx.%08lx\n", read64(0x38), read64(0x30));
+    write64(0x20, 0x8877665544332211);
+    write64(0x28, 0x11ffeeddccbbaa99l);
+    fprintf(stderr, "after3: contents of 0x20 %08lx.%08lx\n", read64(0x28), read64(0x20));
 
     if (verbose) {
 	fprintf(stderr, "Reading card memory space\n");
-	for (int i = 0; i < 10; i++)
+	for (int i = 0; i < 16; i++)
 	    fprintf(stderr, "CARDMEM[%02x]=%08x\n", i*4, read32(0x00000000 + i*4));
+	for (int i = 0; i < 16; i += 2)
+	    fprintf(stderr, "CARDMEM[%02x]=%08lx\n", i*4, read64(0x00000000 + i*8));
     }
     }
-    uint64_t cardcap = read(0);
+    uint64_t cardcap = read64(0);
+    fprintf(stderr, "cardcap=%08lx\n", cardcap);
     int mpsmax = (cardcap >> 52)&0xF;
     int mpsmin = (cardcap >> 48)&0xF;
     if (verbose) fprintf(stderr, "MPSMAX=%0x %#x bytes\n", mpsmax, 1 << (12+mpsmax));
     if (verbose) fprintf(stderr, "MPSMIN=%0x %#x bytes\n", mpsmin, 1 << (12+mpsmin));
+
     write32(0x1c, 0x10); // clear reset bit
+    if (verbose) fprintf(stderr, "0x1c reset %08x\n", read32(0x1c));
+    if (verbose) fprintf(stderr, "0x14 %08llx\n", (long long)read(0x14));
+    if (verbose) fprintf(stderr, "0x18 %08llx\n", (long long)read(0x18));
 
     // initialize CC.IOCQES and CC.IOSQES
     write32(0x14, 0x00460000); // completion queue entry size 2^4, submission queue entry size 2^6
@@ -357,14 +410,25 @@ void Nvme::setup()
     uint64_t adminSubmissionBaseAddress = adminSubmissionQueueRef << 24;
     if (verbose) fprintf(stderr, "Setting up Admin submission and completion queues %llx %llx\n",
 			 (long long)adminCompletionBaseAddress, (long long)adminSubmissionBaseAddress);
-    write(0x28, adminSubmissionBaseAddress);
+    write64(0x28, adminSubmissionBaseAddress);
     if (verbose) fprintf(stderr, "AdminSubmissionBaseAddress %08llx\n", (long long)read(0x28));
-    write(0x30, adminCompletionBaseAddress);
+    write64(0x30, adminCompletionBaseAddress);
     if (verbose) fprintf(stderr, "AdminCompletionBaseAddress %08llx\n", (long long)read(0x30));
     write32(0x24, 0x003f003f);
 
     // CC.enable
+    if (verbose) fprintf(stderr, "****************************************\n");
+    if (verbose) fprintf(stderr, "CSTS %08x \n", read32(0x1c));
+    if (verbose) fprintf(stderr, "read64 0x18 %08lx\n", read64(0x18));
+    write32(0x14, 0x00460000);
+    if (verbose) fprintf(stderr, "CC.enable %08x (expected 0x00460001)\n", read32(0x14));
     write32(0x14, 0x00460001);
+    if (verbose) fprintf(stderr, "read64 0x010 %08llx\n", (long long)read64(0x10));
+    if (verbose) fprintf(stderr, "read32 0x014 %08llx\n", (long long)read32(0x14));
+    if (verbose) fprintf(stderr, "****************************************\n");
+	for (int i = 0; i < 10; i++)
+	    fprintf(stderr, "CARDMEM[%02x]=%08x\n", i*4, read32(0x00000000 + i*4));
+
 }
 
 void Nvme::memserverWrite()
@@ -434,10 +498,14 @@ int Nvme::adminCommand(nvme_admin_cmd *cmd, nvme_completion *completion)
     int responseNumber       = adminRequestNumber % (4096 / 16);
     int *response            = &responses[responseNumber * 4];
 
+    driverRequest.trace(1);
+
     if (verbose) fprintf(stderr, "%s:%d requestNumber=%d responseNumber = %d\n", __FUNCTION__, __LINE__, requestNumber, responseNumber);
 
     cmd->cid = adminRequestNumber++;
     *request = *cmd;
+    write32(0x1000 + ((2*0 + 0) * (4 << 0)), requestNumber+1);
+    fprintf(stderr, "doorbell value: %08x\n", read32(0x1000 + ((2*0 + 0) * (4 << 0))));
 
     adminSubmissionQueue.cacheInvalidate(4096, 1);
     adminCompletionQueue.cacheInvalidate(4096, 0);
@@ -445,6 +513,7 @@ int Nvme::adminCommand(nvme_admin_cmd *cmd, nvme_completion *completion)
     // update submission queue tail
     write32(0x1000 + ((2*0 + 0) * (4 << 0)), requestNumber+1);
     sleep(1);
+    dumpTrace();
 
     if (verbose) {
 	for (int i = 0; i < 4; i++)
@@ -455,6 +524,7 @@ int Nvme::adminCommand(nvme_admin_cmd *cmd, nvme_completion *completion)
     int sc = (status >> 17) & 0xff;
     int sct = (status >> 25) & 0x7;
     write32(0x1000 + ((2*0 + 1) * (4 << 0)), responseNumber+1);
+    fprintf(stderr, "doorbell value: %08x\n", read32(0x1000 + ((2*0 + 1) * (4 << 0))));
     if (verbose) fprintf(stderr, "status=%08x more=%d sc=%x sct=%x\n", status, more, sc, sct);
     return sc;
 }

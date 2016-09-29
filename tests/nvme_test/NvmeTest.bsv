@@ -94,85 +94,6 @@ typedef struct {
    } MsgToSoftware deriving (Bits);
 
 
-(* synthesize *)
-module mkSearchAcceleratorClient(NvmeAcceleratorClient);
-   Reg#(Bit#(32))                       dataCounter <- mkReg(0);
-   FIFOF#(Bit#(32))                  dataLengthFifo <- mkFIFOF();
-
-   FIFOF#(MemData#(32)) msgFromSoftwareFifo <- mkFIFOF();
-   FIFOF#(MemData#(32)) msgToSoftwareFifo <- mkFIFOF();
-   FIFOF#(MemDataF#(PcieDataBusWidth)) dataFromNvmeFifo <- mkFIFOF();
-   FIFOF#(MemDataF#(PcieDataBusWidth)) dataToNvmeFifo <- mkFIFOF();
-   FIFOF#(Bit#(SizeOf#(NvmeIoCommand))) requestFifo <- mkFIFOF();
-   FIFOF#(Bit#(SizeOf#(NvmeIoResponse))) responseFifo <- mkFIFOF();
-
-
-   Reg#(Bit#(8)) opcode <- mkReg(extend(pack(NvmeRead)));
-   Reg#(Bit#(32)) startBlock <- mkReg(0);
-   Reg#(Bit#(32))  numBlocks <- mkReg(0);
-   Reg#(Bit#(16)) requestId <- mkReg(0);
-
-   let inmsgTagProbe <- mkProbe();
-   let inmsgDataProbe <- mkProbe();
-   let outmsgTagProbe <- mkProbe();
-   let outmsgDataProbe <- mkProbe();
-   let responseProbe <- mkProbe();
-   rule rl_msg_from_software;
-      let md <- toGet(msgFromSoftwareFifo).get();
-      MsgFromSoftware msg = unpack(truncate(md.data));
-      inmsgTagProbe <= msg.tag;
-      inmsgDataProbe <= msg.data;
-      case (msg.tag) matches
-	 Loopback: begin
-		      MsgToSoftware outmsg = MsgToSoftware { tag: Loopback, data: msg.data };
-		      outmsgTagProbe <= outmsg.tag;
-		      outmsgDataProbe <= outmsg.data;
-		      msgToSoftwareFifo.enq(MemData { data: extend(pack(outmsg)), last: md.last });
-		   end
-	 Opcode:         opcode <= truncate(msg.data);
-	 StartBlock: startBlock <= extend(msg.data);
-	 NumBlocks:   numBlocks <= extend(msg.data);
-	 Start: begin
-		   requestFifo.enq(pack(NvmeIoCommand {
-		      opcode: opcode,
-		      flags: 0,
-		      requestId: requestId,
-		      startBlock: extend(startBlock),
-		      numBlocks: numBlocks,
-		      dsm: 'h71 // FIXME copied value from nvme.cpp, but where did this come from?
-		      }));
-		   requestId <= requestId + 1;
-		end
-      endcase
-   endrule
-   rule rl_response;
-      let r <- toGet(responseFifo).get();
-      NvmeIoResponse response = unpack(r);
-      Bit#(8) sct = truncate(response.statusCodeType);
-      responseProbe <= response.statusCode;
-      
-      MsgToSoftware outmsg = MsgToSoftware { tag: TransferDone, data: { sct, response.statusCode }};
-      outmsgTagProbe <= outmsg.tag;
-      outmsgDataProbe <= outmsg.data;
-      msgToSoftwareFifo.enq(MemData { data: extend(pack(outmsg)), last: True });
-   endrule
-
-   AxiStreamSlave#(32) msgFromSoftwareStream <- mkAxiStream(msgFromSoftwareFifo);
-   AxiStreamMaster#(32) msgToSoftwareStream <- mkAxiStream(msgToSoftwareFifo);
-   AxiStreamSlave#(PcieDataBusWidth) dataFromNvmeStream <- mkAxiStream(dataFromNvmeFifo);
-   AxiStreamMaster#(PcieDataBusWidth) dataToNvmeStream <- mkAxiStream(dataToNvmeFifo);
-   AxiStreamMaster#(SizeOf#(NvmeIoCommand)) requestStream <- mkAxiStream(requestFifo);
-   AxiStreamSlave#(SizeOf#(NvmeIoResponse)) responseStream <- mkAxiStream(responseFifo);
-
-   interface AxiStreamSlave msgFromSoftware = msgFromSoftwareStream;
-   interface AxiStreamMaster msgToSoftware = msgToSoftwareStream;
-   interface AxiStreamSlave dataFromNvme = dataFromNvmeStream;
-   interface AxiStreamMaster dataToNvme = dataToNvmeStream;
-   interface AxiStreamMaster request = requestStream;
-   interface AxiStreamSlave response = responseStream;
-
-endmodule
-
 module mkNvmeTest#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace trace, MemServerPortalIndication bramIndication)(NvmeTest);
 
    let nvme <- mkNvme(ind, driverInd, trace, bramIndication);
@@ -196,6 +117,7 @@ module mkNvmeTest#(NvmeIndication ind, NvmeDriverIndication driverInd, NvmeTrace
    endrule
 `endif
 
+   
    interface NvmeRequest                request = nvme.request;
    interface NvmeDriverRequest    driverRequest = nvme.driverRequest;
    interface MemServerPortalRequest bramRequest = nvme.bramRequest;
