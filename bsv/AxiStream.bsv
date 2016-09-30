@@ -62,15 +62,15 @@ endinstance
 instance Connectable#(AxiStreamMaster#(dataWidth), Put#(dtype))
    provisos (Bits#(dtype, dataWidth));
    module mkConnection#(AxiStreamMaster#(dataWidth) from, Put#(dtype) to)(Empty);
-      FIFOF#(Bit#(dataWidth)) tmpfifo <- mkFIFOF();
+      FIFOF#(Bit#(dataWidth)) asputfifo <- mkFIFOF();
       rule rl_ready;
-	 from.tready(pack(tmpfifo.notFull));
+	 from.tready(pack(asputfifo.notFull));
       endrule
       rule rl_enq if (from.tvalid == 1);
-	 tmpfifo.enq(from.tdata);
+	 asputfifo.enq(from.tdata);
       endrule
       rule rl_put;
-	 let v <- toGet(tmpfifo).get();
+	 let v <- toGet(asputfifo).get();
 	 to.put(unpack(v));
       endrule
    endmodule
@@ -79,21 +79,21 @@ endinstance
 instance Connectable#(Get#(dtype), AxiStreamSlave#(dataWidth))
    provisos (Bits#(dtype, dataWidth));
    module mkConnection#(Get#(dtype) from, AxiStreamSlave#(dataWidth) to)(Empty);
-      FIFOF#(Bit#(dataWidth)) tmpfifo <- mkFIFOF();
+      FIFOF#(Bit#(dataWidth)) asgetfifo <- mkFIFOF();
       rule rl_get;
 	 let v <- from.get();
-	 tmpfifo.enq(pack(v));
+	 asgetfifo.enq(pack(v));
       endrule
       rule rl_axi_stream;
-	 to.tdata(tmpfifo.first);
+	 to.tdata(asgetfifo.first);
 	 to.tkeep(maxBound);
 	 to.tlast(0);
       endrule
       rule rl_tvalid;
-	 to.tvalid(pack(tmpfifo.notEmpty));
+	 to.tvalid(pack(asgetfifo.notEmpty));
       endrule
       rule rl_deq if (to.tready == 1);
-	 tmpfifo.deq();
+	 asgetfifo.deq();
       endrule
    endmodule
 endinstance
