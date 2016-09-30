@@ -108,7 +108,7 @@ module mkSyncAxisFifo8#(Clock sclk, Reset srst, Clock dclk, Reset drst)(SyncAxis
 	 mapM_(fifo_tready, fifos);
       endmethod
       method Bit#(1)                tvalid();
-	 return fifos[0].m_axis.tlast();
+	 return fifos[0].m_axis.tvalid();
       endmethod
    endinterface
 endmodule
