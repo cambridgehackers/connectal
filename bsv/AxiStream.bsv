@@ -59,38 +59,77 @@ instance Connectable#(AxiStreamMaster#(dataWidth), AxiStreamSlave#(dataWidth));
    endmodule
 endinstance
 
+instance Connectable#(AxiStreamMaster#(dataWidth), Put#(dtype))
+   provisos (Bits#(dtype, dataWidth));
+   module mkConnection#(AxiStreamMaster#(dataWidth) from, Put#(dtype) to)(Empty);
+      FIFOF#(Bit#(dataWidth)) tmpfifo <- mkFIFOF();
+      rule rl_ready;
+	 from.tready(pack(tmpfifo.notFull));
+      endrule
+      rule rl_enq if (from.tvalid == 1);
+	 tmpfifo.enq(from.tdata);
+      endrule
+      rule rl_put;
+	 let v <- toGet(tmpfifo).get();
+	 to.put(unpack(v));
+      endrule
+   endmodule
+endinstance
+
+instance Connectable#(Get#(dtype), AxiStreamSlave#(dataWidth))
+   provisos (Bits#(dtype, dataWidth));
+   module mkConnection#(Get#(dtype) from, AxiStreamSlave#(dataWidth) to)(Empty);
+      FIFOF#(Bit#(dataWidth)) tmpfifo <- mkFIFOF();
+      rule rl_get;
+	 let v <- from.get();
+	 tmpfifo.enq(pack(v));
+      endrule
+      rule rl_axi_stream;
+	 to.tdata(tmpfifo.first);
+	 to.tkeep(maxBound);
+	 to.tlast(0);
+      endrule
+      rule rl_tvalid;
+	 to.tvalid(pack(tmpfifo.notEmpty));
+      endrule
+      rule rl_deq if (to.tready == 1);
+	 tmpfifo.deq();
+      endrule
+   endmodule
+endinstance
+
 ////////////////////////////////////////////////////////////
 
 instance ToGetM#(AxiStreamMaster#(asz), Bit#(asz));
    module toGetM#(AxiStreamMaster#(asz) m)(Get#(Bit#(asz)));
-      FIFOF#(Bit#(asz)) dfifo <- mkFIFOF();
+      FIFOF#(Bit#(asz)) tmpfifo <- mkFIFOF();
 
       rule handshake;
-         m.tready(pack(dfifo.notFull));
+         m.tready(pack(tmpfifo.notFull));
       endrule
       rule enq if (unpack(m.tvalid));
-	 dfifo.enq(m.tdata());
+	 tmpfifo.enq(m.tdata());
       endrule
 
-      return toGet(dfifo);
+      return toGet(tmpfifo);
    endmodule
 endinstance
 
 instance ToPutM#(AxiStreamSlave#(asz), Bit#(asz));
    module toPutM#(AxiStreamSlave#(asz) m)(Put#(Bit#(asz)));
-      FIFOF#(Bit#(asz)) dfifo <- mkFIFOF();
+      FIFOF#(Bit#(asz)) tmpfifo <- mkFIFOF();
 
       rule handshake;
-	 m.tvalid(pack(dfifo.notEmpty()));
+	 m.tvalid(pack(tmpfifo.notEmpty()));
       endrule
       rule deq if (unpack(m.tready()));
-	 m.tdata(dfifo.first());
+	 m.tdata(tmpfifo.first());
 	 m.tkeep(maxBound);
 	 m.tlast(1);
-	 dfifo.deq();
+	 tmpfifo.deq();
       endrule
 
-      return toPut(dfifo);
+      return toPut(tmpfifo);
    endmodule
 endinstance
 

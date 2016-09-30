@@ -1152,3 +1152,32 @@ instance MkAxiStream#(AxiStreamSlave#(dsize), PipeIn#(dtype)) provisos (Bits#(dt
       endmethod
    endmodule
 endinstance
+
+instance Connectable#(AxiStreamMaster#(dataWidth), PipeIn#(dtype))
+   provisos (Bits#(dtype, dataWidth));
+   module mkConnection#(AxiStreamMaster#(dataWidth) from, PipeIn#(dtype) to)(Empty);
+      rule rl_ready;
+	 from.tready(pack(to.notFull));
+      endrule
+      rule rl_enq if (from.tvalid == 1);
+	 to.enq(unpack(from.tdata));
+      endrule
+   endmodule
+endinstance
+
+instance Connectable#(PipeOut#(dtype), AxiStreamSlave#(dataWidth))
+   provisos (Bits#(dtype, dataWidth));
+   module mkConnection#(PipeOut#(dtype) from, AxiStreamSlave#(dataWidth) to)(Empty);
+      rule rl_tvalid;
+	 to.tvalid(pack(from.notEmpty()));
+      endrule
+      rule rl_axi_stream;
+	 to.tdata(pack(from.first));
+	 to.tkeep(maxBound);
+	 to.tlast(0);
+      endrule
+      rule rl_deq if (to.tready == 1);
+	 from.deq();
+      endrule
+   endmodule
+endinstance
