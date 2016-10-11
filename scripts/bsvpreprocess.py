@@ -113,7 +113,7 @@ def preprocess(sourcefilename, source, defs, bsvpath):
             else:
                 defs[sym] = ''
         elif tok == 'include':
-            m = re.search('"?([-_A-Za-z0-9.]+)"?', s)
+            m = re.search('"+([-_A-Za-z0-9.]+)"+', s)
             if not m:
                 sys.stderr.write('syntax.preprocess %s: could not find file in line {%s}\n' % (sourcefilename, s))
                 break
