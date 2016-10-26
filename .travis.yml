@@ -5,11 +5,11 @@ before_script:
 - if [ -d Bluespec-2015.09.beta2 ] ; then echo bluespec cached; else curl http://www.bluespec.com/downloads/Bluespec-2015.09.beta2.tar.gz | tar -zxf - ; fi
 - mkdir -p lib
 - ln -s /usr/lib/x86_64-linux-gnu/libgmp.so.10 lib/libgmp.so.3
-- if [ "$CONNECTAL_ARCH" == "cvc" ]; then if [ -d open-src-cvc.700c ] ; then echo cvc cached; else curl -L https://github.com/cambridgehackers/open-src-cvc/archive/open-src-cvc.700c.tar.gz | tar -zxf - ; cd open-src-cvc/src; make -j4 -f makefile.cvc64; fi; fi
+- if [ "$CONNECTAL_ARCH" == "cvc" ]; then if [ -d open-src-cvc-700c ] ; then echo cvc cached; else curl -L https://github.com/cambridgehackers/open-src-cvc/archive/700c.tar.gz.tar.gz | tar -zxf - ; cd open-src-cvc-700c/src; make -j4 -f makefile.cvc64; fi; fi
 env:
   global:
     - BLUESPECDIR=$PWD/Bluespec-2015.09.beta2/lib
-    - PATH=$PATH:$PWD/Bluespec-2015.09.beta2/bin:$PWD/open-src-cvc/src
+    - PATH=$PATH:$PWD/Bluespec-2015.09.beta2/bin:$PWD/open-src-cvc-700c/src
     - LD_LIBRARY_PATH=$PWD/lib
   matrix:
     - CONNECTAL_TEST=examples/echo CONNECTAL_ARCH=verilator
