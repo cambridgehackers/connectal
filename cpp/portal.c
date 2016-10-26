@@ -316,6 +316,13 @@ static void initPortalHardwareOnce(void)
 	  argv[ind++] = (char*)simulator_vcd_name;
 	}
 #endif
+#if defined(BOARD_cvc)
+	const char *exetype = "cvcsim";
+	if (simulator_dump_vcd) {
+	  //argv[ind++] = (char*)"-t";
+	  //argv[ind++] = (char*)simulator_vcd_name;
+	}
+#endif
 #if defined(BOARD_xsim)
 	const char *exetype = "xsim";
 	bindir = 0; // the simulation driver is found in $PATH

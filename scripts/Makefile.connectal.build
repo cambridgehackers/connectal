@@ -290,7 +290,14 @@ endif
 	xelab -timescale 1ns/1ps --stats $(XVLOGDEFINES) -cc gcc $(SVLOG) --dpiheader XsimTop.h --debug wave -L unisim -L unifast -L unimacro work.xsimtop -sv_lib xsimtop || echo xelab failed
 	true
 
-vlsim: $(DTOP)/obj_dir/vlsim
+CVC64 ?= cvc64
+CVC_ARGS ?=
+cvcsim: bin/cvcsim
+
+bin/cvcsim: $(DTOP)/bin/libconnectal-sim.so verilog bin/cvcsim
+	$(CVC64) +define+SIMULATION=1 $(CVC_ARGS) -y $(CONNECTALDIR)/verilog $(addprefix -v , $(wildcard $(BLUESPECDIR)/Verilog/*.v)) $(addprefix -v , $(wildcard verilog/*.v)) -sv $(CONNECTALDIR)/verilog/XsimSink.sv  $(CONNECTALDIR)/verilog/XsimSource.sv $(CONNECTALDIR)/verilog/XsimDmaReadWrite.sv -sv $(CONNECTALDIR)/verilog/xsimtop.sv -sv_lib $(DTOP)/bin/libconnectal-sim.so -o bin/cvcsim
+
+vlsim:  $(DTOP)/obj_dir/vlsim
 
 VERILATOR_ARGS?= -O3 -CFLAGS "-I$(CONNECTALDIR)/cpp -I$(DTOP)/jni -O $(PROF_FLAGS)" -LDFLAGS "-O $(PROF_FLAGS)" --profile-cfuncs --output-split 20000
 VERILATOR_ARGS += $(VERILATOR_PROJECT_ARGS)
