@@ -57,8 +57,8 @@ module xsimtop(
    reg [31:0] count;
    reg finish;
 
-   import "DPI-C" function void dpi_init();
-   import "DPI-C" function bit dpi_cycle(); // returns non-zero if verilog should $finish().
+   import "DPI-C" function void dpi_init(input int unused);
+   import "DPI-C" function bit dpi_cycle(input int returns); // unused non-zero if verilog should $finish().
 
    mkXsimTop xsimtop(.CLK(CLK), .RST_N(RST_N),
 		     .CLK_derivedClock(DERIVED_CLK), .RST_N_derivedReset(DERIVED_RST_N),
@@ -73,7 +73,7 @@ module xsimtop(
       DERIVED_RST_N = `BSV_RESET_VALUE;
       count = 0;
       finish = 0;
-      dpi_init();
+      dpi_init(0);
    end
 
 `ifdef XSIM
@@ -93,7 +93,7 @@ module xsimtop(
    
    always @(posedge CLK) begin
       count <= count + 1;
-      finish <= dpi_cycle();
+      finish <= dpi_cycle(0);
       if (finish) begin
 	 $display("simulator calling $finish");
 	 $finish();
