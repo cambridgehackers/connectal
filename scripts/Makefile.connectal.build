@@ -291,11 +291,12 @@ endif
 	true
 
 CVC64 ?= cvc64
+CVC_DEFINES = $(addprefix +define+, $(BSVDEFINES_LIST))
 CVC_ARGS ?=
 cvcsim: bin/cvcsim
 
 bin/cvcsim: $(DTOP)/bin/libconnectal-sim.so verilog bin/cvcsim
-	$(CVC64) +define+SIMULATION=1 $(CVC_ARGS) -y $(CONNECTALDIR)/verilog $(addprefix -v , $(wildcard $(BLUESPECDIR)/Verilog/*.v)) $(addprefix -v , $(wildcard verilog/*.v)) -sv $(CONNECTALDIR)/verilog/XsimSink.sv  $(CONNECTALDIR)/verilog/XsimSource.sv $(CONNECTALDIR)/verilog/XsimDmaReadWrite.sv -sv $(CONNECTALDIR)/verilog/xsimtop.sv -sv_lib $(DTOP)/bin/libconnectal-sim.so -o bin/cvcsim
+	$(CVC64) $(CVC_DEFINES) $(CVC_ARGS) -y $(CONNECTALDIR)/verilog $(addprefix -v , $(wildcard $(BLUESPECDIR)/Verilog/*.v)) $(addprefix -v , $(wildcard verilog/*.v)) -sv $(CONNECTALDIR)/verilog/XsimSink.sv  $(CONNECTALDIR)/verilog/XsimSource.sv $(CONNECTALDIR)/verilog/XsimDmaReadWrite.sv -sv $(CONNECTALDIR)/verilog/xsimtop.sv -sv_lib $(DTOP)/bin/libconnectal-sim.so -o bin/cvcsim
 
 vlsim:  $(DTOP)/obj_dir/vlsim
 
