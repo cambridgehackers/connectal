@@ -16,6 +16,8 @@ env:
     - CONNECTAL_TEST=examples/echopy CONNECTAL_ARCH=verilator
     - CONNECTAL_TEST=examples/echo CONNECTAL_ARCH=cvc
     - CONNECTAL_TEST=examples/echopy CONNECTAL_ARCH=cvc
+    - CONNECTAL_TEST=examples/echoslow CONNECTAL_ARCH=verilator
+    - CONNECTAL_TEST=examples/echoslow CONNECTAL_ARCH=cvc
     - CONNECTAL_TEST=examples/simple CONNECTAL_ARCH=bluesim
     - CONNECTAL_TEST=examples/simple CONNECTAL_ARCH=verilator
     - CONNECTAL_TEST=examples/simple CONNECTAL_ARCH=cvc
