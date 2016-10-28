@@ -33,6 +33,7 @@ void parseArgs(int argc, char **argv)
 }
 
 vluint64_t main_time = 0;
+vluint64_t derived_time = 0;
 int main(int argc, char **argv, char **env)
 {
   fprintf(stderr, "vlsim::main\n");
@@ -58,6 +59,9 @@ int main(int argc, char **argv, char **env)
   fprintf(stderr, "starting simulation\n");
   top->CLK = 0;
   top->RST_N = BSV_RESET_VALUE;
+  top->CLK_derivedClock = 0;
+  top->CLK_sys_clk = 0;
+  top->RST_N_derivedReset = BSV_RESET_VALUE;
   while (!Verilated::gotFinish()) {
     if (main_time >= 10) {
       if ((top->CLK == BSV_RESET_EDGE) && (top->RST_N == BSV_RESET_VALUE)) {
@@ -65,16 +69,19 @@ int main(int argc, char **argv, char **env)
 	top->RST_N = !BSV_RESET_VALUE;
       }
     }
+    if (derived_time >= 10) {
+      if ((top->CLK_derivedClock == BSV_RESET_EDGE) && (top->RST_N_derivedReset == BSV_RESET_VALUE)) {
+	fprintf(stderr, "time=%ld deasserting derivedReset new value %d\n", (long)main_time, !BSV_RESET_VALUE);
+	top->RST_N_derivedReset = !BSV_RESET_VALUE;
+      }
+    }
 
     if (dpi_cycle())
       vl_finish(__FILE__, __LINE__, "vlsim");
 
-    if ((main_time % 2) == 1) {	// Toggle clock
-      top->CLK = 1;
-    }
-    if ((main_time % 2) == 0) {
-      top->CLK = 0;
-    }
+    top->CLK = main_time % 2;
+    top->CLK_derivedClock = derived_time % 2;
+    top->CLK_sys_clk = main_time % 2;
     top->eval();
 
 #if VM_TRACE
@@ -82,6 +89,8 @@ int main(int argc, char **argv, char **env)
 #endif
 
     main_time++;
+    if (main_time & 1)
+      derived_time++;
   }
   top->final();
 #if VM_TRACE
