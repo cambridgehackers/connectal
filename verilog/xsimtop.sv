@@ -55,14 +55,15 @@ module xsimtop(
    reg RST_N;
    reg DERIVED_RST_N;
    reg [31:0] count;
+   reg [31:0] count_derived;
    reg finish;
 
    import "DPI-C" function void dpi_init(input int unused);
    import "DPI-C" function bit dpi_cycle(input int returns); // unused non-zero if verilog should $finish().
 
-   mkXsimTop xsimtop(.CLK(CLK), .RST_N(RST_N),
-		     .CLK_derivedClock(DERIVED_CLK), .RST_N_derivedReset(DERIVED_RST_N),
-		     .CLK_sys_clk(sys_clk));
+   mkXsimTop connectalTop(.CLK(CLK), .RST_N(RST_N),
+			  .CLK_derivedClock(DERIVED_CLK), .RST_N_derivedReset(DERIVED_RST_N),
+			  .CLK_sys_clk(sys_clk));
    initial begin
 `ifdef XSIM
       CLK = 0;
@@ -72,6 +73,7 @@ module xsimtop(
       RST_N = `BSV_RESET_VALUE;
       DERIVED_RST_N = `BSV_RESET_VALUE;
       count = 0;
+      count_derived = 0;
       finish = 0;
       dpi_init(0);
    end
@@ -105,7 +107,8 @@ module xsimtop(
       end
    end
    always @(`BSV_RESET_EDGE DERIVED_CLK) begin
-      if (count == (20*`MainClockPeriod/`DerivedClockPeriod)) begin
+      count_derived <= count_derived + 1;
+      if (count_derived == 20) begin
 	 DERIVED_RST_N <= !`BSV_RESET_VALUE;
       end
    end
