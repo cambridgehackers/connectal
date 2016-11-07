@@ -118,7 +118,12 @@ if {$partname != {xc7vx690tffg1761-2} && $partname != {xc7vx690tffg1761-3}} {
 						  CONFIG.shared_logic_in_core {true} \
 						 ]
 } else {
-    fpgamake_ipcore axi_pcie3 2.1 axi_pcie_rp [list \
+    if {[version -short] >= "2016.1"} {
+	set axi_pcie3_version 2.1
+    } else {
+	set axi_pcie3_version 2.0
+    }
+    fpgamake_ipcore axi_pcie3 $axi_pcie3_version axi_pcie_rp [list \
 						   CONFIG.axi_data_width {128_bit} \
 						   CONFIG.axibar_highaddr_0 {0xffffffffffffffff} \
 						   CONFIG.dedicate_perst {false} \
