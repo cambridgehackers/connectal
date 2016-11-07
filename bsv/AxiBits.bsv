@@ -28,6 +28,7 @@ import GetPut::*;
 import MemTypes::*;
 import EHRM::*;
 import Axi4MasterSlave::*;
+import ConnectalBramFifo::*;
 
 interface AxiMasterBits#(numeric type addrWidth, numeric type dataWidth, numeric type tagWidth, type extraType);
     method Bit#(addrWidth)     araddr();
@@ -405,14 +406,12 @@ instance MkPhysMemSlave#(Axi4SlaveLiteBits#(axiAddrWidth,dataWidth),addrWidth,da
       endrule
       rule rl_wvalid;
 	 axiSlave.wvalid(pack(wfifo.notEmpty));
-	 let wdata = 0;
-	 if (wfifo.notEmpty)
-	    wdata = wfifo.first.data;
+      endrule
+      rule rl_wdata if (axiSlave.wready() == 1);
+	 let wdata = wfifo.first.data;
+	 wfifo.deq();
 	 axiSlave.wdata(wdata);
       endrule   
-      rule rl_wdata if (axiSlave.wready() == 1);
-	 let md <- toGet(wfifo).get();
-      endrule
       rule rl_bready;
 	 axiSlave.bready(pack(wtagfifo.notEmpty && bfifo.notFull));
       endrule   
@@ -513,6 +512,7 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,dataWidth,tagWidth,Empty),a
       endrule
       rule rl_arfifo if (axiSlave.arready() == 1);
 	 let req <- toGet(arfifo).get();
+
 	 rtagfifo.enq(req.tag);
       endrule
       rule rl_rready;
@@ -528,7 +528,11 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,dataWidth,tagWidth,Empty),a
       endrule
       rule rl_awaddr if (awfifo.notEmpty);
 	 let req = awfifo.first;
-	 Axi4ReadRequest#(axiAddrWidth,tagWidth) axireq = toAxi4ReadRequest(req);
+
+	 let dataWidthBytes = valueOf(TDiv#(dataWidth,8));
+	 let dataSizeMask = dataWidthBytes-1;
+	 let reqsize = req.burstLen & fromInteger(dataSizeMask);
+	 Axi4WriteRequest#(axiAddrWidth,tagWidth) axireq = toAxi4WriteRequest(req);
 	 axiSlave.awaddr(axireq.address);
 	 axiSlave.awid(axireq.id);
 	 axiSlave.awlen(axireq.len);
@@ -537,10 +541,8 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,dataWidth,tagWidth,Empty),a
 	 axiSlave.awprot(3'b000);
 	 axiSlave.awcache(4'b0011);
 	 //FIXME should go in toAxi4WriteRequest
-	 if (axireq.size == axiBusSizeBytes(dataWidthBytes))
-	    wstrbfifo.enq(maxBound);
-	 else
-	    wstrbfifo.enq('hf);
+	 Bit#(TDiv#(dataWidth,8)) wstrb = (1 << reqsize) - 1;
+	 wstrbfifo.enq(wstrb);
       endrule   
       rule rl_awfifo if (axiSlave.awready() == 1);
 	 let req <- toGet(awfifo).get();
@@ -554,7 +556,7 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,dataWidth,tagWidth,Empty),a
 	 let wdata = md.data;
 	 axiSlave.wdata(wdata);
 	 axiSlave.wlast(pack(wfifo.first.last));
-	 axiSlave.wstrb('hf);
+	 axiSlave.wstrb(wstrbfifo.first);
 	 if (wfifo.first.last)
 	    wstrbfifo.deq();
       endrule
@@ -563,7 +565,7 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,dataWidth,tagWidth,Empty),a
       endrule   
       rule rl_done if (axiSlave.bvalid() == 1);
 	 let tag <- toGet(wtagfifo).get();
-	 bfifo.enq(tag);
+	 bfifo.enq(extend(axiSlave.bid()));
       endrule
 
       interface PhysMemReadServer read_server;
@@ -586,15 +588,28 @@ endtypeclass
 instance AxiToMemReadClient#(Bit#(32),32,dataWidth);
    module mkMemReadClient#(Bit#(32) objId, Axi4MasterBits#(32,dataWidth,MemTagSize,Empty) m)(MemReadClient#(dataWidth));
 
-      Wire#(Bit#(1)) arready <- mkDWire(0);
-      Wire#(Bit#(1)) rvalid <- mkDWire(0);
-      Wire#(Bit#(MemTagSize)) rid <- mkDWire(0);
-      Wire#(Bit#(2)) rresp <- mkDWire(0);
-      Wire#(Bit#(dataWidth)) rdata <- mkDWire(0);
-      Wire#(Bit#(1)) rlast <- mkDWire(0);
+      let clock <- exposeCurrentClock();
+      let mClock = clockOf(m);
+      let reset <- exposeCurrentReset();
+      let mReset = resetOf(m);
 
-      FIFOF#(MemRequest)          arfifo <- mkCFFIFOF();
-      FIFOF#(MemData#(dataWidth))  rfifo <- mkCFFIFOF();
+      Wire#(Bit#(1)) arready <- mkDWire(0, clocked_by mClock, reset_by mReset);
+      Wire#(Bit#(1)) rvalid <- mkDWire(0, clocked_by mClock, reset_by mReset);
+      Wire#(Bit#(MemTagSize)) rid <- mkDWire(0, clocked_by mClock, reset_by mReset);
+      Wire#(Bit#(2)) rresp <- mkDWire(0, clocked_by mClock, reset_by mReset);
+      Wire#(Bit#(dataWidth)) rdata <- mkDWire(0, clocked_by mClock, reset_by mReset);
+      Wire#(Bit#(1)) rlast <- mkDWire(0, clocked_by mClock, reset_by mReset);
+
+      FIFOF#(MemRequest)          arfifo;
+      FIFOF#(MemData#(dataWidth))  rfifo;
+      if ( isAncestor(clock, mClock)) begin
+	 arfifo <- mkCFFIFOF();
+	 rfifo  <- mkCFFIFOF();
+      end
+      else begin
+	 arfifo <- mkDualClockBramFIFOF(mClock, mReset, clock, reset);
+	 rfifo  <- mkDualClockBramFIFOF(clock, reset, mClock, mReset);
+      end
 
       rule rl_araddr if (m.arvalid() == 1);
 	 let addr = m.araddr();   
@@ -626,15 +641,30 @@ instance AxiToMemReadClient#(Bit#(32),32,dataWidth);
 
    module mkMemWriteClient#(Bit#(32) objId, Axi4MasterBits#(32,dataWidth,MemTagSize,Empty) m)(MemWriteClient#(dataWidth));
 
-      Wire#(Bit#(1)) awready <- mkDWire(0);
-      Wire#(Bit#(1)) wready <- mkDWire(0);
-      Wire#(Bit#(1)) bvalid <- mkDWire(0);
-      Wire#(Bit#(MemTagSize)) bid <- mkDWire(0);
-      Wire#(Bit#(2)) bresp <- mkDWire(0);
+      let clock <- exposeCurrentClock();
+      let mClock = clockOf(m);
+      let reset <- exposeCurrentReset();
+      let mReset = resetOf(m);
 
-      FIFOF#(MemRequest)       awfifo   <- mkCFFIFOF();
-      FIFOF#(MemData#(dataWidth)) wfifo <- mkCFFIFOF();
-      FIFOF#(Bit#(MemTagSize))    bfifo <- mkCFFIFOF();
+      Wire#(Bit#(1)) awready <- mkDWire(0, clocked_by mClock, reset_by mReset);
+      Wire#(Bit#(1)) wready <- mkDWire(0, clocked_by mClock, reset_by mReset);
+      Wire#(Bit#(1)) bvalid <- mkDWire(0, clocked_by mClock, reset_by mReset);
+      Wire#(Bit#(MemTagSize)) bid <- mkDWire(0, clocked_by mClock, reset_by mReset);
+      Wire#(Bit#(2)) bresp <- mkDWire(0, clocked_by mClock, reset_by mReset);
+
+      FIFOF#(MemRequest)       awfifo;
+      FIFOF#(MemData#(dataWidth)) wfifo;
+      FIFOF#(Bit#(MemTagSize))    bfifo;
+      if ( isAncestor(clock, mClock)) begin
+	 awfifo   <- mkCFFIFOF();
+	 wfifo <- mkCFFIFOF();
+	 bfifo <- mkCFFIFOF();
+      end
+      else begin
+	 awfifo   <- mkDualClockBramFIFOF(mClock, mReset, clock, reset);
+	 wfifo <- mkDualClockBramFIFOF(mClock, mReset, clock, reset);
+	 bfifo <- mkDualClockBramFIFOF(clock, reset, mClock, mReset);
+      end
 
       rule rl_awaddr if (m.awvalid() == 1);
 	 let addr = m.awaddr();
@@ -676,15 +706,28 @@ endinterface
 instance AxiToMemReadClient#(GetObjId#(32),32,dataWidth);
    module mkMemReadClient#(GetObjId#(32) objId, Axi4MasterBits#(32,dataWidth,MemTagSize,Empty) m)(MemReadClient#(dataWidth));
 
-      Wire#(Bit#(1)) arready <- mkDWire(0);
-      Wire#(Bit#(1)) rvalid <- mkDWire(0);
-      Wire#(Bit#(MemTagSize)) rid <- mkDWire(0);
-      Wire#(Bit#(2)) rresp <- mkDWire(0);
-      Wire#(Bit#(dataWidth)) rdata <- mkDWire(0);
-      Wire#(Bit#(1)) rlast <- mkDWire(0);
+      let clock <- exposeCurrentClock();
+      let mClock = clockOf(m);
+      let reset <- exposeCurrentReset();
+      let mReset = resetOf(m);
 
-      FIFOF#(MemRequest)          arfifo <- mkCFFIFOF();
-      FIFOF#(MemData#(dataWidth))  rfifo <- mkCFFIFOF();
+      Wire#(Bit#(1)) arready <- mkDWire(0, clocked_by mClock, reset_by mReset);
+      Wire#(Bit#(1)) rvalid <- mkDWire(0, clocked_by mClock, reset_by mReset);
+      Wire#(Bit#(MemTagSize)) rid <- mkDWire(0, clocked_by mClock, reset_by mReset);
+      Wire#(Bit#(2)) rresp <- mkDWire(0, clocked_by mClock, reset_by mReset);
+      Wire#(Bit#(dataWidth)) rdata <- mkDWire(0, clocked_by mClock, reset_by mReset);
+      Wire#(Bit#(1)) rlast <- mkDWire(0, clocked_by mClock, reset_by mReset);
+
+      FIFOF#(MemRequest)          arfifo;
+      FIFOF#(MemData#(dataWidth))  rfifo;
+      if ( isAncestor(clock, mClock)) begin
+	 arfifo <- mkCFFIFOF();
+	 rfifo  <- mkCFFIFOF();
+      end
+      else begin
+	 arfifo <- mkDualClockBramFIFOF(mClock, mReset, clock, reset);
+	 rfifo  <- mkDualClockBramFIFOF(clock, reset, mClock, mReset);
+      end
 
       rule rl_araddr if (m.arvalid() == 1);
 	 let addr = m.araddr();
@@ -716,15 +759,30 @@ instance AxiToMemReadClient#(GetObjId#(32),32,dataWidth);
 
    module mkMemWriteClient#(GetObjId#(32) objId, Axi4MasterBits#(32,dataWidth,MemTagSize,Empty) m)(MemWriteClient#(dataWidth));
 
-      Wire#(Bit#(1)) awready <- mkDWire(0);
-      Wire#(Bit#(1)) wready <- mkDWire(0);
-      Wire#(Bit#(1)) bvalid <- mkDWire(0);
-      Wire#(Bit#(MemTagSize)) bid <- mkDWire(0);
-      Wire#(Bit#(2)) bresp <- mkDWire(0);
+      let clock <- exposeCurrentClock();
+      let mClock = clockOf(m);
+      let reset <- exposeCurrentReset();
+      let mReset = resetOf(m);
 
-      FIFOF#(MemRequest)       awfifo   <- mkCFFIFOF();
-      FIFOF#(MemData#(dataWidth)) wfifo <- mkCFFIFOF();
-      FIFOF#(Bit#(MemTagSize))    bfifo <- mkCFFIFOF();
+      Wire#(Bit#(1)) awready <- mkDWire(0, clocked_by mClock, reset_by mReset);
+      Wire#(Bit#(1)) wready <- mkDWire(0, clocked_by mClock, reset_by mReset);
+      Wire#(Bit#(1)) bvalid <- mkDWire(0, clocked_by mClock, reset_by mReset);
+      Wire#(Bit#(MemTagSize)) bid <- mkDWire(0, clocked_by mClock, reset_by mReset);
+      Wire#(Bit#(2)) bresp <- mkDWire(0, clocked_by mClock, reset_by mReset);
+
+      FIFOF#(MemRequest)       awfifo;
+      FIFOF#(MemData#(dataWidth)) wfifo;
+      FIFOF#(Bit#(MemTagSize))    bfifo;
+      if ( isAncestor(clock, mClock)) begin
+	 awfifo   <- mkCFFIFOF();
+	 wfifo <- mkCFFIFOF();
+	 bfifo <- mkCFFIFOF();
+      end
+      else begin
+	 awfifo   <- mkDualClockBramFIFOF(mClock, mReset, clock, reset);
+	 wfifo <- mkDualClockBramFIFOF(mClock, mReset, clock, reset);
+	 bfifo <- mkDualClockBramFIFOF(clock, reset, mClock, mReset);
+      end
 
       rule rl_awaddr if (m.awvalid() == 1);
 	 let addr = m.awaddr();
