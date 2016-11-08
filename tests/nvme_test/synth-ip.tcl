@@ -144,5 +144,19 @@ if {$partname != {xc7vx690tffg1761-2} && $partname != {xc7vx690tffg1761-3}} {
 						  ]
 }
 
-fpgamake_ipcore fifo_generator 13.1 dual_clock_axis_fifo_32x8 [list CONFIG.INTERFACE_TYPE {AXI_STREAM} CONFIG.Clock_Type_AXI {Independent_Clock} CONFIG.TDATA_NUM_BYTES {4} CONFIG.TUSER_WIDTH {0} CONFIG.Enable_TLAST {true} CONFIG.HAS_TKEEP {true} CONFIG.FIFO_Application_Type_axis {Data_FIFO} CONFIG.Reset_Type {Asynchronous_Reset} ]
+if {[version -short] >= "2016.1"} {
+    set dual_clock_axis_fifo_version 13.1
+} else {
+    set dual_clock_axis_fifo_version 13.0
+}
+fpgamake_ipcore fifo_generator $dual_clock_axis_fifo_version dual_clock_axis_fifo_32x8 [list \
+                           CONFIG.INTERFACE_TYPE {AXI_STREAM} \
+                           CONFIG.Clock_Type_AXI {Independent_Clock} \
+                           CONFIG.TDATA_NUM_BYTES {4} \
+                           CONFIG.TUSER_WIDTH {0} \
+                           CONFIG.Enable_TLAST {true} \
+                           CONFIG.HAS_TKEEP {true} \
+                           CONFIG.FIFO_Application_Type_axis {Data_FIFO} \
+                           CONFIG.Reset_Type {Asynchronous_Reset} \
+                           ]
 
