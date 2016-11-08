@@ -422,6 +422,10 @@ int portalmem_dmabuffer_create(PortalAlloc portalAlloc)
 				.exp_name = "portalmem",
 				.owner    = THIS_MODULE
 			};
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(3,17,0))
+			struct dma_buf_export_info export_info = {
+				.exp_name = "portalmem"
+                        };
 #endif
                         sg = table->sgl;
                         list_for_each_entry_safe(info, tmp_info, &pages, list) {
@@ -456,18 +460,14 @@ int portalmem_dmabuffer_create(PortalAlloc portalAlloc)
 #endif
                                 sg_dma_address(sg) = sg_phys(sg);
                         }
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0) || LINUX_VERSION_CODE < KERNEL_VERSION(3,17,0))
 			export_info.ops = &dma_buf_ops;
 			export_info.size = len;
 			export_info.flags = O_RDWR;
 			export_info.priv = buffer;
 			dmabuf = dma_buf_export(&export_info);
-#else
-                        dmabuf = dma_buf_export(buffer, &dma_buf_ops, len, O_RDWR
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0))
-                                                , NULL
-#endif
-                                );
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0))
+                        dmabuf = dma_buf_export(buffer, &dma_buf_ops, len, O_RDWR , NULL);
 #endif
                         if (IS_ERR(dmabuf))
                                 pa_buffer_free(buffer);
