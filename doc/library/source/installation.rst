@@ -25,6 +25,19 @@ To use Connectal to build hardware/software applications, some additional packag
 
     cd connectal; sudo make install-dependences
 
+Installing Connectal and Bluespec on CentOS 7
+---------------------------------------------
+
+The following dependencies were needed on CentOS::
+
+    sudo yum install gmp glibc-devel autoconf gperf compat-libstdc++-33
+
+CentOS does not have an iverilog packages, but it can be build from
+source, following the instructions in its repository:
+
+  * https://github.com/steveicarus/iverilog.git
+
+
 Installing Connectal Drivers and PCI Express Utilities:
 -------------------------------------------------------
 
