@@ -25,7 +25,10 @@ else
 ifeq ($(BOARD),kc705g2)
 CONNECTALFLAGS += --pin-binding FMC:fmc1
 endif
-PINOUT_FILE += fmc.json
+ifeq ($(BOARD),nfsume)
+CONNECTALFLAGS += --implconstraint=nfsume.xdc
+endif
+#PINOUT_FILE += fmc.json
 CONNECTALFLAGS += -D PcieDataBusWidth=128
 endif
 CONNECTALFLAGS += -D BlocksPerRequest=8
