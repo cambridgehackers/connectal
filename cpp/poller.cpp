@@ -51,6 +51,9 @@ PortalPoller::PortalPoller(int autostart)
 #if defined(SIMULATION)
     timeout = 100;
 #endif
+#if defined(BOARD_nfsume)
+    timeout = 100;
+#endif
 }
 
 int PortalPoller::unregisterInstance(Portal *portal)
