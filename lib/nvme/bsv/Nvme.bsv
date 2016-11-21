@@ -175,11 +175,11 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
    let nvwdataCnx  <- mkConnection(toGet(wdataFifo), axiRootPortMemSlave.write_server.writeData);
    let nvdoneCnx   <- mkConnection(axiRootPortMemSlave.write_server.writeDone, toPut(doneFifo));
 `else
-   let nvaraddrCnx <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toGet(araddrFifo), axiRootPortMemSlave.read_server.readReq);
-   let nvawaddrCnx <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toGet(awaddrFifo), axiRootPortMemSlave.write_server.writeReq);
-   let nvrdataCnx  <- GetPutWithClocks::mkConnectionWithClocks(axiClock, axiReset, clock, reset, axiRootPortMemSlave.read_server.readData, toPut(rdataFifo));
-   let nvwdataCnx  <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toGet(wdataFifo), axiRootPortMemSlave.write_server.writeData);
-   let nvdoneCnx   <- GetPutWithClocks::mkConnectionWithClocks(axiClock, axiReset, clock, reset, axiRootPortMemSlave.write_server.writeDone, toPut(doneFifo));
+   let nvaraddrCnx <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toPipeOut(araddrFifo), axiRootPortMemSlave.read_server.readReq);
+   let nvawaddrCnx <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toPipeOut(awaddrFifo), axiRootPortMemSlave.write_server.writeReq);
+   let nvrdataCnx  <- GetPutWithClocks::mkConnectionWithClocks(axiClock, axiReset, clock, reset, axiRootPortMemSlave.read_server.readData, toPipeIn(rdataFifo));
+   let nvwdataCnx  <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toPipeOut(wdataFifo), axiRootPortMemSlave.write_server.writeData);
+   let nvdoneCnx   <- GetPutWithClocks::mkConnectionWithClocks(axiClock, axiReset, clock, reset, axiRootPortMemSlave.write_server.writeDone, toPipeIn(doneFifo));
 `endif
 
    rule rl_rdata if (!inSetup);
@@ -207,11 +207,11 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
    let wdataCtlCnx  <- mkConnection(toGet(wdataFifoCtl), axiRootPortMemSlaveCtl.write_server.writeData);
    let doneCtlCnx   <- mkConnection(axiRootPortMemSlaveCtl.write_server.writeDone, toPut(doneFifoCtl));
 `else
-   let araddrCtlCnx <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toGet(araddrFifoCtl), axiRootPortMemSlaveCtl.read_server.readReq);
-   let awaddrCtlCnx <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toGet(awaddrFifoCtl), axiRootPortMemSlaveCtl.write_server.writeReq);
-   let rdataCtlCnx  <- GetPutWithClocks::mkConnectionWithClocks(axiClock, axiReset, clock, reset, axiRootPortMemSlaveCtl.read_server.readData, toPut(rdataFifoCtl));
-   let wdataCtlCnx  <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toGet(wdataFifoCtl), axiRootPortMemSlaveCtl.write_server.writeData);
-   let doneCtlCnx   <- GetPutWithClocks::mkConnectionWithClocks(axiClock, axiReset, clock, reset, axiRootPortMemSlaveCtl.write_server.writeDone, toPut(doneFifoCtl));
+   let araddrCtlCnx <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toPipeOut(araddrFifoCtl), axiRootPortMemSlaveCtl.read_server.readReq);
+   let awaddrCtlCnx <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toPipeOut(awaddrFifoCtl), axiRootPortMemSlaveCtl.write_server.writeReq);
+   let rdataCtlCnx  <- GetPutWithClocks::mkConnectionWithClocks(axiClock, axiReset, clock, reset, axiRootPortMemSlaveCtl.read_server.readData, toPipeIn(rdataFifoCtl));
+   let wdataCtlCnx  <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toPipeOut(wdataFifoCtl), axiRootPortMemSlaveCtl.write_server.writeData);
+   let doneCtlCnx   <- GetPutWithClocks::mkConnectionWithClocks(axiClock, axiReset, clock, reset, axiRootPortMemSlaveCtl.write_server.writeDone, toPipeIn(doneFifoCtl));
 `endif
 
    rule rl_rdata_ctl if (!inSetup);
@@ -329,7 +329,7 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
 
    FIFOF#(Tuple4#(DmaChannel,Bool,MemRequest,Bit#(32))) traceFifo <- mkSizedBRAMFIFOF(128);
    PipeIn#(Tuple4#(DmaChannel,Bool,MemRequest,Bit#(32))) tracePipe = traceEnabled ? toPipeIn(traceFifo) : sinkPipe();
-   FIFOF#(Tuple4#(DmaChannel,Bool,MemData#(PcieDataBusWidth),Bit#(32))) traceDataFifo <- mkSizedBRAMFIFOF(2048);
+   FIFOF#(Tuple4#(DmaChannel,Bool,MemData#(PcieDataBusWidth),Bit#(32))) traceDataFifo <- mkSizedBRAMFIFOF(128);
    PipeIn#(Tuple4#(DmaChannel,Bool,MemData#(PcieDataBusWidth),Bit#(32))) traceDataPipe = traceEnabled ? toPipeIn(traceDataFifo) : sinkPipe();
    FIFOF#(Tuple2#(DmaChannel,Bit#(32)))                              traceDoneFifo <- mkSizedBRAMFIFOF(128);
    PipeIn#(Tuple2#(DmaChannel,Bit#(32)))                             traceDonePipe = traceEnabled ? toPipeIn(traceDoneFifo) : sinkPipe();
@@ -382,16 +382,6 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
       cycles <= cycles + 1;
    endrule
 
-   let commandStartProbe <- mkProbe();
-   let commandNumBlocksProbe <- mkProbe();
-   let segmentStartProbe <- mkProbe();
-   let segmentNumBlocksProbe <- mkProbe();
-   let completedRequestProbe <- mkProbe();
-   let commandSourceProbe <- mkProbe();
-   let segmentSourceProbe <- mkProbe();
-   let requestSourceProbe <- mkProbe();
-   let responseSourceProbe <- mkProbe();
-
    IteratorWithContext#(Bit#(32),NvmeIoCommand) ioIterator <- mkIteratorWithContext();
    let segmenterFsm <- mkAutoFSM(seq
       while (True) seq
@@ -416,10 +406,7 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
 						xlimit: command.numBlocks,
 						xstep: `BlocksPerRequest},
 				command);
-	       commandStartProbe <= command.startBlock;
-	       commandNumBlocksProbe <= command.numBlocks;
 	       ioCommandSourceFifo.enq(commandSource);
-	       commandSourceProbe <= commandSource;
 	    end
 	 endaction
          while (ioIterator.ivpipe.notEmpty()) seq
@@ -436,28 +423,19 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
 	       command.startBlock = command.startBlock + extend(v.value);
 	       ioSegmentFifo.enq(command);
 	       ioSegmentSourceFifo.enq(ioCommandSourceFifo.first);
-	       segmentSourceProbe <= ioCommandSourceFifo.first;
 
-	       segmentStartProbe <= truncate(command.startBlock) + v.value;
-	       segmentNumBlocksProbe <= command.numBlocks;
 	    endaction
 	 endseq
-         completedRequestProbe <= True;
       endseq // while True
       endseq);
 
    Reg#(Bit#(32)) i <- mkReg(0);
-
-   let bramQueryAddress <- mkProbe();
-   let bramQueryResponse <- mkProbe();
-   let requestCompleted <- mkProbe();
 
    let requestFsm <- mkAutoFSM(seq
       while (True) seq
 	 action
 	    let req <- toGet(ioSegmentFifo).get();
 	    let source <- toGet(ioSegmentSourceFifo).get();
-	    requestSourceProbe <= source;
 	    Vector#(16,Bit#(32)) command = unpack(0);
 	    command[0] = { requestId, req.flags, req.opcode };
 	    command[1] = 1; // nsid
@@ -514,16 +492,12 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
 	 while (requestInProgress) seq
 	    portB2.request.put(BRAMRequest {address: (extend(responseId[2:0]) * fromInteger(responseSize/bytesPerEntry)) + fromInteger(12/bytesPerEntry),
 					    write: False, responseOnWrite: False, datain: 0});
-	    bramQueryAddress <= (responseId * fromInteger(responseSize/bytesPerEntry)) + fromInteger(12/bytesPerEntry);
 	    action
 	       let response <- portB2.response.get();
-	       bramQueryResponse <= response;
 	       let phase = ~responseId[3];
 	       if (response[16+(3*32 % valueOf(PcieDataBusWidth))] == phase) begin
-		  requestCompleted <= response;
 		  // if status field written by NVME
 		  let source <- toGet(ioResponseSourceFifo).get();
-		  responseSourceProbe <= source;
 `ifdef NVME_ACCELERATOR_INTERFACE
 		  if (source == 1)
 		     ioResponseFifoAccel.enq(NvmeIoResponse {requestId: responseId, statusCode: 'h5a5a, statusCodeType: 'h5a5a });
