@@ -43,6 +43,8 @@ addons:
     packages:
     - python-dev
     - libgmp10
+    - flex
+    - bison
 notifications:
   email: false
   irc:
