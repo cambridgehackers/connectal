@@ -13,7 +13,7 @@ before_script:
 env:
   global:
     - BLUESPECDIR=$PWD/Bluespec-2015.09.beta2/lib
-    - PATH=$PATH:$PWD/Bluespec-2015.09.beta2/bin:$PWD/open-src-cvc-700c-1/src
+    - PATH=$PATH:$PWD/Bluespec-2015.09.beta2/bin:$PWD/open-src-cvc-700c-1/src:$PWD/verilator-3.888/bin
     - LD_LIBRARY_PATH=$PWD/lib
   matrix:
     - CONNECTAL_TEST=examples/echo CONNECTAL_ARCH=verilator
