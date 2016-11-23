@@ -6,6 +6,7 @@ before_script:
 - mkdir -p lib
 - ln -s /usr/lib/x86_64-linux-gnu/libgmp.so.10 lib/libgmp.so.3
 - if [ "$CONNECTAL_ARCH" == "cvc" ]; then if [ -d open-src-cvc-700c-1 ] ; then echo cvc cached; else curl -L https://github.com/cambridgehackers/open-src-cvc/archive/700c-1.tar.gz | tar -zxf - ; (cd open-src-cvc-700c-1/src; make -j4 -f makefile.cvc64); fi; fi
+- (if [ "$CONNECTAL_ARCH" == "verilator" ]; then curl -L http://www.veripool.org/ftp/verilator-3.888.tgz | tar -zxf -; cd verilator-3.888/; ./configure; make -j2;  fi)
 - curl http://www.dabeaz.com/ply/ply-3.9.tar.gz | tar -zxf -
 - ln -s ../ply-3.9/ply scripts
 - ls -l scripts/ply
