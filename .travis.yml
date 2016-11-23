@@ -6,6 +6,9 @@ before_script:
 - mkdir -p lib
 - ln -s /usr/lib/x86_64-linux-gnu/libgmp.so.10 lib/libgmp.so.3
 - if [ "$CONNECTAL_ARCH" == "cvc" ]; then if [ -d open-src-cvc-700c-1 ] ; then echo cvc cached; else curl -L https://github.com/cambridgehackers/open-src-cvc/archive/700c-1.tar.gz | tar -zxf - ; (cd open-src-cvc-700c-1/src; make -j4 -f makefile.cvc64); fi; fi
+- curl http://www.dabeaz.com/ply/ply-3.9.tar.gz | tar -zxf -
+- ln -s ../ply-3.9/ply scripts
+- ls -l scripts/ply
 env:
   global:
     - BLUESPECDIR=$PWD/Bluespec-2015.09.beta2/lib
@@ -38,10 +41,7 @@ addons:
     - sourceline: 'ppa:jamey-hicks/connectal'
     packages:
     - python-dev
-    - python-ply
     - libgmp10
-    - libjsoncpp-dev
-    - verilator
 notifications:
   email: false
   irc:
