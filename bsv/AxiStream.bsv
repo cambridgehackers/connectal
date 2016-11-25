@@ -24,6 +24,7 @@ import Connectable::*;
 import FIFOF::*;
 import GetPut::*;
 import GetPutM::*;
+import Probe::*;
 
 (* always_ready, always_enabled *)
 interface AxiStreamMaster#(numeric type dsz);
@@ -49,6 +50,12 @@ endinterface
 
 instance Connectable#(AxiStreamMaster#(dataWidth), AxiStreamSlave#(dataWidth));
    module mkConnection#(AxiStreamMaster#(dataWidth) from, AxiStreamSlave#(dataWidth) to)(Empty);
+`ifdef GET_PUT_WITH_CLOCKS_USE_XILINX_FIFO
+      cnxProbe <- mkProbe;
+      rule rl_probe if (from.tvalid() == 1 and to.tready() == 1);;
+	 cnxProbe <= from.tdata();
+      endrule
+`endif
       rule rl_axi_stream;
 	 to.tdata(from.tdata());
 	 to.tkeep(from.tkeep());
@@ -63,14 +70,24 @@ instance Connectable#(AxiStreamMaster#(dataWidth), Put#(dtype))
    provisos (Bits#(dtype, dataWidth));
    module mkConnection#(AxiStreamMaster#(dataWidth) from, Put#(dtype) to)(Empty);
       FIFOF#(Bit#(dataWidth)) asputfifo <- mkFIFOF();
+`ifdef GET_PUT_WITH_CLOCKS_USE_XILINX_FIFO
+      getProbe <- mkProbe;
+      putProbe <- mkProbe;
+`endif
       rule rl_ready;
 	 from.tready(pack(asputfifo.notFull));
       endrule
       rule rl_enq if (from.tvalid == 1);
+`ifdef GET_PUT_WITH_CLOCKS_USE_XILINX_FIFO
+	 getProbe <= from.tdata;
+`endif
 	 asputfifo.enq(from.tdata);
       endrule
       rule rl_put;
 	 let v <- toGet(asputfifo).get();
+`ifdef GET_PUT_WITH_CLOCKS_USE_XILINX_FIFO
+	 putProbe <= v;
+`endif
 	 to.put(unpack(v));
       endrule
    endmodule
@@ -80,8 +97,15 @@ instance Connectable#(Get#(dtype), AxiStreamSlave#(dataWidth))
    provisos (Bits#(dtype, dataWidth));
    module mkConnection#(Get#(dtype) from, AxiStreamSlave#(dataWidth) to)(Empty);
       FIFOF#(Bit#(dataWidth)) asgetfifo <- mkFIFOF();
+`ifdef GET_PUT_WITH_CLOCKS_USE_XILINX_FIFO
+      let getProbe <- mkProbe();
+      let putProbe <- mkProbe();
+`endif
       rule rl_get;
 	 let v <- from.get();
+`ifdef GET_PUT_WITH_CLOCKS_USE_XILINX_FIFO
+	 getProbe <= v;
+`endif
 	 asgetfifo.enq(pack(v));
       endrule
       rule rl_axi_stream;
@@ -93,6 +117,9 @@ instance Connectable#(Get#(dtype), AxiStreamSlave#(dataWidth))
 	 to.tvalid(pack(asgetfifo.notEmpty));
       endrule
       rule rl_deq if (to.tready == 1);
+`ifdef GET_PUT_WITH_CLOCKS_USE_XILINX_FIFO
+	 putProbe <= asgetfifo.first();
+`endif
 	 asgetfifo.deq();
       endrule
    endmodule
