@@ -94,13 +94,17 @@ instance ConnectableWithClocks#(PipeOut#(a), Put#(a)) provisos (
 `ifndef GET_PUT_WITH_CLOCKS_USE_XILINX_FIFO
       SyncFIFOIfc#(a) synchronizer <- mkSyncFIFO(8, inClock, inReset, outClock);
       //FIFOF#(a) synchronizer <- mkDualClockBramFIFOF(inClock, inReset, outClock, outReset);
+      let deqProbe <- mkProbe();
+      let enqProbe <- mkProbe();
        rule mcwc_doGet;
           let v = in.first;
 	  in.deq();
+	  deqProbe <= v;
 	   synchronizer.enq(v);
        endrule
        rule mcwc_doPut;
 	  let v = synchronizer.first;
+	  enqProbe <= v;
 	  synchronizer.deq;
 	  out.put(v);
        endrule
