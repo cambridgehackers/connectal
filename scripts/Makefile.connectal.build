@@ -98,7 +98,7 @@ BSCOPTFLAGS= -show-schedule -aggressive-conditions -show-method-bvi
 BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj
 BSCFLAGS_COMMON += $(BSCWARNFLAGS) $(BSCOPTFLAGS) $(BSCPATHFLAGS) --wait-for-license
 PROF_FLAGS= #-pg
-export SIM_CFLAGS= $(CFLAGS_PROJECT) -fPIC -Ijni -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -O $(PROF_FLAGS)
+export SIM_CFLAGS= $(CFLAGS_PROJECT) -fPIC -Ijni -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -I $(CONNECTALDIR)/lib/json -O $(PROF_FLAGS)
 export SIM_CXXFLAGS= $(CXXFLAGS_PROJECT) -fPIC -Ijni -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -O $(PROF_FLAGS)
 SIM_CXX_COMMON = $(addprefix $(CONNECTALDIR)/cpp/, TlpReplay.cpp BsimDma.cpp sock_utils.c portalPrintf.c XsimTop.cpp poller.cpp transportSocket.c transportHardware.c transportXsim.c portal.c)
 SIM_CXX_LOCAL = $(SIM_CXX_COMMON) $(DTOP)/jni/XsimMsgRequest.c $(DTOP)/jni/XsimMsgIndication.c $(DTOP)/jni/GeneratedCppCallbacks.cpp
@@ -292,7 +292,8 @@ endif
 
 CVC64 ?= cvc64
 CVC_DEFINES = $(addprefix +define+, $(BSVDEFINES_LIST))
-CVC_ARGS ?=
+CVC_TRACE_ARGS = +printstats +fstvars
+CVC_ARGS ?= 
 CVC_SOURCES = $(addprefix -v , $(wildcard $(BLUESPECDIR)/Verilog/*.v $(DTOP)/verilog/*.v))
 cvcsim: bin/cvcsim
 
@@ -351,6 +352,7 @@ $(2): $(3) $(4) $(5)
 	@echo BSCVERILOG [$(1)]
 	cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -g $(1) $(3)
 	$(Q)sed -i 's|// On .*|// timestamp removed|' verilog/*.v
+	$(Q)sed -i 's|Prelude_inst_changeSpecialWires|csw|g' verilog/*.v
 	$(Q)sed -i 's|  reg.*PROBE[,;]|(* mark_debug="true" *)&|' verilog/*.v 
 	$(Q)sed -i 's|  wire.*PROBE[,;]|(* mark_debug="true" *)&|' verilog/*.v 
 	$(Q)sed -i 's|  wire.*PROBE_VALID[,;]|(* mark_debug="true" *)&|' verilog/*.v 
@@ -368,6 +370,7 @@ $(VFILE): $(addprefix obj/, $(patsubst %.bsv, %.bo, $(notdir $(TOPBSVFILE))))
 	@echo BSCVERILOG [$(VFILE)]
 	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -g $(MKTOP) $(TOPBSVFILE)
 	$(Q)sed -i 's|// On .*|// timestamp removed|' verilog/*.v
+	$(Q)sed -i 's|Prelude_inst_changeSpecialWires|csw|g' verilog/*.v
 	$(Q)sed -i 's|  reg.*PROBE[,;]|(* mark_debug="true" *)&|' verilog/*.v 
 	$(Q)sed -i 's|  wire.*PROBE[,;]|(* mark_debug="true" *)&|' verilog/*.v 
 	$(Q)sed -i 's|  wire.*PROBE_VALID[,;]|(* mark_debug="true" *)&|' verilog/*.v 
