@@ -169,17 +169,17 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
    FIFOF#(Bit#(6))                           doneFifo <- mkFIFOF();
 
 `ifndef PCIE
-   let nvaraddrCnx <- mkConnection(toGet(araddrFifo), axiRootPortMemSlave.read_server.readReq);
-   let nvawaddrCnx <- mkConnection(toGet(awaddrFifo), axiRootPortMemSlave.write_server.writeReq);
-   let nvrdataCnx  <- mkConnection(axiRootPortMemSlave.read_server.readData, toPut(rdataFifo));
-   let nvwdataCnx  <- mkConnection(toGet(wdataFifo), axiRootPortMemSlave.write_server.writeData);
-   let nvdoneCnx   <- mkConnection(axiRootPortMemSlave.write_server.writeDone, toPut(doneFifo));
+   let axiRootArAddrCnx <- mkConnection(toGet(araddrFifo), axiRootPortMemSlave.read_server.readReq);
+   let axiRootAwAddrCnx <- mkConnection(toGet(awaddrFifo), axiRootPortMemSlave.write_server.writeReq);
+   let axiRootRDataCnx  <- mkConnection(axiRootPortMemSlave.read_server.readData, toPut(rdataFifo));
+   let axiRootWDataCnx  <- mkConnection(toGet(wdataFifo), axiRootPortMemSlave.write_server.writeData);
+   let axiRootWDoneCnx   <- mkConnection(axiRootPortMemSlave.write_server.writeDone, toPut(doneFifo));
 `else
-   let nvaraddrCnx <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toPipeOut(araddrFifo), axiRootPortMemSlave.read_server.readReq);
-   let nvawaddrCnx <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toPipeOut(awaddrFifo), axiRootPortMemSlave.write_server.writeReq);
-   let nvrdataCnx  <- GetPutWithClocks::mkConnectionWithClocks(axiClock, axiReset, clock, reset, axiRootPortMemSlave.read_server.readData, toPipeIn(rdataFifo));
-   let nvwdataCnx  <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toPipeOut(wdataFifo), axiRootPortMemSlave.write_server.writeData);
-   let nvdoneCnx   <- GetPutWithClocks::mkConnectionWithClocks(axiClock, axiReset, clock, reset, axiRootPortMemSlave.write_server.writeDone, toPipeIn(doneFifo));
+   let axiRootArAddrCnx <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toPipeOut(araddrFifo), axiRootPortMemSlave.read_server.readReq);
+   let axiRootAwAddrCnx <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toPipeOut(awaddrFifo), axiRootPortMemSlave.write_server.writeReq);
+   let axiRootRDataCnx  <- GetPutWithClocks::mkConnectionWithClocks(axiClock, axiReset, clock, reset, axiRootPortMemSlave.read_server.readData, toPipeIn(rdataFifo));
+   let axiRootWDataCnx  <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toPipeOut(wdataFifo), axiRootPortMemSlave.write_server.writeData);
+   let axiRootWDoneCnx   <- GetPutWithClocks::mkConnectionWithClocks(axiClock, axiReset, clock, reset, axiRootPortMemSlave.write_server.writeDone, toPipeIn(doneFifo));
 `endif
 
    rule rl_rdata if (!inSetup);
@@ -201,17 +201,17 @@ module mkNvme#(NvmeIndication nvmeInd, NvmeDriverIndication driverInd, NvmeTrace
    FIFOF#(Bit#(6))                doneFifoCtl <- mkFIFOF();
 
 `ifndef PCIE
-   let araddrCtlCnx <- mkConnection(toGet(araddrFifoCtl), axiRootPortMemSlaveCtl.read_server.readReq);
-   let awaddrCtlCnx <- mkConnection(toGet(awaddrFifoCtl), axiRootPortMemSlaveCtl.write_server.writeReq);
-   let rdataCtlCnx  <- mkConnection(axiRootPortMemSlaveCtl.read_server.readData, toPut(rdataFifoCtl));
-   let wdataCtlCnx  <- mkConnection(toGet(wdataFifoCtl), axiRootPortMemSlaveCtl.write_server.writeData);
-   let doneCtlCnx   <- mkConnection(axiRootPortMemSlaveCtl.write_server.writeDone, toPut(doneFifoCtl));
+   let axiCtlArAddrCnx <- mkConnection(toGet(araddrFifoCtl), axiRootPortMemSlaveCtl.read_server.readReq);
+   let axiCtlAwAddrCnx <- mkConnection(toGet(awaddrFifoCtl), axiRootPortMemSlaveCtl.write_server.writeReq);
+   let axiCtlRDataCnx  <- mkConnection(axiRootPortMemSlaveCtl.read_server.readData, toPut(rdataFifoCtl));
+   let axiCtlWDataCnx  <- mkConnection(toGet(wdataFifoCtl), axiRootPortMemSlaveCtl.write_server.writeData);
+   let axiCtlDoneCnx   <- mkConnection(axiRootPortMemSlaveCtl.write_server.writeDone, toPut(doneFifoCtl));
 `else
-   let araddrCtlCnx <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toPipeOut(araddrFifoCtl), axiRootPortMemSlaveCtl.read_server.readReq);
-   let awaddrCtlCnx <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toPipeOut(awaddrFifoCtl), axiRootPortMemSlaveCtl.write_server.writeReq);
-   let rdataCtlCnx  <- GetPutWithClocks::mkConnectionWithClocks(axiClock, axiReset, clock, reset, axiRootPortMemSlaveCtl.read_server.readData, toPipeIn(rdataFifoCtl));
-   let wdataCtlCnx  <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toPipeOut(wdataFifoCtl), axiRootPortMemSlaveCtl.write_server.writeData);
-   let doneCtlCnx   <- GetPutWithClocks::mkConnectionWithClocks(axiClock, axiReset, clock, reset, axiRootPortMemSlaveCtl.write_server.writeDone, toPipeIn(doneFifoCtl));
+   let axiCtlArAddrCnx <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toPipeOut(araddrFifoCtl), axiRootPortMemSlaveCtl.read_server.readReq);
+   let axiCtlAwAddrCnx <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toPipeOut(awaddrFifoCtl), axiRootPortMemSlaveCtl.write_server.writeReq);
+   let axiCtlRDataCnx  <- GetPutWithClocks::mkConnectionWithClocks(axiClock, axiReset, clock, reset, axiRootPortMemSlaveCtl.read_server.readData, toPipeIn(rdataFifoCtl));
+   let axiCtlWDataCnx  <- GetPutWithClocks::mkConnectionWithClocks(clock, reset, axiClock, axiReset, toPipeOut(wdataFifoCtl), axiRootPortMemSlaveCtl.write_server.writeData);
+   let axiCtlWDoneCnx   <- GetPutWithClocks::mkConnectionWithClocks(axiClock, axiReset, clock, reset, axiRootPortMemSlaveCtl.write_server.writeDone, toPipeIn(doneFifoCtl));
 `endif
 
    rule rl_rdata_ctl if (!inSetup);
