@@ -25,6 +25,7 @@ import FIFOF::*;
 import GetPut::*;
 import GetPutM::*;
 import Probe::*;
+`include "ConnectalProjectConfig.bsv"
 
 (* always_ready, always_enabled *)
 interface AxiStreamMaster#(numeric type dsz);
@@ -51,8 +52,8 @@ endinterface
 instance Connectable#(AxiStreamMaster#(dataWidth), AxiStreamSlave#(dataWidth));
    module mkConnection#(AxiStreamMaster#(dataWidth) from, AxiStreamSlave#(dataWidth) to)(Empty);
 `ifdef GET_PUT_WITH_CLOCKS_USE_XILINX_FIFO
-      cnxProbe <- mkProbe;
-      rule rl_probe if (from.tvalid() == 1 and to.tready() == 1);;
+      let cnxProbe <- mkProbe;
+      rule rl_probe if (from.tvalid() == 1 && to.tready() == 1);
 	 cnxProbe <= from.tdata();
       endrule
 `endif
@@ -71,8 +72,8 @@ instance Connectable#(AxiStreamMaster#(dataWidth), Put#(dtype))
    module mkConnection#(AxiStreamMaster#(dataWidth) from, Put#(dtype) to)(Empty);
       FIFOF#(Bit#(dataWidth)) asputfifo <- mkFIFOF();
 `ifdef GET_PUT_WITH_CLOCKS_USE_XILINX_FIFO
-      getProbe <- mkProbe;
-      putProbe <- mkProbe;
+      let getProbe <- mkProbe;
+      let putProbe <- mkProbe;
 `endif
       rule rl_ready;
 	 from.tready(pack(asputfifo.notFull));
