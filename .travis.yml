@@ -43,6 +43,7 @@ addons:
     packages:
     - python-dev
     - libgmp10
+    - libjsoncpp-dev
     - flex
     - bison
 notifications:
