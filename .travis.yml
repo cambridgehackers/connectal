@@ -52,3 +52,5 @@ notifications:
     channels:
     - chat.freenode.net#connectal
 
+  slack:
+    secure: mQApKri2F2TZEyLEs530x+snMA8aDdL6o0e/HCVqk3t4pfSfj2OfPQ5edVrvIh+dsFjhX1GNDk94LSmZTS6AVCQ4+VPXORN1VjvB+xIeyP/PsIjSUoWqvS2V0t8CYV5K+5HRJq2H7tNmY4wxZYQnPAAGplsrKgJBxjccMhSqO30=
