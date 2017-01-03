@@ -114,6 +114,7 @@ typedef struct PortalInternal {
     int                    fpga_fd;
     uint32_t               fpga_number;
     uint32_t               fpga_tile;
+    uint32_t               board_number;
     volatile unsigned int *map_base;
     void                  *parent;
     PORTAL_INDFUNC         handler;

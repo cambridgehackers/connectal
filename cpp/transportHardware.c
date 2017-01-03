@@ -161,20 +161,33 @@ static int init_hardware(struct PortalInternal *pint, void *param)
         return -1;
     }
 #else
-    char buff[128];
+    char oldname[128];
+    char newname[128];
     int i;
-    snprintf(buff, sizeof(buff), "/dev/portal_%d_%d", pint->fpga_tile, pint->fpga_number);
+    snprintf(oldname, sizeof(oldname), "/dev/portal_%d_%d", pint->fpga_tile, pint->fpga_number);
+    snprintf(newname, sizeof(newname), "/dev/portal_b%dt%dp%d", pint->board_number, pint->fpga_tile, pint->fpga_number);
     //FIXME: race condition on Zynq between cat /dev/connectal and here
     for (i = 0; i < 5; i++) {
-	pint->fpga_fd = open(buff, O_RDWR);
-	if (pint->fpga_fd < 0) {
-	    if (errno == EACCES && i != 4) {
-		sleep(1);
-		continue;
-	    }
-	    PORTAL_PRINTF("Failed to open %s fd=%d errno=%d:%s\n", buff, pint->fpga_fd, errno, strerror(errno));
-	    return -errno;
+
+	// try old style name
+	pint->fpga_fd = open(oldname, O_RDWR);
+	if (pint->fpga_fd >= 0)
+	    break;
+
+	// try new style name
+	pint->fpga_fd = open(newname, O_RDWR);
+	if (pint->fpga_fd >= 0)
+	    break;
+
+	// retry if EACCESS
+	if (errno == EACCES && i != 4) {
+	    sleep(1);
+	    continue;
 	}
+
+	// else fail
+	PORTAL_PRINTF("Failed to open %s fd=%d errno=%d:%s\n", oldname, pint->fpga_fd, errno, strerror(errno));
+	return -errno;
     }
     pint->map_base = (volatile unsigned int*)portalMmap(pint->fpga_fd, PORTAL_BASE_OFFSET);
     if (pint->map_base == MAP_FAILED) {

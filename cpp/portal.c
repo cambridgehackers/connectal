@@ -76,6 +76,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     memset(pint, 0, sizeof(*pint));
     if(!utility_portal)
       utility_portal = pint;
+    pint->board_number = 0;
     pint->fpga_number = id;
     pint->fpga_tile = tile;
     pint->fpga_fd = -1;
@@ -85,7 +86,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     pint->parent = parent;
     pint->reqinfo = reqinfo;
     if(trace_portal)
-        PORTAL_PRINTF("%s: **initialize portal_%d_%d handler %p cb %p parent %p\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number, handler, cb, parent);
+	PORTAL_PRINTF("%s: **initialize portal_b%dt%dp%d handler %p cb %p parent %p\n", __FUNCTION__, pint->board_number, pint->fpga_tile, pint->fpga_number, handler, cb, parent);
     if (!transport) {
         // Use defaults for transport handling methods
 #ifdef SIMULATION
@@ -97,7 +98,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     pint->transport = transport;
     rc = pint->transport->init(pint, param);
     if (rc != 0) {
-        PORTAL_PRINTF("%s: failed to initialize Portal portal_%d_%d\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number);
+        PORTAL_PRINTF("%s: failed to initialize Portal portal_b%dt%dp%d\n", __FUNCTION__, pint->board_number, pint->fpga_tile, pint->fpga_number);
 #ifndef __KERNEL__
         exit(1);
 #endif
