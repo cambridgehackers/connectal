@@ -611,7 +611,8 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		if (cdev_add(&this_board->extra->cdev, this_device_number, 1)) {
 		    printk(KERN_ERR "%s: cdev_add board failed\n", DEV_NAME);
                 }
-		device_create(pcieportal_class, &dev->dev, this_device_number, NULL, "connectal");
+		if (this_board->info.board_number == 0)
+			device_create(pcieportal_class, &dev->dev, this_device_number, NULL, "connectal");
 
 		tune_pcie_caps(dev);
 
@@ -620,8 +621,9 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
         } /* end of if(activate) */
 
         /******** deactivate board *******/
-	device_destroy(pcieportal_class, MKDEV(MAJOR(device_number), MINOR(device_number) + MAX_MINOR_COUNT));
-        cdev_del(&this_board->extra->cdev);
+	if (this_board->info.board_number == 0)
+		device_destroy(pcieportal_class, MKDEV(MAJOR(device_number), MINOR(device_number) + MAX_MINOR_COUNT));
+	cdev_del(&this_board->extra->cdev);
 	fpn = 0;
 	while(fpn < this_board->info.num_portals) {
                 tPortal *this_portal = &this_board->portal[fpn];
