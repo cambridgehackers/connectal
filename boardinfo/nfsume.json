@@ -1,6 +1,7 @@
 {
     "options": {
-        "bsvdefines" : ["XILINX=1", "Virtex7", "PCIE", "PCIE3", "PcieHostInterface", "PhysAddrWidth=40", "NUMBER_OF_LEDS=2", "PcieLanes=8"],
+        "bsvdefines" : ["XILINX=1", "Virtex7", "PCIE", "PCIE3", "PcieHostInterface", "PhysAddrWidth=40", "NUMBER_OF_LEDS=2", "PcieLanes=8",
+		       	"CONNECTAL_BITS_DEPENDENCES=hw/mkTop.bit", "CONNECTAL_RUN_SCRIPT=$(CONNECTALDIR)/scripts/run.pcietest"],
         "os" : "ubuntu",
         "partname" : "xc7vx690tffg1761-3",
         "need_pcie" : "x7_gen3x8",
@@ -14,11 +15,11 @@
     "BTN": {
         "BTN[0]": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AR13"
+            "PACKAGE_PIN": "AR13"
         },
         "BTN[1]": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "BB12"
+            "PACKAGE_PIN": "BB12"
         }
     },
     "CLK": {
@@ -26,836 +27,844 @@
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVDS",
 			"DIFF_TERM": "TRUE",
-            "LOC": "G18"
+            "PACKAGE_PIN": "G18"
         },
         "FPGA_SYSCLK_P": {
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVDS",
 			"DIFF_TERM": "TRUE",
-            "LOC": "H19"
+            "PACKAGE_PIN": "H19"
         }
     },
     "CPLD": {
         "CPLD_IMGSEL[0]": {
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AP31"
+            "PACKAGE_PIN": "AP31"
         },
         "CPLD_IMGSEL[1]": {
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AP33"
+            "PACKAGE_PIN": "AP33"
         },
         "CPLD_IMGSEL[2]": {
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AR33"
+            "PACKAGE_PIN": "AR33"
         },
         "CPLD_RECONFIG": {
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AK32"
+            "PACKAGE_PIN": "AK32"
         }
     },
     "DDR": {
         "DDR3_SYSCLK_N": {
             "IOSTANDARD": "LVDS",
 			"DIFF_TERM": "TRUE",
-            "LOC": "E35"
+            "PACKAGE_PIN": "E35"
         },
         "DDR3_SYSCLK_P": {
             "IOSTANDARD": "LVDS",
 			"DIFF_TERM": "TRUE",
-            "LOC": "E34"
+            "PACKAGE_PIN": "E34"
         }
     },
     "FMC": {
+	"FMC_GBTCLK_P[00]": {
+	    "DIFF_TERM": "TRUE",
+            "PACKAGE_PIN": "AT8"
+	},
+	"FMC_GBTCLK_N[00]": {
+	    "DIFF_TERM": "TRUE",
+            "PACKAGE_PIN": "AT7"
+	},
         "FMC_CLK0_M2C_N": {
             "IOSTANDARD": "LVDS",
-			"DIFF_TERM": "TRUE",
-            "LOC": "AT27"
+	    "DIFF_TERM": "TRUE",
+            "PACKAGE_PIN": "AT27"
         },
         "FMC_CLK0_M2C_P": {
             "IOSTANDARD": "LVDS",
 			"DIFF_TERM": "TRUE",
-            "LOC": "AR27"
+            "PACKAGE_PIN": "AR27"
         },
         "FMC_CLK1_M2C_N": {
             "IOSTANDARD": "LVDS",
 			"DIFF_TERM": "TRUE",
-            "LOC": "AV35"
+            "PACKAGE_PIN": "AV35"
         },
         "FMC_CLK1_M2C_P": {
             "IOSTANDARD": "LVDS",
 			"DIFF_TERM": "TRUE",
-            "LOC": "AV34"
+            "PACKAGE_PIN": "AV34"
         },
         "FMC_LA_N[00]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AV28"
+            "PACKAGE_PIN": "AV28"
         },
         "FMC_LA_N[01]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AR28"
+            "PACKAGE_PIN": "AR28"
         },
         "FMC_LA_N[02]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AT29"
+            "PACKAGE_PIN": "AT29"
         },
         "FMC_LA_N[03]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "BB27"
+            "PACKAGE_PIN": "BB27"
         },
         "FMC_LA_N[04]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "BB29"
+            "PACKAGE_PIN": "BB29"
         },
         "FMC_LA_N[05]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AV26"
+            "PACKAGE_PIN": "AV26"
         },
         "FMC_LA_N[06]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "BA27"
+            "PACKAGE_PIN": "BA27"
         },
         "FMC_LA_N[07]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AY28"
+            "PACKAGE_PIN": "AY28"
         },
         "FMC_LA_N[08]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AP28"
+            "PACKAGE_PIN": "AP28"
         },
         "FMC_LA_N[09]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AR25"
+            "PACKAGE_PIN": "AR25"
         },
         "FMC_LA_N[10]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AW26"
+            "PACKAGE_PIN": "AW26"
         },
         "FMC_LA_N[11]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AT26"
+            "PACKAGE_PIN": "AT26"
         },
         "FMC_LA_N[12]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AV29"
+            "PACKAGE_PIN": "AV29"
         },
         "FMC_LA_N[13]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AW28"
+            "PACKAGE_PIN": "AW28"
         },
         "FMC_LA_N[14]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AN26"
+            "PACKAGE_PIN": "AN26"
         },
         "FMC_LA_N[15]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AM27"
+            "PACKAGE_PIN": "AM27"
         },
         "FMC_LA_N[16]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AL27"
+            "PACKAGE_PIN": "AL27"
         },
         "FMC_LA_N[17]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AY33"
+            "PACKAGE_PIN": "AY33"
         },
         "FMC_LA_N[18]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AV33"
+            "PACKAGE_PIN": "AV33"
         },
         "FMC_LA_N[19]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AW31"
+            "PACKAGE_PIN": "AW31"
         },
         "FMC_LA_N[20]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AY30"
+            "PACKAGE_PIN": "AY30"
         },
         "FMC_LA_N[21]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "BB31"
+            "PACKAGE_PIN": "BB31"
         },
         "FMC_LA_N[22]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "BA32"
+            "PACKAGE_PIN": "BA32"
         },
         "FMC_LA_N[23]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "BB34"
+            "PACKAGE_PIN": "BB34"
         },
         "FMC_LA_N[24]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AU34"
+            "PACKAGE_PIN": "AU34"
         },
         "FMC_LA_N[25]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AU33"
+            "PACKAGE_PIN": "AU33"
         },
         "FMC_LA_N[26]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "BB33"
+            "PACKAGE_PIN": "BB33"
         },
         "FMC_LA_N[27]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AV31"
+            "PACKAGE_PIN": "AV31"
         },
         "FMC_LA_N[28]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AT35"
+            "PACKAGE_PIN": "AT35"
         },
         "FMC_LA_N[29]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "BB36"
+            "PACKAGE_PIN": "BB36"
         },
         "FMC_LA_N[30]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "BA35"
+            "PACKAGE_PIN": "BA35"
         },
         "FMC_LA_N[31]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AP30"
+            "PACKAGE_PIN": "AP30"
         },
         "FMC_LA_N[32]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AW36"
+            "PACKAGE_PIN": "AW36"
         },
         "FMC_LA_N[33]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AU36"
+            "PACKAGE_PIN": "AU36"
         },
         "FMC_LA_P[00]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AU28"
+            "PACKAGE_PIN": "AU28"
         },
         "FMC_LA_P[01]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AP27"
+            "PACKAGE_PIN": "AP27"
         },
         "FMC_LA_P[02]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AR29"
+            "PACKAGE_PIN": "AR29"
         },
         "FMC_LA_P[03]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "BB26"
+            "PACKAGE_PIN": "BB26"
         },
         "FMC_LA_P[04]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "BB28"
+            "PACKAGE_PIN": "BB28"
         },
         "FMC_LA_P[05]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AV25"
+            "PACKAGE_PIN": "AV25"
         },
         "FMC_LA_P[06]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "BA26"
+            "PACKAGE_PIN": "BA26"
         },
         "FMC_LA_P[07]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AY27"
+            "PACKAGE_PIN": "AY27"
         },
         "FMC_LA_P[08]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AN28"
+            "PACKAGE_PIN": "AN28"
         },
         "FMC_LA_P[09]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AP25"
+            "PACKAGE_PIN": "AP25"
         },
         "FMC_LA_P[10]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AW25"
+            "PACKAGE_PIN": "AW25"
         },
         "FMC_LA_P[11]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AT25"
+            "PACKAGE_PIN": "AT25"
         },
         "FMC_LA_P[12]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AU29"
+            "PACKAGE_PIN": "AU29"
         },
         "FMC_LA_P[13]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AW27"
+            "PACKAGE_PIN": "AW27"
         },
         "FMC_LA_P[14]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AN25"
+            "PACKAGE_PIN": "AN25"
         },
         "FMC_LA_P[15]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AM26"
+            "PACKAGE_PIN": "AM26"
         },
         "FMC_LA_P[16]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AK27"
+            "PACKAGE_PIN": "AK27"
         },
         "FMC_LA_P[17]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AY32"
+            "PACKAGE_PIN": "AY32"
         },
         "FMC_LA_P[18]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AU32"
+            "PACKAGE_PIN": "AU32"
         },
         "FMC_LA_P[19]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AV30"
+            "PACKAGE_PIN": "AV30"
         },
         "FMC_LA_P[20]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AW30"
+            "PACKAGE_PIN": "AW30"
         },
         "FMC_LA_P[21]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "BA30"
+            "PACKAGE_PIN": "BA30"
         },
         "FMC_LA_P[22]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "BA31"
+            "PACKAGE_PIN": "BA31"
         },
         "FMC_LA_P[23]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "BA34"
+            "PACKAGE_PIN": "BA34"
         },
         "FMC_LA_P[24]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AT34"
+            "PACKAGE_PIN": "AT34"
         },
         "FMC_LA_P[25]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AT32"
+            "PACKAGE_PIN": "AT32"
         },
         "FMC_LA_P[26]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "BB32"
+            "PACKAGE_PIN": "BB32"
         },
         "FMC_LA_P[27]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AU31"
+            "PACKAGE_PIN": "AU31"
         },
         "FMC_LA_P[28]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AR34"
+            "PACKAGE_PIN": "AR34"
         },
         "FMC_LA_P[29]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "BA36"
+            "PACKAGE_PIN": "BA36"
         },
         "FMC_LA_P[30]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AY34"
+            "PACKAGE_PIN": "AY34"
         },
         "FMC_LA_P[31]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AN30"
+            "PACKAGE_PIN": "AN30"
         },
         "FMC_LA_P[32]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AV36"
+            "PACKAGE_PIN": "AV36"
         },
         "FMC_LA_P[33]": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AT36"
+            "PACKAGE_PIN": "AT36"
         },
         "FMC_PRSNT_LS": {
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AR30"
+            "PACKAGE_PIN": "AR30"
         }
     },
     "Fan": {
         "FAN_PWM": {
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AN34"
+            "PACKAGE_PIN": "AN34"
         },
         "FAN_TACH": {
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AP32"
+            "PACKAGE_PIN": "AP32"
         }
     },
     "I2C": {
         "I2C_FPGA_SCL": {
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AK24"
+            "PACKAGE_PIN": "AK24"
         },
         "I2C_FPGA_SDA": {
             "PIO_DIRECTION": "BIDIR",
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AK25"
+            "PACKAGE_PIN": "AK25"
         },
         "I2C_MUX_RESET": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AM39"
+            "PACKAGE_PIN": "AM39"
         }
     },
     "sdio": {
         "cmd": {
             "PIO_DIRECTION": "BIDIR",
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AJ26"
+            "PACKAGE_PIN": "AJ26"
         },
         "clk": {
             "PIO_DIRECTION": "BIDIR",
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AJ25"
+            "PACKAGE_PIN": "AJ25"
         },
         "cd": {
             "PIO_DIRECTION": "BIDIR",
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AW35"
+            "PACKAGE_PIN": "AW35"
         },
         "d0": {
             "PIO_DIRECTION": "BIDIR",
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AY29"
+            "PACKAGE_PIN": "AY29"
         },
         "d1": {
             "PIO_DIRECTION": "BIDIR",
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AM28"
+            "PACKAGE_PIN": "AM28"
         },
         "d2": {
             "PIO_DIRECTION": "BIDIR",
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AL25"
+            "PACKAGE_PIN": "AL25"
         },
         "d3": {
             "PIO_DIRECTION": "BIDIR",
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AL26"
+            "PACKAGE_PIN": "AL26"
         }
     },
     "LED": {
         "LED[0]": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AR22"
+            "PACKAGE_PIN": "AR22"
         },
         "LED[1]": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AR23"
+            "PACKAGE_PIN": "AR23"
         }
     },
     "PCIE": {
         "PCIE_SYS_RESETN": {
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AY35"
+            "PACKAGE_PIN": "AY35"
         },
         "PCIE_PRSNT_B_LS": {
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AR35"
+            "PACKAGE_PIN": "AR35"
         },
         "PCIE_WAKE": {
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AT31"
+            "PACKAGE_PIN": "AT31"
         },
         "PCIE_SYSCLK_N": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AB8"
+            "PACKAGE_PIN": "AB8"
         },
         "PCIE_SYSCLK_P": {
             "IOSTANDARD": "LVDS",
-            "LOC": "AB7"
+            "PACKAGE_PIN": "AB7"
         }
     },
     "PMODCTRL": {
         "DIR_JA[0]": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AT16"
+            "PACKAGE_PIN": "AT16"
         },
         "DIR_JA[1]": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AU16"
+            "PACKAGE_PIN": "AU16"
         },
         "DIR_JA[2]": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "BB19"
+            "PACKAGE_PIN": "BB19"
         },
         "DIR_JA[3]": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AV20"
+            "PACKAGE_PIN": "AV20"
         },
         "DIR_JA[4]": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AW20"
+            "PACKAGE_PIN": "AW20"
         },
         "DIR_JA[5]": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "BA17"
+            "PACKAGE_PIN": "BA17"
         },
         "DIR_JA[6]": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "BB17"
+            "PACKAGE_PIN": "BB17"
         },
         "DIR_JA[7]": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AY20"
+            "PACKAGE_PIN": "AY20"
         },
         "PMOD_OE_B": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "C40"
+            "PACKAGE_PIN": "C40"
         }
     },
     "PMODData": {
         "JA_FPGA[0]": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AW18"
+            "PACKAGE_PIN": "AW18"
         },
         "JA_FPGA[1]": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AW17"
+            "PACKAGE_PIN": "AW17"
         },
         "JA_FPGA[2]": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AU19"
+            "PACKAGE_PIN": "AU19"
         },
         "JA_FPGA[3]": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AV19"
+            "PACKAGE_PIN": "AV19"
         },
         "JA_FPGA[4]": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AT20"
+            "PACKAGE_PIN": "AT20"
         },
         "JA_FPGA[5]": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AT19"
+            "PACKAGE_PIN": "AT19"
         },
         "JA_FPGA[6]": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AV16"
+            "PACKAGE_PIN": "AV16"
         },
         "JA_FPGA[7]": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AW16"
+            "PACKAGE_PIN": "AW16"
         }
     },
     "POWER": {
         "PCON_ALERT_B": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "J41"
+            "PACKAGE_PIN": "J41"
         },
         "PCON_AUXFAULT_B": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "M41"
+            "PACKAGE_PIN": "M41"
         },
         "PCON_FAULT": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "N40"
+            "PACKAGE_PIN": "N40"
         },
         "PWR_SNS": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AW42"
+            "PACKAGE_PIN": "AW42"
         }
     },
     "QDRIIA": {
         "QDRII_SYSCLK_N": {
             "IOSTANDARD": "LVDS",
 			"DIFF_TERM": "TRUE",
-            "LOC": "AD33"
+            "PACKAGE_PIN": "AD33"
         },
         "QDRII_SYSCLK_P": {
             "IOSTANDARD": "LVDS",
 			"DIFF_TERM": "TRUE",
-            "LOC": "AD32"
+            "PACKAGE_PIN": "AD32"
         }
     },
     "QDRIIC": {
         "QDRIIC_SYSCLK_N": {
             "IOSTANDARD": "LVDS",
 			"DIFF_TERM": "TRUE",
-            "LOC": "AU13"
+            "PACKAGE_PIN": "AU13"
         },
         "QDRIIC_SYSCLK_P": {
             "IOSTANDARD": "LVDS",
 			"DIFF_TERM": "TRUE",
-            "LOC": "AU14"
+            "PACKAGE_PIN": "AU14"
         }
     },
     "MICRO_SD": {
         "SD_CCLK": {
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AJ25"
+            "PACKAGE_PIN": "AJ25"
         },
         "SD_CD": {
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AW35"
+            "PACKAGE_PIN": "AW35"
         },
         "SD_CMD": {
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AJ26"
+            "PACKAGE_PIN": "AJ26"
         },
         "SD_D[0]": {
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AY29"
+            "PACKAGE_PIN": "AY29"
         },
         "SD_D[1]": {
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AM28"
+            "PACKAGE_PIN": "AM28"
         },
         "SD_D[2]": {
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AL25"
+            "PACKAGE_PIN": "AL25"
         },
         "SD_D[3]": {
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AL26"
+            "PACKAGE_PIN": "AL26"
         }
     },
     "SFPCLK": {
         "SFP_CLK_ALARM_B": {
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "AM29"
+            "PACKAGE_PIN": "AM29"
         },
         "SFP_CLK_RST": {
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS18",
-            "LOC": "BA29"
+            "PACKAGE_PIN": "BA29"
         }
     },
     "SFP": {
         "SFP_REFCLK_N": {
             "PIO_DIRECTION": "INPUT",
-            "LOC": "E9"
+            "PACKAGE_PIN": "E9"
         },
         "SFP_REFCLK_P": {
             "PIO_DIRECTION": "INPUT",
-            "LOC": "E10"
+            "PACKAGE_PIN": "E10"
         }
     },
     "SFPA": {
         "ETH1_LED[0]": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "G13"
+            "PACKAGE_PIN": "G13"
         },
         "ETH1_LED[1]": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "L15"
+            "PACKAGE_PIN": "L15"
         },
         "ETH1_MOD_DETECT": {
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "N18"
+            "PACKAGE_PIN": "N18"
         },
         "ETH1_RS[0]": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "N19"
+            "PACKAGE_PIN": "N19"
         },
         "ETH1_RS[1]": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "P18"
+            "PACKAGE_PIN": "P18"
         },
         "ETH1_RX_LOS": {
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "L17"
+            "PACKAGE_PIN": "L17"
         },
         "ETH1_TX_DISABLE": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "M18"
+            "PACKAGE_PIN": "M18"
         },
         "ETH1_TX_FAULT": {
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "M19"
+            "PACKAGE_PIN": "M19"
         },
         "ETH1_RX_p": {
             "PIO_DIRECTION": "INPUT",
-            "LOC": "A6"
+            "PACKAGE_PIN": "A6"
         },
         "ETH1_RX_n": {
             "PIO_DIRECTION": "INPUT",
-            "LOC": "A5"
+            "PACKAGE_PIN": "A5"
         },
         "ETH1_TX_p": {
             "PIO_DIRECTION": "OUTPUT",
-            "LOC": "B4"
+            "PACKAGE_PIN": "B4"
         },
         "ETH1_TX_n": {
             "PIO_DIRECTION": "OUTPUT",
-            "LOC": "B3"
+            "PACKAGE_PIN": "B3"
         }
     },
     "SFPB": {
         "ETH2_LED[0]": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AL22"
+            "PACKAGE_PIN": "AL22"
         },
         "ETH2_LED[1]": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "BA20"
+            "PACKAGE_PIN": "BA20"
         },
         "ETH2_MOD_DETECT": {
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "L19"
+            "PACKAGE_PIN": "L19"
         },
         "ETH2_RS[0]": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "P20"
+            "PACKAGE_PIN": "P20"
         },
         "ETH2_RS[1]": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "N20"
+            "PACKAGE_PIN": "N20"
         },
         "ETH2_RX_LOS": {
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "L20"
+            "PACKAGE_PIN": "L20"
         },
         "ETH2_TX_DISABLE": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "B31"
+            "PACKAGE_PIN": "B31"
         },
         "ETH2_TX_FAULT": {
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "C26"
+            "PACKAGE_PIN": "C26"
         },
         "ETH2_RX_p": {
             "PIO_DIRECTION": "INPUT",
-            "LOC": "B8"
+            "PACKAGE_PIN": "B8"
         },
         "ETH2_RX_n": {
             "PIO_DIRECTION": "INPUT",
-            "LOC": "B7"
+            "PACKAGE_PIN": "B7"
         },
         "ETH2_TX_p": {
             "PIO_DIRECTION": "OUTPUT",
-            "LOC": "C2"
+            "PACKAGE_PIN": "C2"
         },
         "ETH2_TX_n": {
             "PIO_DIRECTION": "OUTPUT",
-            "LOC": "C1"
+            "PACKAGE_PIN": "C1"
         }
     },
     "SFPC": {
         "ETH3_LED[0]": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AY18"
+            "PACKAGE_PIN": "AY18"
         },
         "ETH3_LED[1]": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AY17"
+            "PACKAGE_PIN": "AY17"
         },
         "ETH3_MOD_DETECT": {
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "J37"
+            "PACKAGE_PIN": "J37"
         },
         "ETH3_RS[0]": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "F39"
+            "PACKAGE_PIN": "F39"
         },
         "ETH3_RS[1]": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "G36"
+            "PACKAGE_PIN": "G36"
         },
         "ETH3_RX_LOS": {
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "G37"
+            "PACKAGE_PIN": "G37"
         },
         "ETH3_TX_DISABLE": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "J38"
+            "PACKAGE_PIN": "J38"
         },
         "ETH3_TX_FAULT": {
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "E39"
+            "PACKAGE_PIN": "E39"
         },
         "ETH3_RX_p": {
             "PIO_DIRECTION": "INPUT",
-            "LOC": "C6"
+            "PACKAGE_PIN": "C6"
         },
         "ETH3_RX_n": {
             "PIO_DIRECTION": "INPUT",
-            "LOC": "C5"
+            "PACKAGE_PIN": "C5"
         },
         "ETH3_TX_p": {
             "PIO_DIRECTION": "OUTPUT",
-            "LOC": "D4"
+            "PACKAGE_PIN": "D4"
         },
         "ETH3_TX_n": {
             "PIO_DIRECTION": "OUTPUT",
-            "LOC": "D3"
+            "PACKAGE_PIN": "D3"
         }
     },
     "SFPD": {
         "ETH4_LED[0]": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "P31"
+            "PACKAGE_PIN": "P31"
         },
         "ETH4_LED[1]": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "K32"
+            "PACKAGE_PIN": "K32"
         },
         "ETH4_MOD_DETECT": {
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "H36"
+            "PACKAGE_PIN": "H36"
         },
         "ETH4_RS[0]": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "H38"
+            "PACKAGE_PIN": "H38"
         },
         "ETH4_RS[1]": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "G38"
+            "PACKAGE_PIN": "G38"
         },
         "ETH4_RX_LOS": {
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "J36"
+            "PACKAGE_PIN": "J36"
         },
         "ETH4_TX_DISABLE": {
             "PIO_DIRECTION": "OUTPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "L21"
+            "PACKAGE_PIN": "L21"
         },
         "ETH4_TX_FAULT": {
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "J26"
+            "PACKAGE_PIN": "J26"
         },
         "ETH4_RX_p": {
             "PIO_DIRECTION": "INPUT",
-            "LOC": "D8"
+            "PACKAGE_PIN": "D8"
         },
         "ETH4_RX_n": {
             "PIO_DIRECTION": "INPUT",
-            "LOC": "D7"
+            "PACKAGE_PIN": "D7"
         },
         "ETH4_TX_p": {
             "PIO_DIRECTION": "OUTPUT",
-            "LOC": "E2"
+            "PACKAGE_PIN": "E2"
         },
         "ETH4_TX_n": {
             "PIO_DIRECTION": "OUTPUT",
-            "LOC": "E1"
+            "PACKAGE_PIN": "E1"
         }
     },
     "SI570": {
@@ -863,31 +872,31 @@
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVDS",
 			"DIFF_TERM": "TRUE",
-            "LOC": "AU27"
+            "PACKAGE_PIN": "AU27"
         },
         "USERCLK_P": {
             "PIO_DIRECTION": "INPUT",
             "IOSTANDARD": "LVDS",
 			"DIFF_TERM": "TRUE",
-            "LOC": "AU26"
+            "PACKAGE_PIN": "AU26"
         }
     },
     "UART": {
         "UART_CTS": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "BA16"
+            "PACKAGE_PIN": "BA16"
         },
         "UART_RTS": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "BB16"
+            "PACKAGE_PIN": "BB16"
         },
         "UART_RXD_OUT": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "BA19"
+            "PACKAGE_PIN": "BA19"
         },
         "UART_TXD_IN": {
             "IOSTANDARD": "LVCMOS15",
-            "LOC": "AY19"
+            "PACKAGE_PIN": "AY19"
         }
     },
     "pins": {

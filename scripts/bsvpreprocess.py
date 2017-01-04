@@ -60,6 +60,10 @@ def preprocess(sourcefilename, source, defs, bsvpath):
         cond  = stack[-1][0]
         valid = stack[-1][1]
 
+        if (line.endswith('\\')):
+            noncomment += line[:-1]
+            continue
+
         commentStart = line.find('//')
         if commentStart >= 0:
             noncomment = line[0:commentStart]
@@ -74,6 +78,7 @@ def preprocess(sourcefilename, source, defs, bsvpath):
             else:
                 outlines.append('//SKIPPED %s' % line)
             continue
+
         s = noncomment[i+1:]
         (tok, s) = nexttok(s)
         if tok == 'ifdef':
@@ -111,6 +116,7 @@ def preprocess(sourcefilename, source, defs, bsvpath):
             m = re.search('"?([-_A-Za-z0-9.]+)"?', s)
             if not m:
                 sys.stderr.write('syntax.preprocess %s: could not find file in line {%s}\n' % (sourcefilename, s))
+                break
             filename = m.group(1)
             inc = ''
             for d in bsvpath:

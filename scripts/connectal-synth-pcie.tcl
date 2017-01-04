@@ -44,7 +44,9 @@ CONFIG.AER_Enabled {true} CONFIG.AER_Multiheader {true} CONFIG.AER_Permit_Root_E
 }
 
 if {$need_pcie == "x7_gen3x8"} {
-    if {[version -short] >= "2015.3"} {
+    if {[version -short] >= "2016.1"} {
+	set pcieversion {4.2}
+    } elseif {[version -short] >= "2015.3"} {
 	set pcieversion {4.1}
     } elseif {[version -short] >= "2015.2"} {
 	set pcieversion {4.0}

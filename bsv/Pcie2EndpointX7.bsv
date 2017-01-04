@@ -24,6 +24,7 @@
 
 package Pcie2EndpointX7;
 
+`include "ConnectalProjectConfig.bsv"
 import ConnectalConfig   ::*;
 import BRAMFIFO          ::*;
 import Clocks            ::*;
@@ -246,10 +247,10 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    end
    else begin
       portalClock = clkgen.clkout1;
-      portalReset <- mkAsyncReset(4, user_reset_n, portalClock);
+      portalReset <- mkSyncReset(5, user_reset_n, portalClock);
    end
    Clock derivedClock = clkgen.clkout0;
-   Reset derivedReset <- mkAsyncReset(4, user_reset_n, derivedClock);
+   Reset derivedReset <- mkSyncReset(5, user_reset_n, derivedClock);
 
    Server#(TLPData#(16), TLPData#(16)) tlp16 = (interface Server;
 						interface Put request;

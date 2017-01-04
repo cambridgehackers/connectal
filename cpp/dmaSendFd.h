@@ -26,7 +26,6 @@
 #define NUM_SHIFTS 4
 static int shifts[NUM_SHIFTS+1] = {PAGE_SHIFT12, PAGE_SHIFT8, PAGE_SHIFT4, PAGE_SHIFT0, 0 /* needed for border computation */};
 
-#include "dmaManager.h"
 #include "drivers/portalmem/portalmem.h" // PortalAlloc
 
 #ifdef CONNECTAL_DRIVER_CODE

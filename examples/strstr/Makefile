@@ -5,7 +5,6 @@ MEM_READ_INTERFACES = lStrstrExample.readClients
 
 BSVFILES = $(CONNECTALDIR)/lib/strstr/bsv/Strstr.bsv StrstrExample.bsv
 CPPFILES=teststrstr.cpp
-CONNECTALFLAGS += -D DEGPAR=2
 CONNECTALFLAGS += -I $(CONNECTALDIR)/lib/strstr/cpp
 
 include $(CONNECTALDIR)/Makefile.connectal

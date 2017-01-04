@@ -18,6 +18,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+`include "ConnectalProjectConfig.bsv"
 import Clocks::*;
 import Vector::*;
 import FIFO::*;
@@ -104,7 +105,7 @@ module mkConnectalTop(ConnectalTop);
    ZynqPcieTestRequestWrapper zynqPcieTestRequestWrapper <- mkZynqPcieTestRequestWrapper(IfcNames_ZynqPcieTestRequest,zynqPcieTest.request);
 
    // Connect the exposed BRAM client to the trace BRAM server in the PcieHost
-   mkConnectionWithClocks(zynqPcieTest.traceBramClient, host.tpciehost.traceBramServer, defaultClock, defaultReset, host.portalClock, host.portalReset);
+   mkConnectionWithClocks2(zynqPcieTest.traceBramClient, host.tpciehost.traceBramServer);
 
    // send the value of the lnk_up signal from the PCIE endpoint to the Zynq portal clock domain
    rule updateLinkBit;

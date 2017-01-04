@@ -1,3 +1,4 @@
+`include "ConnectalProjectConfig.bsv"
 import FShow::*;
 
 //**********************************************************

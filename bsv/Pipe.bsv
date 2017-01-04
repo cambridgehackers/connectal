@@ -30,8 +30,9 @@ import MIMO::*;
 import DefaultValue::*;
 import Gearbox::*;
 import Clocks::*;
+import AxiStream::*;
 
-typedef Tuple3#(x,x,x) Tripple#(type x);
+typedef Tuple3#(x,x,x) Triplet#(type x);
 typedef Tuple2#(x,x)   Pair#(type x);
 
 interface PipeIn#(type a);
@@ -973,7 +974,6 @@ module mkIteratorWithContext(IteratorWithContext#(a,c)) provisos (Arith#(a), Bit
    Reg#(a) xstep <- mkReg(0);
    // inclusive limit
    Reg#(a) xlimit <- mkReg(0);
-   Reg#(a) xdown <- mkReg(0);
    Reg#(Bool) first <- mkReg(False);
    Reg#(Bool) last <- mkReg(False);
    Reg#(Bool) idle <- mkReg(True);
@@ -987,11 +987,11 @@ module mkIteratorWithContext(IteratorWithContext#(a,c)) provisos (Arith#(a), Bit
 	 countReg <= countReg + 1;
 	 x <= x + xstep;
 	 first <= False;
-	 last <= (next_x+xstep >= xlimit);
+	 last <= (x + xstep*2 >= xlimit);
 	 idle <= last;
       endmethod
       method Bool notEmpty();
-	 return (x < xlimit);
+	 return !idle;
       endmethod
    endinterface
    interface PipeOut ivpipe;
@@ -1002,13 +1002,12 @@ module mkIteratorWithContext(IteratorWithContext#(a,c)) provisos (Arith#(a), Bit
 	 let next_x = x + xstep;
 	 countReg <= countReg + 1;
 	 x <= x + xstep;
-	 xdown <= xdown - xstep;
 	 first <= False;
-	 last <= (xdown <= xstep);//(next_x+xstep >= xlimit);
+	 last <= (x + xstep*2 >= xlimit);
 	 idle <= last;
       endmethod
       method Bool notEmpty();
-	 return (x < xlimit);
+	 return !idle;
       endmethod
    endinterface
    method Action start(IteratorConfig#(a) cfg, c ctxt) if (idle);
@@ -1017,7 +1016,6 @@ module mkIteratorWithContext(IteratorWithContext#(a,c)) provisos (Arith#(a), Bit
       xbase <= cfg.xbase;
       xstep <= cfg.xstep;
       xlimit <= cfg.xlimit;
-      xdown <= cfg.xlimit - cfg.xbase;
 
       first <= True;
       last <= (cfg.xbase+cfg.xstep >= cfg.xlimit);
@@ -1114,3 +1112,72 @@ module mkXYIterator(XYIteratorIfc#(a)) provisos (Arith#(a), Bits#(a,awidth), Eq#
       $display("XYIterator x=%d xlimit=%d y=%d ylimit=%d xstep=%d ystep=%d", x, xlimit, xstep, y, ylimit, ystep);
    endmethod
 endmodule: mkXYIterator
+
+instance MkAxiStream#(AxiStreamMaster#(dsize), PipeOut#(dtype)) provisos (Bits#(dtype,dsize));
+   module mkAxiStream#(PipeOut#(dtype) f)(AxiStreamMaster#(dsize));
+      Wire#(Bool) readyWire <- mkDWire(False);
+      rule rl_deq if (readyWire && f.notEmpty);
+	 f.deq();
+      endrule
+     method Bit#(dsize)              tdata();
+	if (f.notEmpty())
+	  return pack(f.first());
+	else
+	  return 0;
+     endmethod
+     method Bit#(TDiv#(dsize,8))     tkeep(); return maxBound; endmethod
+     method Bit#(1)                tlast(); return 0; endmethod
+     method Action                 tready(Bit#(1) v);
+	readyWire <= unpack(v);
+     endmethod
+     method Bit#(1)                tvalid(); return pack(f.notEmpty()); endmethod
+   endmodule
+endinstance
+
+instance MkAxiStream#(AxiStreamSlave#(dsize), PipeIn#(dtype)) provisos (Bits#(dtype,dsize));
+   module mkAxiStream#(PipeIn#(dtype) f)(AxiStreamSlave#(dsize));
+      Wire#(Bit#(dsize)) dataWire <- mkDWire(unpack(0));
+      Wire#(Bool) validWire <- mkDWire(False);
+      rule enq if (validWire && f.notFull());
+	 f.enq(unpack(dataWire));
+      endrule
+      method Action      tdata(Bit#(dsize) v);
+	 dataWire <= v;
+      endmethod
+      method Action      tkeep(Bit#(TDiv#(dsize,8)) v); endmethod
+      method Action      tlast(Bit#(1) v); endmethod
+      method Bit#(1)     tready(); return pack(f.notFull()); endmethod
+      method Action      tvalid(Bit#(1) v);
+	 validWire <= unpack(v);
+      endmethod
+   endmodule
+endinstance
+
+instance Connectable#(AxiStreamMaster#(dataWidth), PipeIn#(dtype))
+   provisos (Bits#(dtype, dataWidth));
+   module mkConnection#(AxiStreamMaster#(dataWidth) from, PipeIn#(dtype) to)(Empty);
+      rule rl_ready;
+	 from.tready(pack(to.notFull));
+      endrule
+      rule rl_enq if (from.tvalid == 1);
+	 to.enq(unpack(from.tdata));
+      endrule
+   endmodule
+endinstance
+
+instance Connectable#(PipeOut#(dtype), AxiStreamSlave#(dataWidth))
+   provisos (Bits#(dtype, dataWidth));
+   module mkConnection#(PipeOut#(dtype) from, AxiStreamSlave#(dataWidth) to)(Empty);
+      rule rl_tvalid;
+	 to.tvalid(pack(from.notEmpty()));
+      endrule
+      rule rl_axi_stream;
+	 to.tdata(pack(from.first));
+	 to.tkeep(maxBound);
+	 to.tlast(0);
+      endrule
+      rule rl_deq if (to.tready == 1);
+	 from.deq();
+      endrule
+   endmodule
+endinstance

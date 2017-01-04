@@ -49,6 +49,10 @@ interface BRAMWriteClient#(numeric type bramIdxWidth, numeric type busWidth);
    interface MemWriteClient#(busWidth) dmaClient;
 endinterface
 
+interface BRAMPipeIn#(numeric type bramIdxWidth, numeric type busWidth);
+   interface PipeIn#(MemDataF#(busWidth)) pipe;
+endinterface
+
 module mkBRAMReadClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMReadClient#(bramIdxWidth,busWidth))
    provisos(Bits#(d,dsz),
 	    Div#(busWidth,dsz,nd),
@@ -251,4 +255,56 @@ module mkBRAMWriteClient#(BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMWriteClient#
       return True;
    endmethod
    interface dmaClient = we.dmaClient;
+endmodule
+
+module mkBRAMPipeIn#(Integer id,
+		     BRAMServer#(Bit#(bramIdxWidth),d) br)(BRAMPipeIn#(bramIdxWidth,busWidth))
+   provisos(Bits#(d,dsz),
+	    Div#(busWidth,dsz,nd),
+	    Mul#(nd,dsz,busWidth),
+	    Add#(1,a__,nd),
+	    Add#(1,bramIdxWidth,cntW),
+	    Div#(busWidth,8,bwbytes),
+	    Mul#(bwbytes, 8, busWidth),
+	    Add#(b__, bramIdxWidth, 32),
+	    Add#(c__, TLog#(nd), 32));
+
+   let verbose = False;
+   Clock clk <- exposeCurrentClock;
+   Reset rst <- exposeCurrentReset;
+   Reg#(Bit#(cntW)) j <- mkReg(0);
+   Reg#(Bit#(cntW)) n <- mkReg(0);
+   Gearbox#(nd,1,MemDataF#(dsz)) gb <- mkNto1Gearbox(clk,rst,clk,rst);
+   Reg#(Bool) running <- mkReg(False);
+   FIFO#(void) doneFifo <- mkFIFO;
+   FIFOF#(MemDataF#(busWidth)) dataFifo <- mkFIFOF();
+   
+   rule feed_gearbox;
+      let md <- toGet(dataFifo).get;
+      if(verbose) $display("mkBRAMWriter::feed_gearbox (%d) %x", id, md.data);
+      Vector#(nd,Bit#(dsz)) ds = unpack(md.data);
+      Vector#(nd,MemDataF#(dsz)) mds = unpack(0);
+      for (Integer i = 0; i < valueOf(nd); i = i + 1)
+	 mds[i].data = ds[i];
+      if (md.last)
+	 mds[valueOf(nd)-1].last = True;
+      gb.enq(mds);
+   endrule
+   
+   rule load;
+      let md = gb.first[0];
+      $display("load id=%d j=%d data=%h", id, j, md.data);
+      br.request.put(BRAMRequest{write:True, responseOnWrite:False, address:truncate(j), datain:unpack(md.data)});
+      gb.deq;
+      let nextj = j + 1;
+      if (md.last) begin
+	 nextj = 0;
+	 $display("end of stream j=%d", j);
+	 end
+      j <= nextj;
+      if(verbose) $display("mkBRAMWriter::load (%d) %x, %x", id, j, n);
+   endrule
+   
+   interface PipeIn pipe = toPipeIn(dataFifo);
+
 endmodule

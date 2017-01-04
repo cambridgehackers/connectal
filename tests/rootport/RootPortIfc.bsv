@@ -20,17 +20,27 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import ConnectalConfig::*;
+
+typedef enum { DMA_RX, DMA_TX, DMA_SG } DmaChannel deriving (Bits,Eq);
 
 interface RootPortRequest;
+   method Action read32(Bit#(32) addr);
+   method Action write32(Bit#(32) addr, Bit#(32) data);
    method Action read(Bit#(32) addr);
-   method Action write(Bit#(32) addr, Bit#(64) data);
+   method Action write(Bit#(32) addr, Bit#(DataBusWidth) data);
    method Action readCtl(Bit#(32) addr);
-   method Action writeCtl(Bit#(32) addr, Bit#(64) data);
+   method Action writeCtl(Bit#(32) addr, Bit#(DataBusWidth) data);
    method Action status();
 endinterface
 
 interface RootPortIndication;
-   method Action readDone(Bit#(64) data);
+   method Action readDone(Bit#(DataBusWidth) data);
    method Action writeDone();
    method Action status(Bit#(1) mmcm_lock);
+endinterface
+
+interface RootPortTrace;
+   method Action traceDmaRequest(DmaChannel channel, Bool write, Bit#(16) objId, Bit#(DataBusWidth) offset, Bit#(16) burstLen, Bit#(8) tag, Bit#(32) timestamp);
+   method Action traceDmaData(DmaChannel channel, Bool write, Bit#(DataBusWidth) data, Bool last, Bit#(8) tag, Bit#(32) timestamp);
 endinterface

@@ -38,6 +38,7 @@
    cores/nfsume/tri_mode_ethernet_mac_0/tri_mode_ethernet_mac_0_stub.v
 */
 
+`include "ConnectalProjectConfig.bsv"
 import Clocks::*;
 import DefaultValue::*;
 import XilinxCells::*;

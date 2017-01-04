@@ -30,6 +30,7 @@ import SpecialFIFOs::*;
 import Connectable::*;
 import HostInterface::*;
 import MemTypes::*;
+import ConnectalConfig::*;
 import ConnectalMemory::*;
 import MMU::*;
 import MemServerInternal::*;
@@ -282,20 +283,20 @@ endmodule
 module mkMemServerWithMMU#(Vector#(numReadClients, MemReadClient#(busWidth)) readClients,
 			  Vector#(numWriteClients, MemWriteClient#(busWidth)) writeClients,
 			  MemServerIndication indication,
-			  MMUIndication mmuIndication)(MemServerWithMMU#(addrWidth, busWidth,nMasters))
+			  MMUIndication mmuIndication)(MemServerWithMMU#(PhysAddrWidth, busWidth,nMasters))
 
    provisos(Add#(TLog#(TDiv#(busWidth, 8)), e__, 8)
 	    ,Add#(TLog#(TDiv#(busWidth, 8)), f__, BurstLenSize)
-	    ,Add#(c__, addrWidth, 64)
-	    ,Add#(d__, addrWidth, MemOffsetSize)
+	    ,Add#(c__, PhysAddrWidth, 64)
+	    ,Add#(d__, PhysAddrWidth, MemOffsetSize)
 	    ,Add#(numWriteClients, a__, TMul#(TDiv#(numWriteClients, nMasters),nMasters))
 	    ,Add#(numReadClients, b__, TMul#(TDiv#(numReadClients, nMasters),nMasters))
 	    ,Add#(g__, TDiv#(busWidth, 8), ByteEnableSize)
 	    );
 
    
-   MMU#(addrWidth) hostMMU <- mkMMU(0, True, mmuIndication);
-   MemServer#(addrWidth,busWidth,nMasters) dma <- mkMemServer(readClients, writeClients, cons(hostMMU,nil), indication);
+   MMU#(PhysAddrWidth) hostMMU <- mkMMU(0, True, mmuIndication);
+   MemServer#(PhysAddrWidth,busWidth,nMasters) dma <- mkMemServer(readClients, writeClients, cons(hostMMU,nil), indication);
 
    interface MemServerRequest memServerRequest = dma.request;
    interface MMURequest mmuRequest = hostMMU.request;

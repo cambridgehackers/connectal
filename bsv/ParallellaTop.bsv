@@ -106,7 +106,7 @@ module mkZynqTop(ZynqTop);
    BscanTop bscan <- mkBscanTop(3, clocked_by mainclock, reset_by mainreset); // Use USER3  (JTAG IDCODE address 0x22)
    BscanLocal lbscan <- mkBscanLocal(bscan, clocked_by bscan.tck, reset_by bscan.rst);
 `ifdef IMPORT_HOSTIF
-   ConnectalTop top <- mkConnectalTop(
+   let top <- mkConnectalTop(
       (interface HostInterface;
           interface ps7 = ps7;
 	  interface portalClock = mainclock;
@@ -116,7 +116,7 @@ module mkZynqTop(ZynqTop);
           interface bscan = lbscan.loc[0];
       endinterface), clocked_by mainclock, reset_by mainreset);
 `else
-   ConnectalTop top <- mkConnectalTop(clocked_by mainclock, reset_by mainreset);
+   let top <- mkConnectalTop(clocked_by mainclock, reset_by mainreset);
 `endif
    mkConnectionWithTrace(ps7, top, lbscan.loc[1], clocked_by mainclock, reset_by mainreset);
 
@@ -126,7 +126,7 @@ module mkZynqTop(ZynqTop);
    endrule
 
    module bufferClock#(Integer i)(Clock); let bc <- mkClockBUFG(clocked_by ps7.fclkclk[i]); return bc; endmodule
-   module bufferReset#(Integer i)(Reset); let rc <- mkAsyncReset(2, ps7.fclkreset[i], ps7.fclkclk[0]); return rc; endmodule
+   module bufferReset#(Integer i)(Reset); let rc <- mkSyncReset(5, ps7.fclkreset[i], ps7.fclkclk[0]); return rc; endmodule
    Vector#(4, Clock) unused_clock <- genWithM(bufferClock);
    Vector#(4, Reset) unused_reset <- genWithM(bufferReset);
 

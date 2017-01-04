@@ -1,4 +1,5 @@
 
+`include "ConnectalProjectConfig.bsv"
 import Vector::*;
 import Clocks::*;
 import Connectable::*;

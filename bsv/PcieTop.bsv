@@ -81,7 +81,7 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
    PcieHostTop host <- mkPcieHostTop(pcie_refclk_p, osc_50_b3b, pcie_perst_n);
 `endif
 
-   Vector#(NumberOfUserTiles,ConnectalTop) tile <- replicateM(mkConnectalTop(
+   Vector#(NumberOfUserTiles,ConnectalTop#(`PinType)) tile <- replicateM(mkConnectalTop(
 `ifdef IMPORT_HOSTIF // no synthesis boundary
       host,
 `else                // enables synthesis boundary
@@ -99,15 +99,14 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
        end
    end
    else begin
-       GetPutWithClocks::mkConnectionWithClocks(host.tpciehost.master, portalTop.slave, host.pcieClock, host.pcieReset, host.portalClock, host.portalReset);
+       GetPutWithClocks::mkConnectionWithClocks2(host.tpciehost.master, portalTop.slave);
        if (valueOf(NumberOfMasters) > 0) begin
-	  zipWithM_(mkConnectionWithClocksFirst(host.portalClock, host.portalReset, host.pcieClock, host.pcieReset),
-		    portalTop.masters, host.tpciehost.slave);
+	  zipWithM_(GetPutWithClocks::mkConnectionWithClocks2, portalTop.masters, host.tpciehost.slave);
        end
    end
 
    // going from level to edge-triggered interrupt
-   SyncFIFOIfc#(Bit#(4)) intrFifo <- mkSyncFIFO(1, host.portalClock, host.portalReset, host.pcieClock);
+   SyncFIFOIfc#(Bit#(4)) intrFifo <- mkSyncFIFO(8, host.portalClock, host.portalReset, host.pcieClock);
    Vector#(16, Reg#(Bool)) interruptRequested <- replicateM(mkReg(False, clocked_by host.portalClock, reset_by host.portalReset));
    rule interrupt_rule;
      Maybe#(Bit#(4)) intr = tagged Invalid;

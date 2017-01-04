@@ -100,7 +100,7 @@ module renameWrites#(Integer tile, MemWriteClient#(DataBusWidth) writer, MemServ
    endinterface
 endmodule
 
-module mkPlatform#(Vector#(NumberOfUserTiles, ConnectalTop) tiles)(Platform);
+module mkPlatform#(Vector#(NumberOfUserTiles, ConnectalTop#(`PinType)) tiles)(Platform);
    /////////////////////////////////////////////////////////////
    // connecting up the tiles
 
@@ -127,7 +127,11 @@ module mkPlatform#(Vector#(NumberOfUserTiles, ConnectalTop) tiles)(Platform);
    MMUIndicationProxy lMMUIndicationProxy <- mkMMUIndicationProxy(PlatformIfcNames_MMUIndicationH2S);
    MemServerIndicationProxy lMemServerIndicationProxy <- mkMemServerIndicationProxy(PlatformIfcNames_MemServerIndicationH2S);
 
+`ifdef USE_SIMPLE_MMU
+   MMU#(PhysAddrWidth) lMMU <- mkSimpleMMU(0,True, lMMUIndicationProxy.ifc);
+`else
    MMU#(PhysAddrWidth) lMMU <- mkMMU(0,True, lMMUIndicationProxy.ifc);
+`endif
    Vector#(TMul#(NumberOfUserTiles,NumReadClients), MemReadClient#(DataBusWidth)) tile_read_clients_renamed <- zipWith3M(renameReads, concat(read_client_tile_numbers), concat(tile_read_clients), replicate(lMemServerIndicationProxy.ifc));
    Vector#(TMul#(NumberOfUserTiles,NumWriteClients), MemWriteClient#(DataBusWidth)) tile_write_clients_renamed <- zipWith3M(renameWrites, concat(write_client_tile_numbers), concat(tile_write_clients), replicate(lMemServerIndicationProxy.ifc));
    MemServer#(PhysAddrWidth,DataBusWidth,NumberOfMasters) lMemServer <- mkMemServer(tile_read_clients_renamed, tile_write_clients_renamed, vec(lMMU), lMemServerIndicationProxy.ifc);

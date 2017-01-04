@@ -43,7 +43,10 @@ gen.%:
 ifeq ($(BOARD),)
 	$(eval BOARD := $*)
 endif
-	+BOARD=$(BOARD) PROJECTDIR=$* $(MAKE) --no-print-directory gentarget prebuild $(VARIANT_PROJECTS)
+ifeq ($(PROJECTDIR),)
+	$(eval PROJECTDIR := $*)
+endif
+	+BOARD=$(BOARD) PROJECTDIR=$(PROJECTDIR) $(MAKE) --no-print-directory gentarget prebuild $(VARIANT_PROJECTS)
 
 variantgen.%:
 	BOARD=$(BOARD) PROJECTDIR=variant$* \
@@ -51,13 +54,16 @@ variantgen.%:
 	    $(MAKE) --no-print-directory gentarget prebuild
 
 build.%: gen.%
-	$(MAKE) -C $* --no-print-directory all
+	$(MAKE) -C $(PROJECTDIR) --no-print-directory all
 
 verilog.%: gen.%
-	$(MAKE) -C $* --no-print-directory verilog
+	$(MAKE) -C $(PROJECTDIR) --no-print-directory verilog
 
 run.%:
-	$(MAKE) -C $* --no-print-directory run
+ifeq ($(PROJECTDIR),)
+	$(eval PROJECTDIR := $*)
+endif
+	$(MAKE) -C $(PROJECTDIR) --no-print-directory run
 
 IPDIR?=$(PROJECTDIR)/ip
 NUMBER_OF_USER_TILES?=1
@@ -116,6 +122,44 @@ INTERFACES += $(INTERFACES_$(USE_CNOC))
 CPPFILES   += $(CPPFILES_$(USE_CNOC))
 BSVFILES   += $(BSVFILES_$(USE_CNOC))
 
+ifneq ($(PYFILES),)
+CONNECTALFLAGS += --shared -D PORTAL_JSON
+CPPFILES += $(CONNECTALDIR)/cpp/portalPython.cpp
+CPPFILES2 = $(CONNECTALDIR)/cpp/runpython.cpp
+ifneq ($(BOARD),zedboard)
+ifneq ($(BOARD),zedboard_ubuntu)
+CONNECTALFLAGS += -ljsoncpp
+endif
+endif
+
+ifeq ($(BOARD),zedboard)
+## git clone git://github.com/cambridgehackers/python-for-android-sdk
+PYTHON_FOR_ANDROID ?= $(CONNECTALDIR)/../python-for-android-sdk
+CONNECTALFLAGS += -I$(PYTHON_FOR_ANDROID)/include/ -I.
+CONNECTALFLAGS += -L$(PYTHON_FOR_ANDROID)/lib -lpython2.7
+CONNECTALFLAGS += --stl=gnustl_static --cxxflags=-fexceptions --android-toolchain=4.8
+
+CPPFILES  += jsoncpp/dist/jsoncpp.cpp
+CPPFILES2 += jsoncpp/dist/jsoncpp.cpp
+
+prebuild::
+	[ -d jsoncpp ] || git clone git://github.com/open-source-parsers/jsoncpp
+	cd jsoncpp; python amalgamate.py; mkdir -p json; cd json; ln -sf ../dist/json/*.h .
+endif #zedboard
+
+ifeq ($(BOARD),zedboard_ubuntu)
+CONNECTALFLAGS += --cxxflags=-std=c++11
+CONNECTALFLAGS += -I usr/include
+CONNECTALFLAGS += -L usr/lib/arm-linux-gnueabihf -lpython2.7
+
+CPPFILES  += jsoncpp/dist/jsoncpp.cpp
+CPPFILES2 += jsoncpp/dist/jsoncpp.cpp
+
+prebuild::
+	[ -d jsoncpp ] || git clone git://github.com/open-source-parsers/jsoncpp
+	cd jsoncpp; python amalgamate.py; mkdir -p json; cd json; ln -sf ../dist/json/*.h .
+endif # zedboard_ubuntu
+endif # PYFILES
 
 ifneq ($(CPPFILES2),)
 ALL_CPPFILES2 = $(CPPFILES2) $(CPPFILES2_$(USE_CNOC)) $(CPPFILES2_dma)
@@ -152,14 +196,14 @@ ifeq ($(NEED_XILINX_PCIE_$(BOARD)),1)
     CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/pcie_7x_0/pcie_7x_0.xci
     CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS"
 endif
-ifeq ($(NEED_XILINX_PCIE_$(BOARD)),2)
-    FPGAMAKE_CONNECTALFLAGS += -P mkPcieEndpointX7Gen2 -P mkPcieHost
+ifeq ($(PCIEGEN),2)
+    FPGAMAKE_CONNECTALFLAGS += -P mkPcieHost
     CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/pcie2_7x_0/pcie2_7x_0.xci
     CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS"
 endif
 
 ifeq ($(NEED_XILINX_PCIE_$(BOARD)),3)
-    FPGAMAKE_CONNECTALFLAGS += -P mkPcieEndpointX7 -P mkPcieHost
+    FPGAMAKE_CONNECTALFLAGS += -P mkPcieHost
     CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/pcie3_7x_0/pcie3_7x_0.xci
     CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS"
 endif
@@ -197,9 +241,6 @@ endif
 comma := ,
 gentarget:: process_autotop generate_altera_custom
 	@[ -e $(CONNECTALDIR)/scripts/syntax/parsetab.py ] || make -C $(CONNECTALDIR) scripts/syntax/parsetab.py
-	$(Q)[ -e $(IPDIR) ] || mkdir -p $(IPDIR)
-	$(Q)[ -e $(PROJECTDIR)/generatedbsv ] || mkdir -p $(PROJECTDIR)/generatedbsv
-	$(Q)[ -e $(PROJECTDIR)/jni ] || mkdir -p $(PROJECTDIR)/jni
 ifeq ($(USE_PRINTF),1)
 	$(CONNECTALDIR)/scripts/preprocess_trace.py $(PROJECTDIR) $(BSVFILES)
 endif
@@ -207,6 +248,7 @@ endif
 	$(foreach interfaces, $(INTERFACES), -interfaces $(interfaces)) \
 	$(foreach f, $(CPPFILES), --source $f) \
 	$(foreach f, $(ALL_CPPFILES2), --source2 $f) \
+	$(foreach f, $(BSVPATH), --bsvpath $f) \
 	$(foreach f, $(PINOUT_FILE), --pinout $f) \
 	$(foreach f, $(PIN_BINDINGS), --pin-binding $f) \
 	$(foreach f, $(PRTOP_FILE), --prtop $f) \
@@ -222,11 +264,11 @@ process_autotop::
 	touch $(PROJECTDIR)/Makefile.autotop
 ifneq ($(USE_AUTOTOP),)
 	$(Q)[ -e $(GPROJ) ] || mkdir -p $(GPROJ)
-	$(Q)$(CONNECTALDIR)/scripts/topgen.py --board $(BOARD) --project-dir $(GPROJ) $(AUTOTOP) $(CNOC) \
+	$(Q)$(CONNECTALDIR)/scripts/topgen.py --project-dir $(GPROJ) $(AUTOTOP) $(CNOC) \
 	    $(foreach f, $(S2H_INTERFACES), --wrapper $f) \
 	    $(foreach f, $(H2S_INTERFACES), --proxy $f)   \
- 	    $(foreach f, $(MEM_READ_INTERFACES), --memread $f)   \
- 	    $(foreach f, $(MEM_WRITE_INTERFACES), --memwrite $f)
+	    $(foreach f, $(MEM_READ_INTERFACES), --memread $f)   \
+	    $(foreach f, $(MEM_WRITE_INTERFACES), --memwrite $f)
 endif
 
 generate_altera_custom::
@@ -246,6 +288,7 @@ prebuild::
 	@# additional steps needed before making verilog etc
 ifneq ($(NEED_XILINX_PCIE_$(BOARD)),)
 	@echo "building ... $(BOARD) PCIe gen$(PCIEGEN)"
+	$(Q)[ -e $(IPDIR) ] || mkdir -p $(IPDIR)
 	cd $(PROJECTDIR); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) vivado -notrace -mode batch -source $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
 endif
 

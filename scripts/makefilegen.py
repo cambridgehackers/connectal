@@ -76,7 +76,8 @@ argparser.add_argument('--xsimflags', help='Options to pass to the xsim simulato
 argparser.add_argument('--ipdir', help='Directory in which to store generated IP')
 argparser.add_argument('-q', '--qtused', help='Qt used in simulator test application', action='store_true')
 argparser.add_argument('--stl', help='STL implementation to use for Android builds', default=None, choices=supported_stl)
-argparser.add_argument('--android-platform', help='Android platform to use for Android builds', type=int, default=None)
+argparser.add_argument('--android-platform', help='Android platform to use for Android builds', type=int, default='16')
+argparser.add_argument('--android-toolchain', help='NDK toolchain to use for Android builds', default='4.9')
 argparser.add_argument('--floorplan', help='Floorplan XDC', default=None)
 argparser.add_argument('-P', '--partition-module', help='Modules to separately synthesize/place/route', action='append', default=[])
 argparser.add_argument('--cachedir', help='Cache directory for fpgamake to use', default=None)
@@ -127,6 +128,7 @@ export VERILOG_PATH=verilog %(verilog)s $(BLUESPEC_VERILOG)
 MODELSIM_FILES= %(modelsim)s
 FPGAMAKE=$(CONNECTALDIR)/../fpgamake/fpgamake
 fpgamake.mk: $(VFILE) Makefile prepare_bin_target
+	$(Q)if [ -f ../synth-ip.tcl ]; then vivado -mode batch -source ../synth-ip.tcl; fi
 	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk --board=%(boardname)s --part=%(partname)s %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s %(qsf)s %(chipscope)s -t $(MKTOP) %(FPGAMAKE_DEFINE)s %(cachedir)s -b hw/mkTop.bit %(prtop)s %(reconfig)s $(VERILOG_PATH)
 
 synth.%%:fpgamake.mk
@@ -159,6 +161,7 @@ BOARD=%(boardname)s
 PROJECTDIR=%(project_dir)s
 MKTOP=%(topbsvmod)s
 OS=%(OS)s
+TOOLCHAIN?=%(toolchain)s
 DUT=%(dut)s
 
 export INTERFACES = %(interfaces)s
@@ -207,11 +210,21 @@ LOCAL_MODULE := %(android_local_module)s
 LOCAL_MODULE_TAGS := optional
 LOCAL_LDLIBS := -llog %(clibdirs)s %(clibs)s %(clibfiles)s
 LOCAL_CPPFLAGS := "-march=armv7-a"
-LOCAL_CFLAGS := -DZYNQ %(cflags)s %(werr)s
-LOCAL_CXXFLAGS := -DZYNQ %(cxxflags)s %(werr)s
+LOCAL_CFLAGS := %(cflags)s %(werr)s
+LOCAL_CXXFLAGS := %(cxxflags)s %(werr)s
 LOCAL_CFLAGS2 := $(cdefines2)s
 
 include $(%(android_build_type)s)
+'''
+
+androidmk2_template='''
+include $(CLEAR_VARS)
+LOCAL_CPPFLAGS := "-march=armv7-a"
+LOCAL_CFLAGS := %(cflags)s %(werr)s
+LOCAL_CXXFLAGS := %(cxxflags)s %(werr)s
+LOCAL_SRC_FILES= %(source2)s
+LOCAL_MODULE := android.exe2
+include $(BUILD_EXECUTABLE)
 '''
 
 genxdc_template='''
@@ -227,7 +240,12 @@ linuxmakefile_template='''
 CONNECTALDIR?=%(connectaldir)s
 DTOP?=%(project_dir)s
 
-CFLAGS_COMMON = -O -g %(cflags)s -Wall %(werr)s
+TOOLCHAIN?=%(toolchain)s
+ifneq ($(TOOLCHAIN),)
+CC=$(TOOLCHAIN)gcc
+CXX=$(TOOLCHAIN)g++
+endif
+CFLAGS_COMMON = -O -g %(cflags)s -Wall %(werr)s %(cxxflags)s
 CFLAGS = $(CFLAGS_COMMON)
 CFLAGS2 = %(cdefines2)s
 
@@ -236,20 +254,20 @@ include $(CONNECTALDIR)/scripts/Makefile.connectal.application
 SOURCES = %(source)s $(PORTAL_SRC_FILES)
 SOURCES2 = %(source2)s $(PORTAL_SRC_FILES)
 XSOURCES = $(CONNECTALDIR)/cpp/XsimTop.cpp $(PORTAL_SRC_FILES)
-LDLIBS := %(clibdirs)s %(clibs)s %(clibfiles)s -pthread 
+LDLIBS := %(clibdirs)s %(clibs)s %(clibfiles)s -lpthread
 
 ubuntu.exe: $(SOURCES)
-	$(Q)g++ $(CFLAGS) -o ubuntu.exe $(SOURCES) $(LDLIBS)
-	$(Q)[ ! -f ../bin/mkTop.bin.gz ] || objcopy --add-section fpgadata=../bin/mkTop.bin.gz ubuntu.exe
+	$(Q)$(CXX) $(CFLAGS) -o ubuntu.exe $(SOURCES) $(LDLIBS)
+	$(Q)[ ! -f ../bin/mkTop.bin.gz ] || $(TOOLCHAIN)objcopy --add-section fpgadata=../bin/mkTop.bin.gz ubuntu.exe
 
 connectal.so: $(SOURCES)
-	$(Q)g++ -shared -fpic $(CFLAGS) -o connectal.so $(SOURCES) $(LDLIBS)
+	$(Q)$(CXX) -shared -fpic $(CFLAGS) -o connectal.so $(SOURCES) $(LDLIBS)
 
 ubuntu.exe2: $(SOURCES2)
-	$(Q)g++ $(CFLAGS) $(CFLAGS2) -o ubuntu.exe2 $(SOURCES2) $(LDLIBS)
+	$(Q)$(CXX) $(CFLAGS) $(CFLAGS2) -o ubuntu.exe2 $(SOURCES2) $(LDLIBS)
 
 xsim: $(XSOURCES)
-	g++ $(CFLAGS) -o xsim $(XSOURCES)
+	$(CXX) $(CFLAGS) -o xsim $(XSOURCES)
 '''
 
 if __name__=='__main__':
@@ -296,9 +314,9 @@ if __name__=='__main__':
         bsvdefines.append('PcieClockPeriod=%d' % options.pcieclockperiod)
     print bsvdefines
 
-    if option_info['rewireclockstring'] != '':
-        option_info['rewireclockstring'] = tclzynqrewireclock
-    rewireclockstring = option_info['rewireclockstring']
+    rewireclockstring = tclzynqrewireclock
+    if 'rewireclockstring' in option_info and option_info['rewireclockstring'] != '':
+        rewireclockstring = option_info['rewireclockstring']
 
     dutname = 'mk' + option_info['TOP']
     topbsv = connectaldir + '/bsv/' + option_info['TOP'] + '.bsv'
@@ -376,31 +394,36 @@ if __name__=='__main__':
         'clibs': ' '.join(['-l%s' % l for l in options.clib]),
         'clibfiles': ' '.join(['%s' % l for l in options.clibfiles]),
         'clibdirs': ' '.join([ '-L%s' % os.path.abspath(l) for l in options.clibdir ]),
-        'cdefines': ' '.join([ '-D%s' % d for d in bsvdefines ]),
-        'cdefines2': ' '.join([ '-D%s' % d for d in options.bsvdefine2 ]),
+        'cdefines': '', #' '.join([ '-D%s' % d for d in bsvdefines ]),
+        'cdefines2': '', #' '.join([ '-D%s' % d for d in options.bsvdefine2 ]),
         'cincludes': ' '.join([ '-I%s' % os.path.abspath(i) for i in options.cinclude ]),
         'werr': '-Werror' if not options.nonstrict else '-Wall'
     }
     includelist = ['-I$(DTOP)/jni', '-I$(CONNECTALDIR)', \
                    '-I$(CONNECTALDIR)/cpp', '-I$(CONNECTALDIR)/lib/cpp', \
                    #'%(sourceincludes)s',
-                   '%(cincludes)s', '%(cdefines)s']
+                   '%(cincludes)s']
+    substs['toolchain'] = option_info['toolchain'] if 'toolchain' in option_info else ''
     substs['cflags'] = util.escapequotes('%s %s' % ((' '.join(includelist) % substs), ' '.join(options.cflags)))
     substs['cxxflags'] = util.escapequotes('%s %s' % ((' '.join(includelist) % substs), ' '.join(options.cxxflags)))
     substs['android_build_type'] = 'BUILD_SHARED_LIBRARY' if options.shared else 'BUILD_EXECUTABLE'
     substs['android_local_module'] = 'connectal' if options.shared else 'android.exe'
     f = util.createDirAndOpen(androidmkname, 'w')
     f.write(androidmk_template % substs)
+    if options.source2:
+        f.write(androidmk2_template % substs)
     f.close()
     f = util.createDirAndOpen(linuxmkname, 'w')
     f.write(linuxmakefile_template % substs)
     f.close()
-    if options.stl or options.android_platform:
+    if options.stl or options.android_platform or options.android_toolchain:
 	    f = util.createDirAndOpen(os.path.join(project_dir, 'jni', 'Application.mk'), 'w')
             if options.stl:
                 f.write('APP_STL                 := %s\n' % options.stl)
             if options.android_platform:
                 f.write('APP_PLATFORM             := android-%s\n' % options.android_platform)
+            if options.android_toolchain:
+                f.write('NDK_TOOLCHAIN_VERSION    := %s\n' % options.android_toolchain)
 	    f.close()
 
     tclsubsts = {'dut': dutname.lower(),
@@ -501,8 +524,8 @@ if __name__=='__main__':
                                    'dut' : dutname.lower(),
                                    'Dut': dutname,
                                    'clibs': ' '.join(['-l%s' % l for l in options.clib]),
-                                   'cdefines': ' '.join([ '-D%s' % d for d in bsvdefines ]),
-                                   'mdefines': '\n'.join(['%s="%s"' % (var,val) for (var,val) in map(util.splitBinding, bsvdefines)]),
+                                   'cdefines': '', #' '.join([ '-D%s' % d for d in bsvdefines ]),
+                                   'mdefines': '\n'.join(['%s=%s' % (var,val or var) for (var,val) in map(util.splitBinding, bsvdefines)]),
                                    'dump_map': ('export PORTAL_DUMP_MAP=' + options.dump_map + '\n') if options.dump_map else '',
                                    'bscflags': ' '.join(options.bscflags),
                                    'xelabflags': ' '.join(options.xelabflags),
@@ -514,7 +537,8 @@ if __name__=='__main__':
                                    'nohardware': 'CONNECTAL_NOHARDWARE=1' if options.nohardware else '',
                                    'protobuf': ('export PROTODEBUG=%s' % ' '.join(protolist)) if options.protobuf else '',
                                    'bitsmake': bitsmake,
-                                   'run_args': ' '.join(options.run_args)
+                                   'run_args': ' '.join(options.run_args),
+                                   'toolchain': option_info['toolchain'] if 'toolchain' in option_info else ''
                                    })
     if not options.prtop:
         for name in options.prvariant:

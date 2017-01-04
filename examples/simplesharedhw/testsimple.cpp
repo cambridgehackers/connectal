@@ -152,7 +152,7 @@ int main(int argc, const char **argv)
     SimpleRequestProxy *device = new SimpleRequestProxy(IfcNames_SimpleRequestS2H, &transportShared, &paramr);
 
     // currently no interrupts on shared memory portals, so timeout after 1ms
-    defaultPoller->timeout = 1;
+    defaultPoller->timeout = 100;
 
     for (int i = 0; i < numtimes; i++) {
       if (verbose) fprintf(stderr, "Main::calling say1(%d)\n", v1a);

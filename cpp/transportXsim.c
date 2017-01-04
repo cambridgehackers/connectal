@@ -19,32 +19,40 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include "GeneratedTypes.h"
+#include <sys/types.h>
+#include <unistd.h>
 
 static int trace_xsim; // = 1;
 
-static int indicationIndex[16];
+static uint32_t indicationIndex[16];
+static uint32_t indicationHdr[16];
 static PortalInternal mcommon, indPortal, reqPortal;
 
 static int indMsgSource (PortalInternal *pint, const uint32_t portal, const uint32_t data )
 {
-    if (trace_xsim)
-	fprintf(stderr, "%s: portal=%d data=%x pid=%d\n", __FUNCTION__, portal, data, getpid());
     PortalInternal *clientp = pint->mux_ports[portal].pint;
-    clientp->map_base[indicationIndex[portal]++] = data;
-    uint32_t hdr = clientp->map_base[0];
-    int numwords = hdr & 0xFF;
+    uint32_t index = indicationIndex[portal]++;
+    if (index == 0)
+	indicationHdr[portal] = data;
+    uint32_t hdr = indicationHdr[portal];
+    if (clientp)
+	clientp->map_base[index] = data;
+    uint32_t numwords = hdr & 0xFF;
+    if (trace_xsim)
+	fprintf(stderr, "pid %d %s: portal=%d data=%x hdr=%08x numwords=%d pid=%d\n", getpid(), __FUNCTION__, portal, data, hdr, numwords, getpid());
 
     if (indicationIndex[portal] >= numwords) {
         uint32_t methodId = (hdr >> 16) & 0xFF;
 	if (trace_xsim)
-            fprintf(stderr, "%s: clientp=%p srcbeats=%d methodwords=%d methodId=%d hdr=%08x\n",
-		__FUNCTION__, clientp, indicationIndex[portal], numwords, methodId, hdr);
-        if (clientp->handler)
+            fprintf(stderr, "pid %d %s: clientp=%p srcbeats=%d methodwords=%d methodId=%d hdr=%08x\n",
+		    getpid(), __FUNCTION__, clientp, indicationIndex[portal], numwords, methodId, hdr);
+        if (clientp && clientp->handler)
             clientp->handler(clientp, methodId, 0);
         indicationIndex[portal] = 0;
     }
     return 0;
 }
+
 static XsimMsgIndicationCb indHandlers = {portal_disconnect, indMsgSource};
 
 static int init_xsim(struct PortalInternal *pint, void *init_param)

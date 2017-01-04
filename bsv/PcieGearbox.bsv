@@ -7,6 +7,7 @@
 // PCI-Express for Xilinx 7
 // FPGAs.
 
+`include "ConnectalProjectConfig.bsv"
 import Vector          :: *;
 import GetPut          :: *;
 import PCIE            :: *;

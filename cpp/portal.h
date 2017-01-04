@@ -37,7 +37,9 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
 #include <string.h> // memcpy
 #include <stdio.h>   // printf()
 #include <stdlib.h>  // exit()
+#ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
+#endif
 #include <inttypes.h>
 #ifdef __cplusplus
 #include <semaphore.h>
@@ -45,6 +47,8 @@ int pthread_create(pthread_t *thread, void *attr, void *(*start_routine) (void *
 #include <pthread.h> // pthread_mutex_t
 #include <poll.h>
 #endif
+
+#include "ConnectalProjectConfig.h"
 
 extern int simulator_dump_vcd;
 extern const char *simulator_vcd_name;
@@ -110,6 +114,7 @@ typedef struct PortalInternal {
     int                    fpga_fd;
     uint32_t               fpga_number;
     uint32_t               fpga_tile;
+    uint32_t               board_number;
     volatile unsigned int *map_base;
     void                  *parent;
     PORTAL_INDFUNC         handler;
@@ -152,17 +157,17 @@ typedef int (*SHARED_MMUINDICATION_POLL)(PortalInternal *p, uint32_t *arg_id);
 typedef struct {
     struct {
         struct DmaManager *manager;
-        int reqport;
-        int reqinfo;
-        int indport;
-        int indinfo;
+        uint32_t reqport;
+        uint32_t reqinfo;
+        uint32_t indport;
+        uint32_t indinfo;
         PORTAL_INDFUNC     handler;
         void              *callbackFunctions;
         SHARED_MMUINDICATION_POLL poll;
     } dma;
     uint32_t    size;
     struct {
-        int port;
+        uint32_t port;
         uint32_t reqinfo;
         SHARED_CONFIG_SETSGLID setSglId;
     } hardware;
@@ -293,7 +298,8 @@ int portal_serialmux_handler(struct PortalInternal *p, unsigned int channel, int
 // Json encode/decode functions called from generated code
 void connectalJsonEncode(char *json, void *data, ConnectalMethodJsonInfo *info, int json_arg_vector);
 void connectalJsonEncodeAndSend(PortalInternal *pint, void *data, ConnectalMethodJsonInfo *info);
-int connnectalJsonDecode(PortalInternal *pint, int channel, void *data, ConnectalMethodJsonInfo *info);
+void connectalJsonSend(PortalInternal *pint, const char *jsonp, int methodNumber);
+const char *connectalJsonReceive(PortalInternal *pint);
 
 // Primitive used to send/recv data across a socket.
 void portalSendFd(int fd, void *data, int len, int sendFd);

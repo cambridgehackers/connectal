@@ -23,6 +23,7 @@
 
 package Pcie3EndpointX7;
 
+`include "ConnectalProjectConfig.bsv"
 import BRAMFIFO          ::*;
 import Clocks            ::*;
 import Vector            ::*;
@@ -199,7 +200,7 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    // The PCIe endpoint exports full (250MHz) and half-speed (125MHz) clocks
    Clock pcieClock250 = pcie_ep.user_clk;
    Reset user_reset_n <- mkResetInverter(pcie_ep.user_reset, clocked_by pcie_ep.user_clk);
-   Reset pcieReset250 <- mkAsyncReset(4, user_reset_n, pcieClock250);
+   Reset pcieReset250 <- mkSyncReset(5, user_reset_n, pcieClock250);
 
    ClockGenerator7Params     clkgenParams = defaultValue;
    clkgenParams.clkin1_period    = 4.000; //  250MHz
@@ -212,10 +213,10 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    clkgenParams.clkout1_phase      = 0.0000;
    ClockGenerator7           clkgen <- mkClockGenerator7(clkgenParams, clocked_by pcieClock250, reset_by pcieReset250);
    Clock mainClock = clkgen.clkout1;
-   Reset mainReset <- mkAsyncReset(4, pcieReset250, mainClock);
+   Reset mainReset <- mkSyncReset(5, pcieReset250, mainClock);
    Clock derivedClock = clkgen.clkout0;
-   Reset derivedReset <- mkAsyncReset(4, pcieReset250, derivedClock);
-   Reset user_reset <- mkAsyncReset(2, pcie_ep.user_reset, pcie_ep.user_clk);
+   Reset derivedReset <- mkSyncReset(5, pcieReset250, derivedClock);
+   Reset user_reset <- mkSyncReset(5, pcie_ep.user_reset, pcie_ep.user_clk);
 
    // FIFOS
    FIFOF#(AxiStCq) fAxiCq <- mkFIFOF(clocked_by pcie_ep.user_clk, reset_by user_reset_n);

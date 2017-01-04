@@ -20,6 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+`include "ConnectalProjectConfig.bsv"
 import FIFOF::*;
 import FIFO::*;
 import GetPut::*;
@@ -29,7 +30,7 @@ import BRAM::*;
 import Memory::*;
 
 
-module mkPhysMemToBram#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (PhysMemSlave#(busAddrWidth, busDataWidth))
+module mkPhysMemSlaveFromBram#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (PhysMemSlave#(busAddrWidth, busDataWidth))
    provisos(Add#(a__, bramAddrWidth, busAddrWidth));
 
    FIFOF#(Bit#(6))  readTagFifo <- mkFIFOF();
@@ -101,7 +102,7 @@ module mkPhysMemToBram#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br)
    endinterface
 endmodule
 
-module mkPhysMemToBramBE#(BRAMServerBE#(Bit#(bramAddrWidth), Bit#(busDataWidth), dataWidthBytes) br) (PhysMemSlave#(busAddrWidth, busDataWidth))
+module mkPhysMemSlaveFromBramBE#(BRAMServerBE#(Bit#(bramAddrWidth), Bit#(busDataWidth), dataWidthBytes) br) (PhysMemSlave#(busAddrWidth, busDataWidth))
    provisos(Add#(a__, bramAddrWidth, busAddrWidth)
            ,Mul#(dataWidthBytes, 8, busDataWidth)
            ,Div#(busDataWidth, 8, dataWidthBytes)
@@ -138,7 +139,7 @@ module mkPhysMemToBramBE#(BRAMServerBE#(Bit#(bramAddrWidth), Bit#(busDataWidth),
       let burstCount = addrBeat.bc;
       readTagFifo.enq(tag);
       readLastFifo.enq(addrBeat.last);
-      Bit#(bramAddrWidth) regFileAddr = truncate(addr << fromInteger(valueOf(TLog#(dataWidthBytes))));
+      Bit#(bramAddrWidth) regFileAddr = truncate(addr/fromInteger(valueOf(TDiv#(busDataWidth,8))));
       req_addr.enq(regFileAddr);
       if (verbose) $display("%d read_server.readData (a) %h %d last=%d", cycles, addr, burstCount, addrBeat.last);
    endrule
@@ -198,7 +199,7 @@ module mkPhysMemToBramBE#(BRAMServerBE#(Bit#(bramAddrWidth), Bit#(busDataWidth),
 	 method Action put(MemData#(busDataWidth) resp);
 	    let addrBeat <- writeAddrGenerator.addrBeat.get();
 	    let addr = addrBeat.addr;
-	    Bit#(bramAddrWidth) regFileAddr = truncate(addr << fromInteger(valueOf(TLog#(TDiv#(busDataWidth,8)))));
+	    Bit#(bramAddrWidth) regFileAddr = truncate(addr/fromInteger(valueOf(TDiv#(busDataWidth,8))));
             let writeBE = writeByteEnableFifo.first;
             Bit#(dataWidthBytes) byteEnable = addrBeat.last ? writeBE : maxBound;
             req_aws.enq(BRAMRequestBE{writeen:byteEnable, responseOnWrite:False, address:regFileAddr, datain:resp.data});
@@ -217,3 +218,72 @@ module mkPhysMemToBramBE#(BRAMServerBE#(Bit#(bramAddrWidth), Bit#(busDataWidth),
    endinterface
 endmodule
 
+
+module mkMemServerFromBram#(BRAMServer#(Bit#(bramAddrWidth), Bit#(busDataWidth)) br) (MemServer#(busDataWidth))
+   provisos(Add#(a__, bramAddrWidth, MemOffsetSize));
+
+   FIFOF#(Tuple2#(Bit#(6),Bool))  readTagFifo <- mkFIFOF();
+   FIFOF#(Bit#(6)) writeTagFifo <- mkFIFOF();
+   AddressGenerator#(bramAddrWidth,busDataWidth) readAddrGenerator <- mkAddressGenerator();
+   AddressGenerator#(bramAddrWidth,busDataWidth) writeAddrGenerator <- mkAddressGenerator();
+   let verbose = False;
+
+    Reg#(Bit#(32)) cycles      <- mkReg(0);
+    rule count;
+       cycles <= cycles + 1;
+    endrule
+
+   rule read_req;
+      let addrBeat <- readAddrGenerator.addrBeat.get();
+      let addr = addrBeat.addr;
+      let tag = addrBeat.tag;
+      let burstCount = addrBeat.bc;
+      readTagFifo.enq(tuple2(tag, addrBeat.last));
+      Bit#(bramAddrWidth) regFileAddr = truncate(addr/fromInteger(valueOf(TDiv#(busDataWidth,8))));
+      br.request.put(BRAMRequest{write:False, responseOnWrite:False, address:regFileAddr, datain:?});
+      if (verbose) $display("%d read_server.readData (a) %h %d last=%d", cycles, addr, burstCount, addrBeat.last);
+   endrule
+
+   interface MemReadServer readServer;
+      interface Put readReq;
+	 method Action put(MemRequest req);
+            if (verbose) $display("%d axiSlave.read.readAddr %h bc %d", cycles, req.offset, req.burstLen);
+	    readAddrGenerator.request.put(PhysMemRequest { addr: truncate(req.offset), burstLen: req.burstLen, tag: req.tag });
+	 endmethod
+      endinterface
+      interface Get readData;
+	 method ActionValue#(MemData#(busDataWidth)) get();
+	    match { .tag, .last } = readTagFifo.first;
+	    readTagFifo.deq;
+            let data <- br.response.get;
+            if (verbose) $display("%d read_server.readData (b) %h", cycles, data);
+            return MemData { data: data, tag: tag, last: last };
+	 endmethod
+      endinterface
+   endinterface
+   interface MemWriteServer writeServer;
+      interface Put writeReq;
+	 method Action put(MemRequest req);
+	    writeAddrGenerator.request.put(PhysMemRequest { addr: truncate(req.offset), burstLen: req.burstLen, tag: req.tag});
+            if (verbose) $display("%d write_server.writeAddr %h bc %d", cycles, req.offset, req.burstLen);
+	 endmethod
+      endinterface
+      interface Put writeData;
+	 method Action put(MemData#(busDataWidth) resp);
+	    let addrBeat <- writeAddrGenerator.addrBeat.get();
+	    let addr = addrBeat.addr;
+	    Bit#(bramAddrWidth) regFileAddr = truncate(addr/fromInteger(valueOf(TDiv#(busDataWidth,8))));
+            br.request.put(BRAMRequest{write:True, responseOnWrite:False, address:regFileAddr, datain:resp.data});
+            if (verbose) $display("%d write_server.writeData %h %h %d", cycles, addr, resp.data, addrBeat.bc);
+            if (addrBeat.last)
+               writeTagFifo.enq(addrBeat.tag);
+	 endmethod
+      endinterface
+      interface Get writeDone;
+	 method ActionValue#(Bit#(6)) get();
+	    writeTagFifo.deq;
+            return writeTagFifo.first;
+	 endmethod
+      endinterface
+   endinterface
+endmodule

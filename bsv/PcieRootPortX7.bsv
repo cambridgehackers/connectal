@@ -180,7 +180,7 @@ module mkPcieRootPortX7(PcieRootPortX7#(PcieLanes));
                         data: pcie_ep.m_axis_rx.tdata });
    endrule
 
-   Reset user_reset <- mkAsyncReset(4, user_reset_n, user_clk);
+   Reset user_reset <- mkSyncReset(5, user_reset_n, user_clk);
 
    ClockGenerator7Params     clkgenParams = defaultValue;
    clkgenParams.clkin1_period    = 4.000; //  250MHz
@@ -192,7 +192,7 @@ module mkPcieRootPortX7(PcieRootPortX7#(PcieLanes));
    clkgenParams.clkout1_phase      = 0.0000;
    ClockGenerator7           clkgen <- mkClockGenerator7(clkgenParams, clocked_by user_clk, reset_by user_reset_n);
    Clock derivedClock = clkgen.clkout1;
-   Reset derivedReset <- mkAsyncReset(4, user_reset_n, derivedClock);
+   Reset derivedReset <- mkSyncReset(5, user_reset_n, derivedClock);
 
    Server#(TLPData#(16), TLPData#(16)) tlp16 = (interface Server;
 						interface Put request;

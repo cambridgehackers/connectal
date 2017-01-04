@@ -81,6 +81,7 @@ handleMessageTemplate1='''
     int   tmp __attribute__ ((unused));
     int tmpfd __attribute__ ((unused));
     %(classNameOrig)sData tempdata __attribute__ ((unused));
+    memset(&tempdata, 0, sizeof(tempdata));
     %(handleStartup)s
     switch (channel) {'''
 
@@ -108,19 +109,12 @@ handleMessageTemplate2='''
 }
 '''
 
-jsonStructTemplateDecl='''
-    {"%(methodName)s", ((ConnectalParamJsonInfo[]){
-        %(paramJsonDeclarations)s
-        {NULL, %(channelNumber)s}}) },'''
-
-jsonMethodTemplateDecl='''
-static ConnectalMethodJsonInfo %(classNameOrig)sInfo[] = {'''
-
 proxyMethodTableDecl='''
 %(classNameOrig)sCb %(className)sProxyReq = {
     %(methodTable)s
 };
-%(classNameOrig)sCb *p%(className)sProxyReq = &%(className)sProxyReq;'''
+%(classNameOrig)sCb *p%(className)sProxyReq = &%(className)sProxyReq;
+'''
 
 proxyMethodTemplateDecl='''
 int %(className)s_%(methodName)s (%(paramProxyDeclarations)s )'''
@@ -138,9 +132,12 @@ proxyMethodTemplate='''
 
 proxyJMethodTemplate='''
 {
-    %(channelName)sData tempdata;
+    Json::Value request;
+    request.append(Json::Value("%(methodName)s"));
     %(paramStructMarshall)s
-    connectalJsonEncodeAndSend(p, &tempdata, &%(classNameOrig)sInfo[%(channelNumber)s]);
+
+    std::string requestjson = Json::FastWriter().write(request);;
+    connectalJsonSend(p, requestjson.c_str(), (int)%(channelNumber)s);
     return 0;
 };
 '''
@@ -177,7 +174,7 @@ def collectMembers(scope, pitem):
         elif membtype['name'] == 'SpecialTypeForSendingFd':
             return [('%s%s'%(scope,pitem['pname']),membtype)]
         elif membtype['name'] == 'Vector':
-            nElt = int(membtype['params'][0]['name'])
+            nElt = typeNumeric(membtype['params'][0])
             retitem = []
             ind = 0;
             while ind < nElt:
@@ -214,9 +211,9 @@ def typeNumeric(item):
         elif tstr == 'TMul':
             return values[0] * values[1]
         elif tstr == 'TDiv':
-            return math.ceil(values[0] / float(values[1]))
+            return int(math.ceil(values[0] / float(values[1])))
         elif tstr == 'TLog':
-            return math.ceil(math.log(values[0], 2))
+            return int(math.ceil(math.log(values[0], 2)))
         elif tstr == 'TExp':
             return math.pow(2, values[0])
         elif tstr == 'TMax':
@@ -246,7 +243,7 @@ def typeCName(item):
             elif numbits <= 64:
                 return 'uint64_t'
             else:
-                return 'std::bitset<%d>' % (numbits)
+                return 'char * /* %d bytes */' % ((numbits+7) / 8)
         elif cid == 'bit':
             return 'int'
         elif cid == 'Bool':
@@ -356,7 +353,7 @@ def typeBitWidth(item):
     if item['name'] == 'SpecialTypeForSendingFd':
         return 32
     if item.get('type') == 'Enum':
-        return int(math.ceil(math.log(len(item['elements']))))
+        return int(math.ceil(math.log(len(item['elements']), 2)))
     if hasBitWidth(item):
         width = item['params'][0]['name']
         while globalv_globalvars.has_key(width):
@@ -403,7 +400,7 @@ def accumWords(s, pro, memberList):
 def generate_marshall(pfmt, w):
     global fdName
     off = 0
-    word = []
+    fields = []
     fmt = pfmt
     outstr = ''
     for e in w:
@@ -419,23 +416,23 @@ def generate_marshall(pfmt, w):
             field = '(((unsigned long)%s)<<%s)' % (field, off)
         if typeBitWidth(e.datatype) > 64:
             field = '(const %s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, typeBitWidth(e.datatype))
-        word.append(field)
+        fields.append(field)
         off = off+e.width-e.shifted
         if typeCName(e.datatype) == 'SpecialTypeForSendingFd':
             fdName = field
             fmt = 'p->transport->writefd(p, &temp_working_addr, %s);'
-    return fmt % (''.join(util.intersperse('|', word)))
+    return fmt % (''.join(util.intersperse('|', fields)))
 
 def generate_demarshall(argStruct, w):
     fmt, methodName = argStruct
     off = 0
-    word = []
-    word.append(fmt)
+    statements = []
+    statements.append(fmt)
     for e in w:
         # print e.name+' (d)'
         field = 'tmp'
         if typeCName(e.datatype) == 'float':
-            word.append('tempdata.%s.%s %s *(float *)&(%s);'%(methodName, e.name, e.assignOp, field))
+            statements.append('tempdata.%s.%s %s *(float *)&(%s);'%(methodName, e.name, e.assignOp, field))
             continue
         if off:
             field = '%s>>%s' % (field, off)
@@ -448,17 +445,72 @@ def generate_demarshall(argStruct, w):
         if e.shifted:
             field = '((%s)(%s)<<%s)' % (typeCName(e.datatype),field, e.shifted)
         if typeCName(e.datatype) == 'SpecialTypeForSendingFd':
-            word.append('tempdata.%s.%s %s messageFd;'%(methodName, e.name, e.assignOp))
+            statements.append('tempdata.%s.%s %s messageFd;'%(methodName, e.name, e.assignOp))
         else:
-            word.append('tempdata.%s.%s %s (%s)(%s);'%(methodName, e.name, e.assignOp, typeCName(e.datatype), field))
+            statements.append('tempdata.%s.%s %s (%s)(%s);'%(methodName, e.name, e.assignOp, typeCName(e.datatype), field))
         off = off+e.width-e.shifted
-    return '\n        '.join(word)
+    return '\n        '.join(statements)
 
 def formalParameters(params, insertPortal):
     rc = [ 'const %s %s' % (typeCName(pitem['ptype']), pitem['pname']) for pitem in params]
     if insertPortal:
         rc.insert(0, ' struct PortalInternal *p')
     return ', '.join(rc)
+
+toJsonVerbose = False
+def genToJson(var, name, prefix, ptype, appendto=False):
+    typename = ptype['name']
+    if toJsonVerbose: print 'genToJson', name, typename, ptype, appendto
+    if typename in ['Bit', 'Int', 'UInt', 'Bool']:
+        if typename == 'Int':
+            cast = 'Json::Int64'
+        else:
+            cast = 'Json::UInt64'
+        if appendto:
+            return ['%s.append((%s)%s);' % (var, cast, prefix)]
+        else:
+            return ['%s["%s"] = (%s)%s;' % (var, name, cast, prefix)]
+
+    if 'type' not in ptype and typename != 'Vector':
+        typedef = globalv_globalvars[typename]
+        if toJsonVerbose: print '    dereferencing typedef', typedef
+        if typedef['dtype'] == 'TypeDef':
+            tdtype = typedef['tdtype']
+            return genToJson(var, name, prefix, tdtype, appendto)
+
+    result = []
+    if typename == 'Vector':
+        ptype_type = 'Vector'
+    else:
+        ptype_type = ptype['type']
+
+    if ptype_type == 'Struct':
+        if toJsonVerbose: print 'elements', ptype['elements']
+        structvar = '_%sValue' % name
+        result.append('Json::Value %s;' % structvar)
+        result.append('%s["__type__"]="%s";' % (structvar, typename))
+        for elt in ptype['elements']:
+            result.extend(genToJson(structvar, elt['pname'], '%s.%s' % (name, elt['pname']), elt['ptype']))
+        expr = structvar
+    elif ptype_type == 'Enum':
+        expr = '(int)%s' % prefix
+    elif ptype_type == 'Vector':
+        vectorSize = typeNumeric(ptype['params'][0])
+        vectorType = ptype['params'][1]
+        vectorName = '%sVector' % cName(prefix)
+        result.append('Json::Value %s;' % vectorName)
+        for i in range(0,vectorSize):
+            result.extend(genToJson(vectorName,None,('%s[%d]' % (prefix,i)),vectorType,True))
+        expr = vectorName
+    else:
+        print 'genToJson cannot handle', name, prefix, ptype
+        expr = prefix
+    if appendto:
+        result.append('%s.append(%s);' % (var, expr))
+    else:
+        result.append('%s["%s"] = %s;' % (var, name, expr))
+    if toJsonVerbose: print 'result', result
+    return result
 
 def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
     global fdName
@@ -489,13 +541,13 @@ def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
             break
     if classVariant:
         paramStructMarshall = []
+        itemNumber = 0
         for pitem in params:
             pname = pitem['pname']
-            if typeJson(pitem['ptype']) == 'other':
-                titem = 'memcpy(&tempdata.%s, &%s, sizeof(tempdata.%s));' % (pname,pname,pname)
-            else:
-                titem = 'tempdata.%s = %s;' % (pname,pname)
-            paramStructMarshall.append(titem)
+            ptype = pitem['ptype']
+            titems = genToJson('request', pname, pname, pitem['ptype'], True)
+            paramStructMarshall.extend(titems)
+            itemNumber = itemNumber + 1
     paramStructDeclarations = [ '%s %s;' % (typeCName(pitem['ptype']), pitem['pname']) for pitem in params]
     paramJsonDeclarations = [ '{"%s", Connectaloffsetof(%sData,%s), ITYPE_%s},' % \
         (pitem['pname'], chname, pitem['pname'], typeJson(pitem['ptype'])) for pitem in params]
@@ -559,19 +611,23 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
     global generatedVectors
     className = classNameOrig + classVariant
     classCName = cName(className)
-    cppname = '%s.c' % className
+    if classVariant == 'Json':
+        cppname = '%s.cpp' % className
+    else:
+        cppname = '%s.c' % className
     hppname = '%s.h' % className
     if cppname in generatedCFiles:
         return
     generatedCFiles.append(cppname)
     cpp = create_cpp_file(cppname)
+    if classVariant:
+        cpp.write('#ifdef PORTAL_JSON\n')
+        cpp.write('#include "jsoncpp/json/json.h"\n')
     maxSize = 0
     reqChanNums = []
     methodList = []
     cnSubst = {'className': className, 'classNameOrig': classNameOrig}
-    if classVariant:
-        cpp.write(jsonMethodTemplateDecl % cnSubst)
-    else:
+    if not classVariant:
         hpp = create_cpp_file(hppname)
         hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': className.upper()})
         hpp.write('#include "portal.h"\n')
@@ -582,13 +638,9 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         substs, t = gatherMethodInfo(mitem['dname'], mitem['dparams'], className, classNameOrig, classVariant)
         if t > maxSize:
             maxSize = t
-        if classVariant:
-            cpp.write((jsonStructTemplateDecl) % substs)
         methodList.append(substs['methodName'])
         reqChanNums.append(substs['channelNumber'])
     methodJsonDeclarations = ['{"%(methodName)s", %(classNameOrig)s_%(methodName)sInfo},' % {'methodName': p, 'classNameOrig': classNameOrig} for p in methodList]
-    if classVariant:
-        cpp.write('{}};\n')
     for mitem in declList:
         substs, t = gatherMethodInfo(mitem['dname'], mitem['dparams'], className, classNameOrig, classVariant)
         if classVariant:
@@ -608,7 +660,7 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
             'reqInfo': '0x%x' % ((len(declList) << 16) + (maxSize+1) * sizeofUint32_t),
             'classNameOrig': classNameOrig }
     if classVariant:
-        subs['handleStartup'] = 'channel = connnectalJsonDecode(p, channel, &tempdata, %(classNameOrig)sInfo);' % subs
+        subs['handleStartup'] = 'Json::Value msg = Json::Value(connectalJsonReceive(p));' % subs
     else:
         subs['handleStartup'] = 'volatile unsigned int* temp_working_addr = p->transport->mapchannelInd(p, channel);'
         generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n' % subs)
@@ -665,6 +717,8 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         hpp.write('#endif // _%(name)s_H_\n' % {'name': className.upper()})
         hpp.close()
     generated_hpp.write('extern %(classNameOrig)sCb %(className)sProxyReq;\n' % subs)
+    if classVariant:
+        cpp.write('#endif /* PORTAL_JSON */\n')
     cpp.close()
 
 def emitStructMember(item, f, indentation):

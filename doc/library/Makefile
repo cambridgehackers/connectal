@@ -186,7 +186,7 @@ images: source/devguide/connectalbuild-1.png
 
 install:
 	sudo apt-get install poppler-utils
-	pip install docutils sphinx sphinxcontrib-makedomain sphinx-argparse
+	sudo pip install docutils sphinx sphinxcontrib-makedomain sphinx-argparse
 
 publish:
 	sed -i "s/version = .*/version = '$(VERSION)'/" source/conf.py

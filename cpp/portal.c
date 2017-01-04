@@ -20,6 +20,8 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+#include "ConnectalProjectConfig.h"
+
 #include "portal.h"
 #include "sock_utils.h"
 #ifdef __KERNEL__
@@ -43,7 +45,7 @@
 #endif
 #include "drivers/portalmem/portalmem.h" // PA_MALLOC
 
-#ifdef ZYNQ
+#if defined(ZYNQ) || defined(__riscv__)
 #include "drivers/zynqportal/zynqportal.h"
 #else
 #include "drivers/pcieportal/pcieportal.h" // BNOC_TRACE
@@ -74,6 +76,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     memset(pint, 0, sizeof(*pint));
     if(!utility_portal)
       utility_portal = pint;
+    pint->board_number = 0;
     pint->fpga_number = id;
     pint->fpga_tile = tile;
     pint->fpga_fd = -1;
@@ -83,7 +86,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     pint->parent = parent;
     pint->reqinfo = reqinfo;
     if(trace_portal)
-        PORTAL_PRINTF("%s: **initialize portal_%d_%d handler %p cb %p parent %p\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number, handler, cb, parent);
+	PORTAL_PRINTF("%s: **initialize portal_b%dt%dp%d handler %p cb %p parent %p\n", __FUNCTION__, pint->board_number, pint->fpga_tile, pint->fpga_number, handler, cb, parent);
     if (!transport) {
         // Use defaults for transport handling methods
 #ifdef SIMULATION
@@ -95,7 +98,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     pint->transport = transport;
     rc = pint->transport->init(pint, param);
     if (rc != 0) {
-        PORTAL_PRINTF("%s: failed to initialize Portal portal_%d_%d\n", __FUNCTION__, pint->fpga_tile, pint->fpga_number);
+        PORTAL_PRINTF("%s: failed to initialize Portal portal_b%dt%dp%d\n", __FUNCTION__, pint->board_number, pint->fpga_tile, pint->fpga_number);
 #ifndef __KERNEL__
         exit(1);
 #endif
@@ -302,6 +305,11 @@ static void initPortalHardwareOnce(void)
 	  argv[ind++] = (char*)simulator_vcd_name;
 	}
 #endif
+#if defined(BOARD_ncverilog)
+	const char *exetype = "ncverilog";
+	bindir = 0; // the simulation driver is found in $PATH
+	//FIXME ARGS
+#endif
 #if defined(BOARD_verilator)
 	const char *exetype = "vlsim";
 	if (simulator_dump_vcd) {
@@ -309,11 +317,23 @@ static void initPortalHardwareOnce(void)
 	  argv[ind++] = (char*)simulator_vcd_name;
 	}
 #endif
+#if defined(BOARD_cvc)
+	const char *exetype = "cvcsim";
+	if (simulator_dump_vcd) {
+	  //argv[ind++] = (char*)"-t";
+	  //argv[ind++] = (char*)simulator_vcd_name;
+	}
+#endif
 #if defined(BOARD_xsim)
 	const char *exetype = "xsim";
 	bindir = 0; // the simulation driver is found in $PATH
         argv[ind++] = (char *)"-R";
         argv[ind++] = (char *)"work.xsimtop";
+#endif
+#if defined(BOARD_vcs)
+	const char *exetype = "vcs";
+	bindir = 0; // the simulation driver is found in $PATH
+	//FIXME ARGS
 #endif
 #if defined(BOARD_vsim)
 	const char *exetype = "vsim";
@@ -354,13 +374,15 @@ if (trace_portal) fprintf(stderr, "[%s:%d] LD_LIBRARY_PATH %s *******\n", __FUNC
             argv[ind++] = strdup(serial);
         }
         {
-#ifdef __arm__
+#ifdef __ANDROID__
 	  // on zynq android, fpgajtag is in the initramdisk in the root directory
 	  const char *fpgajtag = "/fpgajtag";
-	  argv[ind++] = (char *)"-x"; // program via /dev/xdevcfg
 #else
 	  const char *fpgajtag = "fpgajtag";
 #endif // !__arm__
+#ifdef __arm__
+	  argv[ind++] = (char *)"-x"; // program via /dev/xdevcfg
+#endif
 	  argv[ind++] = filename;
           errno = 0;
           if (filename) // only run fpgajtag if filename was found
@@ -387,7 +409,7 @@ void initPortalMemory(void)
 #ifndef SIMULATION
         global_pa_fd = open("/dev/portalmem", O_RDWR);
     if (global_pa_fd < 0){
-        PORTAL_PRINTF("Failed to open /dev/portalmem pa_fd=%d errno=%d\n", global_pa_fd, errno);
+	PORTAL_PRINTF("Failed to open /dev/portalmem pa_fd=%d errno=%d:%s\n", global_pa_fd, errno, strerror(errno));
         exit(ENODEV);
     }
 #else
@@ -423,7 +445,7 @@ int portalAlloc(size_t size, int cached)
       unlink(fname);
       lseek(fd, size, SEEK_SET);
       size_t bytesWritten = write(fd, (void*)fname, 512);
-      if (bytesWritten != size)
+      if (bytesWritten != 512)
 	fprintf(stderr, "ERROR %s:%d fname=%s fd=%d wrote %ld bytes\n", __FUNCTION__, __LINE__, fname, fd, bytesWritten);
       portalmem_sizes[fd] = size;
     }
@@ -463,9 +485,9 @@ int portalMunmap(void *addr, size_t size)
 
 int portalCacheFlush(int fd, void *__p, long size, int flush)
 {
-    int i;
-#if defined(__arm__)
+#if defined(__arm__) || defined (__riscv__)
 #ifdef __KERNEL__
+    int i;
     struct scatterlist *sg;
     struct file *fmem = fget(fd);
     struct sg_table *sgtable = ((struct pa_buffer *)((struct dma_buf *)fmem->private_data)->priv)->sg_table;
@@ -498,12 +520,15 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
     }
 #endif
 #elif defined(__i386__) || defined(__x86_64__)
-    // not sure any of this is necessary (mdk)
-    for(i = 0; i < size; i++){
-        char foo = *(((volatile char *)__p)+i);
-        asm volatile("clflush %0" :: "m" (foo));
+    {
+	int i;
+	// not sure any of this is necessary (mdk)
+	for(i = 0; i < size; i++){
+	    char foo = *(((volatile char *)__p)+i);
+	    asm volatile("clflush %0" :: "m" (foo));
+	}
+	asm volatile("mfence");
     }
-    asm volatile("mfence");
 #else
 #error("dCAcheFlush not defined for unspecified architecture")
 #endif

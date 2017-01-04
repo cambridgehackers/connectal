@@ -52,9 +52,10 @@ module PositiveReset (
    input              IN_RST ;
    output             OUT_RST ;
 
-   //(* keep = "true" *)
-   reg [RSTDELAY:0]   reset_hold ;
-   wire [RSTDELAY+1:0] next_reset = {reset_hold, 1'b0} ;
+   (* ASYNC_REG = "true" *)
+   reg                reset_meta ;
+   reg [RSTDELAY:1]   reset_hold ;
+   wire [RSTDELAY+1:0] next_reset = {reset_hold, reset_meta, 1'b0} ;
 
    assign  OUT_RST = reset_hold[RSTDELAY] ;
 
@@ -63,11 +64,13 @@ module PositiveReset (
         if (IN_RST == `BSV_RESET_VALUE)
            begin
 
+              reset_meta <= 1;
               reset_hold <= `BSV_ASSIGNMENT_DELAY -1 ;
            end
         else
           begin
-             reset_hold <= `BSV_ASSIGNMENT_DELAY next_reset[RSTDELAY:0];
+	     reset_meta <= next_reset[0];
+             reset_hold <= `BSV_ASSIGNMENT_DELAY next_reset[RSTDELAY:1];
           end
      end // always @ ( posedge CLK )
 

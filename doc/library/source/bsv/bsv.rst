@@ -8,6 +8,7 @@ Connectal BSV Libraries
 
    addressgenerator.rst
    arith.rst
+   axistream.rst
    ctrlmux.rst
    hostinterface.rst
    leds.rst

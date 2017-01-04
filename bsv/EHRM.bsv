@@ -38,12 +38,9 @@ typedef  Vector#(n, Reg#(t)) Ehr#(numeric type n, type t);
 module mkEhr#(t init)(Ehr#(n, t)) provisos(Bits#(t, tSz));
   Vector#(n, RWire#(t)) lat <- replicateM(mkUnsafeRWire);
 
-  Vector#(n, Vector#(n, RWire#(Maybe#(t)))) dummy <- replicateM(replicateM(mkUnsafeRWire));
   Vector#(n, Reg#(Bool)) dummy2 <- replicateM(mkReg(True));
 
   Reg#(t) rl <- mkReg(init);
-
-  Ehr#(n, t) r = newVector;
 
   rule canon;
     t upd = rl;
@@ -53,28 +50,29 @@ module mkEhr#(t init)(Ehr#(n, t)) provisos(Bits#(t, tSz));
     rl <= upd;
   endrule
 
-  for(Integer i = 0; i < valueOf(n); i = i + 1)
-    r[i] = (interface Reg;
-              method Action _write(t x);
-                lat[i].wset(x);
-                dummy2[i] <= True;
-                for(Integer j = 0; j < i; j = j + 1)
-                  dummy[i][j].wset(lat[j].wget);
-              endmethod
+   function Reg#(t) genEhr(Integer i);
+      return (interface Reg;
+	 method Action _write(t x);
+	    lat[i].wset(x);
+	    dummy2[i] <= True;
+         endmethod
 
-              method t _read;
-                t upd = rl;
-                Bool yes = True;
-                for(Integer j = i; j < valueOf(n); j = j + 1)
-                  yes = yes && dummy2[j];
-                for(Integer j = 0; j < i; j = j + 1)
-                begin
+	 method t _read;
+	    t upd = rl;
+	    Bool yes = True;
+	    for(Integer j = i; j < valueOf(n); j = j + 1)
+	       yes = yes && dummy2[j];
+	    for(Integer j = 0; j < i; j = j + 1)
+	       begin
                   if(lat[j].wget matches tagged Valid .x)
-                    upd = x;
-                end
-                return yes? upd : ?;
-              endmethod
-            endinterface);
+                     upd = x;
+	       end
+	    return yes? upd : ?;
+         endmethod
+	 endinterface);
+   endfunction
+   
+   Ehr#(n, t) r = genWith(genEhr);
 
    return r;
 endmodule

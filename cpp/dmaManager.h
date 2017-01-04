@@ -23,6 +23,8 @@
 #ifndef _PORTAL_MEMORY_H_
 #define _PORTAL_MEMORY_H_
 
+#include "ConnectalProjectConfig.h"
+
 #ifdef __KERNEL__
 #include <linux/types.h>
 #include <linux/semaphore.h>

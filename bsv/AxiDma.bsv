@@ -89,7 +89,7 @@ module mkAxiDmaMaster#(PhysMemMaster#(addrWidth,dataWidth) master) (Axi3Master#(
       method ActionValue#(Axi3WriteRequest#(addrWidth,tagWidth)) get();
 	 let req <- master.write_client.writeReq.get;
 	 reqs.enq(tuple3(truncate(req.burstLen),reqFirstByteEnable(req),reqLastByteEnable(req)));
-	 return Axi3WriteRequest{address:req.addr, len:truncate((req.burstLen>>beat_shift)-1), id:truncate(req.tag), size: axiBusSize(valueOf(dataWidth)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
+	 return Axi3WriteRequest{address:req.addr, len:truncate((req.burstLen>>beat_shift)-1), id:truncate(req.tag), size: axiBusSize(valueOf(dataWidth)), burst: 1, prot: 0, cache: 15, lock:0, qos:0};
       endmethod
    endinterface
    interface Get resp_write;
@@ -121,7 +121,7 @@ module mkAxiDmaMaster#(PhysMemMaster#(addrWidth,dataWidth) master) (Axi3Master#(
       method ActionValue#(Axi3ReadRequest#(addrWidth,tagWidth)) get();
 	 let req <- master.read_client.readReq.get;
 	 //$display("req_ar %h", req.tag);
-	 return Axi3ReadRequest{address:req.addr, len:truncate((req.burstLen>>beat_shift)-1), id:truncate(req.tag), size: axiBusSize(valueOf(dataWidth)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
+	 return Axi3ReadRequest{address:req.addr, len:truncate((req.burstLen>>beat_shift)-1), id:truncate(req.tag), size: axiBusSize(valueOf(dataWidth)), burst: 1, prot: 0, cache: 15, lock:0, qos:0};
       endmethod
    endinterface
    interface Put resp_read;
@@ -193,7 +193,7 @@ module mkAxi4DmaMaster#(PhysMemMaster#(addrWidth,dataWidth) master) (Axi4Master#
       method ActionValue#(Axi4WriteRequest#(addrWidth,tagWidth)) get();
 	 let req <- master.write_client.writeReq.get;
 	 reqs.enq(tuple3(truncate(req.burstLen),reqFirstByteEnable(req),reqLastByteEnable(req)));
-	 return Axi4WriteRequest{address:req.addr, len:truncate((req.burstLen>>beat_shift)-1), id:truncate(req.tag), size: axiBusSize(valueOf(dataWidth)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
+	 return Axi4WriteRequest{address:req.addr, len:truncate((req.burstLen>>beat_shift)-1), id:truncate(req.tag), size: axiBusSize(valueOf(dataWidth)), burst: 1, prot: 0, cache: 15, lock:0, qos:0};
       endmethod
    endinterface
    interface Get resp_write;
@@ -225,7 +225,7 @@ module mkAxi4DmaMaster#(PhysMemMaster#(addrWidth,dataWidth) master) (Axi4Master#
       method ActionValue#(Axi4ReadRequest#(addrWidth,tagWidth)) get();
 	 let req <- master.read_client.readReq.get;
 	 //$display("req_ar %h", req.tag);
-	 return Axi4ReadRequest{address:req.addr, len:truncate((req.burstLen>>beat_shift)-1), id:truncate(req.tag), size: axiBusSize(valueOf(dataWidth)), burst: 1, prot: 0, cache: 3, lock:0, qos:0};
+	 return Axi4ReadRequest{address:req.addr, len:truncate((req.burstLen>>beat_shift)-1), id:truncate(req.tag), size: axiBusSize(valueOf(dataWidth)), burst: 1, prot: 0, cache: 15, lock:0, qos:0};
       endmethod
    endinterface
    interface Put resp_read;

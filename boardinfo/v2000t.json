@@ -1,6 +1,7 @@
 {
     "options": {
-        "bsvdefines" : ["XILINX=1", "Virtex7", "PCIE", "PcieHostInterface", "PhysAddrWidth=40"],
+        "bsvdefines" : ["XILINX=1", "Virtex7", "PCIE", "PcieHostInterface", "PhysAddrWidth=40",
+		       	"CONNECTAL_BITS_DEPENDENCES=hw/mkTop.bit", "CONNECTAL_RUN_SCRIPT=$(CONNECTALDIR)/scripts/run.pcietest"],
         "os" : "ubuntu",
         "partname" : "xc7v2000tflg1925-2",
         "need_pcie" : "x7_gen1x8",

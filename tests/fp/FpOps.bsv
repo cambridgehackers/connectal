@@ -21,6 +21,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+`include "ConnectalProjectConfig.bsv"
 import BviFpAdd::*;
 import Clocks::*;
 import GetPut::*;

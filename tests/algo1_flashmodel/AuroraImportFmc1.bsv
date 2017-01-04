@@ -1,5 +1,6 @@
 package AuroraImportFmc1;
 
+`include "ConnectalProjectConfig.bsv"
 import FIFO::*;
 import FIFOF::*;
 import Clocks :: *;

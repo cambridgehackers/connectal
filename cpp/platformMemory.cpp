@@ -85,7 +85,7 @@ class MemServerIndication : public MemServerIndicationWrapper
     sem_post(&mtSem);
   }
   virtual void error (uint32_t code, uint32_t pointer, uint64_t offset, uint64_t extra) {
-    fprintf(stderr, "MemServerIndication::error(code=%x, pointer=%x, offset=%" PRIx64 " extra=%" PRIx64 "\n", code, pointer, offset, extra);
+    fprintf(stderr, "MemServerIndication::error(code=%x:%s, pointer=%x, offset=%" PRIx64 " extra=%" PRIx64 "\n", code, dmaErrors[code], pointer, offset, extra);
     if (--mem_error_limit < 0)
       exit(-1);
   }

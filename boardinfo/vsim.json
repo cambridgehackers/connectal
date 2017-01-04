@@ -4,7 +4,8 @@
         "partname" : "5SGXEA7N2F45C2",
         "rewireclockstring" : "tclzynqrewireclock",
         "TOP" : "XsimTop",
-	"bsvdefines": ["ALTERA=1", "CnocTop", "XsimHostInterface", "PhysAddrWidth=40", "XSIM", "SIMULATION", "SVDPI", "PcieLanes=8"],
+	"bsvdefines": ["MODELSIM=1", "CnocTop", "XsimHostInterface", "PhysAddrWidth=40", "XSIM", "SIMULATION", "SVDPI", "PcieLanes=8",
+		       	"CONNECTAL_BITS_DEPENDENCES=vsim"],
         "CONNECTALFLAGS" : ["--mainclockperiod=20", "--derivedclockperiod=10"],
         "need_pcie" : "unused"
     }

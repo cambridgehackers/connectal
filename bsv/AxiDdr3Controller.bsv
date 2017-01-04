@@ -96,7 +96,7 @@ module mkDdr3#(Clock clk200)(Ddr3);
    let clock <- exposeCurrentClock();
    let reset <- exposeCurrentReset();
 
-   Reset rst200 <- mkAsyncReset( 10, reset, clk200 );
+   Reset rst200 <- mkSyncReset( 10, reset, clk200 );
 
 `ifndef BSV_POSITIVE_RESET
    let mcReset = rst200;

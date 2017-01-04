@@ -20,6 +20,8 @@
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+`include "ConnectalProjectConfig.bsv"
+import BuildVector::*;
 import Clocks::*;
 import DefaultValue::*;
 import GetPut::*;
@@ -216,6 +218,8 @@ interface PS7;
     interface Vector#(4, Clock) fclkclk;
     interface Vector#(4, Reset) fclkreset;
     interface Vector#(2, Pps7Emioi2c)  i2c;
+    interface Clock portalClock;
+    interface Reset portalReset;
     interface Clock derivedClock;
     interface Reset derivedReset;
 `ifdef PS7EXTENDED      
@@ -224,7 +228,7 @@ interface PS7;
 `endif
 endinterface
 
-module mkPS7(PS7);
+module mkPS7#(Clock axiClock)(PS7);
    // B2C converts a bit to a clock, enabling us to break the apparent cycle
    Vector#(4, B2C) b2c <- replicateM(mkB2C());
 
@@ -234,11 +238,20 @@ module mkPS7(PS7);
    Vector#(4, Clock) fclk <- genWithM(mkBufferedClock);
    Vector#(4, Reset) freset <- genWithM(mkBufferedReset);
 
+`ifndef TOP_SOURCES_PORTAL_CLOCK
    Clock single_clock = fclk[0];
 `ifdef ZYNQ_NO_RESET
    freset[0]          = noReset;
 `endif
    let single_reset   = freset[0];
+`else
+   //Clock axiClockBuf <- mkClockBUFG(clocked_by axiClock);
+   Clock axiClockBuf = axiClock;
+   Clock single_clock = axiClockBuf;
+   Reset axiResetUnbuffered <- mkSyncReset(10, freset[0], single_clock);
+   Reset axiReset <- mkResetBUFG(clocked_by axiClockBuf, reset_by axiResetUnbuffered);
+   let single_reset   = axiReset;
+`endif
 
    ClockGenerator7Params clockParams = defaultValue;
    // input clock 200MHz for speed grade -2, 100MHz for speed grade -1
@@ -324,11 +337,18 @@ module mkPS7(PS7);
     interface s_axi_hp = ps7.s_axi_hp;
     interface fclkclk = fclk;
     interface fclkreset = freset;
+`ifndef TOP_SOURCES_PORTAL_CLOCK
+    interface portalClock = fclk[0];
+    interface portalReset = freset[0];
+`else
+    interface portalClock = axiClockBuf;
+    interface portalReset = axiReset;
+`endif
     interface derivedClock = derived_clock;
     interface derivedReset = derived_reset;
     method Action interrupt(Bit#(1) v);
         ps7.irq.f2p({19'b0, v});
     endmethod
     interface i2c = ps7.i2c;
-   interface s_axi_acp = cons(ps7.s_axi_acp, nil);
+   interface s_axi_acp = vec(ps7.s_axi_acp);
 endmodule

@@ -80,10 +80,13 @@ endinterface
 
 typedef MemPortal#(12,32) StdPortal;
 
-interface ConnectalTop;
+interface ConnectalTop#(type pinType);
    interface PhysMemSlave#(18,32) slave;
    interface Vector#(MaxNumberOfPortals,ReadOnly#(Bool)) interrupt;
    interface Vector#(NumReadClients,MemReadClient#(DataBusWidth)) readers;
    interface Vector#(NumWriteClients,MemWriteClient#(DataBusWidth)) writers;
-   interface `PinType pins;
+`ifdef TOP_SOURCES_PORTAL_CLOCK
+   interface Clock portalClockSource;
+`endif
+   interface pinType pins;
 endinterface

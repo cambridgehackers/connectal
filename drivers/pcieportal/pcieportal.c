@@ -591,9 +591,9 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		    } else {
 		      /* create a device node via udev */
 		      device_create(pcieportal_class, &dev->dev, this_device_number,
-			    this_portal, "%s_%d_%d", DEV_NAME, this_portal->device_tile, this_portal->device_name);
-		      printk(KERN_INFO "%s: /dev/%s_%d_%d = %x created\n",
-			     DEV_NAME, DEV_NAME, this_portal->device_tile, this_portal->device_name, this_device_number);
+				    this_portal, "%s_b%dt%dp%d", DEV_NAME, this_portal->board->info.board_number, this_portal->device_tile, this_portal->device_name);
+		      printk(KERN_INFO "%s: /dev/%s_b%dt%d%p%d = %x created\n",
+			     DEV_NAME, DEV_NAME, this_portal->board->info.board_number, this_portal->device_tile, this_portal->device_name, this_device_number);
 		    }
 		    if (++fpn >= MAX_NUM_PORTALS){
 		      printk(KERN_INFO "%s: MAX_NUM_PORTALS exceeded", __func__);
@@ -629,8 +629,8 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		dev_t this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + this_portal->device_number);
 		portalp[this_portal->device_name] = 0;
                 device_destroy(pcieportal_class, this_device_number);
-                printk(KERN_INFO "%s: /dev/%s_%d_%d = %x removed\n",
-		       DEV_NAME, DEV_NAME, this_portal->device_tile, this_portal->device_name, this_device_number); 
+                printk(KERN_INFO "%s: /dev/%s_b%dt%dp%d = %x removed\n",
+		       DEV_NAME, DEV_NAME, this_portal->board->info.board_number, this_portal->device_tile, this_portal->device_name, this_device_number);
                 /* remove device */
                 cdev_del(&this_board->portal[fpn].extra->cdev);
 		fpn++;

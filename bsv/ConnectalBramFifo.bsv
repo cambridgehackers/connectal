@@ -57,7 +57,9 @@ endinterface
 import "BVI" FIFO_DUALCLOCK_MACRO =
 module  vmkBramFifo#(String fifo_size, Clock wrClock, Reset wrReset, Clock rdClock, Reset rdReset)(X7FifoSyncMacro#(data_width));
 `ifndef BSV_POSITIVE_RESET
-   let positiveReset <- mkPositiveReset(10, wrReset, wrClock);
+   let rdReset1 <- mkSyncReset(10, rdReset, wrClock);
+   let eitherReset <- mkResetEither(wrReset, rdReset1, clocked_by wrClock);
+   let positiveReset <- mkPositiveReset(10, eitherReset, wrClock);
    let fifoReset = positiveReset.positiveReset;
 `else
    let fifoReset = wrReset;
@@ -65,7 +67,11 @@ module  vmkBramFifo#(String fifo_size, Clock wrClock, Reset wrReset, Clock rdClo
    parameter DEVICE = "7SERIES";
    parameter DATA_WIDTH = valueOf(data_width);
    parameter FIFO_SIZE = fifo_size;
+`ifndef SIMULATION
+   parameter FIRST_WORD_FALL_THROUGH = "TRUE"; // not supported by xsim
+`else
    parameter FIRST_WORD_FALL_THROUGH = True;
+`endif
    default_clock wrClock(WRCLK) = wrClock;
    no_reset;
    input_reset wrReset(RST) = fifoReset;

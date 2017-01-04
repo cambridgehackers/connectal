@@ -6,6 +6,5 @@ BSVFILES = Echo.bsv
 CPPFILES= ../echo/testecho.cpp
 CONNECTALFLAGS += -D IMPORT_HOST_CLOCKS
 CONNECTALFLAGS += --derivedclockperiod=125
-CONNECTALFLAGS += --implconstraint=echoslow.xdc
 
 include $(CONNECTALDIR)/Makefile.connectal

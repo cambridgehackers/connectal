@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 
+`include "ConnectalProjectConfig.bsv"
 import BRAM::*;
 import BRAMFIFO::*;
 import FIFO::*;

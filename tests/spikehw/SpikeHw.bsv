@@ -22,7 +22,8 @@ import HostInterface::*;
 import MemTypes::*;
 import Pipe::*;
 import AxiBits::*;
-import PhysMemToBram::*;
+import PhysMemSlaveFromBram::*;
+import TraceMemClient::*;
 
 import BpiFlash::*;
 import AxiIntcBvi::*;
@@ -63,56 +64,6 @@ module mkBramBootRom(Server#(BRAMRequest#(Bit#(TLog#(BootRomEntries)),Bit#(32)),
 
    BRAM1Port#(Bit#(TLog#(BootRomEntries)), Bit#(32)) bram <- mkBRAM1Server(cfg);
    return bram.portA;
-endmodule
-
-module mkTraceReadClient#(PipeIn#(Tuple3#(DmaChannel,Bool,MemRequest)) tracePipe,
-			  PipeIn#(Tuple3#(DmaChannel,Bool,MemData#(dataWidth))) traceDataPipe,
-			  DmaChannel chan,
-			  MemReadClient#(dataWidth) m)
-   (MemReadClient#(dataWidth));
-
-   let reqFifo  <- mkFIFOF();
-   let dataFifo <- mkFIFOF();
-
-   rule rl_req;
-      let mr <- m.readReq.get();
-      tracePipe.enq(tuple3(chan, False, mr));
-      reqFifo.enq(mr);
-   endrule
-
-   rule rl_data;
-      let md <- toGet(dataFifo).get();
-      traceDataPipe.enq(tuple3(chan, False, md));
-      m.readData.put(md);
-   endrule
-
-   interface Get readReq = toGet(reqFifo);
-   interface Put readData = toPut(dataFifo);
-endmodule
-
-module mkTraceWriteClient#(PipeIn#(Tuple3#(DmaChannel,Bool,MemRequest)) tracePipe,
-			   PipeIn#(Tuple3#(DmaChannel,Bool,MemData#(dataWidth))) traceDataPipe,
-			   DmaChannel chan, MemWriteClient#(dataWidth) m)
-   (MemWriteClient#(dataWidth));
-
-   let reqFifo <- mkFIFOF();
-   let dataFifo <- mkFIFOF();
-
-   rule rl_req;
-      let mr <- m.writeReq.get();
-      tracePipe.enq(tuple3(chan, True, mr));
-      reqFifo.enq(mr);
-   endrule
-
-   rule rl_data;
-      let md <- m.writeData.get();
-      traceDataPipe.enq(tuple3(chan, True, md));
-      dataFifo.enq(md);
-   endrule
-
-   interface Get writeReq = toGet(reqFifo);
-   interface Get writeData = toGet(dataFifo);
-   interface Put writeDone = m.writeDone;
 endmodule
 
 module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
@@ -225,14 +176,14 @@ module mkSpikeHw#(HostInterface host, SpikeHwIndication ind)(SpikeHw);
    PhysMemSlave#(20,32) deviceSlaveMux       <- mkPhysMemSlaveMux(vec(axiUartMemSlave, axiIntcMemSlave, axiIicMemSlave));
 `endif
 
-   PhysMemSlave#(20,32) bootRomMemSlave      <- mkPhysMemToBram(bootRom);
+   PhysMemSlave#(20,32) bootRomMemSlave      <- mkPhysMemSlaveFromBram(bootRom);
    PhysMemSlave#(21,32) memSlaveMux          <- mkPhysMemSlaveMux(vec(bootRomMemSlave, deviceSlaveMux));
 
    let memReadClients  <- mapM(mkMemReadClient(objId), vec(m_axi_mm2s, m_axi_sg));
    let memWriteClients <- mapM(mkMemWriteClient(objId), vec(m_axi_s2mm, m_axi_sg));
 
 `ifdef IncludeFlash
-   PhysMemSlave#(26,16) bpiFlashSlave <- mkPhysMemToBram(bpiFlash.server);
+   PhysMemSlave#(26,16) bpiFlashSlave <- mkPhysMemSlaveFromBram(bpiFlash.server);
 `endif
    FIFOF#(Bit#(32)) dfifo <- mkFIFOF();
    FIFOF#(Bit#(32)) flashdfifo <- mkFIFOF();

@@ -27,13 +27,29 @@ if os.environ.has_key('LD_LIBRARY_PATH'):
 else:
     connectal = ctypes.CDLL('./connectal.so')
 
+class JsonObject:
+    def __init__(self, d=None, **kwargs):
+        if d:
+            for k in d:
+                setattr(self, k, d[k])
+        if kwargs:
+            for k in kwargs:
+                setattr(self, k, kwargs[k])
+
+def json_object_hook(d, encoding=None):
+    result = JsonObject(d)
+    return result
+
 class NativeProxy:
-    def __init__(self, interfaceName, handler, responseInterface=None, rpc=False):
+    def __init__(self, interfaceName, handler, responseInterface=None, rpc=False, multithreaded=False):
         self.interfaceName = interfaceName
         self.handler = handler
         self.rpc = rpc
+        self.multithreaded = multithreaded
         if rpc:
-            self.sem_response = threading.Semaphore(0)
+            if multithreaded:
+                self.sem_response = threading.Semaphore(0)
+                self._response = False
         self.stopPolling = False
         self.methods = {}
         newRequestPortal = connectal.newRequestPortal
@@ -42,26 +58,31 @@ class NativeProxy:
         newIndicationPortal.restype = ctypes.c_void_p
         reqifcname = ctypes.c_int.in_dll(connectal, 'ifcNames_%sS2H' % interfaceName)
         reqinfo = ctypes.c_int.in_dll(connectal, '%s_reqinfo' % interfaceName)
-        print('reqifcname=', reqifcname, ' reqinfo=', reqinfo)
+        #print('reqifcname=', reqifcname, ' reqinfo=', reqinfo)
         self.requestPortal = newRequestPortal(reqifcname, reqinfo)
         respifcname = ctypes.c_int.in_dll(connectal, 'ifcNames_%sH2S' % responseInterface)
         respinfo = ctypes.c_int.in_dll(connectal, '%s_reqinfo' % responseInterface)
         resphandlemessage = getattr(connectal, '%s_handleMessage' % responseInterface)
         respproxyreq = ctypes.c_long.in_dll(connectal, 'p%sJsonProxyReq' % responseInterface)
-        print 'respproxyreq=', respproxyreq
+        #print 'respproxyreq=', respproxyreq
         self.responsePortal = newIndicationPortal(respifcname, respinfo, resphandlemessage, respproxyreq)
         connectal.set_callback(self.responsePortal, ctypes.py_object(self))
-        print 'JJ', '%x' % self.requestPortal, '%x' % self.responsePortal
-        self.t1 = threading.Thread(target=self.worker)
-        self.t1.start()
+        #print 'JJ', '%x' % self.requestPortal, '%x' % self.responsePortal
+        if multithreaded:
+            self.t1 = threading.Thread(target=self.worker)
+            self.t1.start()
 
     def callback(self, a):
-        vec = json.loads(a.strip())
+        ## use json_object_hook to convert JSON dictionaries to python objects
+        vec = json.loads(a.strip(), None, None, json_object_hook)
         #print 'callback called!!!', a, vec
         if hasattr(self.handler, vec[0]):
             getattr(self.handler, vec[0])(*vec[1:])
             if self.rpc:
-                self.sem_response.release()
+                if self.multithreaded:
+                    self.sem_response.release()
+                else:
+                    self._response = True
 
     def worker(self):
         while not self.stopPolling:
@@ -81,7 +102,12 @@ class NativeProxy:
                 elif len(args) == 2:
                     m(requestPortal, args[0], args[1])
                 if self.rpc:
-                    self.sem_response.acquire()
+                    if self.multithreaded:
+                        self.sem_response.acquire()
+                    else:
+                        self._response = False
+                        while not self._response:
+                            connectal.portal_event(ctypes.c_void_p(self.responsePortal))
             self.methods[name] = fcn
             return fcn
         else:

@@ -31,7 +31,7 @@
 #define BNOC_IOC_MAGIC 0xB5
 
 /* Number of boards to support */
-#define NUM_BOARDS 1
+#define NUM_BOARDS 4
 #define MAX_NUM_PORTALS 32
 
 /* Structures used with IOCTLs */

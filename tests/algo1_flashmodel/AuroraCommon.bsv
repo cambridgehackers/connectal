@@ -1,6 +1,7 @@
 package AuroraCommon;
 
 
+`include "ConnectalProjectConfig.bsv"
 import FIFO::*;
 import Clocks :: *;
 import DefaultValue :: *;

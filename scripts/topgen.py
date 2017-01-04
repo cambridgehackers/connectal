@@ -27,8 +27,12 @@ import util
 def newArgparser():
     argparser = argparse.ArgumentParser("Generate Top.bsv for an project.")
     argparser.add_argument('--project-dir', help='project directory')
+    argparser.add_argument('--filename', default='Top.bsv', help='name of generated file')
+    argparser.add_argument('--topname', default='mkConnectalTop', help='name of generated module')
+    argparser.add_argument('--ifcnames', default='IfcNames', help='name of interface names enum type and file')
+    argparser.add_argument('--pintype', default=[], help='Type of pins interface', action='append')
     argparser.add_argument('--interface', default=[], help='exported interface declaration', action='append')
-    argparser.add_argument('--board', help='Board type')
+    argparser.add_argument('--portalclock', help='Portal clock source', default=None)
     argparser.add_argument('--importfiles', default=[], help='added imports', action='append')
     argparser.add_argument('--portname', default=[], help='added portal names to enum list', action='append')
     argparser.add_argument('--wrapper', default=[], help='exported wrapper interfaces', action='append')
@@ -44,6 +48,7 @@ argparser = newArgparser()
 topTemplate='''
 import ConnectalConfig::*;
 import Vector::*;
+import BuildVector::*;
 import Portal::*;
 import CtrlMux::*;
 import HostInterface::*;
@@ -52,14 +57,16 @@ import MemReadEngine::*;
 import MemWriteEngine::*;
 import MemTypes::*;
 import MemServer::*;
-import IfcNames::*;
-%(generatedImport)s
 `include "ConnectalProjectConfig.bsv"
+import %(ifcnames)s::*;
+%(generatedImport)s
+
+%(pinsInterfaceDecl)s
 
 `ifndef IMPORT_HOSTIF
 (* synthesize *)
 `endif
-module mkConnectalTop
+module %(topname)s
 `ifdef IMPORT_HOSTIF // no synthesis boundary
       #(HostInterface host)
 `else
@@ -92,27 +99,33 @@ module mkConnectalTop
    interface slave = ctrl_mux;
    interface readers = take(%(portalReaders)s);
    interface writers = take(%(portalWriters)s);
+`ifdef TOP_SOURCES_PORTAL_CLOCK
+   interface portalClockSource = %(portalclock)s;
+`endif
 %(pinsInterface)s
 %(exportedInterfaces)s
-endmodule : mkConnectalTop
+endmodule : %(topname)s
 %(exportedNames)s
 '''
 
 ifcnamesTemplate='''
-typedef enum {NoInterface, %(enumList)s} IfcNames deriving (Eq,Bits);
+typedef enum {%(ifcnames)sNone=0,
+%(enumList)s
+} %(ifcnames)s deriving (Eq,Bits);
 '''
 
 topNocTemplate='''
 import ConnectalConfig::*;
 import Vector::*;
+import BuildVector::*;
 import Portal::*;
 import CnocPortal::*;
 import Connectable::*;
 import HostInterface::*;
-import IfcNames::*;
 import MemTypes::*;
-%(generatedImport)s
 `include "ConnectalProjectConfig.bsv"
+import %(ifcnames)s::*;
+%(generatedImport)s
 
 %(generatedTypedefs)s
 
@@ -151,13 +164,17 @@ module mkCnocTop
    interface indications = %(indicationList)s;
    interface readers = take(%(portalReaders)s);
    interface writers = take(%(portalWriters)s);
+`ifdef TOP_SOURCES_PORTAL_CLOCK
+   interface portalClockSource = %(portalclock)s;
+`endif
+%(pinsInterface)s
 %(exportedInterfaces)s
 endmodule : mkCnocTop
 %(exportedNames)s
 '''
 
 topEnumTemplate='''
-typedef enum {NoInterface, %(enumList)s} IfcNames;
+typedef enum {NoInterface, %(enumList)s} %(ifcnames)s;
 '''
 
 portalTemplate = '''   PortalCtrlMemSlave#(SlaveControlAddrWidth,SlaveDataBusWidth) ctrlPort_%(count)s <- mkPortalCtrlMemSlave(extend(pack(%(enumVal)s)), %(ifcName)s.intr);
@@ -231,7 +248,7 @@ def instMod(pmap, args, modname, modext, constructor, tparam, memFlag, inverseFl
         args = modname + tstr
     pmap['args'] = args % pmap
     if modext:
-        options.portname.append('IfcNames_' + modname + tstr + pmap['number'])
+        options.portname.append('%s_%s%s%s' % (options.ifcnames, modname, tstr, pmap['number']))
         pmap['argsConfig'] = modname + memFlag + tstr
         outputPrefix = ''
         if modext == 'Output':
@@ -262,15 +279,15 @@ def instMod(pmap, args, modname, modext, constructor, tparam, memFlag, inverseFl
             pipeInstantiate.append(pipeInstantiation % pmap)
             connectInstantiate.append(connectInstantiation % pmap)
         if memFlag:
-            options.portname.append('IfcNames_' + modname + memFlag + tstr + pmap['number'])
-            addPortal('', 'IfcNames_' + pmap['argsConfig'], 'l%(modname)sCW' % pmap, 'Request')
+            options.portname.append('%s_%s%s%s%s' % (options.ifcnames, modname, memFlag, tstr, pmap['number']))
+            addPortal('', options.ifcnames + '_' + pmap['argsConfig'], 'l%(modname)sCW' % pmap, 'Request')
         else:
-            addPortal(outputPrefix, 'IfcNames_' + pmap['args'] + pmap['number'], 'l%(modname)s%(number)s' % pmap, pmap['stype'])
+            addPortal(outputPrefix, options.ifcnames + '_' + pmap['args'] + pmap['number'], 'l%(modname)s%(number)s' % pmap, pmap['stype'])
     else:
         if not instantiateRequest.get(pmap['modname']):
             instantiateRequest[pmap['modname']] = iReq()
             pmap['hostif'] = ''
-            instantiateRequest[pmap['modname']].inst = '   %(modname)s%(tparam)s l%(modname)s <- mk%(modname)s(%(hostif)s%%s);' % pmap
+            instantiateRequest[pmap['modname']].inst = '   let l%(modname)s <- mk%(modname)s(%(hostif)s%%s);' % pmap
         instantiateRequest[pmap['modname']].args.append(pmap['args'])
     if pmap['modname'] not in instantiatedModules:
         instantiatedModules.append(pmap['modname'])
@@ -284,7 +301,15 @@ def flushModules(key):
 
 def toVectorLiteral(l):
     if l:
-        return 'cons(%s,%s)' % (l[0], toVectorLiteral(l[1:]))
+        return 'vec(%s)' % ', '.join(l)
+    else:
+        return 'nil'
+
+def appendVectors(l):
+    if len(l) > 1:
+        return 'append(%s,%s)' % (l[0], appendVectors(l[1:]))
+    elif len(l) == 1:
+        return l[0]
     else:
         return 'nil'
 
@@ -302,6 +327,7 @@ def parseParam(pitem, proxy):
     return pmap
 
 if __name__=='__main__':
+    print 'topgen', sys.argv
     options = argparser.parse_args()
 
     if not options.project_dir:
@@ -314,8 +340,8 @@ if __name__=='__main__':
     pipeInstantiate = []
     connectInstantiate = []
     instantiateRequest = {}
-    for item in ['PlatformIfcNames_MemServerRequestS2H', 'PlatformIfcNames_MMURequestS2H', 'PlatformIfcNames_MemServerIndicationH2S', 'PlatformIfcNames_MMUIndicationH2S']:
-        options.portname.append(item)
+    for item in ['Platform%s_MemServerRequestS2H', 'Platform%s_MMURequestS2H', 'Platform%s_MemServerIndicationH2S', 'Platform%s_MMUIndicationH2S']:
+        options.portname.append(item % options.ifcnames)
     requestList = []
     indicationList = []
     portalList = []
@@ -323,12 +349,10 @@ if __name__=='__main__':
     instantiatedModules = []
     exportedNames = []
     options.importfiles.append('`PinTypeInclude')
-    if options.board == 'xsim':
-        options.cnoc = True
     if options.cnoc:
         exportedNames.extend(['export mkCnocTop;', 'export NumberOfRequests;', 'export NumberOfIndications;'])
     else:
-        exportedNames.extend(['export mkConnectalTop;'])
+        exportedNames.extend(['export %s;' % options.topname])
     if options.importfiles:
         for item in options.importfiles:
              exportedNames.append('export %s::*;' % item)
@@ -377,17 +401,36 @@ if __name__=='__main__':
             portalInstantiate.append('')
     for key in instantiatedModules:
         flushModules(key)
-    for pitem in options.interface:
+    if len(options.pintype) > 1:
+        interfaceList.append('   interface Pins pins;')
+    for i,pitem in enumerate(options.interface):
         p = pitem.split(':')
-        interfaceList.append('   interface %s = l%s;' % (p[0], p[1]))
+        if len(options.pintype) > 1:
+            interfaceList.append('      interface pins%d = l%s;' % (i, p[1]))
+        else:
+            interfaceList.append('      interface %s = l%s;' % (p[0], p[1]))
+    if len(options.pintype) > 1:
+        interfaceList.append('   endinterface ')
 
     memory_flag = 'MemServer' in instantiatedModules
     if clientCount:
         pipeInstantiate.append(memEngineInst % {'clientCount': clientCount})
-    topsubsts = {'enumList': ','.join(options.portname),
+    pintype = '`PinType'
+    pinsInterfaceDecl = ''
+    if len(options.pintype) == 1:
+        pintype = options.pintype[0]
+    elif len(options.pintype) > 1:
+        pintype = 'Pins'
+        subifcs = []
+        for (i,ifc) in enumerate(options.pintype):
+            subifcs.append('    interface %s pins%d;\n' % (ifc, i))
+        pinsInterfaceDecl = 'interface Pins;\n %s endinterface\n' % '\n'.join(subifcs)
+        exportedNames.append('export Pins(..);')
+    topsubsts = {'enumList': ',\n'.join(['%s=%d' % (name, i+1) for i,name in enumerate(options.portname)]),
                  'generatedImport': '\n'.join(['import %s::*;' % p for p in options.importfiles]),
                  'generatedTypedefs': '\n'.join(['typedef %d NumberOfRequests;' % len(requestList),
                                                  'typedef %d NumberOfIndications;' % len(indicationList)]),
+                 'ifcnames': options.ifcnames,
                  'pipeInstantiate' : '\n'.join(sorted(pipeInstantiate)),
                  'connectInstantiate' : '\n'.join(sorted(connectInstantiate)),
                  'portalInstantiate' : '\n'.join(portalInstantiate),
@@ -397,15 +440,18 @@ if __name__=='__main__':
                  'indicationList': toVectorLiteral(indicationList),
                  'exportedInterfaces' : '\n'.join(interfaceList),
                  'exportedNames' : '\n'.join(exportedNames),
-                 'portalReaders' : ('append(' if len(options.memread) > 0 else '(') + ', '.join(options.memread + ['nullReaders']) + ')',
-                 'portalWriters' : ('append(' if len(options.memwrite) > 0 else '(') + ', '.join(options.memwrite + ['nullWriters']) + ')',
+                 'portalReaders' : appendVectors(options.memread + ['nullReaders']),
+                 'portalWriters' : appendVectors(options.memwrite + ['nullWriters']),
                  'portalMaster' : 'lMemServer.masters' if memory_flag else 'nil',
 #Use e.g., --interface pins:Ddr3Test.ddr3
                  'pinsInterface' : '    interface pins = l%(usermod)s.pins;\n' % pmap if False else '',
-                 'moduleParam' : 'ConnectalTop' if not options.cnoc \
-                     else 'CnocTop#(NumberOfRequests,NumberOfIndications,PhysAddrWidth,DataBusWidth,`PinType,NumberOfMasters)'
+                 'pinsInterfaceDecl' : pinsInterfaceDecl,
+                 'moduleParam' : 'ConnectalTop#(%s)' % pintype if not options.cnoc \
+                     else 'CnocTop#(NumberOfRequests,NumberOfIndications,PhysAddrWidth,DataBusWidth,%s,NumberOfMasters)' % pintype,
+                 'portalclock': options.portalclock,
+                 'topname': options.topname
                  }
-    topFilename = project_dir + '/Top.bsv'
+    topFilename = project_dir + '/' + options.filename
     print 'Writing:', topFilename
     top = util.createDirAndOpen(topFilename, 'w')
     if options.cnoc:
@@ -413,7 +459,7 @@ if __name__=='__main__':
     else:
         top.write(topTemplate % topsubsts)
     top.close()
-    topFilename = project_dir + '/IfcNames.bsv'
+    topFilename = project_dir + '/' + options.ifcnames + '.bsv'
     print 'Writing:', topFilename
     top = util.createDirAndOpen(topFilename, 'w')
     top.write(ifcnamesTemplate % topsubsts)

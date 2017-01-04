@@ -24,11 +24,14 @@
  *    MP algorithm on pages 7-11 from "Pattern Matching Algorithms" by
  *       Alberto Apostolico, Zvi Galil, 1997
  *
+ *    pattern x of length m
+ *    text    t of length n
+ *
  *    procedure MP(x, t: string; m, n: integer);
  *    begin
  *        i := 1; j := 1;
  *        while j <= n do begin
- *            while (i = m + 1) or (i > 0 and x[i] != t[j]) do j := MP_next[i];
+ *            while (i = m + 1) or (i > 0 and x[i] != t[j]) do i := MP_next[i];
  *            i := i + 1; j := j + 1;
  *            if i = m + 1 then writeln('x occurs in t at position ', j - i + 1);
  *        end;
@@ -71,19 +74,25 @@ void compute_borders(const char *x, int *border, int m)
   }
 }
 
-void compute_MP_next(const char *x, int *MP_next, int m)
+struct MP {
+MP(uint16_t x, uint16_t index) : index(index), x(x) {}
+  uint16_t index;
+  uint16_t x;
+};
+
+void compute_MP_next(const char *x, struct MP *MP_next, int m)
 {
-  MP_next[1] = 0;
+  MP_next[1] = MP(0, 0);
   int j = 0;
   for(int i = 1; i <= m; i++){
     while ((j>0) && (x[i] != x[j]))
-      j = MP_next[j];
+      j = MP_next[j].index;
     j = j+1;
-    MP_next[i+1] = j;
+    MP_next[i+1] = MP(x[j-1], j);
   }
 }
 
-void MP(const char *x, const char *t, int *MP_next, int m, int n, int *match_cnt)
+void MP(const char *x, const char *t, struct MP *MP_next, int m, int n, int *match_cnt)
 {
   int i = 1;
   int j = 1;
@@ -91,7 +100,7 @@ void MP(const char *x, const char *t, int *MP_next, int m, int n, int *match_cnt
   while (j <= n) {
     while ((i==m+1) || ((i>0) && (x[i-1] != t[j-1]))){
       //fprintf(stderr, "char mismatch %d %d MP_next[i]=%d\n", i,j,MP_next[i]);
-      i = MP_next[i];
+      i = MP_next[i].index;
     }
     //fprintf(stderr, "   char match %d %d\n", i, j);
     i = i+1;

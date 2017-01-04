@@ -28,29 +28,38 @@
 #include <sys/mman.h>
 #include <assert.h>
 #include <mp.h>
+#include <semaphore.h>
 #include "dmaManager.h"
 #include "MMURequest.h"
 #include "MMUIndication.h"
+#include "MemServerRequest.h"
+#include "MemServerIndication.h"
 #include "StrstrIndication.h"
 #include "StrstrRequest.h"
 
 static int trace_memory = 1;
 extern "C" {
-#include "sys/ioctl.h"
 #include "drivers/portalmem/portalmem.h"
-#include "sock_utils.h"
 #include "userReference.h"
 }
 
 #include "nandsim.h"
 #include "strstr.h"
 
-class MMUIndicationNAND : public MMUIndicationWrapper
+class MMUIndicationNandSim : public MMUIndicationWrapper
 {
   DmaManager *portalMemory;
+  sem_t sem;
  public:
-  MMUIndicationNAND(DmaManager *pm, unsigned int  id, int tile=DEFAULT_TILE) : MMUIndicationWrapper(id,tile), portalMemory(pm) {}
-  MMUIndicationNAND(DmaManager *pm, unsigned int  id, PortalTransportFunctions *item, void *param) : MMUIndicationWrapper(id, item, param), portalMemory(pm) {}
+  int sglId;
+
+  MMUIndicationNandSim(DmaManager *pm, unsigned int  id, int tile=DEFAULT_TILE) : MMUIndicationWrapper(id,tile), portalMemory(pm) {
+    sem_init(&sem, 0, 0);
+  }
+  void wait() {
+    sem_wait(&sem);
+  }
+
   virtual void configResp(uint32_t pointer){
     fprintf(stderr, "MMUIndication::configResp: %x\n", pointer);
     portalMemory->confResp(pointer);
@@ -61,12 +70,15 @@ class MMUIndicationNAND : public MMUIndicationWrapper
         exit(-1);
   }
   virtual void idResponse(uint32_t sglId){
-    portalMemory->sglIdResp(sglId);
+    fprintf(stderr, "MMUIndication::idResponse: %x\n", sglId);
+    if (portalMemory)
+      portalMemory->sglIdResp(sglId);
+    this->sglId = sglId;
+    sem_post(&sem);
   }
 };
 
-#if 0
-class MemServerIndicationNAND : public MemServerIndicationWrapper
+class MemServerIndicationNandSim : public MemServerIndicationWrapper
 {
   MemServerRequestProxy *memServerRequestProxy;
   sem_t mtSem;
@@ -76,8 +88,7 @@ class MemServerIndicationNAND : public MemServerIndicationWrapper
       PORTAL_PRINTF("MemServerIndication::init failed to init mtSem\n");
   }
  public:
-  MemServerIndicationNAND(unsigned int  id, int tile=DEFAULT_TILE) : MemServerIndicationWrapper(id,tile), memServerRequestProxy(NULL) {init();}
-  MemServerIndicationNAND(MemServerRequestProxy *p, unsigned int  id, int tile=DEFAULT_TILE) : MemServerIndicationWrapper(id,tile), memServerRequestProxy(p) {init();}
+  MemServerIndicationNandSim(unsigned int  id, int tile=DEFAULT_TILE) : MemServerIndicationWrapper(id,tile), memServerRequestProxy(NULL) {init();}
   virtual void addrResponse(uint64_t physAddr){
     fprintf(stderr, "DmaIndication::addrResponse(physAddr=%"PRIx64")\n", physAddr);
   }
@@ -104,23 +115,29 @@ class MemServerIndicationNAND : public MemServerIndicationWrapper
     return receiveMemoryTraffic();
   }
 };
-#endif
 
 size_t numBytes = 1 << 10;
+
+extern int initNandSim(DmaManager *hostDma);
 
 int main(int argc, const char **argv)
 {
   fprintf(stderr, "Main::%s %s\n", __DATE__, __TIME__);
 
   DmaManager *hostDma = platformInit();
-  MMURequestProxy *nandsimMMU = new MMURequestProxy(IfcNames_NandMMURequestS2H);
+  MMURequestProxy *nandsimMMU = new MMURequestProxy(IfcNames_MMURequestS2H);
   DmaManager *nandsimDma = new DmaManager(nandsimMMU);
-  MMUIndicationNAND nandsimMMUIndication(nandsimDma,IfcNames_NandMMUIndicationH2S);
 
-  StrstrRequestProxy *strstrRequest = new StrstrRequestProxy(IfcNames_AlgoRequestS2H);
-  StrstrIndication *strstrIndication = new StrstrIndication(IfcNames_AlgoIndicationH2S);
+  StrstrRequestProxy *strstrRequest = new StrstrRequestProxy(IfcNames_StrstrRequestS2H);
+  StrstrIndication *strstrIndication = new StrstrIndication(IfcNames_StrstrIndicationH2S);
   
-  //MemServerIndicationNAND nandsimMemServerIndication(IfcNames_NandMemServerIndication);
+  MMUIndicationNandSim nandsimMMUIndication(nandsimDma,IfcNames_MMUIndicationH2S);
+  MemServerIndicationNandSim nandsimMemServerIndication(IfcNames_MemServerIndicationH2S);
+
+  fprintf(stderr, "Initializing nandSim...\n");
+  int haystack_len = initNandSim(hostDma);
+  int haystack_base = 0;
+  fprintf(stderr, "haystack_base=%d haystack_len=%d\n", haystack_base, haystack_len);
 
   fprintf(stderr, "Main::allocating memory...\n");
 
@@ -130,7 +147,7 @@ int main(int argc, const char **argv)
   int ref_needleAlloc = hostDma->reference(needleAlloc);
   int ref_mpNextAlloc = hostDma->reference(mpNextAlloc);
 
-  fprintf(stderr, "%08x %08x\n", ref_needleAlloc, ref_mpNextAlloc);
+  fprintf(stderr, "%s:%d %08x %08x\n", __FUNCTION__, __LINE__, ref_needleAlloc, ref_mpNextAlloc);
 
   char *needle = (char *)portalMmap(needleAlloc, numBytes);
   int *mpNext = (int *)portalMmap(mpNextAlloc, numBytes);
@@ -140,42 +157,34 @@ int main(int argc, const char **argv)
   strncpy(needle, needle_text, needle_len);
   compute_MP_next(needle, mpNext, needle_len);
 
-  // fprintf(stderr, "mpNext=[");
-  // for(int i= 0; i <= needle_len; i++) 
-  //   fprintf(stderr, "%d ", mpNext[i]);
-  // fprintf(stderr, "]\nneedle=[");
-  // for(int i= 0; i < needle_len; i++) 
-  //   fprintf(stderr, "%d ", needle[i]);
-  // fprintf(stderr, "]\n");
-
   portalCacheFlush(needleAlloc, needle, numBytes, 1);
   portalCacheFlush(mpNextAlloc, mpNext, numBytes, 1);
   fprintf(stderr, "Main::flush and invalidate complete\n");
 
-  fprintf(stderr, "Main::waiting to connect to nandsim_exe\n");
-  wait_for_connect_nandsim_exe();
-  fprintf(stderr, "Main::connected to nandsim_exe\n");
-  // base of haystack in "flash" memory
-  // this is read from nandsim_exe, but could also come from kernel driver
-  int haystack_base = read_from_nandsim_exe();
-  int haystack_len  = read_from_nandsim_exe();
-  fprintf(stderr, "haystack_base=%d haystack_len=%d\n", haystack_base, haystack_len);
-
   // request the next sglist identifier from the sglistMMU hardware module
   // which is used by the mem server accessing flash memory.
   int id = 0;
-  MMURequest_idRequest(nandsimDma->priv.sglDevice, 0);
-  sem_wait(&nandsimDma->priv.sglIdSem);
-  id = nandsimDma->priv.sglId;
+  fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);
+  if (1) {
+      MMURequest_idRequest(nandsimDma->priv.sglDevice, 0);
+      sem_wait(&nandsimDma->priv.sglIdSem);
+      id = nandsimDma->priv.sglId;
+  } else {
+      nandsimMMU->idRequest(0);
+      nandsimMMUIndication.wait();
+      id = nandsimMMUIndication.sglId;
+  }
+
+  fprintf(stderr, "[%s:%d] id=%d\n", __FUNCTION__, __LINE__, id);
   // pairs of ('offset','size') pointing to space in nandsim memory
   // this is unsafe.  To do it properly, we should get this list from
   // nandsim_exe or from the kernel driver.  This code here might overrun
   // the backing store allocated by nandsim_exe.
   RegionRef region[] = {{0, 0x100000}, {0x100000, 0x100000}};
-  printf("[%s:%d]\n", __FUNCTION__, __LINE__);
+  fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);
   int ref_haystackInNandMemory = send_reference_to_portal(nandsimDma->priv.sglDevice, sizeof(region)/sizeof(region[0]), region, id);
   sem_wait(&(nandsimDma->priv.confSem));
-  fprintf(stderr, "%08x\n", ref_haystackInNandMemory);
+  fprintf(stderr, "[%s:%d] %08x\n", __FUNCTION__, __LINE__, ref_haystackInNandMemory);
 
   // at this point, ref_needleAlloc and ref_mpNextAlloc are valid sgListIds for use by 
   // the host memory dma hardware, and ref_haystackInNandMemory is a valid sgListId for
