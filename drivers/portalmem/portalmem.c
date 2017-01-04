@@ -463,7 +463,7 @@ int portalmem_dmabuffer_create(PortalAlloc portalAlloc)
 			dmabuf = dma_buf_export(&export_info);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0))
                         dmabuf = dma_buf_export(buffer, &dma_buf_ops, len, O_RDWR , NULL);
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0))
                         dmabuf = dma_buf_export(buffer, &dma_buf_ops, len, O_RDWR);
 #else
 #error no dma_buf support known for this kernel version
