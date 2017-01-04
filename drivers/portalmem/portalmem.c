@@ -461,10 +461,12 @@ int portalmem_dmabuffer_create(PortalAlloc portalAlloc)
 			export_info.flags = O_RDWR;
 			export_info.priv = buffer;
 			dmabuf = dma_buf_export(&export_info);
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0) || LINUX_VERSION_CODE < KERNEL_VERSION(3,17,0))
-                        dmabuf = dma_buf_export(buffer, &dma_buf_ops, len, O_RDWR);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0))
                         dmabuf = dma_buf_export(buffer, &dma_buf_ops, len, O_RDWR , NULL);
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+                        dmabuf = dma_buf_export(buffer, &dma_buf_ops, len, O_RDWR);
+#else
+#error no dma_buf support known for this kernel version
 #endif
                         if (IS_ERR(dmabuf))
                                 pa_buffer_free(buffer);
