@@ -592,7 +592,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		      /* create a device node via udev */
 		      device_create(pcieportal_class, &dev->dev, this_device_number,
 				    this_portal, "%s_b%dt%dp%d", DEV_NAME, this_portal->board->info.board_number, this_portal->device_tile, this_portal->device_name);
-		      printk(KERN_INFO "%s: /dev/%s_b%dt%d%p%d = %x created\n",
+		      printk(KERN_INFO "%s: /dev/%s_b%dt%dp%d = %x created\n",
 			     DEV_NAME, DEV_NAME, this_portal->board->info.board_number, this_portal->device_tile, this_portal->device_name, this_device_number);
 		    }
 		    if (++fpn >= MAX_NUM_PORTALS){
