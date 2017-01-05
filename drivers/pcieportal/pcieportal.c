@@ -583,7 +583,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		    this_portal->offset = offs;
 		    /* add the device operations */
 		    cdev_init(&this_portal->extra->cdev, &pcieportal_fops);
-		    this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + fpn);
+		    this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + this_portal->device_number);
 		    if (cdev_add(&this_portal->extra->cdev, this_device_number, 1)) {
 		      printk(KERN_ERR "%s: cdev_add %x failed\n",
 			     DEV_NAME, this_device_number);
@@ -606,13 +606,15 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		} while (++tile_index < num_tiles);
 		this_board->info.num_portals = fpn;
                 pci_set_drvdata(dev, this_board);
-		this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + MAX_MINOR_COUNT);
-		cdev_init(&this_board->extra->cdev, &pcieportal_fops);
-		if (cdev_add(&this_board->extra->cdev, this_device_number, 1)) {
-		    printk(KERN_ERR "%s: cdev_add board failed\n", DEV_NAME);
-                }
-		if (this_board->info.board_number == 0)
+
+		if (this_board->info.board_number == 0) {
+			this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + MAX_MINOR_COUNT);
+			cdev_init(&this_board->extra->cdev, &pcieportal_fops);
+			if (cdev_add(&this_board->extra->cdev, this_device_number, 1)) {
+				printk(KERN_ERR "%s: cdev_add board failed\n", DEV_NAME);
+			}
 			device_create(pcieportal_class, &dev->dev, this_device_number, NULL, "connectal");
+		}
 
 		tune_pcie_caps(dev);
 
@@ -621,9 +623,10 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
         } /* end of if(activate) */
 
         /******** deactivate board *******/
-	if (this_board->info.board_number == 0)
+	if (this_board->info.board_number == 0) {
 		device_destroy(pcieportal_class, MKDEV(MAJOR(device_number), MINOR(device_number) + MAX_MINOR_COUNT));
-	cdev_del(&this_board->extra->cdev);
+		cdev_del(&this_board->extra->cdev);
+	}
 	fpn = 0;
 	while(fpn < this_board->info.num_portals) {
                 tPortal *this_portal = &this_board->portal[fpn];
