@@ -85,6 +85,8 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     pint->cb = (PortalHandlerTemplate *)cb;
     pint->parent = parent;
     pint->reqinfo = reqinfo;
+    if (getenv("FPGA_NUMBER") != 0)
+	pint->board_number = strtoul(getenv("FPGA_NUMBER"), 0, 0);
     if(trace_portal)
 	PORTAL_PRINTF("%s: **initialize portal_b%dt%dp%d handler %p cb %p parent %p\n", __FUNCTION__, pint->board_number, pint->fpga_tile, pint->fpga_number, handler, cb, parent);
     if (!transport) {
