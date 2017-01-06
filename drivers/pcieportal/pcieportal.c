@@ -584,12 +584,15 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		    /* add the device operations */
 		    cdev_init(&this_portal->extra->cdev, &pcieportal_fops);
 		    this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + this_portal->device_number);
+		    printk("%s:%d: calling cdev_add this_device_number=%x\n", DEV_NAME, __LINE__, this_device_number);
 		    if (cdev_add(&this_portal->extra->cdev, this_device_number, 1)) {
 		      printk(KERN_ERR "%s: cdev_add %x failed\n",
 			     DEV_NAME, this_device_number);
 		      err = -EFAULT;
 		    } else {
 		      /* create a device node via udev */
+		      printk("%s:%d: calling_device_create /dev/%s_b%dt%dp%d = %x\n",
+			     DEV_NAME, __LINE__, DEV_NAME, this_portal->board->info.board_number, this_portal->device_tile, this_portal->device_name, this_device_number);
 		      device_create(pcieportal_class, &dev->dev, this_device_number,
 				    this_portal, "%s_b%dt%dp%d", DEV_NAME, this_portal->board->info.board_number, this_portal->device_tile, this_portal->device_name);
 		      printk(KERN_INFO "%s: /dev/%s_b%dt%dp%d = %x created\n",
@@ -610,9 +613,11 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		if (this_board->info.board_number == 0) {
 			this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + MAX_MINOR_COUNT);
 			cdev_init(&this_board->extra->cdev, &pcieportal_fops);
+			printk("%s:%d: calling cdev_add this_device_number=%x\n", DEV_NAME, __LINE__, this_device_number);
 			if (cdev_add(&this_board->extra->cdev, this_device_number, 1)) {
 				printk(KERN_ERR "%s: cdev_add board failed\n", DEV_NAME);
 			}
+			printk("%s:%d: calling device_create this_device_number=%x\n", DEV_NAME, __LINE__, this_device_number);
 			device_create(pcieportal_class, &dev->dev, this_device_number, NULL, "connectal");
 		}
 
