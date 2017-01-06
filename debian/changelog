@@ -1,3 +1,9 @@
+connectal (17.01.2-1precise1) precise; urgency=medium
+
+  * Some driver fixes
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 05 Jan 2017 20:36:15 -0500
+
 connectal (17.01.1-1precise1) precise; urgency=medium
 
   * First step towards supporting multiple FPGAs on pcie
