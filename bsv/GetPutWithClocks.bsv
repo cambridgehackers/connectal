@@ -53,8 +53,8 @@ instance ConnectableWithClocks#(Get#(a), Put#(a)) provisos (
 `ifndef GET_PUT_WITH_CLOCKS_USE_XILINX_FIFO
       SyncFIFOIfc#(a) synchronizer <- mkSyncFIFO(8, inClock, inReset, outClock);
       //FIFOF#(a) synchronizer <- mkDualClockBramFIFOF(inClock, inReset, outClock, outReset);
-      let getProbe <- mkProbe();
-      let putProbe <- mkProbe();
+      let getProbe <- mkProbe(clocked_by inClock, reset_by inReset);
+      let putProbe <- mkProbe(clocked_by outClock, reset_by outReset);
        rule mcwc_doGet;
            let v <- in.get();
 	   getProbe <= v;
@@ -94,8 +94,8 @@ instance ConnectableWithClocks#(PipeOut#(a), Put#(a)) provisos (
 `ifndef GET_PUT_WITH_CLOCKS_USE_XILINX_FIFO
       SyncFIFOIfc#(a) synchronizer <- mkSyncFIFO(8, inClock, inReset, outClock);
       //FIFOF#(a) synchronizer <- mkDualClockBramFIFOF(inClock, inReset, outClock, outReset);
-      let deqProbe <- mkProbe();
-      let enqProbe <- mkProbe();
+      let deqProbe <- mkProbe(clocked_by inClock, reset_by inReset);
+      let enqProbe <- mkProbe(clocked_by outClock, reset_by outReset);
        rule mcwc_doGet;
           let v = in.first;
 	  in.deq();
@@ -136,8 +136,8 @@ instance ConnectableWithClocks#(Get#(a), PipeIn#(a)) provisos (
 `ifndef GET_PUT_WITH_CLOCKS_USE_XILINX_FIFO
       SyncFIFOIfc#(a) synchronizer <- mkSyncFIFO(8, inClock, inReset, outClock);
       //FIFOF#(a) synchronizer <- mkDualClockBramFIFOF(inClock, inReset, outClock, outReset);
-      let getProbe <- mkProbe();
-      let putProbe <- mkProbe();
+      let getProbe <- mkProbe(clocked_by inClock, reset_by inReset);
+      let putProbe <- mkProbe(clocked_by outClock, reset_by outReset);
        rule mcwc_doGet;
            let v <- in.get();
 	  getProbe <= v;
