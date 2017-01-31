@@ -1,0 +1,5 @@
+This test reproduces the bug reported in issue #133 on github.
+    https://github.com/cambridgehackers/connectal/issues/133
+
+When this design is built for kc705g2 and run on FPGA, it typically stalls
+after a few thousand requests and indications.
