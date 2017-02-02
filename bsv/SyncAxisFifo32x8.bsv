@@ -34,8 +34,8 @@ interface SyncAxisFifo8#(numeric type dwidth);
 endinterface
 import "BVI" dual_clock_axis_fifo_32x8 =
 module mkSyncAxisFifo32x8#(Clock s_aclk, Reset s_aresetn, Clock m_aclk, Reset m_aresetn)(SyncAxisFifo8#(32));
-    default_clock clk();
-    default_reset rst();
+    default_clock no_clock;
+    default_reset no_reset;
         input_clock m_aclk(m_aclk, (* unused *) GATE) = m_aclk;
         input_clock s_aclk(s_aclk, (* unused *) GATE) = s_aclk;
         input_reset s_aresetn(s_aresetn) clocked_by (s_aclk) = s_aresetn;
@@ -57,6 +57,7 @@ module mkSyncAxisFifo32x8#(Clock s_aclk, Reset s_aresetn, Clock m_aclk, Reset m_
     schedule (m_axis.tdata, m_axis.tkeep, m_axis.tlast, m_axis.tready, m_axis.tvalid, s_axis.tdata, s_axis.tkeep, s_axis.tlast, s_axis.tready, s_axis.tvalid) CF (m_axis.tdata, m_axis.tkeep, m_axis.tlast, m_axis.tready, m_axis.tvalid, s_axis.tdata, s_axis.tkeep, s_axis.tlast, s_axis.tready, s_axis.tvalid);
 endmodule
 
+(* no_default_clock, no_default_reset *)
 module mkSyncAxisFifo8#(Clock sclk, Reset srst, Clock dclk, Reset drst)(SyncAxisFifo8#(dwidth))
    provisos (Div#(dwidth, 32, numFifos),
 	     Mul#(numFifos, 32, numBits),
@@ -64,9 +65,7 @@ module mkSyncAxisFifo8#(Clock sclk, Reset srst, Clock dclk, Reset drst)(SyncAxis
 	     Bits#(Vector#(numFifos, Bit#(4)), TDiv#(numBits, 8)),
 	     Add#(b__, TDiv#(dwidth, 8), TDiv#(numBits, 8))
       );
-   Vector#(numFifos,SyncAxisFifo8#(32)) fifos <- replicateM(mkSyncAxisFifo32x8(sclk, srst, dclk, drst),
-      clocked_by sclk,
-      reset_by srst);
+   Vector#(numFifos,SyncAxisFifo8#(32)) fifos <- replicateM(mkSyncAxisFifo32x8(sclk, srst, dclk, drst));
    Integer numFifos = valueOf(numFifos);
    interface AxiStreamSlave s_axis;
        method tready = fifos[0].s_axis.tready;
@@ -115,6 +114,7 @@ module mkSyncAxisFifo8#(Clock sclk, Reset srst, Clock dclk, Reset drst)(SyncAxis
    endinterface
 endmodule
 
+(* no_default_clock, no_default_reset *)
 module mkSyncFifo8#(Clock fromClock, Reset fromReset, Clock toClock, Reset toReset)(FIFOF#(a))
    provisos (Bits#(a, asz),
 	     Div#(asz,32,afifos),
