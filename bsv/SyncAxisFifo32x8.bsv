@@ -36,8 +36,8 @@ import "BVI" dual_clock_axis_fifo_32x8 =
 module mkSyncAxisFifo32x8#(Clock s_aclk, Reset s_aresetn, Clock m_aclk, Reset m_aresetn)(SyncAxisFifo8#(32));
     default_clock clk();
     default_reset rst();
-        input_clock m_aclk(m_aclk) = m_aclk;
-        input_clock s_aclk(s_aclk) = s_aclk;
+        input_clock m_aclk(m_aclk, (* unused *) GATE) = m_aclk;
+        input_clock s_aclk(s_aclk, (* unused *) GATE) = s_aclk;
         input_reset s_aresetn(s_aresetn) clocked_by (s_aclk) = s_aresetn;
         input_reset m_aresetn_foo() clocked_by (m_aclk) = m_aresetn;
     interface AxiStreamMaster     m_axis;
@@ -64,7 +64,9 @@ module mkSyncAxisFifo8#(Clock sclk, Reset srst, Clock dclk, Reset drst)(SyncAxis
 	     Bits#(Vector#(numFifos, Bit#(4)), TDiv#(numBits, 8)),
 	     Add#(b__, TDiv#(dwidth, 8), TDiv#(numBits, 8))
       );
-   Vector#(numFifos,SyncAxisFifo8#(32)) fifos <- replicateM(mkSyncAxisFifo32x8(sclk, srst, dclk, drst));
+   Vector#(numFifos,SyncAxisFifo8#(32)) fifos <- replicateM(mkSyncAxisFifo32x8(sclk, srst, dclk, drst),
+      clocked_by sclk,
+      reset_by srst);
    Integer numFifos = valueOf(numFifos);
    interface AxiStreamSlave s_axis;
        method tready = fifos[0].s_axis.tready;
