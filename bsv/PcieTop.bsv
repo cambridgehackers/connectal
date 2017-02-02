@@ -99,14 +99,21 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
        end
    end
    else begin
-       GetPutWithClocks::mkConnectionWithClocks2(host.tpciehost.master, portalTop.slave);
+       let portalCnx <- GetPutWithClocks::mkConnectionWithClocks(host.pcieClock, host.pcieReset,
+								 host.portalClock, host.portalReset,
+								 host.tpciehost.master, portalTop.slave);
        if (valueOf(NumberOfMasters) > 0) begin
-	  zipWithM_(GetPutWithClocks::mkConnectionWithClocks2, portalTop.masters, host.tpciehost.slave);
+	  //zipWithM_(GetPutWithClocks::mkConnectionWithClocks2, portalTop.masters, host.tpciehost.slave);
+	  for (Integer i = 0; i < valueOf(NumberOfMasters); i = i + 1)
+	     let memCnx <- GetPutWithClocks::mkConnectionWithClocks(host.portalClock, host.portalReset,
+								    host.pcieClock, host.pcieReset,
+								    portalTop.masters[i], host.tpciehost.slave[i]);
        end
    end
 
    // going from level to edge-triggered interrupt
-   SyncFIFOIfc#(Bit#(4)) intrFifo <- mkSyncFIFO(8, host.portalClock, host.portalReset, host.pcieClock);
+   FIFO#(Bit#(4)) intrFifo <- mkFIFO(clocked_by host.portalClock, reset_by host.portalReset);
+   //(8, host.portalClock, host.portalReset, host.pcieClock);
    Vector#(16, Reg#(Bool)) interruptRequested <- replicateM(mkReg(False, clocked_by host.portalClock, reset_by host.portalReset));
    rule interrupt_rule;
      Maybe#(Bit#(4)) intr = tagged Invalid;
@@ -119,11 +126,17 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
 	intrFifo.enq(intr_num);
      end
    endrule
-   rule syncintr;
-      Bit#(4) intr_num <- toGet(intrFifo).get();
-      ReadOnly_MSIX_Entry msixEntry = host.tpciehost.msixEntry[intr_num];
-      host.tpciehost.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
-   endrule
+   Put#(Bit#(4)) intrPut = (interface Put;
+      method Action put(Bit#(4) intr_num);
+	ReadOnly_MSIX_Entry msixEntry = host.tpciehost.msixEntry[intr_num];
+	host.tpciehost.interruptRequest.put(tuple2({msixEntry.addr_hi, msixEntry.addr_lo}, msixEntry.msg_data));
+      endmethod
+      endinterface);
+
+   GetPutWithClocks::mkConnectionWithClocks(host.portalClock, host.portalReset,
+					    host.pcieClock, host.pcieReset,
+					    toGet(intrFifo),
+					    intrPut);
 
    interface pcie = host.tep7.pcie;
    interface pins = portalTop.pins;
