@@ -412,6 +412,7 @@ module mkPhysMemSlaveMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves)
    function Get#(MemData#(dataWidth)) getMemPortalReadData(PhysMemSlave#(aw,dataWidth) x) = x.read_server.readData;
    function Put#(MemData#(dataWidth)) getMemPortalWriteData(PhysMemSlave#(aw,dataWidth) x) = x.write_server.writeData;
    
+   Reg#(Bool) lastWriteDataSeen <- mkReg(False);
    FIFO#(Bit#(MemTagSize))        doneFifo <- mkFIFO1();
    FIFO#(PhysMemRequest#(aw,dataWidth)) req_ars <- mkSizedFIFO(1);
    FIFO#(Bit#(TLog#(numSlaves))) rs <- mkFIFO1();
@@ -452,12 +453,16 @@ module mkPhysMemSlaveMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves)
 	       });
 	    if (req.burstLen > 4) $display("**** \n\n mkPhysMemSlaveMux.writeReq len=%d \n\n ****", req.burstLen);
 	    ws.enq(truncate(psel(req.addr)));
+	    lastWriteDataSeen <= False;
 	    if(verbose) $display("mkPhysMemSlaveMux.writeReq addr=%h aw=%d psel=%h", req.addr, valueOf(aw), psel(req.addr));
 	 endmethod
       endinterface
       interface Put writeData;
-	 method Action put(MemData#(dataWidth) wdata);
+	 method Action put(MemData#(dataWidth) wdata) if (!lastWriteDataSeen);
 	    write_data.enq(tuple2(ws.first,wdata));
+	    if (wdata.last) begin
+	       lastWriteDataSeen <= True;
+	    end
 	    if(verbose) $display("mkPhysMemSlaveMux.writeData dst=%h wdata=%h", ws.first,wdata);
 	 endmethod
       endinterface
