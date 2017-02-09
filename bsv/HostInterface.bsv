@@ -98,7 +98,11 @@ import PCIEWRAPPER2       :: *;
 import Pcie2EndpointX7 :: *;
 `endif // pcie2
 `ifdef PCIE3
+`ifdef XilinxUltrascale
+import PCIEWRAPPER3u     ::*;
+`else
 import PCIEWRAPPER3      :: *;
+`endif
 import Pcie3EndpointX7   :: *;
 `endif
 `endif

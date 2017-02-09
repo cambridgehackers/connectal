@@ -50,7 +50,7 @@ import ConnectalClocks   ::*;
 import ConnectalXilinxCells   ::*;
 import XilinxCells       ::*;
 import PCIE              ::*;
-`ifdef XilinxUltrascal
+`ifdef XilinxUltrascale
 import PCIEWRAPPER3u     ::*;
 `else
 import PCIEWRAPPER3      ::*;
@@ -199,7 +199,13 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
    Reset defaultResetInverted <- mkResetInverter(defaultReset, clocked_by defaultClock);
-   PcieWrap#(PcieLanes) pcie_ep <- mkPcieWrap(defaultClock, defaultResetInverted);
+   PcieWrap#(PcieLanes) pcie_ep <- mkPcieWrap(defaultClock, 
+`ifdef XilinxUltrascale
+      defaultReset
+`else
+      defaultResetInverted
+`endif
+);
 
    // The PCIe endpoint exports full (250MHz) and half-speed (125MHz) clocks
    Clock pcieClock250 = pcie_ep.user_clk;

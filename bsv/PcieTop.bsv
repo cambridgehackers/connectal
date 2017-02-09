@@ -40,7 +40,11 @@ import ConnectalClocks   :: *;
 import GetPutWithClocks  :: *;
 `ifdef XILINX
 `ifdef PCIE3
+`ifdef XilinxUltrascale
+import PCIEWRAPPER3u     ::*;
+`else
 import PCIEWRAPPER3      :: *;
+`endif
 import Pcie3EndpointX7   :: *;
 `endif
 `ifdef PCIE2
