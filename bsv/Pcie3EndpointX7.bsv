@@ -50,7 +50,11 @@ import ConnectalClocks   ::*;
 import ConnectalXilinxCells   ::*;
 import XilinxCells       ::*;
 import PCIE              ::*;
+`ifdef XilinxUltrascal
+import PCIEWRAPPER3u     ::*;
+`else
 import PCIEWRAPPER3      ::*;
+`endif
 import Bufgctrl           ::*;
 import PcieGearbox       :: *;
 import Pipe              :: *;

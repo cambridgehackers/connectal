@@ -1,6 +1,6 @@
 {
     "options": {
-        "bsvdefines" : ["XILINX=1", "Virtex7", "PCIE", "PCIE3", "PcieHostInterface", "PhysAddrWidth=40", "NUMBER_OF_LEDS=2", "PcieLanes=8",
+        "bsvdefines" : ["XILINX=1", "VirtexUltrascale", "XilinxUltrascale", "PCIE", "PCIE3", "PcieHostInterface", "PhysAddrWidth=40", "NUMBER_OF_LEDS=2", "PcieLanes=8",
 		       	"CONNECTAL_BITS_DEPENDENCES=hw/mkTop.bit", "CONNECTAL_RUN_SCRIPT=$(CONNECTALDIR)/scripts/run.pcietest"],
         "os" : "ubuntu",
         "partname" : "xcvu095-ffva2104-2-e",
