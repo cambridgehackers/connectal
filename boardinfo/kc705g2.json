@@ -204,6 +204,48 @@
 			"PIO_DIRECTION": "OUTPUT"
 		}
     },
+    "sdio": {
+        "dat0": {
+            "PACKAGE_PIN": "AC20",
+            "IOSTANDARD": "LVCMOS25",
+            "PIO_DIRECTION": "BIDIR"
+        },
+        "dat1": {
+            "PACKAGE_PIN": "AA23",
+            "IOSTANDARD": "LVCMOS25",
+            "PIO_DIRECTION": "BIDIR"
+        },
+        "dat2": {
+            "PACKAGE_PIN": "AA22",
+            "IOSTANDARD": "LVCMOS25",
+            "PIO_DIRECTION": "BIDIR"
+        },
+        "cd_dat3": {
+            "PACKAGE_PIN": "AC21",
+            "IOSTANDARD": "LVCMOS25",
+            "PIO_DIRECTION": "BIDIR"
+        },
+        "clk": {
+            "PACKAGE_PIN": "AB23",
+            "IOSTANDARD": "LVCMOS25",
+            "PIO_DIRECTION": "OUTPUT"
+        },
+        "cmd": {
+            "PACKAGE_PIN": "AB22",
+            "IOSTANDARD": "LVCMOS25",
+            "PIO_DIRECTION": "BIDIR"
+        },
+        "sddet": {
+            "PACKAGE_PIN": "AA21",
+            "IOSTANDARD": "LVCMOS25",
+            "PIO_DIRECTION": "INPUT"
+        },
+        "sdwp": {
+            "PACKAGE_PIN": "Y21",
+            "IOSTANDARD": "LVCMOS25",
+            "PIO_DIRECTION": "INPUT"
+        }
+    },
     "pins": {
 	"userClk_p": {
 	    "PACKAGE_PIN": "K29",
