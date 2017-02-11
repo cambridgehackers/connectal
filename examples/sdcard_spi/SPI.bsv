@@ -1,5 +1,5 @@
 // This is a simple SPI Master module.
-// This is sever;y
+// This has only been tested with cpol == 0 and cpha == 0
 
 // For information about SPI, check wikipedia:
 //   https://en.wikipedia.org/wiki/Serial_Peripheral_Interface_Bus
