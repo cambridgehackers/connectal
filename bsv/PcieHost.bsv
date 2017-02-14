@@ -33,6 +33,7 @@ import ConnectalConfig   :: *;
 import PcieSplitter      :: *;
 import PcieTracer        :: *;
 import Xilinx            :: *;
+import ConnectalXilinxCells :: *;
 import Bscan             :: *;
 import Portal            :: *;
 import MemToPcie    :: *;
@@ -251,7 +252,7 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_
        sys_clk_p, sys_clk_n);
    Clock sys_clk_200mhz_buf <- mkClockBUFG(clocked_by sys_clk_200mhz);
 `endif // XILINX_SYS_CLK
-   Clock pci_clk_100mhz_buf <- mkClockIBUFDS_GTE2(
+   Clock pci_clk_100mhz_buf <- mkClockIBUFDS_GTE(
 `ifdef ClockDefaultParam
        defaultValue,
 `endif

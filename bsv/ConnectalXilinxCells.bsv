@@ -121,6 +121,67 @@ module mkConnectalClockIBUFDS_GTE2#(Bool enable, Wire#(one_bit) i, Wire#(one_bit
    return _m.gen_clk;
 endmodule: mkConnectalClockIBUFDS_GTE2
 
+interface GTE2ClockGenIfc;
+   interface Clock gen_clk;
+   interface Clock gen_clk_div2;
+endinterface
+
+import "BVI" IBUFDS_GTE2 =
+module vMkClockIBUFDS_GTE2#(IBUFDS_GTE2Params params, Bool enable, Clock clk_p, Clock clk_n)(GTE2ClockGenIfc);
+   default_clock no_clock;
+   default_reset no_reset;
+
+   input_clock clk_p(I)  = clk_p;
+   input_clock clk_n(IB) = clk_n;
+
+   port CEB = pack(!enable);
+
+   output_clock gen_clk(O);
+   output_clock gen_clk_div2(ODIV2);
+
+   parameter CLKCM_CFG      = params.clkcm_cfg;
+   parameter CLKRCV_TRST    = params.clkrcv_trst;
+   parameter CLKSWING_CFG   = (Bit#(2))'(params.clkswing_cfg);
+
+   path(I,  O);
+   path(IB, O);
+   path(I,  ODIV2);
+   path(IB, ODIV2);
+
+   same_family(clk_p, gen_clk);
+endmodule: vMkClockIBUFDS_GTE2
+
+import "BVI" IBUFDS_GTE3 =
+module vMkClockIBUFDS_GTE3#(IBUFDS_GTE2Params params, Bool enable, Clock clk_p, Clock clk_n)(GTE2ClockGenIfc);
+   default_clock no_clock;
+   default_reset no_reset;
+
+   input_clock clk_p(I)  = clk_p;
+   input_clock clk_n(IB) = clk_n;
+
+   port CEB = pack(!enable);
+
+   output_clock gen_clk(O);
+   output_clock gen_clk_div2(ODIV2);
+
+   path(I,  O);
+   path(IB, O);
+   path(I,  ODIV2);
+   path(IB, ODIV2);
+
+   same_family(clk_p, gen_clk);
+endmodule: vMkClockIBUFDS_GTE3
+
+module mkClockIBUFDS_GTE#(IBUFDS_GTE2Params params, Bool enable, Clock clk_p, Clock clk_n)(Clock);
+`ifdef XilinxUltrascale
+   let _m <- vMkClockIBUFDS_GTE3(params, enable, clk_p, clk_n);
+`else
+   let _m <- vMkClockIBUFDS_GTE2(params, enable, clk_p, clk_n);
+`endif
+   return _m.gen_clk;
+endmodule: mkClockIBUFDS_GTE
+
+
 import "BVI" OBUFT =
 module mkOBUFT#(ReadOnly#(one_bit) i, ReadOnly#(oneb_bit) t)(ReadOnly#(onec_bit)) provisos(Bits#(one_bit,1), Bits#(oneb_bit,1), Bits#(onec_bit,1));
    default_clock clk();
