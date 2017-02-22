@@ -8,7 +8,7 @@
         "rewireclockstring" : "tclzynqrewireclock",
         "constraints": [],
         "implconstraints": ["constraints/xilinx/zcu102.xdc"],
-        "TOP" : "ZynqTop",
+        "TOP" : "ZynqUltraTop",
         "runscript" : "run.pcietest",
         "CONNECTALFLAGS" : ["--mainclockperiod=10", "--derivedclockperiod=5"],
         "need_pcie" : "unused"
