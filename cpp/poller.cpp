@@ -51,7 +51,7 @@ PortalPoller::PortalPoller(int autostart)
 #if defined(SIMULATION)
     timeout = 100;
 #endif
-#if defined(BOARD_nfsume)
+#if defined(PCIE3)
     timeout = 100;
 #endif
 }
