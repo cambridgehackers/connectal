@@ -531,8 +531,10 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
 	}
 	asm volatile("mfence");
     }
+#elif defined(__aarch64__)
+    // TBD
 #else
-#error("dCAcheFlush not defined for unspecified architecture")
+#error("portalCacheFlush not defined for unspecified architecture")
 #endif
     if(trace_portal)
         PORTAL_PRINTF("dcache flush\n");
