@@ -29,12 +29,14 @@ import Connectable::*;
 import ConnectableWithTrace::*;
 import Bscan::*;
 import Vector::*;
-import AxiMasterSlave::*;
-import AxiDma::*;
 import XilinxCells::*;
 import ConnectalXilinxCells::*;
 import ConnectalClocks::*;
+import AxiMasterSlave::*;
 import Axi4MasterSlave::*;
+import AxiDma::*;
+import AxiBits::*;
+import MemTypes::*;
 import Platform::*;
 import ZYNQ_ULTRA::*;
 
@@ -136,17 +138,62 @@ module mkPSULIB#(Clock axiClock)(PSULIB);
     endmethod
 endmodule
 
-instance ConnectableWithTrace#(PsultraMaxigp,AxiMasterSlave::Axi3Slave#(32, 32, 12),traceType);
-   module mkConnectionWithTrace#(PsultraMaxigp m, AxiMasterSlave::Axi3Slave#(32, 32, 12) s, traceType readout)(Empty);
-   endmodule
+interface PsultraAruser;
+    method Action      aruser(Bit#(5) v);
+    method Action      awuser(Bit#(5) v);
+endinterface
+
+instance ToAxi4MasterBits#(Axi4MasterBits#(40,128,16,PsultraAruser), PsultraMaxigp);
+function Axi4MasterBits#(40,128,16,PsultraAruser) toAxi4MasterBits(PsultraMaxigp m);
+   return (interface Axi4MasterBits#(40,128,16,PsultraAruser);
+      method araddr = m.araddr;
+	   method arburst = m.arburst;
+	   method arcache = m.arcache;
+	   method Bit#(1) aresetn(); return 1; endmethod
+	   method Bit#(16)     arid(); return 0; endmethod
+	   method arlen = m.arlen;
+	   method arlock = 0;
+	   method arprot = m.arprot;
+	   method arqos = 0;
+	   method arready = m.arready;
+	   method arsize = m.arsize;
+	   method arvalid = m.arvalid;
+	   method Bit#(40)     awaddr(); return 0; endmethod
+	   method Bit#(2)     awburst(); return 0; endmethod
+	   method Bit#(4)     awcache(); return 0; endmethod
+	   method Bit#(16)     awid(); return 0; endmethod
+	   method Bit#(8)     awlen(); return 0; endmethod
+	   method Bit#(2)     awlock(); return 0; endmethod
+	   method Bit#(3)     awprot(); return 0; endmethod
+	   method Bit#(4)     awqos(); return 0; endmethod
+	   method Action      awready(Bit#(1) v); endmethod
+	   method Bit#(3)     awsize(); return 0; endmethod
+	   method Bit#(1)     awvalid(); return 0; endmethod
+	   method Action      bid(Bit#(16) v); endmethod
+	   method Bit#(1)     bready(); return 0; endmethod
+	   method Action      bresp(Bit#(2) v); endmethod
+	   method Action      bvalid(Bit#(1) v); endmethod
+	   method rdata = m.rdata;
+	   method Action      rid(Bit#(16) v); endmethod
+	   method rlast = m.rlast;
+	   method rready = m.rready;
+	   method rresp = m.rresp;
+	   method rvalid = m.rvalid;
+	   method Bit#(128)     wdata(); return 0; endmethod
+	   method Bit#(16)     wid(); return 0; endmethod
+	   method Bit#(1)     wlast(); return 0; endmethod
+	   method Action      wready(Bit#(1) v); endmethod
+	   method Bit#(TDiv#(128,8))     wstrb(); return 0; endmethod
+	   method Bit#(1)     wvalid(); return 0; endmethod
+	 interface extra = ?;   
+	 endinterface);
+   endfunction: toAxi4MasterBits
 endinstance
 
-instance ConnectableWithTrace#(PSULIB, Platform, traceType)
-   provisos (ConnectableWithTrace::ConnectableWithTrace#(PsultraMaxigp,AxiMasterSlave::Axi3Slave#(32, 32, 12),traceType)
-	     );
-   module mkConnectionWithTrace#(PSULIB psu, Platform top, traceType readout)(Empty)
-      provisos (ConnectableWithTrace#(PsultraMaxigp, Axi3Slave#(32,32,12),traceType));
-      Axi3Slave#(32,32,12) ctrl <- mkAxiDmaSlave(top.slave);
-      mkConnectionWithTrace(psu.m_axi_gp[0], ctrl, readout);
+instance ConnectableWithTrace#(PSULIB, Platform, traceType);
+   module mkConnectionWithTrace#(PSULIB psu, Platform top, traceType readout)(Empty);
+      Axi4MasterBits#(40,128,16,PsultraAruser) master = toAxi4MasterBits(psu.m_axi_gp[0]);
+      PhysMemMaster#(32,32) physMemMaster <- mkPhysMemMaster(master);
+      mkConnection(physMemMaster, top.slave);
    endmodule
 endinstance
