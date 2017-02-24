@@ -293,6 +293,11 @@ ifneq ($(NEED_XILINX_PCIE_$(BOARD)),)
 	$(Q)[ -e $(IPDIR) ] || mkdir -p $(IPDIR)
 	cd $(PROJECTDIR); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) vivado -notrace -mode batch -source $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
 endif
+ifeq ($(BOARD),zcu102)
+	@echo "building ... $(BOARD) Zynq MPSOC core"
+	$(Q)[ -e $(IPDIR) ] || mkdir -p $(IPDIR)
+	cd $(PROJECTDIR); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) vivado -notrace -mode batch -source $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-zynq-mpsoc.tcl
+endif
 
 ifneq (, $(QUARTUS_SH))
 # Synthesis Altera PCIe Core and PLL
