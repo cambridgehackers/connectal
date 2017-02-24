@@ -570,4 +570,7 @@ endinstance
 typeclass MkPhysMemSlave#(type srctype, numeric type addrWidth, numeric type dataWidth);
    module mkPhysMemSlave#(srctype axiSlave)(PhysMemSlave#(addrWidth,dataWidth));
 endtypeclass
+typeclass MkPhysMemMaster#(type srctype, numeric type addrWidth, numeric type dataWidth);
+   module mkPhysMemMaster#(srctype axiSlave)(PhysMemMaster#(addrWidth,dataWidth));
+endtypeclass
 
