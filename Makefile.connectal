@@ -219,6 +219,9 @@ ifeq ($(NEED_ALTERA_PCIE_$(BOARD)),1)
 	FPGAMAKE_CONNECTALFLAGS += --tcl=$(CONNECTALDIR)/constraints/altera/$(BOARD).sdc
 	CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS -demote-errors G0066:G0045 -suppress-warnings G0046:G0020:S0015:S0080:S0039"
 endif
+ifeq $(BOARD),zcu102)
+    CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/zynq_ultra_ps_e_0/zynq_ultra_ps_e_0.xci
+endif
 
 CONNECTALFLAGS += $(FPGAMAKE_CONNECTALFLAGS)
 ifeq ($(USE_BUILDCACHE),1)
