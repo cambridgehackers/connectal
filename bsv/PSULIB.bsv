@@ -116,9 +116,17 @@ module mkPSULIB#(Clock axiClock)(PSULIB);
    // this rule connects the pl_clk wires to the clock net via B2C
    for (Integer i = 0; i < 1; i = i + 1) begin
       ReadOnly#(Bit#(1)) fclkb;
+      ReadOnly#(Bit#(1)) fclkresetnb;
       fclkb       <- mkNullCrossingWire(b2c[i].c, psu.pl.clk0);
+      fclkresetnb <- mkNullCrossingWire(b2c[i].c, psu.pl.resetn0);
+`ifndef BSV_POSITIVE_RESET
+      let resetValue = 0;
+`else
+      let resetValue = 1;
+`endif
       rule b2c_rule1;
 	 b2c[i].inputclock(fclkb[i]);
+	 b2c[i].inputreset(fclkresetnb[i] == 0 ? resetValue : ~resetValue);
       endrule
    end
 
