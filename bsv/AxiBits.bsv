@@ -25,6 +25,7 @@ import Clocks::*;
 import FIFOF::*;
 import CFFIFO::*;
 import GetPut::*;
+import Probe::*;
 import MemTypes::*;
 import EHRM::*;
 import Axi4MasterSlave::*;
@@ -373,47 +374,55 @@ instance MkPhysMemMaster#(Axi4MasterBits#(axiAddrWidth,axiDataWidth,idWidth,extr
       FIFOF#(MemData#(dataWidth)) wfifo <- mkAxiFifoF();
       FIFOF#(Bit#(MemTagSize)) bfifo <- mkAxiFifoF();
       FIFOF#(Bit#(idWidth)) rtagfifo <- mkAxiFifoF();
+      FIFOF#(Bit#(idWidth)) awtagfifo <- mkAxiFifoF();
       FIFOF#(Bit#(idWidth)) wtagfifo <- mkAxiFifoF();
 
+      let arreadyProbe <- mkProbe();
       rule rl_arvalid_araddr;
+	 arreadyProbe <= pack(arfifo.notFull && rtagfifo.notFull);
 	 axiMaster.arready(pack(arfifo.notFull && rtagfifo.notFull));
       endrule
       rule rl_arfifo if (axiMaster.arvalid() == 1);
 	 let req <- toGet(arfifo).get();
-	 if (axiMaster.arvalid() == 1) begin
-	    let addr = truncate(axiMaster.araddr());
-	    arfifo.enq(PhysMemRequest{ addr: addr, burstLen: 4, tag: 0 } );
-	    rtagfifo.enq(axiMaster.arid());
-	 end
+	 let addr = truncate(axiMaster.araddr());
+	 arfifo.enq(PhysMemRequest{ addr: addr, burstLen: 4, tag: 0 } );
+	 rtagfifo.enq(axiMaster.arid());
       endrule
+      let rvalidProbe <- mkProbe();
       rule rl_rready;
+	 rvalidProbe <= pack(rfifo.notEmpty && rtagfifo.notEmpty);
 	 axiMaster.rvalid(pack(rfifo.notEmpty && rtagfifo.notEmpty));
       endrule
       rule rl_rdata if (axiMaster.rready() == 1);
 	 let rtag <- toGet(rtagfifo).get();
 	 let rdata <- toGet(rfifo).get();
+	 axiMaster.rresp(0);
 	 axiMaster.rdata(extend(rdata.data));
 	 axiMaster.rid(extend(rtag));
       endrule
 
+      let awreadyProbe <- mkProbe();
       rule rl_awvalid_awaddr;
-	 axiMaster.awready(pack(awfifo.notFull && wtagfifo.notFull));
+	 awreadyProbe <= pack(awfifo.notFull && awtagfifo.notFull);
+	 axiMaster.awready(pack(awfifo.notFull && awtagfifo.notFull));
       endrule
       rule rl_awfifo if (axiMaster.awvalid() == 1);
-	 if (awfifo.notFull) begin
-	    let addr = truncate(axiMaster.awaddr());
-	    awfifo.enq(PhysMemRequest{ addr: addr, tag: 0, burstLen: 4 });
-	    //wtagfifo.enq(axiMaster.awid());
-	 end
+	 let addr = truncate(axiMaster.awaddr());
+	 awfifo.enq(PhysMemRequest{ addr: addr, tag: 0, burstLen: 4 });
+	 awtagfifo.enq(axiMaster.awid());
       endrule
+      let wreadyProbe <- mkProbe();
       rule rl_wready;
+	 wreadyProbe <= pack(wfifo.notFull);
 	 axiMaster.wready(pack(wfifo.notFull));
       endrule
       rule rl_wdata if (axiMaster.wvalid() == 1);
 	 wfifo.enq(MemData { data: truncate(axiMaster.wdata()), tag: 0, last: True});
 	 wtagfifo.enq(axiMaster.wid());
       endrule
+      let bvalidProbe <- mkProbe();
       rule rl_bvalid;
+	 bvalidProbe <= pack(wtagfifo.notEmpty && bfifo.notEmpty);
 	 axiMaster.bvalid(pack(wtagfifo.notEmpty && bfifo.notEmpty));
       endrule
       rule rl_done if (axiMaster.bready() == 1);
