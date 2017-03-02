@@ -23,7 +23,7 @@ import GetPut::*;
 import AxiBits::*;
 
 (* always_ready, always_enabled *)
-interface PsultraMaxigp;
+interface Ps8Maxigp;
     method Bit#(40)     araddr();
     method Bit#(2)     arburst();
     method Bit#(4)     arcache();
@@ -52,21 +52,21 @@ interface PsultraMaxigp;
     method Bit#(1)     bready();
     method Action      bresp(Bit#(2) v);
     method Action      bvalid(Bit#(1) v);
-    method Action      rdata(Bit#(128) v);
+    method Action      rdata(Bit#(32) v);
     method Action      rid(Bit#(16) v);
     method Action      rlast(Bit#(1) v);
     method Bit#(1)     rready();
     method Action      rresp(Bit#(2) v);
     method Action      rvalid(Bit#(1) v);
-    method Bit#(128)     wdata();
+    method Bit#(32)     wdata();
     method Bit#(1)     wlast();
     method Action      wready(Bit#(1) v);
-    method Bit#(16)     wstrb();
+    method Bit#(4)     wstrb();
     method Bit#(1)     wvalid();
 endinterface
 (* always_ready, always_enabled *)
 (* always_ready, always_enabled *)
-interface PsultraPl;
+interface Ps8Pl;
     method Bit#(1)     clk0();
     method Bit#(1)     clk1();
     method Action      ps_irq0(Bit#(1) v);
@@ -74,9 +74,9 @@ interface PsultraPl;
 endinterface
 (* always_ready, always_enabled *)
 interface PS8;
-    interface PsultraMaxigp     maxigp0;
-    interface PsultraMaxigp     maxigp2;
-    interface PsultraPl     pl;
+    interface Ps8Maxigp     maxigp0;
+    interface Ps8Maxigp     maxigp2;
+    interface Ps8Pl     pl;
 endinterface
 import "BVI" zynq_ultra_ps_e_0 =
 module mkPS8#(Clock maxihpm0_fpd_aclk, Clock maxihpm0_lpd_aclk)(PS8);
@@ -86,7 +86,7 @@ module mkPS8#(Clock maxihpm0_fpd_aclk, Clock maxihpm0_lpd_aclk)(PS8);
          /* from clock*/
         input_clock maxihpm0_lpd_aclk(maxihpm0_lpd_aclk) = maxihpm0_lpd_aclk;
          /* from clock*/
-    interface PsultraMaxigp     maxigp0;
+    interface Ps8Maxigp     maxigp0;
         method maxigp0_araddr araddr() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
         method maxigp0_arburst arburst() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
         method maxigp0_arcache arcache() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
@@ -127,7 +127,7 @@ module mkPS8#(Clock maxihpm0_fpd_aclk, Clock maxihpm0_lpd_aclk)(PS8);
         method maxigp0_wstrb wstrb() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
         method maxigp0_wvalid wvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
     endinterface
-    interface PsultraMaxigp     maxigp2;
+    interface Ps8Maxigp     maxigp2;
         method maxigp2_araddr araddr() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
         method maxigp2_arburst arburst() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
         method maxigp2_arcache arcache() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
@@ -168,7 +168,7 @@ module mkPS8#(Clock maxihpm0_fpd_aclk, Clock maxihpm0_lpd_aclk)(PS8);
         method maxigp2_wstrb wstrb() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
         method maxigp2_wvalid wvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
     endinterface
-    interface PsultraPl     pl;
+    interface Ps8Pl     pl;
         method pl_clk0 clk0() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
         method pl_clk1 clk1() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
         method ps_irq0(pl_ps_irq0) enable((*inhigh*) EN_pl_ps_irq0) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
