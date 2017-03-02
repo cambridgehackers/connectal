@@ -8,9 +8,9 @@
    -c
    maxihpm0_lpd_aclk
    -I
-   PSUltra
+   PS8
    -P
-   PSUltra
+   PS8
    -o
    ZYNQ_ULTRA.bsv
    ../../out/zcu102/zynq_ultra_ps_e_0/zynq_ultra_ps_e_0_stub.v
@@ -73,13 +73,13 @@ interface PsultraPl;
     method Bit#(1)     resetn0();
 endinterface
 (* always_ready, always_enabled *)
-interface PSUltra;
+interface PS8;
     interface PsultraMaxigp     maxigp0;
     interface PsultraMaxigp     maxigp2;
     interface PsultraPl     pl;
 endinterface
 import "BVI" zynq_ultra_ps_e_0 =
-module mkPSUltra#(Clock maxihpm0_fpd_aclk, Clock maxihpm0_lpd_aclk)(PSUltra);
+module mkPS8#(Clock maxihpm0_fpd_aclk, Clock maxihpm0_lpd_aclk)(PS8);
     default_clock no_clock;
     default_reset no_reset;
         input_clock maxihpm0_fpd_aclk(maxihpm0_fpd_aclk) = maxihpm0_fpd_aclk;

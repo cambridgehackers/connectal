@@ -31,7 +31,7 @@ import MemTypes          :: *;
 import AxiMasterSlave    :: *;
 import XilinxCells       :: *;
 import ConnectalXilinxCells   :: *;
-import PSULIB::*;
+import PS8LIB::*;
 import ZYNQ_ULTRA::*;
 import CtrlMux::*;
 import AxiDma            :: *;
@@ -80,9 +80,9 @@ module mkZynqUltraTop `SYS_CLK_PARAM (ZynqUltraTop);
    B2C axiClockB2C <- mkB2C();
    let axiClock = axiClockB2C.c;
 `endif
-   PSULIB ps7 <- mkPSULIB(axiClock);
-   Clock mainclock = ps7.portalClock;
-   Reset mainreset = ps7.portalReset;
+   PS8LIB ps8 <- mkPS8LIB(axiClock);
+   Clock mainclock = ps8.portalClock;
+   Reset mainreset = ps8.portalReset;
 
 `ifdef XILINX_SYS_CLK
    Clock sys_clk_200mhz <- mkClockIBUFDS(
@@ -98,11 +98,11 @@ module mkZynqUltraTop `SYS_CLK_PARAM (ZynqUltraTop);
    Vector#(NumberOfUserTiles,ConnectalTop#(`PinType)) ts <- replicateM(mkConnectalTop(
 `ifdef IMPORT_HOSTIF
       (interface HostInterface;
-          interface ps7 = ps7;
+          interface ps8 = ps8;
 	  interface portalClock = mainclock;
 	  interface portalReset = mainreset;
-	  interface derivedClock = ps7.derivedClock;
-	  interface derivedReset = ps7.derivedReset;
+	  interface derivedClock = ps8.derivedClock;
+	  interface derivedReset = ps8.derivedReset;
           interface bscan = lbscan.loc[0];
 `ifdef XILINX_SYS_CLK
        interface tsys_clk_200mhz = sys_clk_200mhz;
@@ -111,7 +111,7 @@ module mkZynqUltraTop `SYS_CLK_PARAM (ZynqUltraTop);
       endinterface),
 `else                  // enables synthesis boundary
 `ifdef IMPORT_HOST_CLOCKS
-      ps7.derivedClock, ps7.derivedReset,
+      ps8.derivedClock, ps8.derivedReset,
 `endif
 `endif
       clocked_by mainclock, reset_by mainreset));
@@ -124,19 +124,19 @@ module mkZynqUltraTop `SYS_CLK_PARAM (ZynqUltraTop);
 `endif
 
    Platform top <- mkPlatform(ts, clocked_by mainclock, reset_by mainreset);
-   mkConnectionWithTrace(ps7, top, lbscan.loc[1], clocked_by mainclock, reset_by mainreset);
+   mkConnectionWithTrace(ps8, top, lbscan.loc[1], clocked_by mainclock, reset_by mainreset);
 
    let intr_mux <- mkInterruptMux(top.interrupt);
    rule send_int_rule;
-      ps7.interrupt(pack(intr_mux));
+      ps8.interrupt(pack(intr_mux));
    endrule
 
-   module bufferClock#(Integer i)(Clock); let bc <- mkClockBUFG(clocked_by ps7.plclk[i]); return bc; endmodule
-   //module bufferReset#(Integer i)(Reset); let rc <- mkSyncReset(10, ps7.fclkreset[i], ps7.fclkclk[0]); return rc; endmodule
+   module bufferClock#(Integer i)(Clock); let bc <- mkClockBUFG(clocked_by ps8.plclk[i]); return bc; endmodule
+   //module bufferReset#(Integer i)(Reset); let rc <- mkSyncReset(10, ps8.fclkreset[i], ps8.fclkclk[0]); return rc; endmodule
    Vector#(4, Clock) unused_clock <- genWithM(bufferClock);
    //Vector#(4, Reset) unused_reset <- genWithM(bufferReset);
 
-   //interface zynq = ps7.pins;
+   //interface zynq = ps8.pins;
    interface pins = top.pins;
    interface deleteme_unused_clock = unused_clock;
    //interface deleteme_unused_reset = unused_reset;

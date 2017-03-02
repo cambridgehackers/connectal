@@ -50,7 +50,7 @@ endinterface
 interface ZynqPins;
 endinterface
 
-interface PSULIB;
+interface PS8LIB;
     (* prefix="" *)
     interface Vector#(1, PsultraMaxigp)     m_axi_gp;
     method Action                             interrupt(Bit#(1) v);
@@ -61,7 +61,7 @@ interface PSULIB;
     interface Reset derivedReset;
 endinterface
 
-module mkPSULIB#(Clock axiClock)(PSULIB);
+module mkPS8LIB#(Clock axiClock)(PS8LIB);
    // B2C converts a bit to a clock, enabling us to break the apparent cycle
    Vector#(4, B2C) b2c <- replicateM(mkB2C());
 
@@ -111,7 +111,7 @@ module mkPSULIB#(Clock axiClock)(PSULIB);
    let derived_reset_unbuffered <- mkSyncReset(10, single_reset, derived_clock);
    let derived_reset <- mkResetBUFG(clocked_by derived_clock, reset_by derived_reset_unbuffered);
 
-   ZYNQ_ULTRA::PSUltra psu <- ZYNQ_ULTRA::mkPSUltra(single_clock, single_clock);
+   ZYNQ_ULTRA::PS8ltra psu <- ZYNQ_ULTRA::mkPS8ltra(single_clock, single_clock);
 
    // this rule connects the pl_clk wires to the clock net via B2C
    for (Integer i = 0; i < 1; i = i + 1) begin
@@ -198,8 +198,8 @@ function Axi4MasterBits#(40,128,16,PsultraAruser) toAxi4MasterBits(PsultraMaxigp
    endfunction: toAxi4MasterBits
 endinstance
 
-instance ConnectableWithTrace#(PSULIB, Platform, traceType);
-   module mkConnectionWithTrace#(PSULIB psu, Platform top, traceType readout)(Empty);
+instance ConnectableWithTrace#(PS8LIB, Platform, traceType);
+   module mkConnectionWithTrace#(PS8LIB psu, Platform top, traceType readout)(Empty);
       Axi4MasterBits#(40,128,16,PsultraAruser) master = toAxi4MasterBits(psu.m_axi_gp[0]);
       PhysMemMaster#(32,32) physMemMaster <- mkPhysMemMaster(master);
       mkConnection(physMemMaster, top.slave);
