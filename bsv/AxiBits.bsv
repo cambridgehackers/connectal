@@ -365,21 +365,23 @@ module mkAxiFifoF(FIFOF#(t)) provisos(Bits#(t, tSz));
   endmethod
 endmodule
 
-instance MkPhysMemMaster#(Axi4MasterBits#(axiAddrWidth,axiDataWidth,idWidth,extra),addrWidth,dataWidth)
-      provisos (Add#(addrWidth,a__,axiAddrWidth),Add#(dataWidth,b__,axiDataWidth),
+typedef 128 MpsocAxiDataWidth;
+typedef 32 PhysMemDataWidth;
+instance MkPhysMemMaster#(Axi4MasterBits#(axiAddrWidth,MpsocAxiDataWidth,idWidth,extra),addrWidth,PhysMemDataWidth)
+      provisos (Add#(addrWidth,a__,axiAddrWidth),
 		Add#(c__, 6, idWidth)
 		);
-   module mkPhysMemMaster#(Axi4MasterBits#(axiAddrWidth,axiDataWidth,idWidth,extra) axiMaster)(PhysMemMaster#(addrWidth,dataWidth));
-      FIFOF#(PhysMemRequest#(addrWidth,dataWidth)) arfifo <- mkAxiFifoF();
-      FIFOF#(MemData#(dataWidth)) rfifo <- mkAxiFifoF();
-      FIFOF#(PhysMemRequest#(addrWidth,dataWidth)) awfifo <- mkAxiFifoF();
-      FIFOF#(MemData#(dataWidth)) wfifo <- mkAxiFifoF();
+   module mkPhysMemMaster#(Axi4MasterBits#(axiAddrWidth,MpsocAxiDataWidth,idWidth,extra) axiMaster)(PhysMemMaster#(addrWidth,PhysMemDataWidth));
+      FIFOF#(PhysMemRequest#(addrWidth,PhysMemDataWidth)) arfifo <- mkAxiFifoF();
+      FIFOF#(MemData#(PhysMemDataWidth)) rfifo <- mkAxiFifoF();
+      FIFOF#(PhysMemRequest#(addrWidth,PhysMemDataWidth)) awfifo <- mkAxiFifoF();
+      FIFOF#(MemData#(PhysMemDataWidth)) wfifo <- mkAxiFifoF();
       FIFOF#(Bit#(MemTagSize)) bfifo <- mkAxiFifoF();
       FIFOF#(Bit#(idWidth)) rtagfifo <- mkAxiFifoF();
       FIFOF#(Bit#(idWidth)) awtagfifo <- mkAxiFifoF();
       FIFOF#(Bit#(idWidth)) wtagfifo <- mkAxiFifoF();
 
-   let beatShift = fromInteger(valueOf(TLog#(TDiv#(dataWidth,8))));
+   let beatShift = fromInteger(valueOf(TLog#(TDiv#(PhysMemDataWidth,8))));
 // req_ar (M=>S)
       let arreadyProbe <- mkProbe();
       rule rl_arready;
@@ -411,7 +413,8 @@ instance MkPhysMemMaster#(Axi4MasterBits#(axiAddrWidth,axiDataWidth,idWidth,extr
 	 end
 	 
 	 axiMaster.rresp(0); //okay
-	 axiMaster.rdata(extend(rdata.data));
+	 Vector#(4,Bit#(32)) words = replicate(rdata.data);
+	 axiMaster.rdata(pack(words));
 	 axiMaster.rid(extend(rtag));
 	 axiMaster.rlast(rdata.last?1:0); // added
       endrule
