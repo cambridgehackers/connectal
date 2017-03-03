@@ -111,7 +111,7 @@ module mkPS8LIB#(Clock axiClock)(PS8LIB);
    let derived_reset_unbuffered <- mkSyncReset(10, single_reset, derived_clock);
    let derived_reset <- mkResetBUFG(clocked_by derived_clock, reset_by derived_reset_unbuffered);
 
-   ZYNQ_ULTRA::PS8ltra psu <- ZYNQ_ULTRA::mkPS8ltra(single_clock, single_clock);
+   ZYNQ_ULTRA::PS8 psu <- ZYNQ_ULTRA::mkPS8(single_clock, single_clock);
 
    // this rule connects the pl_clk wires to the clock net via B2C
    for (Integer i = 0; i < 1; i = i + 1) begin
