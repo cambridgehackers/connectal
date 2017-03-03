@@ -385,6 +385,9 @@ if (trace_portal) fprintf(stderr, "[%s:%d] LD_LIBRARY_PATH %s *******\n", __FUNC
 #ifdef __arm__
 	  argv[ind++] = (char *)"-x"; // program via /dev/xdevcfg
 #endif
+#ifdef __aarch64__
+	  argv[ind++] = (char *)"-m"; // program via fpga manager
+#endif
 	  argv[ind++] = filename;
           errno = 0;
           if (filename) // only run fpgajtag if filename was found
