@@ -366,7 +366,9 @@ module mkAxiFifoF(FIFOF#(t)) provisos(Bits#(t, tSz));
 endmodule
 
 instance MkPhysMemMaster#(Axi4MasterBits#(axiAddrWidth,axiDataWidth,idWidth,extra),addrWidth,dataWidth)
-      provisos (Add#(addrWidth,a__,axiAddrWidth),Add#(dataWidth,b__,axiDataWidth));
+      provisos (Add#(addrWidth,a__,axiAddrWidth),Add#(dataWidth,b__,axiDataWidth),
+		Add#(c__, 6, idWidth)
+		);
    module mkPhysMemMaster#(Axi4MasterBits#(axiAddrWidth,axiDataWidth,idWidth,extra) axiMaster)(PhysMemMaster#(addrWidth,dataWidth));
       FIFOF#(PhysMemRequest#(addrWidth,dataWidth)) arfifo <- mkAxiFifoF();
       FIFOF#(MemData#(dataWidth)) rfifo <- mkAxiFifoF();
@@ -377,58 +379,88 @@ instance MkPhysMemMaster#(Axi4MasterBits#(axiAddrWidth,axiDataWidth,idWidth,extr
       FIFOF#(Bit#(idWidth)) awtagfifo <- mkAxiFifoF();
       FIFOF#(Bit#(idWidth)) wtagfifo <- mkAxiFifoF();
 
+   let beatShift = fromInteger(valueOf(TLog#(TDiv#(dataWidth,8))));
+// req_ar (M=>S)
       let arreadyProbe <- mkProbe();
-      rule rl_arvalid_araddr;
-	 arreadyProbe <= pack(arfifo.notFull && rtagfifo.notFull);
-	 axiMaster.arready(pack(arfifo.notFull && rtagfifo.notFull));
+      rule rl_arready;
+	 let arready = pack(arfifo.notFull && rtagfifo.notFull);
+	 arreadyProbe <= arready;
+	 axiMaster.arready(arready);
       endrule
       rule rl_arfifo if (axiMaster.arvalid() == 1);
-	 let req <- toGet(arfifo).get();
 	 let addr = truncate(axiMaster.araddr());
-	 arfifo.enq(PhysMemRequest{ addr: addr, burstLen: 4, tag: 0 } );
-	 rtagfifo.enq(axiMaster.arid());
-      endrule
-      let rvalidProbe <- mkProbe();
-      rule rl_rready;
-	 rvalidProbe <= pack(rfifo.notEmpty && rtagfifo.notEmpty);
-	 axiMaster.rvalid(pack(rfifo.notEmpty && rtagfifo.notEmpty));
-      endrule
-      rule rl_rdata if (axiMaster.rready() == 1);
-	 let rtag <- toGet(rtagfifo).get();
-	 let rdata <- toGet(rfifo).get();
-	 axiMaster.rresp(0);
-	 axiMaster.rdata(extend(rdata.data));
-	 axiMaster.rid(extend(rtag));
+	 let burstLen = extend(axiMaster.arlen+1) << beatShift; // calculate burstLen
+	 arfifo.enq(PhysMemRequest{ addr: addr, burstLen: burstLen, tag: 0 } ); // burstlen corrected
+	 rtagfifo.enq(axiMaster.arid()); // what if the single request with multiple transfer
       endrule
 
+// resp_read (S=>M)
+      let rvalidProbe <- mkProbe();
+      rule rl_rvalid;
+	 let rvalid = pack(rfifo.notEmpty && rtagfifo.notEmpty);
+	 rvalidProbe <= rvalid;
+	 axiMaster.rvalid(rvalid);
+      endrule
+      rule rl_rdata if (axiMaster.rready() == 1);
+	 //let rtag <- toGet(rtagfifo).get();
+	 let rtag = rtagfifo.first();
+	 let rdata <- toGet(rfifo).get();
+
+	 if (rdata.last) begin
+		 rtagfifo.deq(); // deq rtagfifo only if last beat
+	 end
+	 
+	 axiMaster.rresp(0); //okay
+	 axiMaster.rdata(extend(rdata.data));
+	 axiMaster.rid(extend(rtag));
+	 axiMaster.rlast(rdata.last?1:0); // added
+      endrule
+
+// req_aw (M=>S)
       let awreadyProbe <- mkProbe();
       rule rl_awvalid_awaddr;
-	 awreadyProbe <= pack(awfifo.notFull && awtagfifo.notFull);
-	 axiMaster.awready(pack(awfifo.notFull && awtagfifo.notFull));
+	 let awready = pack(awfifo.notFull && awtagfifo.notFull);
+	 awreadyProbe <= awready;
+	 axiMaster.awready(awready);
       endrule
       rule rl_awfifo if (axiMaster.awvalid() == 1);
 	 let addr = truncate(axiMaster.awaddr());
-	 awfifo.enq(PhysMemRequest{ addr: addr, tag: 0, burstLen: 4 });
-	 awtagfifo.enq(axiMaster.awid());
+	 let burstLen = extend(axiMaster.awlen+1) << beatShift; // calculate burstLen
+	 let tag = axiMaster.awid();
+	 awfifo.enq(PhysMemRequest{ addr: addr, tag: truncate(tag), burstLen: burstLen }); // burstlen corrected
+	 awtagfifo.enq(tag); // what if the single request with multiple transfer??
       endrule
+
+// resp_wr (M=>S) sending data
       let wreadyProbe <- mkProbe();
       rule rl_wready;
-	 wreadyProbe <= pack(wfifo.notFull);
-	 axiMaster.wready(pack(wfifo.notFull));
+	 let wready = pack(wfifo.notFull && awtagfifo.notEmpty && wtagfifo.notFull);
+	 wreadyProbe <= wready;
+	 axiMaster.wready(wready);
       endrule
       rule rl_wdata if (axiMaster.wvalid() == 1);
-	 wfifo.enq(MemData { data: truncate(axiMaster.wdata()), tag: 0, last: True});
-	 wtagfifo.enq(axiMaster.wid());
+	 let last = axiMaster.wlast == 1;
+	 let tag = awtagfifo.first;
+	 wfifo.enq(MemData { data: truncate(axiMaster.wdata()), tag: truncate(tag), last: last});
+	 if (last) begin
+	    awfifo.deq();
+	    wtagfifo.enq(tag);
+	 end
       endrule
+
+// resp_b (S=>M) 
       let bvalidProbe <- mkProbe();
       rule rl_bvalid;
-	 bvalidProbe <= pack(wtagfifo.notEmpty && bfifo.notEmpty);
-	 axiMaster.bvalid(pack(wtagfifo.notEmpty && bfifo.notEmpty));
+	 let bvalid = pack(wtagfifo.notEmpty && bfifo.notEmpty);
+	 bvalidProbe <= bvalid;
+	 axiMaster.bvalid(bvalid);
       endrule
       rule rl_done if (axiMaster.bready() == 1);
 	 let tag <- toGet(bfifo).get();
-	 let wtag <- toGet(wtagfifo).get();
-	 axiMaster.bid(wtag);
+	 let awtag <- toGet(wtagfifo).get();
+	 axiMaster.bid(awtag);
+	 axiMaster.bresp(0); //okay
+	 // where is b_resp?
       endrule
 
       interface PhysMemReadClient read_client;
