@@ -52,7 +52,7 @@ endinterface
 
 interface PS8LIB;
     (* prefix="" *)
-    interface Vector#(1, Ps8Maxigp)     m_axi_gp;
+    interface Vector#(1, PsultraMaxigp)     m_axi_gp;
     method Action                             interrupt(Bit#(1) v);
     interface Vector#(4, Clock) plclk;
     interface Clock portalClock;
@@ -111,7 +111,7 @@ module mkPS8LIB#(Clock axiClock)(PS8LIB);
    let derived_reset_unbuffered <- mkSyncReset(10, single_reset, derived_clock);
    let derived_reset <- mkResetBUFG(clocked_by derived_clock, reset_by derived_reset_unbuffered);
 
-   ZYNQ_ULTRA::PS8 psu <- ZYNQ_ULTRA::mkPS8(single_clock, single_clock);
+   ZYNQ_ULTRA::PS8ltra psu <- ZYNQ_ULTRA::mkPS8ltra(single_clock, single_clock);
 
    // this rule connects the pl_clk wires to the clock net via B2C
    for (Integer i = 0; i < 1; i = i + 1) begin
@@ -146,14 +146,14 @@ module mkPS8LIB#(Clock axiClock)(PS8LIB);
     endmethod
 endmodule
 
-interface Ps8Aruser;
+interface PsultraAruser;
     method Action      aruser(Bit#(5) v);
     method Action      awuser(Bit#(5) v);
 endinterface
 
-instance ToAxi4MasterBits#(Axi4MasterBits#(40,32,16,Ps8Aruser), Ps8Maxigp);
-function Axi4MasterBits#(40,32,16,Ps8Aruser) toAxi4MasterBits(Ps8Maxigp m);
-   return (interface Axi4MasterBits#(40,32,16,Ps8Aruser);
+instance ToAxi4MasterBits#(Axi4MasterBits#(40,128,16,PsultraAruser), PsultraMaxigp);
+function Axi4MasterBits#(40,128,16,PsultraAruser) toAxi4MasterBits(PsultraMaxigp m);
+   return (interface Axi4MasterBits#(40,128,16,PsultraAruser);
       method araddr = m.araddr;
 	   method arburst = m.arburst;
 	   method arcache = m.arcache;
@@ -200,7 +200,7 @@ endinstance
 
 instance ConnectableWithTrace#(PS8LIB, Platform, traceType);
    module mkConnectionWithTrace#(PS8LIB psu, Platform top, traceType readout)(Empty);
-      Axi4MasterBits#(40,32,16,Ps8Aruser) master = toAxi4MasterBits(psu.m_axi_gp[0]);
+      Axi4MasterBits#(40,128,16,PsultraAruser) master = toAxi4MasterBits(psu.m_axi_gp[0]);
       PhysMemMaster#(32,32) physMemMaster <- mkPhysMemMaster(master);
       mkConnection(physMemMaster, top.slave);
    endmodule
