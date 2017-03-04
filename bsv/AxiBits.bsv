@@ -365,21 +365,24 @@ module mkAxiFifoF(FIFOF#(t)) provisos(Bits#(t, tSz));
   endmethod
 endmodule
 
+typedef 40 MpsocAxiAddrWidth;
 typedef 128 MpsocAxiDataWidth;
+typedef 16 MpsocAxiIdWidth;
 typedef 32 PhysMemDataWidth;
-instance MkPhysMemMaster#(Axi4MasterBits#(axiAddrWidth,MpsocAxiDataWidth,idWidth,extra),addrWidth,PhysMemDataWidth)
-      provisos (Add#(addrWidth,a__,axiAddrWidth),
-		Add#(c__, 6, idWidth)
+typedef 32 PhysMemAddrWidth;
+instance MkPhysMemMaster#(Axi4MasterBits#(MpsocAxiAddrWidth,MpsocAxiDataWidth,MpsocAxiIdWidth,extra),PhysMemAddrWidth,PhysMemDataWidth)
+      provisos (Add#(PhysMemAddrWidth,a__,MpsocAxiAddrWidth),
+		Add#(c__, 6, MpsocAxiIdWidth)
 		);
-   module mkPhysMemMaster#(Axi4MasterBits#(axiAddrWidth,MpsocAxiDataWidth,idWidth,extra) axiMaster)(PhysMemMaster#(addrWidth,PhysMemDataWidth));
-      FIFOF#(PhysMemRequest#(addrWidth,PhysMemDataWidth)) arfifo <- mkAxiFifoF();
+   module mkPhysMemMaster#(Axi4MasterBits#(MpsocAxiAddrWidth,MpsocAxiDataWidth,MpsocAxiIdWidth,extra) axiMaster)(PhysMemMaster#(PhysMemAddrWidth,PhysMemDataWidth));
+      FIFOF#(PhysMemRequest#(PhysMemAddrWidth,PhysMemDataWidth)) arfifo <- mkAxiFifoF();
       FIFOF#(MemData#(PhysMemDataWidth)) rfifo <- mkAxiFifoF();
-      FIFOF#(PhysMemRequest#(addrWidth,PhysMemDataWidth)) awfifo <- mkAxiFifoF();
+      FIFOF#(PhysMemRequest#(PhysMemAddrWidth,PhysMemDataWidth)) awfifo <- mkAxiFifoF();
       FIFOF#(MemData#(PhysMemDataWidth)) wfifo <- mkAxiFifoF();
       FIFOF#(Bit#(MemTagSize)) bfifo <- mkAxiFifoF();
-      FIFOF#(Bit#(idWidth)) rtagfifo <- mkAxiFifoF();
-      FIFOF#(Bit#(idWidth)) awtagfifo <- mkAxiFifoF();
-      FIFOF#(Bit#(idWidth)) wtagfifo <- mkAxiFifoF();
+      FIFOF#(Bit#(MpsocAxiIdWidth)) rtagfifo <- mkAxiFifoF();
+      FIFOF#(Tuple2#(Bit#(MpsocAxiIdWidth),Bit#(2))) awtagfifo <- mkAxiFifoF();
+      FIFOF#(Bit#(MpsocAxiIdWidth)) wtagfifo <- mkAxiFifoF();
 
    let beatShift = fromInteger(valueOf(TLog#(TDiv#(PhysMemDataWidth,8))));
 // req_ar (M=>S)
@@ -427,11 +430,11 @@ instance MkPhysMemMaster#(Axi4MasterBits#(axiAddrWidth,MpsocAxiDataWidth,idWidth
 	 axiMaster.awready(awready);
       endrule
       rule rl_awfifo if (axiMaster.awvalid() == 1);
-	 let addr = truncate(axiMaster.awaddr());
+	 Bit#(PhysMemAddrWidth) addr = truncate(axiMaster.awaddr());
 	 let burstLen = extend(axiMaster.awlen+1) << beatShift; // calculate burstLen
 	 let tag = axiMaster.awid();
 	 awfifo.enq(PhysMemRequest{ addr: addr, tag: truncate(tag), burstLen: burstLen }); // burstlen corrected
-	 awtagfifo.enq(tag); // what if the single request with multiple transfer??
+	 awtagfifo.enq(tuple2(tag, addr[3:2])); // what if the single request with multiple transfer??
       endrule
 
 // resp_wr (M=>S) sending data
@@ -443,8 +446,9 @@ instance MkPhysMemMaster#(Axi4MasterBits#(axiAddrWidth,MpsocAxiDataWidth,idWidth
       endrule
       rule rl_wdata if (axiMaster.wvalid() == 1);
 	 let last = axiMaster.wlast == 1;
-	 let tag = awtagfifo.first;
-	 wfifo.enq(MemData { data: truncate(axiMaster.wdata()), tag: truncate(tag), last: last});
+	 match { .tag, .lane } = awtagfifo.first;
+	 Vector#(4, Bit#(PhysMemDataWidth)) words = unpack(axiMaster.wdata());
+	 wfifo.enq(MemData { data: words[lane], tag: truncate(tag), last: last});
 	 if (last) begin
 	    awfifo.deq();
 	    wtagfifo.enq(tag);
