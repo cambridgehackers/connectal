@@ -450,7 +450,7 @@ instance MkPhysMemMaster#(Axi4MasterBits#(MpsocAxiAddrWidth,MpsocAxiDataWidth,Mp
 	 Vector#(4, Bit#(PhysMemDataWidth)) words = unpack(axiMaster.wdata());
 	 wfifo.enq(MemData { data: words[lane], tag: truncate(tag), last: last});
 	 if (last) begin
-	    awfifo.deq();
+	    awtagfifo.deq();
 	    wtagfifo.enq(tag);
 	 end
       endrule
