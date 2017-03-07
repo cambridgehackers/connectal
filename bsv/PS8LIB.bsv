@@ -142,7 +142,7 @@ module mkPS8LIB#(Clock axiClock)(PS8LIB);
     interface derivedClock = derived_clock;
     interface derivedReset = derived_reset;
     method Action interrupt(Bit#(1) v);
-       //psu.irq.f2p({19'b0, v});
+       psu.pl.ps_irq0(v);
     endmethod
 endmodule
 
