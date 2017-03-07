@@ -21,9 +21,11 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 `include "ConnectalProjectConfig.bsv"
+import ConnectalConfig::*;
 import BuildVector::*;
 import Clocks::*;
 import DefaultValue::*;
+import FIFOF::*;
 import GetPut::*;
 import Connectable::*;
 import ConnectableWithTrace::*;
@@ -52,7 +54,8 @@ endinterface
 
 interface PS8LIB;
     (* prefix="" *)
-    interface Vector#(1, PsultraMaxigp)     m_axi_gp;
+    interface Vector#(1, Ps8Maxigp)     m_axi_gp;
+    interface Vector#(1, Ps8Saxigp)     s_axi_gp;
     method Action                             interrupt(Bit#(1) v);
     interface Vector#(4, Clock) plclk;
     interface Clock portalClock;
@@ -111,7 +114,7 @@ module mkPS8LIB#(Clock axiClock)(PS8LIB);
    let derived_reset_unbuffered <- mkSyncReset(10, single_reset, derived_clock);
    let derived_reset <- mkResetBUFG(clocked_by derived_clock, reset_by derived_reset_unbuffered);
 
-   ZYNQ_ULTRA::PS8 psu <- ZYNQ_ULTRA::mkPS8(single_clock, single_clock);
+   ZYNQ_ULTRA::PS8 psu <- ZYNQ_ULTRA::mkPS8(single_clock, single_clock, single_clock);
 
    // this rule connects the pl_clk wires to the clock net via B2C
    for (Integer i = 0; i < 1; i = i + 1) begin
@@ -131,6 +134,7 @@ module mkPS8LIB#(Clock axiClock)(PS8LIB);
    end
 
     interface m_axi_gp = vec(psu.maxigp0);
+    interface s_axi_gp = vec(psu.saxigp0);
     interface plclk = fclk;
 `ifndef TOP_SOURCES_PORTAL_CLOCK
     interface portalClock = fclk[0];
@@ -146,14 +150,14 @@ module mkPS8LIB#(Clock axiClock)(PS8LIB);
     endmethod
 endmodule
 
-interface PsultraAruser;
+interface Ps8Aruser;
     method Action      aruser(Bit#(5) v);
     method Action      awuser(Bit#(5) v);
 endinterface
 
-instance ToAxi4MasterBits#(Axi4MasterBits#(40,128,16,PsultraAruser), PsultraMaxigp);
-function Axi4MasterBits#(40,128,16,PsultraAruser) toAxi4MasterBits(PsultraMaxigp m);
-   return (interface Axi4MasterBits#(40,128,16,PsultraAruser);
+instance ToAxi4MasterBits#(Axi4MasterBits#(40,128,16,Ps8Aruser), Ps8Maxigp);
+function Axi4MasterBits#(40,128,16,Ps8Aruser) toAxi4MasterBits(Ps8Maxigp m);
+   return (interface Axi4MasterBits#(40,128,16,Ps8Aruser);
       method araddr = m.araddr;
 	   method arburst = m.arburst;
 	   method arcache = m.arcache;
@@ -198,10 +202,138 @@ function Axi4MasterBits#(40,128,16,PsultraAruser) toAxi4MasterBits(PsultraMaxigp
    endfunction: toAxi4MasterBits
 endinstance
 
+instance ToAxi4SlaveBits#(Axi4SlaveBits#(49,128,6,Empty), Ps8Saxigp);
+   function Axi4SlaveBits#(49,128,6,Empty) toAxi4SlaveBits(Ps8Saxigp s);
+      return (interface Axi4SlaveBits#(49,128,6,Empty);
+	 method araddr = s.araddr;
+	 method arburst = s.arburst;
+	 method arcache = s.arcache;
+	 method arid = s.arid;
+	 method arlen = s.arlen;
+	 method arlock = compose(s.arlock, truncate);
+	 method arprot = s.arprot;
+	 method arqos = s.arqos;
+	 method arready = s.arready;
+	 method arsize = s.arsize;
+	 method arvalid = s.arvalid;
+	 
+	 method awaddr = s.awaddr;
+	 method awburst = s.awburst;
+	 method awcache = s.awcache;
+	 method awid = s.awid;
+	 method awlen = s.awlen;
+	 method awlock = compose(s.awlock, truncate);
+	 method awprot = s.awprot;
+	 method awqos = s.awqos;
+	 method awready = s.awready;
+	 method awsize = s.awsize;
+	 method awvalid = s.awvalid;
+
+	 method bid = s.bid;
+	 method bready = s.bready;
+	 method bresp = s.bresp;
+	 method bvalid = s.bvalid;
+	 method rdata = s.rdata;
+	 method rid = s.rid;
+	 method rlast = s.rlast;
+	 method rready = s.rready;
+	 method rresp = s.rresp;
+	 method rvalid = s.rvalid;
+	 method wdata = s.wdata;
+	 method wlast = s.wlast;
+	 method wready = s.wready;
+	 method wvalid = s.wvalid;
+	 method wstrb = s.wstrb;
+	 endinterface);
+   endfunction
+endinstance
+
+//FIXME extra aruser awuser
+instance MkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Empty),addrWidth,DataBusWidth)
+      provisos (Add#(addrWidth,a__,49));
+   module mkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Empty) axiSlave)(PhysMemSlave#(addrWidth,DataBusWidth));
+      FIFOF#(PhysMemRequest#(addrWidth,DataBusWidth)) arfifo <- mkAxiFifoF();
+      FIFOF#(MemData#(DataBusWidth)) rfifo <- mkAxiFifoF();
+      FIFOF#(PhysMemRequest#(addrWidth,DataBusWidth)) awfifo <- mkAxiFifoF();
+      FIFOF#(MemData#(DataBusWidth)) wfifo <- mkAxiFifoF();
+      FIFOF#(Bit#(MemTagSize)) bfifo <- mkAxiFifoF();
+      FIFOF#(Bit#(MemTagSize)) rtagfifo <- mkAxiFifoF();
+      FIFOF#(Bit#(MemTagSize)) wtagfifo <- mkAxiFifoF();
+
+      rule rl_arvalid_araddr;
+	 axiSlave.arvalid(pack(arfifo.notEmpty && rtagfifo.notFull));
+      endrule
+      rule rl_arfifo if (axiSlave.arready() == 1);
+	 let req <- toGet(arfifo).get();
+	 Axi4ReadRequest#(addrWidth,6) axireq = toAxi4ReadRequest(req);
+	 axiSlave.araddr(extend(axireq.address));
+	 axiSlave.arid(axireq.id);
+	 axiSlave.arsize(axireq.size);
+	 axiSlave.arlen(axireq.len);
+	 axiSlave.arburst(2'b01);   //FIXME
+	 axiSlave.arcache(4'b0011); //FIXME
+	 //FIXME axiSlave.extra.aruser();
+	 rtagfifo.enq(req.tag);
+      endrule
+      rule rl_rready;
+	 axiSlave.rready(pack(rfifo.notFull && rtagfifo.notEmpty));
+      endrule
+      rule rl_rdata if (axiSlave.rvalid() == 1);
+	 let rtag <- toGet(rtagfifo).get();
+	 rfifo.enq(MemData { data: truncate(axiSlave.rdata()), tag: rtag } );
+      endrule
+
+      rule rl_awvalid_awaddr;
+	 axiSlave.awvalid(pack(awfifo.notEmpty && wtagfifo.notFull));
+      endrule
+      rule rl_awfifo if (axiSlave.awready() == 1);
+	 let req <- toGet(awfifo).get();
+	 Axi4WriteRequest#(addrWidth,6) axireq = toAxi4WriteRequest(req);
+	 axiSlave.awaddr(extend(axireq.address));
+	 axiSlave.awid(axireq.id);
+	 axiSlave.awsize(axireq.size);
+	 axiSlave.awlen(axireq.len);
+	 axiSlave.awburst(2'b01);   //FIXME
+	 axiSlave.awcache(4'b0011); //FIXME
+	 //FIXME axiSlave.extra.awuser();
+	 wtagfifo.enq(req.tag);
+      endrule
+      rule rl_wvalid;
+	 axiSlave.wvalid(pack(wfifo.notEmpty));
+      endrule
+      rule rl_wdata if (axiSlave.wready() == 1);
+	 let wdata = wfifo.first.data;
+	 wfifo.deq();
+	 axiSlave.wdata(extend(wdata));
+      endrule
+      rule rl_bready;
+	 axiSlave.bready(pack(wtagfifo.notEmpty && bfifo.notFull));
+      endrule
+      rule rl_done if (axiSlave.bvalid() == 1);
+	 let tag <- toGet(wtagfifo).get();
+	 bfifo.enq(tag);
+      endrule
+
+      interface PhysMemReadServer read_server;
+	 interface Put readReq = toPut(arfifo);
+	 interface Get readData = toGet(rfifo);
+      endinterface
+      interface PhysMemWriteServer write_server;
+	 interface Put writeReq = toPut(awfifo);
+	 interface Put writeData = toPut(wfifo);
+	 interface Get writeDone = toGet(bfifo);
+      endinterface
+   endmodule
+endinstance
+
 instance ConnectableWithTrace#(PS8LIB, Platform, traceType);
    module mkConnectionWithTrace#(PS8LIB psu, Platform top, traceType readout)(Empty);
-      Axi4MasterBits#(40,128,16,PsultraAruser) master = toAxi4MasterBits(psu.m_axi_gp[0]);
+      Axi4MasterBits#(40,128,16,Ps8Aruser) master = toAxi4MasterBits(psu.m_axi_gp[0]);
       PhysMemMaster#(32,32) physMemMaster <- mkPhysMemMaster(master);
       mkConnection(physMemMaster, top.slave);
+
+      Axi4SlaveBits#(49,128,6,Empty) slave = toAxi4SlaveBits(psu.s_axi_gp[0]);
+      PhysMemSlave#(32,DataBusWidth) physMemSlave <- mkPhysMemSlave(slave);
+      mkConnection(top.masters[0], physMemSlave);
    endmodule
 endinstance
