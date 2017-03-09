@@ -1,6 +1,6 @@
 {
     "options": {
-        "bsvdefines" : ["XILINX=1", "ZYNQ", "ZynqUltrascale", "ZynqHostInterface", "PhysAddrWidth=32",
+        "bsvdefines" : ["XILINX=1", "ZYNQ", "ZynqUltrascale", "ZynqHostInterface", "PhysAddrWidth=40",
 			"CONNECTAL_BITS_DEPENDENCES=hw/mkTop.bit", "CONNECTAL_RUN_SCRIPT=$(CONNECTALDIR)/scripts/run.pcietest",
 			"CONNECTAL_EXENAME=ubuntu.exe", "CONNECTAL_EXENAME2=ubuntu.exe2"],
         "os" : "ubuntu",
@@ -12,7 +12,7 @@
         "implconstraints": ["constraints/xilinx/zcu102.xdc"],
         "TOP" : "ZynqUltraTop",
         "runscript" : "run.pcietest",
-        "CONNECTALFLAGS" : ["--mainclockperiod=10", "--derivedclockperiod=5"],
+        "CONNECTALFLAGS" : ["--mainclockperiod=5", "--derivedclockperiod=2.5"],
         "need_pcie" : "unused"
     },
     "fmc1": {
