@@ -41,6 +41,7 @@ import AxiBits::*;
 import MemTypes::*;
 import Platform::*;
 import ZYNQ_ULTRA::*;
+import Probe::*;
 
 (* always_ready, always_enabled *)
 interface Bidir#(numeric type data_width);
@@ -150,18 +151,23 @@ module mkPS8LIB#(Clock axiClock)(PS8LIB);
     endmethod
 endmodule
 
-interface Ps8Aruser;
-    method Action      aruser(Bit#(5) v);
-    method Action      awuser(Bit#(5) v);
+interface Ps8MaxigpExtra;
+    method Bit#(16) aruser();
+    method Bit#(16) awuser();
 endinterface
 
-instance ToAxi4MasterBits#(Axi4MasterBits#(40,128,16,Ps8Aruser), Ps8Maxigp);
-function Axi4MasterBits#(40,128,16,Ps8Aruser) toAxi4MasterBits(Ps8Maxigp m);
-   return (interface Axi4MasterBits#(40,128,16,Ps8Aruser);
+interface Ps8SaxigpExtra;
+    method Action aruser(Bit#(1) v);
+    method Action awuser(Bit#(1) v);
+endinterface
+
+instance ToAxi4MasterBits#(Axi4MasterBits#(40,128,16,Ps8MaxigpExtra), Ps8Maxigp);
+function Axi4MasterBits#(40,128,16,Ps8MaxigpExtra) toAxi4MasterBits(Ps8Maxigp m);
+   return (interface Axi4MasterBits#(40,128,16,Ps8MaxigpExtra);
       method araddr = m.araddr;
 	   method arburst = m.arburst;
 	   method arcache = m.arcache;
-           method aresetn = 0;
+           method aresetn = 1;
 	   method arid = m.arid;
 	   method arlen = m.arlen;
 	   method arlock = extend(m.arlock);
@@ -202,12 +208,13 @@ function Axi4MasterBits#(40,128,16,Ps8Aruser) toAxi4MasterBits(Ps8Maxigp m);
    endfunction: toAxi4MasterBits
 endinstance
 
-instance ToAxi4SlaveBits#(Axi4SlaveBits#(49,128,6,Empty), Ps8Saxigp);
-   function Axi4SlaveBits#(49,128,6,Empty) toAxi4SlaveBits(Ps8Saxigp s);
-      return (interface Axi4SlaveBits#(49,128,6,Empty);
+instance ToAxi4SlaveBits#(Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra), Ps8Saxigp);
+   function Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra) toAxi4SlaveBits(Ps8Saxigp s);
+      return (interface Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra);
 	 method araddr = s.araddr;
 	 method arburst = s.arburst;
 	 method arcache = s.arcache;
+	 //method aresetn = 1; //no aresetn port in zcu
 	 method arid = s.arid;
 	 method arlen = s.arlen;
 	 method arlock = compose(s.arlock, truncate);
@@ -240,28 +247,68 @@ instance ToAxi4SlaveBits#(Axi4SlaveBits#(49,128,6,Empty), Ps8Saxigp);
 	 method rresp = s.rresp;
 	 method rvalid = s.rvalid;
 	 method wdata = s.wdata;
+	 //method wid = s.wid; //wid not present in Axi4
 	 method wlast = s.wlast;
 	 method wready = s.wready;
 	 method wvalid = s.wvalid;
 	 method wstrb = s.wstrb;
+	 interface Ps8SaxigpExtra extra;
+		 method aruser = s.aruser;
+		 method awuser = s.awuser;
+	 endinterface
 	 endinterface);
    endfunction
 endinstance
 
 //FIXME extra aruser awuser
-instance MkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Empty),addrWidth,DataBusWidth)
+instance MkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra),addrWidth,DataBusWidth)
       provisos (Add#(addrWidth,a__,49));
-   module mkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Empty) axiSlave)(PhysMemSlave#(addrWidth,DataBusWidth));
+   module mkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra) axiSlave)(PhysMemSlave#(addrWidth,DataBusWidth));
       FIFOF#(PhysMemRequest#(addrWidth,DataBusWidth)) arfifo <- mkAxiFifoF();
       FIFOF#(MemData#(DataBusWidth)) rfifo <- mkAxiFifoF();
       FIFOF#(PhysMemRequest#(addrWidth,DataBusWidth)) awfifo <- mkAxiFifoF();
       FIFOF#(MemData#(DataBusWidth)) wfifo <- mkAxiFifoF();
       FIFOF#(Bit#(MemTagSize)) bfifo <- mkAxiFifoF();
-      FIFOF#(Bit#(MemTagSize)) rtagfifo <- mkAxiFifoF();
+
       FIFOF#(Bit#(MemTagSize)) wtagfifo <- mkAxiFifoF();
 
+      FIFOF#(Bool) arInFlight <- mkSizedFIFOF(valueOf(TExp#(MemTagSize)));
+
+	Probe#(Bit#(1)) arNF <- mkProbe();
+	Probe#(Bit#(1)) arNE <- mkProbe();
+	Probe#(Bit#(1)) rNF <- mkProbe();
+	Probe#(Bit#(1)) rNE <- mkProbe();
+	Probe#(Bit#(1)) awNF <- mkProbe();
+	Probe#(Bit#(1)) awNE <- mkProbe();
+	Probe#(Bit#(1)) wNF <- mkProbe();
+	Probe#(Bit#(1)) wNE <- mkProbe();
+	Probe#(Bit#(1)) bNF <- mkProbe();
+	Probe#(Bit#(1)) bNE <- mkProbe();
+	Probe#(Bit#(1)) arInFlightNF <- mkProbe();
+	Probe#(Bit#(1)) arInFlightNE <- mkProbe();
+	Probe#(Bit#(1)) wtagNF <- mkProbe();
+	Probe#(Bit#(1)) wtagNE <- mkProbe();
+
+	rule probe_val;
+		arNF <= pack(arfifo.notFull());
+		arNE <= pack(arfifo.notEmpty());
+		rNF <= pack(rfifo.notFull());
+		rNE <= pack(rfifo.notEmpty());
+		awNF <= pack(awfifo.notFull());
+		awNE <= pack(awfifo.notEmpty());
+		wNF <= pack(wfifo.notFull());
+		wNE <= pack(wfifo.notEmpty());
+		bNF <= pack(bfifo.notFull());
+		bNE <= pack(bfifo.notEmpty());
+		
+		arInFlightNF <= pack(arInFlight.notFull());
+		arInFlightNE <= pack(arInFlight.notEmpty());
+		wtagNF <= pack(wtagfifo.notFull());
+		wtagNE <= pack(wtagfifo.notEmpty());
+	endrule
+
       rule rl_arvalid_araddr;
-	 axiSlave.arvalid(pack(arfifo.notEmpty && rtagfifo.notFull));
+	 axiSlave.arvalid(pack(arfifo.notEmpty && arInFlight.notFull));
       endrule
       rule rl_arfifo if (axiSlave.arready() == 1);
 	 let req <- toGet(arfifo).get();
@@ -270,17 +317,23 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Empty),addrWidth,DataBusWidth)
 	 axiSlave.arid(axireq.id);
 	 axiSlave.arsize(axireq.size);
 	 axiSlave.arlen(axireq.len);
-	 axiSlave.arburst(2'b01);   //FIXME
-	 axiSlave.arcache(4'b0011); //FIXME
-	 //FIXME axiSlave.extra.aruser();
-	 rtagfifo.enq(req.tag);
+	 axiSlave.arburst(2'b01);     // burst: INCR
+	 axiSlave.arcache(4'b0011);   // FIXME: 0011? 1111?
+	 axiSlave.arlock(2'b0);       // normal access
+	 axiSlave.arprot(3'b0);       // unprevileged, protected, data access
+	 axiSlave.arqos(4'b0);        // unused - default 0
+	 axiSlave.extra.aruser(1'b0); // unused
+	 arInFlight.enq(True);
       endrule
       rule rl_rready;
-	 axiSlave.rready(pack(rfifo.notFull && rtagfifo.notEmpty));
+	 axiSlave.rready(pack(rfifo.notFull && arInFlight.notEmpty));
       endrule
       rule rl_rdata if (axiSlave.rvalid() == 1);
-	 let rtag <- toGet(rtagfifo).get();
-	 rfifo.enq(MemData { data: truncate(axiSlave.rdata()), tag: rtag } );
+	 let ar = arInFlight.first; // implicit guard (arInFlight should not be empty to fire this rule)
+	 let last = axiSlave.rlast == 1;
+	 if (last) arInFlight.deq;
+
+	 rfifo.enq(MemData { data: truncate(axiSlave.rdata()), tag: ar?axiSlave.rid():0, last: last } );
       endrule
 
       rule rl_awvalid_awaddr;
@@ -293,9 +346,12 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Empty),addrWidth,DataBusWidth)
 	 axiSlave.awid(axireq.id);
 	 axiSlave.awsize(axireq.size);
 	 axiSlave.awlen(axireq.len);
-	 axiSlave.awburst(2'b01);   //FIXME
-	 axiSlave.awcache(4'b0011); //FIXME
-	 //FIXME axiSlave.extra.awuser();
+	 axiSlave.awburst(2'b01);     // burst: INCR
+	 axiSlave.awcache(4'b0011);   //FIXME
+	 axiSlave.awlock(2'b0);       // normal access 
+	 axiSlave.awprot(3'b0);       // unprevileged, protedted, data access
+	 axiSlave.awqos(4'b0);        // unused - default 0
+	 axiSlave.extra.awuser(1'b0); // unused
 	 wtagfifo.enq(req.tag);
       endrule
       rule rl_wvalid;
@@ -303,8 +359,11 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Empty),addrWidth,DataBusWidth)
       endrule
       rule rl_wdata if (axiSlave.wready() == 1);
 	 let wdata = wfifo.first.data;
+	 let last = wfifo.first.last;
 	 wfifo.deq();
 	 axiSlave.wdata(extend(wdata));
+	 axiSlave.wlast(pack(last));
+	 axiSlave.wstrb(16'hFFFF); // using full 128-bit
       endrule
       rule rl_bready;
 	 axiSlave.bready(pack(wtagfifo.notEmpty && bfifo.notFull));
@@ -328,12 +387,12 @@ endinstance
 
 instance ConnectableWithTrace#(PS8LIB, Platform, traceType);
    module mkConnectionWithTrace#(PS8LIB psu, Platform top, traceType readout)(Empty);
-      Axi4MasterBits#(40,128,16,Ps8Aruser) master = toAxi4MasterBits(psu.m_axi_gp[0]);
+      Axi4MasterBits#(40,128,16,Ps8MaxigpExtra) master = toAxi4MasterBits(psu.m_axi_gp[0]);
       PhysMemMaster#(32,32) physMemMaster <- mkPhysMemMaster(master);
       mkConnection(physMemMaster, top.slave);
 
-      Axi4SlaveBits#(49,128,6,Empty) slave = toAxi4SlaveBits(psu.s_axi_gp[0]);
-      PhysMemSlave#(32,DataBusWidth) physMemSlave <- mkPhysMemSlave(slave);
+      Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra) slave = toAxi4SlaveBits(psu.s_axi_gp[0]);
+      PhysMemSlave#(40,DataBusWidth) physMemSlave <- mkPhysMemSlave(slave);
       mkConnection(top.masters[0], physMemSlave);
    endmodule
 endinstance
