@@ -37,6 +37,10 @@ static int iterCnt = 8;
 static int burstLen = 32;
 static int burstLenMin = 32;
 static int burstLenMax = 32;
+#elif defined(ZynqUltrascale)
+static int burstLen = 16;
+static int burstLenMin = 4;
+static int burstLenMax = 64; // 256byte = 16beats of 128bit
 #else
 static int burstLen = 16;
 static int burstLenMin = 4;
@@ -106,6 +110,7 @@ int main(int argc, const char **argv)
       device->startWrite(ref_dstAlloc, 0, numWords, burstLen, iterCnt);
       sem_wait(&test_sem);
       mismatch = 0;
+	  sg = 0;
       for (int i = 0; i < numWords; i++) {
         if (dstBuffer[i] != sg) {
 	  mismatch++;
