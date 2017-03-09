@@ -260,7 +260,6 @@ instance ToAxi4SlaveBits#(Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra), Ps8Saxigp);
    endfunction
 endinstance
 
-//FIXME extra aruser awuser
 instance MkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra),addrWidth,DataBusWidth)
       provisos (Add#(addrWidth,a__,49));
    module mkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra) axiSlave)(PhysMemSlave#(addrWidth,DataBusWidth));
@@ -270,9 +269,8 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra),addrWidth,DataB
       FIFOF#(MemData#(DataBusWidth)) wfifo <- mkAxiFifoF();
       FIFOF#(Bit#(MemTagSize)) bfifo <- mkAxiFifoF();
 
-      FIFOF#(Bit#(MemTagSize)) wtagfifo <- mkAxiFifoF();
-
       FIFOF#(Bool) arInFlight <- mkSizedFIFOF(valueOf(TExp#(MemTagSize)));
+      FIFOF#(Bool) awInFlight <- mkSizedFIFOF(valueOf(TExp#(MemTagSize)));
 
 	Probe#(Bit#(1)) arNF <- mkProbe();
 	Probe#(Bit#(1)) arNE <- mkProbe();
@@ -286,8 +284,8 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra),addrWidth,DataB
 	Probe#(Bit#(1)) bNE <- mkProbe();
 	Probe#(Bit#(1)) arInFlightNF <- mkProbe();
 	Probe#(Bit#(1)) arInFlightNE <- mkProbe();
-	Probe#(Bit#(1)) wtagNF <- mkProbe();
-	Probe#(Bit#(1)) wtagNE <- mkProbe();
+	Probe#(Bit#(1)) awInFlightNF <- mkProbe();
+	Probe#(Bit#(1)) awInFlightNE <- mkProbe();
 
 	rule probe_val;
 		arNF <= pack(arfifo.notFull());
@@ -303,8 +301,8 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra),addrWidth,DataB
 		
 		arInFlightNF <= pack(arInFlight.notFull());
 		arInFlightNE <= pack(arInFlight.notEmpty());
-		wtagNF <= pack(wtagfifo.notFull());
-		wtagNE <= pack(wtagfifo.notEmpty());
+		awInFlightNF <= pack(awInFlight.notFull());
+		awInFlightNE <= pack(awInFlight.notEmpty());
 	endrule
 
       rule rl_arvalid_araddr;
@@ -329,15 +327,15 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra),addrWidth,DataB
 	 axiSlave.rready(pack(rfifo.notFull && arInFlight.notEmpty));
       endrule
       rule rl_rdata if (axiSlave.rvalid() == 1);
-	 let ar = arInFlight.first; // implicit guard (arInFlight should not be empty to fire this rule)
+	 let dummy = arInFlight.first; // implicit guard (arInFlight should not be empty to fire this rule)
 	 let last = axiSlave.rlast == 1;
 	 if (last) arInFlight.deq;
 
-	 rfifo.enq(MemData { data: truncate(axiSlave.rdata()), tag: ar?axiSlave.rid():0, last: last } );
+	 rfifo.enq(MemData { data: truncate(axiSlave.rdata()), tag: axiSlave.rid(), last: last } );
       endrule
 
       rule rl_awvalid_awaddr;
-	 axiSlave.awvalid(pack(awfifo.notEmpty && wtagfifo.notFull));
+	 axiSlave.awvalid(pack(awfifo.notEmpty && awInFlight.notFull));
       endrule
       rule rl_awfifo if (axiSlave.awready() == 1);
 	 let req <- toGet(awfifo).get();
@@ -347,12 +345,12 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra),addrWidth,DataB
 	 axiSlave.awsize(axireq.size);
 	 axiSlave.awlen(axireq.len);
 	 axiSlave.awburst(2'b01);     // burst: INCR
-	 axiSlave.awcache(4'b0011);   //FIXME
+	 axiSlave.awcache(4'b0011);   // FIXME: 0011? 1111?
 	 axiSlave.awlock(2'b0);       // normal access 
 	 axiSlave.awprot(3'b0);       // unprevileged, protedted, data access
 	 axiSlave.awqos(4'b0);        // unused - default 0
 	 axiSlave.extra.awuser(1'b0); // unused
-	 wtagfifo.enq(req.tag);
+	 awInFlight.enq(True);
       endrule
       rule rl_wvalid;
 	 axiSlave.wvalid(pack(wfifo.notEmpty));
@@ -364,13 +362,14 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra),addrWidth,DataB
 	 axiSlave.wdata(extend(wdata));
 	 axiSlave.wlast(pack(last));
 	 axiSlave.wstrb(16'hFFFF); // using full 128-bit
+	 // wid deprecated; the master must issue the data in the same order in which it issued the write address (aw_req)
       endrule
       rule rl_bready;
-	 axiSlave.bready(pack(wtagfifo.notEmpty && bfifo.notFull));
+	 axiSlave.bready(pack(awInFlight.notEmpty && bfifo.notFull));
       endrule
       rule rl_done if (axiSlave.bvalid() == 1);
-	 let tag <- toGet(wtagfifo).get();
-	 bfifo.enq(tag);
+	 let tag <- toGet(awInFlight).get();
+	 bfifo.enq(axiSlave.bid());
       endrule
 
       interface PhysMemReadServer read_server;
