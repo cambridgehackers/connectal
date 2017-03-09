@@ -340,21 +340,20 @@ module mkAxiFifoF(FIFOF#(t)) provisos(Bits#(t, tSz));
     vb[1] <= False;
   endrule
 
-  method Bool notFull = !vb[0];
+  method Bool notFull = !vb[0]; // technically, canEnqueue
 
   method Action enq(t x) if(!vb[0]);
     db[0] <= x;
     vb[0] <= True;
   endmethod
 
-  method Bool notEmpty = va[0];
+  method Bool notEmpty = va[0]; // technically, canDequeue
 
   method Action deq if (va[0]);
     va[0] <= False;
   endmethod
 
-  // no implicit guard, to simplify rule guards below
-  method t first;
+  method t first if (va[0]);
     return da[0];
   endmethod
 
@@ -365,24 +364,24 @@ module mkAxiFifoF(FIFOF#(t)) provisos(Bits#(t, tSz));
   endmethod
 endmodule
 
-typedef 40 MpsocAxiAddrWidth;
+typedef 40 MpsocMAxiAddrWidth; // MAXI:40bit SAXI:49bit
 typedef 128 MpsocAxiDataWidth;
-typedef 16 MpsocAxiIdWidth;
+typedef 16 MpsocMAxiIdWidth;   // MAXI:16bit SAXI: 6bit
 typedef 32 PhysMemDataWidth;
 typedef 32 PhysMemAddrWidth;
-instance MkPhysMemMaster#(Axi4MasterBits#(MpsocAxiAddrWidth,MpsocAxiDataWidth,MpsocAxiIdWidth,extra),PhysMemAddrWidth,PhysMemDataWidth)
-      provisos (Add#(PhysMemAddrWidth,a__,MpsocAxiAddrWidth),
-		Add#(c__, 6, MpsocAxiIdWidth)
+instance MkPhysMemMaster#(Axi4MasterBits#(MpsocMAxiAddrWidth,MpsocAxiDataWidth,MpsocMAxiIdWidth,extra),PhysMemAddrWidth,PhysMemDataWidth)
+      provisos (Add#(PhysMemAddrWidth,a__,MpsocMAxiAddrWidth),
+		Add#(c__, 6, MpsocMAxiIdWidth)
 		);
-   module mkPhysMemMaster#(Axi4MasterBits#(MpsocAxiAddrWidth,MpsocAxiDataWidth,MpsocAxiIdWidth,extra) axiMaster)(PhysMemMaster#(PhysMemAddrWidth,PhysMemDataWidth));
+   module mkPhysMemMaster#(Axi4MasterBits#(MpsocMAxiAddrWidth,MpsocAxiDataWidth,MpsocMAxiIdWidth,extra) axiMaster)(PhysMemMaster#(PhysMemAddrWidth,PhysMemDataWidth));
       FIFOF#(PhysMemRequest#(PhysMemAddrWidth,PhysMemDataWidth)) arfifo <- mkAxiFifoF();
       FIFOF#(MemData#(PhysMemDataWidth)) rfifo <- mkAxiFifoF();
       FIFOF#(PhysMemRequest#(PhysMemAddrWidth,PhysMemDataWidth)) awfifo <- mkAxiFifoF();
       FIFOF#(MemData#(PhysMemDataWidth)) wfifo <- mkAxiFifoF();
       FIFOF#(Bit#(MemTagSize)) bfifo <- mkAxiFifoF();
-      FIFOF#(Bit#(MpsocAxiIdWidth)) rtagfifo <- mkAxiFifoF();
-      FIFOF#(Tuple2#(Bit#(MpsocAxiIdWidth),Bit#(2))) awtagfifo <- mkAxiFifoF();
-      FIFOF#(Bit#(MpsocAxiIdWidth)) wtagfifo <- mkAxiFifoF();
+      FIFOF#(Bit#(MpsocMAxiIdWidth)) rtagfifo <- mkAxiFifoF();
+      FIFOF#(Tuple2#(Bit#(MpsocMAxiIdWidth),Bit#(2))) awtagfifo <- mkAxiFifoF();
+      FIFOF#(Bit#(MpsocMAxiIdWidth)) wtagfifo <- mkAxiFifoF();
 
    let beatShift = fromInteger(valueOf(TLog#(TDiv#(PhysMemDataWidth,8))));
 // req_ar (M=>S)
