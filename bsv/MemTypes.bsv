@@ -39,7 +39,11 @@ typedef Bit#(32) SGLId;
 `ifndef ZYNQ
 typedef 40 MemOffsetSize; // must be at least as large as PhysAddrSize
 `else
+`ifdef ZynqUltrascale
+typedef 40 MemOffsetSize; // ZynqUltrascale PhysAddrWidth=40
+`else
 typedef 32 MemOffsetSize;
+`endif
 `endif
 `ifdef MemTagSize
 typedef `MemTagSize MemTagSize;
