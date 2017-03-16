@@ -8,6 +8,8 @@
    -c
    saxihpc0_fpd_aclk
    -c
+   saxiacp_fpd_aclk
+   -c
    maxihpm0_lpd_aclk
    -I
    PS8
@@ -69,10 +71,53 @@ endinterface
 (* always_ready, always_enabled *)
 (* always_ready, always_enabled *)
 interface Ps8Pl;
+    method Action      acpinact(Bit#(1) v);
     method Bit#(1)     clk0();
     method Bit#(1)     clk1();
     method Action      ps_irq0(Bit#(1) v);
     method Bit#(1)     resetn0();
+endinterface
+(* always_ready, always_enabled *)
+interface Ps8Saxiacp;
+    method Action      araddr(Bit#(40) v);
+    method Action      arburst(Bit#(2) v);
+    method Action      arcache(Bit#(4) v);
+    method Action      arid(Bit#(5) v);
+    method Action      arlen(Bit#(8) v);
+    method Action      arlock(Bit#(1) v);
+    method Action      arprot(Bit#(3) v);
+    method Action      arqos(Bit#(4) v);
+    method Bit#(1)     arready();
+    method Action      arsize(Bit#(3) v);
+    method Action      aruser(Bit#(2) v);
+    method Action      arvalid(Bit#(1) v);
+    method Action      awaddr(Bit#(40) v);
+    method Action      awburst(Bit#(2) v);
+    method Action      awcache(Bit#(4) v);
+    method Action      awid(Bit#(5) v);
+    method Action      awlen(Bit#(8) v);
+    method Action      awlock(Bit#(1) v);
+    method Action      awprot(Bit#(3) v);
+    method Action      awqos(Bit#(4) v);
+    method Bit#(1)     awready();
+    method Action      awsize(Bit#(3) v);
+    method Action      awuser(Bit#(2) v);
+    method Action      awvalid(Bit#(1) v);
+    method Bit#(5)     bid();
+    method Action      bready(Bit#(1) v);
+    method Bit#(2)     bresp();
+    method Bit#(1)     bvalid();
+    method Bit#(128)     rdata();
+    method Bit#(5)     rid();
+    method Bit#(1)     rlast();
+    method Action      rready(Bit#(1) v);
+    method Bit#(2)     rresp();
+    method Bit#(1)     rvalid();
+    method Action      wdata(Bit#(128) v);
+    method Action      wlast(Bit#(1) v);
+    method Bit#(1)     wready();
+    method Action      wstrb(Bit#(16) v);
+    method Action      wvalid(Bit#(1) v);
 endinterface
 (* always_ready, always_enabled *)
 interface Ps8Saxigp;
@@ -122,15 +167,18 @@ interface PS8;
     interface Ps8Maxigp     maxigp0;
     interface Ps8Maxigp     maxigp2;
     interface Ps8Pl     pl;
+    interface Ps8Saxiacp     saxiacp;
     interface Ps8Saxigp     saxigp0;
 endinterface
 import "BVI" zynq_ultra_ps_e_0 =
-module mkPS8#(Clock maxihpm0_fpd_aclk, Clock maxihpm0_lpd_aclk, Clock saxihpc0_fpd_aclk)(PS8);
+module mkPS8#(Clock maxihpm0_fpd_aclk, Clock maxihpm0_lpd_aclk, Clock saxiacp_fpd_aclk, Clock saxihpc0_fpd_aclk)(PS8);
     default_clock no_clock;
     default_reset no_reset;
         input_clock maxihpm0_fpd_aclk(maxihpm0_fpd_aclk) = maxihpm0_fpd_aclk;
          /* from clock*/
         input_clock maxihpm0_lpd_aclk(maxihpm0_lpd_aclk) = maxihpm0_lpd_aclk;
+         /* from clock*/
+        input_clock saxiacp_fpd_aclk(saxiacp_fpd_aclk) = saxiacp_fpd_aclk;
          /* from clock*/
         input_clock saxihpc0_fpd_aclk(saxihpc0_fpd_aclk) = saxihpc0_fpd_aclk;
          /* from clock*/
@@ -217,10 +265,52 @@ module mkPS8#(Clock maxihpm0_fpd_aclk, Clock maxihpm0_lpd_aclk, Clock saxihpc0_f
         method maxigp2_wvalid wvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
     endinterface
     interface Ps8Pl     pl;
+        method acpinact(pl_acpinact) enable((*inhigh*) EN_pl_acpinact) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
         method pl_clk0 clk0() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
         method pl_clk1 clk1() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
         method ps_irq0(pl_ps_irq0) enable((*inhigh*) EN_pl_ps_irq0) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
         method pl_resetn0 resetn0() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+    endinterface
+    interface Ps8Saxiacp     saxiacp;
+       method araddr(saxiacp_araddr) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_araddr);
+       method arburst(saxiacp_arburst) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_arburst);
+       method arcache(saxiacp_arcache) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_arcache);
+       method arid(saxiacp_arid) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_arid);
+       method arlen(saxiacp_arlen) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_arlen);
+       method arlock(saxiacp_arlock) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_arlock);
+       method arprot(saxiacp_arprot) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_arprot);
+       method arqos(saxiacp_arqos) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_arqos);
+       method saxiacp_arready arready() clocked_by (saxiacp_fpd_aclk) reset_by(no_reset);
+       method arsize(saxiacp_arsize) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_arsize);
+       method aruser(saxiacp_aruser) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_aruser);
+       method arvalid(saxiacp_arvalid) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_arvalid);
+       method awaddr(saxiacp_awaddr) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_awaddr);
+       method awburst(saxiacp_awburst) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_awburst);
+       method awcache(saxiacp_awcache) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_awcache);
+       method awid(saxiacp_awid) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_awid);
+       method awlen(saxiacp_awlen) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_awlen);
+       method awlock(saxiacp_awlock) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_awlock);
+       method awprot(saxiacp_awprot) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_awprot);
+       method awqos(saxiacp_awqos) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_awqos);
+       method saxiacp_awready awready() clocked_by (saxiacp_fpd_aclk) reset_by(no_reset);
+       method awsize(saxiacp_awsize) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_awsize);
+       method awuser(saxiacp_awuser) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_awuser);
+       method awvalid(saxiacp_awvalid) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_awvalid);
+       method saxiacp_bid bid() clocked_by (saxiacp_fpd_aclk) reset_by(no_reset);
+       method bready(saxiacp_bready) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_bready);
+       method saxiacp_bresp bresp() clocked_by (saxiacp_fpd_aclk) reset_by(no_reset);
+       method saxiacp_bvalid bvalid() clocked_by (saxiacp_fpd_aclk) reset_by(no_reset);
+       method saxiacp_rdata rdata() clocked_by (saxiacp_fpd_aclk) reset_by(no_reset);
+       method saxiacp_rid rid() clocked_by (saxiacp_fpd_aclk) reset_by(no_reset);
+       method saxiacp_rlast rlast() clocked_by (saxiacp_fpd_aclk) reset_by(no_reset);
+       method rready(saxiacp_rready) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_rready);
+       method saxiacp_rresp rresp() clocked_by (saxiacp_fpd_aclk) reset_by(no_reset);
+       method saxiacp_rvalid rvalid() clocked_by (saxiacp_fpd_aclk) reset_by(no_reset);
+       method wdata(saxiacp_wdata) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_wdata);
+       method wlast(saxiacp_wlast) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_wlast);
+       method saxiacp_wready wready() clocked_by (saxiacp_fpd_aclk) reset_by(no_reset);
+       method wstrb(saxiacp_wstrb) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_wstrb);
+       method wvalid(saxiacp_wvalid) clocked_by (saxiacp_fpd_aclk) reset_by(no_reset) enable((*inhigh*) EN_saxiacp_wvalid);
     endinterface
     interface Ps8Saxigp     saxigp0;
         method araddr(saxigp0_araddr) enable((*inhigh*) EN_saxigp0_araddr) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
@@ -263,5 +353,5 @@ module mkPS8#(Clock maxihpm0_fpd_aclk, Clock maxihpm0_lpd_aclk, Clock saxihpc0_f
         method wstrb(saxigp0_wstrb) enable((*inhigh*) EN_saxigp0_wstrb) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
         method wvalid(saxigp0_wvalid) enable((*inhigh*) EN_saxigp0_wvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
     endinterface
-    schedule (maxigp0.araddr, maxigp0.arburst, maxigp0.arcache, maxigp0.arid, maxigp0.arlen, maxigp0.arlock, maxigp0.arprot, maxigp0.arqos, maxigp0.arready, maxigp0.arsize, maxigp0.aruser, maxigp0.arvalid, maxigp0.awaddr, maxigp0.awburst, maxigp0.awcache, maxigp0.awid, maxigp0.awlen, maxigp0.awlock, maxigp0.awprot, maxigp0.awqos, maxigp0.awready, maxigp0.awsize, maxigp0.awuser, maxigp0.awvalid, maxigp0.bid, maxigp0.bready, maxigp0.bresp, maxigp0.bvalid, maxigp0.rdata, maxigp0.rid, maxigp0.rlast, maxigp0.rready, maxigp0.rresp, maxigp0.rvalid, maxigp0.wdata, maxigp0.wlast, maxigp0.wready, maxigp0.wstrb, maxigp0.wvalid, maxigp2.araddr, maxigp2.arburst, maxigp2.arcache, maxigp2.arid, maxigp2.arlen, maxigp2.arlock, maxigp2.arprot, maxigp2.arqos, maxigp2.arready, maxigp2.arsize, maxigp2.aruser, maxigp2.arvalid, maxigp2.awaddr, maxigp2.awburst, maxigp2.awcache, maxigp2.awid, maxigp2.awlen, maxigp2.awlock, maxigp2.awprot, maxigp2.awqos, maxigp2.awready, maxigp2.awsize, maxigp2.awuser, maxigp2.awvalid, maxigp2.bid, maxigp2.bready, maxigp2.bresp, maxigp2.bvalid, maxigp2.rdata, maxigp2.rid, maxigp2.rlast, maxigp2.rready, maxigp2.rresp, maxigp2.rvalid, maxigp2.wdata, maxigp2.wlast, maxigp2.wready, maxigp2.wstrb, maxigp2.wvalid, pl.clk0, pl.clk1, pl.ps_irq0, pl.resetn0, saxigp0.araddr, saxigp0.arburst, saxigp0.arcache, saxigp0.arid, saxigp0.arlen, saxigp0.arlock, saxigp0.arprot, saxigp0.arqos, saxigp0.arready, saxigp0.arsize, saxigp0.aruser, saxigp0.arvalid, saxigp0.awaddr, saxigp0.awburst, saxigp0.awcache, saxigp0.awid, saxigp0.awlen, saxigp0.awlock, saxigp0.awprot, saxigp0.awqos, saxigp0.awready, saxigp0.awsize, saxigp0.awuser, saxigp0.awvalid, saxigp0.bid, saxigp0.bready, saxigp0.bresp, saxigp0.bvalid, saxigp0.rdata, saxigp0.rid, saxigp0.rlast, saxigp0.rready, saxigp0.rresp, saxigp0.rvalid, saxigp0.wdata, saxigp0.wlast, saxigp0.wready, saxigp0.wstrb, saxigp0.wvalid) CF (maxigp0.araddr, maxigp0.arburst, maxigp0.arcache, maxigp0.arid, maxigp0.arlen, maxigp0.arlock, maxigp0.arprot, maxigp0.arqos, maxigp0.arready, maxigp0.arsize, maxigp0.aruser, maxigp0.arvalid, maxigp0.awaddr, maxigp0.awburst, maxigp0.awcache, maxigp0.awid, maxigp0.awlen, maxigp0.awlock, maxigp0.awprot, maxigp0.awqos, maxigp0.awready, maxigp0.awsize, maxigp0.awuser, maxigp0.awvalid, maxigp0.bid, maxigp0.bready, maxigp0.bresp, maxigp0.bvalid, maxigp0.rdata, maxigp0.rid, maxigp0.rlast, maxigp0.rready, maxigp0.rresp, maxigp0.rvalid, maxigp0.wdata, maxigp0.wlast, maxigp0.wready, maxigp0.wstrb, maxigp0.wvalid, maxigp2.araddr, maxigp2.arburst, maxigp2.arcache, maxigp2.arid, maxigp2.arlen, maxigp2.arlock, maxigp2.arprot, maxigp2.arqos, maxigp2.arready, maxigp2.arsize, maxigp2.aruser, maxigp2.arvalid, maxigp2.awaddr, maxigp2.awburst, maxigp2.awcache, maxigp2.awid, maxigp2.awlen, maxigp2.awlock, maxigp2.awprot, maxigp2.awqos, maxigp2.awready, maxigp2.awsize, maxigp2.awuser, maxigp2.awvalid, maxigp2.bid, maxigp2.bready, maxigp2.bresp, maxigp2.bvalid, maxigp2.rdata, maxigp2.rid, maxigp2.rlast, maxigp2.rready, maxigp2.rresp, maxigp2.rvalid, maxigp2.wdata, maxigp2.wlast, maxigp2.wready, maxigp2.wstrb, maxigp2.wvalid, pl.clk0, pl.clk1, pl.ps_irq0, pl.resetn0, saxigp0.araddr, saxigp0.arburst, saxigp0.arcache, saxigp0.arid, saxigp0.arlen, saxigp0.arlock, saxigp0.arprot, saxigp0.arqos, saxigp0.arready, saxigp0.arsize, saxigp0.aruser, saxigp0.arvalid, saxigp0.awaddr, saxigp0.awburst, saxigp0.awcache, saxigp0.awid, saxigp0.awlen, saxigp0.awlock, saxigp0.awprot, saxigp0.awqos, saxigp0.awready, saxigp0.awsize, saxigp0.awuser, saxigp0.awvalid, saxigp0.bid, saxigp0.bready, saxigp0.bresp, saxigp0.bvalid, saxigp0.rdata, saxigp0.rid, saxigp0.rlast, saxigp0.rready, saxigp0.rresp, saxigp0.rvalid, saxigp0.wdata, saxigp0.wlast, saxigp0.wready, saxigp0.wstrb, saxigp0.wvalid);
+    schedule (maxigp0.araddr, maxigp0.arburst, maxigp0.arcache, maxigp0.arid, maxigp0.arlen, maxigp0.arlock, maxigp0.arprot, maxigp0.arqos, maxigp0.arready, maxigp0.arsize, maxigp0.aruser, maxigp0.arvalid, maxigp0.awaddr, maxigp0.awburst, maxigp0.awcache, maxigp0.awid, maxigp0.awlen, maxigp0.awlock, maxigp0.awprot, maxigp0.awqos, maxigp0.awready, maxigp0.awsize, maxigp0.awuser, maxigp0.awvalid, maxigp0.bid, maxigp0.bready, maxigp0.bresp, maxigp0.bvalid, maxigp0.rdata, maxigp0.rid, maxigp0.rlast, maxigp0.rready, maxigp0.rresp, maxigp0.rvalid, maxigp0.wdata, maxigp0.wlast, maxigp0.wready, maxigp0.wstrb, maxigp0.wvalid, maxigp2.araddr, maxigp2.arburst, maxigp2.arcache, maxigp2.arid, maxigp2.arlen, maxigp2.arlock, maxigp2.arprot, maxigp2.arqos, maxigp2.arready, maxigp2.arsize, maxigp2.aruser, maxigp2.arvalid, maxigp2.awaddr, maxigp2.awburst, maxigp2.awcache, maxigp2.awid, maxigp2.awlen, maxigp2.awlock, maxigp2.awprot, maxigp2.awqos, maxigp2.awready, maxigp2.awsize, maxigp2.awuser, maxigp2.awvalid, maxigp2.bid, maxigp2.bready, maxigp2.bresp, maxigp2.bvalid, maxigp2.rdata, maxigp2.rid, maxigp2.rlast, maxigp2.rready, maxigp2.rresp, maxigp2.rvalid, maxigp2.wdata, maxigp2.wlast, maxigp2.wready, maxigp2.wstrb, maxigp2.wvalid, pl.acpinact, pl.clk0, pl.clk1, pl.ps_irq0, pl.resetn0, saxiacp.araddr, saxiacp.arburst, saxiacp.arcache, saxiacp.arid, saxiacp.arlen, saxiacp.arlock, saxiacp.arprot, saxiacp.arqos, saxiacp.arready, saxiacp.arsize, saxiacp.aruser, saxiacp.arvalid, saxiacp.awaddr, saxiacp.awburst, saxiacp.awcache, saxiacp.awid, saxiacp.awlen, saxiacp.awlock, saxiacp.awprot, saxiacp.awqos, saxiacp.awready, saxiacp.awsize, saxiacp.awuser, saxiacp.awvalid, saxiacp.bid, saxiacp.bready, saxiacp.bresp, saxiacp.bvalid, saxiacp.rdata, saxiacp.rid, saxiacp.rlast, saxiacp.rready, saxiacp.rresp, saxiacp.rvalid, saxiacp.wdata, saxiacp.wlast, saxiacp.wready, saxiacp.wstrb, saxiacp.wvalid, saxigp0.araddr, saxigp0.arburst, saxigp0.arcache, saxigp0.arid, saxigp0.arlen, saxigp0.arlock, saxigp0.arprot, saxigp0.arqos, saxigp0.arready, saxigp0.arsize, saxigp0.aruser, saxigp0.arvalid, saxigp0.awaddr, saxigp0.awburst, saxigp0.awcache, saxigp0.awid, saxigp0.awlen, saxigp0.awlock, saxigp0.awprot, saxigp0.awqos, saxigp0.awready, saxigp0.awsize, saxigp0.awuser, saxigp0.awvalid, saxigp0.bid, saxigp0.bready, saxigp0.bresp, saxigp0.bvalid, saxigp0.rdata, saxigp0.rid, saxigp0.rlast, saxigp0.rready, saxigp0.rresp, saxigp0.rvalid, saxigp0.wdata, saxigp0.wlast, saxigp0.wready, saxigp0.wstrb, saxigp0.wvalid) CF (maxigp0.araddr, maxigp0.arburst, maxigp0.arcache, maxigp0.arid, maxigp0.arlen, maxigp0.arlock, maxigp0.arprot, maxigp0.arqos, maxigp0.arready, maxigp0.arsize, maxigp0.aruser, maxigp0.arvalid, maxigp0.awaddr, maxigp0.awburst, maxigp0.awcache, maxigp0.awid, maxigp0.awlen, maxigp0.awlock, maxigp0.awprot, maxigp0.awqos, maxigp0.awready, maxigp0.awsize, maxigp0.awuser, maxigp0.awvalid, maxigp0.bid, maxigp0.bready, maxigp0.bresp, maxigp0.bvalid, maxigp0.rdata, maxigp0.rid, maxigp0.rlast, maxigp0.rready, maxigp0.rresp, maxigp0.rvalid, maxigp0.wdata, maxigp0.wlast, maxigp0.wready, maxigp0.wstrb, maxigp0.wvalid, maxigp2.araddr, maxigp2.arburst, maxigp2.arcache, maxigp2.arid, maxigp2.arlen, maxigp2.arlock, maxigp2.arprot, maxigp2.arqos, maxigp2.arready, maxigp2.arsize, maxigp2.aruser, maxigp2.arvalid, maxigp2.awaddr, maxigp2.awburst, maxigp2.awcache, maxigp2.awid, maxigp2.awlen, maxigp2.awlock, maxigp2.awprot, maxigp2.awqos, maxigp2.awready, maxigp2.awsize, maxigp2.awuser, maxigp2.awvalid, maxigp2.bid, maxigp2.bready, maxigp2.bresp, maxigp2.bvalid, maxigp2.rdata, maxigp2.rid, maxigp2.rlast, maxigp2.rready, maxigp2.rresp, maxigp2.rvalid, maxigp2.wdata, maxigp2.wlast, maxigp2.wready, maxigp2.wstrb, maxigp2.wvalid, pl.acpinact, pl.clk0, pl.clk1, pl.ps_irq0, pl.resetn0, saxiacp.araddr, saxiacp.arburst, saxiacp.arcache, saxiacp.arid, saxiacp.arlen, saxiacp.arlock, saxiacp.arprot, saxiacp.arqos, saxiacp.arready, saxiacp.arsize, saxiacp.aruser, saxiacp.arvalid, saxiacp.awaddr, saxiacp.awburst, saxiacp.awcache, saxiacp.awid, saxiacp.awlen, saxiacp.awlock, saxiacp.awprot, saxiacp.awqos, saxiacp.awready, saxiacp.awsize, saxiacp.awuser, saxiacp.awvalid, saxiacp.bid, saxiacp.bready, saxiacp.bresp, saxiacp.bvalid, saxiacp.rdata, saxiacp.rid, saxiacp.rlast, saxiacp.rready, saxiacp.rresp, saxiacp.rvalid, saxiacp.wdata, saxiacp.wlast, saxiacp.wready, saxiacp.wstrb, saxiacp.wvalid, saxigp0.araddr, saxigp0.arburst, saxigp0.arcache, saxigp0.arid, saxigp0.arlen, saxigp0.arlock, saxigp0.arprot, saxigp0.arqos, saxigp0.arready, saxigp0.arsize, saxigp0.aruser, saxigp0.arvalid, saxigp0.awaddr, saxigp0.awburst, saxigp0.awcache, saxigp0.awid, saxigp0.awlen, saxigp0.awlock, saxigp0.awprot, saxigp0.awqos, saxigp0.awready, saxigp0.awsize, saxigp0.awuser, saxigp0.awvalid, saxigp0.bid, saxigp0.bready, saxigp0.bresp, saxigp0.bvalid, saxigp0.rdata, saxigp0.rid, saxigp0.rlast, saxigp0.rready, saxigp0.rresp, saxigp0.rvalid, saxigp0.wdata, saxigp0.wlast, saxigp0.wready, saxigp0.wstrb, saxigp0.wvalid);
 endmodule
