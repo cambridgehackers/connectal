@@ -57,6 +57,7 @@ interface PS8LIB;
     (* prefix="" *)
     interface Vector#(1, Ps8Maxigp)     m_axi_gp;
     interface Vector#(1, Ps8Saxigp)     s_axi_gp;
+    interface Vector#(1, Ps8Saxiacp)     s_axi_acp;
     method Action                             interrupt(Bit#(1) v);
     interface Vector#(4, Clock) plclk;
     interface Clock portalClock;
@@ -115,7 +116,7 @@ module mkPS8LIB#(Clock axiClock)(PS8LIB);
    let derived_reset_unbuffered <- mkSyncReset(10, single_reset, derived_clock);
    let derived_reset <- mkResetBUFG(clocked_by derived_clock, reset_by derived_reset_unbuffered);
 
-   ZYNQ_ULTRA::PS8 psu <- ZYNQ_ULTRA::mkPS8(single_clock, single_clock, single_clock);
+   ZYNQ_ULTRA::PS8 psu <- ZYNQ_ULTRA::mkPS8(single_clock, single_clock, single_clock, single_clock);
 
    // this rule connects the pl_clk wires to the clock net via B2C
    for (Integer i = 0; i < 1; i = i + 1) begin
@@ -136,6 +137,7 @@ module mkPS8LIB#(Clock axiClock)(PS8LIB);
 
     interface m_axi_gp = vec(psu.maxigp0);
     interface s_axi_gp = vec(psu.saxigp0);
+    interface s_axi_acp = vec(psu.saxiacp);
     interface plclk = fclk;
 `ifndef TOP_SOURCES_PORTAL_CLOCK
     interface portalClock = fclk[0];
@@ -159,6 +161,10 @@ endinterface
 interface Ps8SaxigpExtra;
     method Action aruser(Bit#(1) v);
     method Action awuser(Bit#(1) v);
+endinterface
+interface Ps8SaxiacpExtra;
+    method Action aruser(Bit#(2) v);
+    method Action awuser(Bit#(2) v);
 endinterface
 
 instance ToAxi4MasterBits#(Axi4MasterBits#(40,128,16,Ps8MaxigpExtra), Ps8Maxigp);
@@ -260,9 +266,106 @@ instance ToAxi4SlaveBits#(Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra), Ps8Saxigp);
    endfunction
 endinstance
 
-instance MkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra),addrWidth,DataBusWidth)
-      provisos (Add#(addrWidth,a__,49));
-   module mkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra) axiSlave)(PhysMemSlave#(addrWidth,DataBusWidth));
+instance ToAxi4SlaveBits#(Axi4SlaveBits#(40,128,5,Ps8SaxiacpExtra), Ps8Saxiacp);
+   function Axi4SlaveBits#(40,128,5,Ps8SaxiacpExtra) toAxi4SlaveBits(Ps8Saxiacp s);
+      return (interface Axi4SlaveBits#(40,128,5,Ps8SaxiacpExtra);
+	 method araddr = s.araddr;
+	 method arburst = s.arburst;
+	 method arcache = s.arcache;
+	 //method aresetn = 1; //no aresetn port in zcu
+	 method arid = s.arid;
+	 method arlen = s.arlen;
+	 method arlock = compose(s.arlock, truncate);
+	 method arprot = s.arprot;
+	 method arqos = s.arqos;
+	 method arready = s.arready;
+	 method arsize = s.arsize;
+	 method arvalid = s.arvalid;
+	 
+	 method awaddr = s.awaddr;
+	 method awburst = s.awburst;
+	 method awcache = s.awcache;
+	 method awid = s.awid;
+	 method awlen = s.awlen;
+	 method awlock = compose(s.awlock, truncate);
+	 method awprot = s.awprot;
+	 method awqos = s.awqos;
+	 method awready = s.awready;
+	 method awsize = s.awsize;
+	 method awvalid = s.awvalid;
+
+	 method bid = s.bid;
+	 method bready = s.bready;
+	 method bresp = s.bresp;
+	 method bvalid = s.bvalid;
+	 method rdata = s.rdata;
+	 method rid = s.rid;
+	 method rlast = s.rlast;
+	 method rready = s.rready;
+	 method rresp = s.rresp;
+	 method rvalid = s.rvalid;
+	 method wdata = s.wdata;
+	 //method wid = s.wid; //wid not present in Axi4
+	 method wlast = s.wlast;
+	 method wready = s.wready;
+	 method wvalid = s.wvalid;
+	 method wstrb = s.wstrb;
+	 interface Ps8SaxiacpExtra extra;
+		 method aruser = s.aruser;
+		 method awuser = s.awuser;
+	 endinterface
+	 endinterface);
+   endfunction
+endinstance
+
+typeclass PhysMemSlaveExtra#(type extraType);
+   function Action extra_r(extraType ex);
+   function Action extra_w(extraType ex);
+endtypeclass
+
+
+instance PhysMemSlaveExtra#(Empty);
+   function Action extra_r(Empty ex);
+      action endaction
+   endfunction
+   function Action extra_w(Empty ex);
+      action endaction
+   endfunction
+endinstance
+
+instance PhysMemSlaveExtra#(Ps8SaxigpExtra);
+   function Action extra_r(Ps8SaxigpExtra ex);
+      action
+	 ex.aruser(1'b0);
+      endaction
+   endfunction
+   function Action extra_w(Ps8SaxigpExtra ex);
+      action
+	 ex.awuser(1'b0);
+      endaction
+   endfunction
+endinstance
+
+instance PhysMemSlaveExtra#(Ps8SaxiacpExtra);
+   function Action extra_r(Ps8SaxiacpExtra ex);
+      action
+	 // inner shareable
+	 ex.aruser(2'b01);
+      endaction
+   endfunction
+   function Action extra_w(Ps8SaxiacpExtra ex);
+      action
+	 // inner shareable
+	 ex.awuser(2'b01);
+      endaction
+   endfunction
+endinstance
+
+instance MkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,128,idWidth,extraType),addrWidth,DataBusWidth)
+      provisos (Add#(addrWidth,a__,axiAddrWidth)
+		, Add#(b__, idWidth, MemTagSize)
+		, PhysMemSlaveExtra#(extraType));
+   module mkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,128,idWidth,extraType) axiSlave)(PhysMemSlave#(addrWidth,DataBusWidth));
       FIFOF#(PhysMemRequest#(addrWidth,DataBusWidth)) arfifo <- mkAxiFifoF();
       FIFOF#(MemData#(DataBusWidth)) rfifo <- mkAxiFifoF();
       FIFOF#(PhysMemRequest#(addrWidth,DataBusWidth)) awfifo <- mkAxiFifoF();
@@ -310,7 +413,7 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra),addrWidth,DataB
       endrule
       rule rl_arfifo if (axiSlave.arready() == 1);
 	 let req <- toGet(arfifo).get();
-	 Axi4ReadRequest#(addrWidth,6) axireq = toAxi4ReadRequest(req);
+	 Axi4ReadRequest#(addrWidth,idWidth) axireq = toAxi4ReadRequest(req);
 	 axiSlave.araddr(extend(axireq.address));
 	 axiSlave.arid(axireq.id);
 	 axiSlave.arsize(axireq.size);
@@ -320,7 +423,7 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra),addrWidth,DataB
 	 axiSlave.arlock(2'b0);       // normal access
 	 axiSlave.arprot(3'b0);       // unprevileged, protected, data access
 	 axiSlave.arqos(4'b0);        // unused - default 0
-	 axiSlave.extra.aruser(1'b0); // unused
+	 extra_r(axiSlave.extra); // unused
 	 arInFlight.enq(True);
       endrule
       rule rl_rready;
@@ -331,7 +434,7 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra),addrWidth,DataB
 	 let last = axiSlave.rlast == 1;
 	 if (last) arInFlight.deq;
 
-	 rfifo.enq(MemData { data: truncate(axiSlave.rdata()), tag: axiSlave.rid(), last: last } );
+	 rfifo.enq(MemData { data: truncate(axiSlave.rdata()), tag: extend(axiSlave.rid()), last: last } );
       endrule
 
       rule rl_awvalid_awaddr;
@@ -339,7 +442,7 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra),addrWidth,DataB
       endrule
       rule rl_awfifo if (axiSlave.awready() == 1);
 	 let req <- toGet(awfifo).get();
-	 Axi4WriteRequest#(addrWidth,6) axireq = toAxi4WriteRequest(req);
+	 Axi4WriteRequest#(addrWidth,idWidth) axireq = toAxi4WriteRequest(req);
 	 axiSlave.awaddr(extend(axireq.address));
 	 axiSlave.awid(axireq.id);
 	 axiSlave.awsize(axireq.size);
@@ -349,7 +452,7 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra),addrWidth,DataB
 	 axiSlave.awlock(2'b0);       // normal access 
 	 axiSlave.awprot(3'b0);       // unprevileged, protedted, data access
 	 axiSlave.awqos(4'b0);        // unused - default 0
-	 axiSlave.extra.awuser(1'b0); // unused
+	 extra_w(axiSlave.extra);
 	 awInFlight.enq(True);
       endrule
       rule rl_wvalid;
@@ -369,7 +472,7 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra),addrWidth,DataB
       endrule
       rule rl_done if (axiSlave.bvalid() == 1);
 	 let tag <- toGet(awInFlight).get();
-	 bfifo.enq(axiSlave.bid());
+	 bfifo.enq(extend(axiSlave.bid()));
       endrule
 
       interface PhysMemReadServer read_server;
@@ -390,7 +493,11 @@ instance ConnectableWithTrace#(PS8LIB, Platform, traceType);
       PhysMemMaster#(32,32) physMemMaster <- mkPhysMemMaster(master);
       mkConnection(physMemMaster, top.slave);
 
+`ifdef USE_ACP
+      Axi4SlaveBits#(40,128,5,Ps8SaxiacpExtra) slave = toAxi4SlaveBits(psu.s_axi_acp[0]);
+`else
       Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra) slave = toAxi4SlaveBits(psu.s_axi_gp[0]);
+`endif // USE_ACP
       PhysMemSlave#(40,DataBusWidth) physMemSlave <- mkPhysMemSlave(slave);
       mkConnection(top.masters[0], physMemSlave);
    endmodule

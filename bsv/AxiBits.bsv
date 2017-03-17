@@ -597,6 +597,7 @@ endmodule
 `endif
 
 
+`ifdef FOOBAR
 //FIXME burst transfers
 instance MkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,dataWidth,tagWidth,Empty),addrWidth,dataWidth)
       provisos (Add#(axiAddrWidth,a__,addrWidth),
@@ -697,6 +698,7 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,dataWidth,tagWidth,Empty),a
       endinterface   
    endmodule   
 endinstance
+`endif // FOOBAR
 
 typeclass AxiToMemReadClient#(type objIdType, numeric type axiAddrWidth, numeric type dataWidth);
    module mkMemReadClient#(objIdType objId, Axi4MasterBits#(axiAddrWidth,dataWidth,MemTagSize,Empty) m)(MemReadClient#(dataWidth));
