@@ -56,7 +56,7 @@ endinterface
 interface PS8LIB;
     (* prefix="" *)
     interface Vector#(1, Ps8Maxigp)     m_axi_gp;
-    interface Vector#(1, Ps8Saxigp)     s_axi_gp;
+    interface Vector#(7, Ps8Saxigp)     s_axi_gp;
     interface Vector#(1, Ps8Saxiacp)     s_axi_acp;
     method Action                             interrupt(Bit#(1) v);
     interface Vector#(4, Clock) plclk;
@@ -116,7 +116,8 @@ module mkPS8LIB#(Clock axiClock)(PS8LIB);
    let derived_reset_unbuffered <- mkSyncReset(10, single_reset, derived_clock);
    let derived_reset <- mkResetBUFG(clocked_by derived_clock, reset_by derived_reset_unbuffered);
 
-   ZYNQ_ULTRA::PS8 psu <- ZYNQ_ULTRA::mkPS8(single_clock, single_clock, single_clock, single_clock);
+   // FIXME: enable multiple clock domains
+   ZYNQ_ULTRA::PS8 psu <- ZYNQ_ULTRA::mkPS8(single_clock, single_clock, single_clock, single_clock, single_clock, single_clock, single_clock, single_clock, single_clock, single_clock, single_clock);
 
    // this rule connects the pl_clk wires to the clock net via B2C
    for (Integer i = 0; i < 1; i = i + 1) begin
@@ -136,7 +137,7 @@ module mkPS8LIB#(Clock axiClock)(PS8LIB);
    end
 
     interface m_axi_gp = vec(psu.maxigp0);
-    interface s_axi_gp = vec(psu.saxigp0);
+    interface s_axi_gp = vec(psu.saxigp0, psu.saxigp1, psu.saxigp2, psu.saxigp3, psu.saxigp4, psu.saxigp5, psu.saxigp6);
     interface s_axi_acp = vec(psu.saxiacp);
     interface plclk = fclk;
 `ifndef TOP_SOURCES_PORTAL_CLOCK
@@ -495,10 +496,14 @@ instance ConnectableWithTrace#(PS8LIB, Platform, traceType);
 
 `ifdef USE_ACP
       Axi4SlaveBits#(40,128,5,Ps8SaxiacpExtra) slave = toAxi4SlaveBits(psu.s_axi_acp[0]);
-`else
-      Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra) slave = toAxi4SlaveBits(psu.s_axi_gp[0]);
+      PhysMemSlave#(40,DataBusWidth) physMemSlaveAcp <- mkPhysMemSlave(slave);
 `endif // USE_ACP
-      PhysMemSlave#(40,DataBusWidth) physMemSlave <- mkPhysMemSlave(slave);
-      mkConnection(top.masters[0], physMemSlave);
+      Vector#(7, Axi4SlaveBits#(49,128,6,Ps8SaxigpExtra)) slaves = map(toAxi4SlaveBits, psu.s_axi_gp);
+      Vector#(7, PhysMemSlave#(40,DataBusWidth)) physMemSlaves <- mapM(mkPhysMemSlave, slaves);
+`ifdef USE_ACP
+      physMemSlaves[0] = physMemSlaveAcp;
+`endif      
+      // makes NumberOfMasters connections
+      zipWithM(mkConnection, top.masters, take(physMemSlaves));
    endmodule
 endinstance
