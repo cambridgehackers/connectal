@@ -54,23 +54,43 @@ def preprocess(sourcefilename, source, defs, bsvpath):
             return (s, '')
     lines = source.splitlines()
     outlines = []
+    noncomment = ''
     while lines:
         line = lines[0]
         lines = lines[1:]
         cond  = stack[-1][0]
         valid = stack[-1][1]
 
+        # FIXME
         if (line.endswith('\\')):
             noncomment += line[:-1]
             continue
 
-        commentStart = line.find('//')
-        if commentStart >= 0:
-            noncomment = line[0:commentStart]
-            comment    = line[commentStart:]
-        else:
-            noncomment = line
-            comment    = ''
+        remaining = line
+        comment = ''
+        noncomment = ''
+        while len(remaining):
+            commentStart = remaining.find('/')
+            if commentStart >= 0:
+                noncomment += remaining[0:commentStart]
+                restofline = remaining[commentStart:]
+                if restofline.startswith('/*'):
+                    commentEnd = restofline.find('*/')
+                    if commentEnd >= 0:
+                        comment += restofline[0:commentEnd+1]
+                        remaining = restofline[commentEnd+1:]
+                    else:
+                        comment += restofline
+                        remaining = ''
+                elif restofline.startswith('//'):
+                    comment += remaining
+                    remaining = ''
+                else:
+                    noncomment += restofline[0]
+                    remaining = remaining[1:]
+            else:
+                noncomment += remaining
+                remaining = ''
         i = noncomment.find('`')
         if i < 0:
             if valid:
