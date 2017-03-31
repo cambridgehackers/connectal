@@ -55,6 +55,8 @@ def preprocess(sourcefilename, source, defs, bsvpath):
     lines = source.splitlines()
     outlines = []
     noncomment = ''
+    # true if a previous line started a block comment and didn't finish it
+    multilinecomment = False
     while lines:
         line = lines[0]
         lines = lines[1:]
@@ -69,6 +71,17 @@ def preprocess(sourcefilename, source, defs, bsvpath):
         remaining = line
         comment = ''
         noncomment = ''
+
+        if multilinecomment:
+            commentEnd = remaining.find('*/')
+            if commentEnd >= 0:
+                comment += remaining[0:commentEnd+2]
+                remaining = remaining[commentEnd+2:]
+                multilinecomment = False
+            else:
+                comment += remaining
+                remaining = ''
+
         while len(remaining):
             commentStart = remaining.find('/')
             if commentStart >= 0:
@@ -77,11 +90,12 @@ def preprocess(sourcefilename, source, defs, bsvpath):
                 if restofline.startswith('/*'):
                     commentEnd = restofline.find('*/')
                     if commentEnd >= 0:
-                        comment += restofline[0:commentEnd+1]
-                        remaining = restofline[commentEnd+1:]
+                        comment += restofline[0:commentEnd+2]
+                        remaining = restofline[commentEnd+2:]
                     else:
                         comment += restofline
                         remaining = ''
+                        multilinecomment = True
                 elif restofline.startswith('//'):
                     comment += remaining
                     remaining = ''
