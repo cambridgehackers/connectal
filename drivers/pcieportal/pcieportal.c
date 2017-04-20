@@ -383,6 +383,7 @@ static const struct file_operations pcieportal_fops = {
         .mmap = portal_mmap
 };
 
+#ifdef PCIEPORTAL_TUNE_CAPS
 static void tune_pcie_caps(struct pci_dev *dev)
 {
 	struct pci_dev *parent;
@@ -433,6 +434,7 @@ static void tune_pcie_caps(struct pci_dev *dev)
 	printk("%s: %s:%d parent.readrq=%d dev.readrq=%d\n", DEV_NAME, __FUNCTION__, __LINE__, pcie_get_readrq(parent), pcie_get_readrq(dev));
 
 }
+#endif // PCIEPORTAL_TUNE_CAPS
 
 static int board_activate(int activate, tBoard *this_board, struct pci_dev *dev)
 {
@@ -621,7 +623,9 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 			device_create(pcieportal_class, &dev->dev, this_device_number, NULL, "connectal");
 		}
 
+#ifdef PCIEPORTAL_TUNE_CAPS
 		tune_pcie_caps(dev);
+#endif // PCIEPORTAL_TUNE_CAPS
 
                 if (err == 0)
                     return err; /* if board activated correctly, return */
