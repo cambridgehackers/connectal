@@ -60,9 +60,11 @@ endif
 
 .PHONY: clean
 clean:
-	rm -rf *.ko *.o *.mod.*
-	rm -rf Module.symvers Module.markers modules.order
+	$(Q)$(MAKE) -C $(KROOT) M=$(PWD) clean
 	cd ../portalmem; make clean
+
+.PHONY: distclean
+distclean: clean
 
 .PHONY: rmmod
 rmmod:
