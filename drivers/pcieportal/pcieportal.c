@@ -722,8 +722,13 @@ printk("*****[%s:%d] getdrv %p\n", __FUNCTION__, __LINE__, this_board);
 }
 
 /* PCI ID pattern table */
-static DEFINE_PCI_DEVICE_TABLE(pcieportal_id_table) = {{
-        PCI_DEVICE(BLUESPEC_VENDOR_ID, CONNECTAL_DEVICE_ID)}, { /* end: all zeros */ } };
+static
+#ifdef DEFINE_PCI_DEVICE_TABLE // changed in Linux 4.8
+    DEFINE_PCI_DEVICE_TABLE(pcieportal_id_table)
+#else
+    const struct pci_device_id pcieportal_id_table[]
+#endif
+        = {{ PCI_DEVICE(BLUESPEC_VENDOR_ID, CONNECTAL_DEVICE_ID)}, { /* end: all zeros */ } };
 
 MODULE_DEVICE_TABLE(pci, pcieportal_id_table);
 
