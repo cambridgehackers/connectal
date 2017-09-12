@@ -15,7 +15,7 @@ CROSS_COMPILE?=arm-linux-gnueabi-
 KROOT?=$(CONNECTALDIR)/../linux-xlnx
 
 ccflags-y := -I$(src)/../portalmem -I$(src)/../../cpp -I$(PWD)/../.. -I$(src)/../../generated/cpp \
-	-DDRIVER_VERSION="KBUILD_STR($(VERSION))"
+	-DDRIVER_VERSION="\"$(VERSION)\""
 
 zynqportal.ko: zynqportal.h zynqportal.c
 	echo "$(VERSION)"
