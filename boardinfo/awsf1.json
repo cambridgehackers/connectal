@@ -1,0 +1,18 @@
+{
+    "options": {
+        "bsvdefines" : ["XILINX=1", "VirtexUltrascale", "PhysAddrWidth=32", "XsimHostInterface",
+		       	"CONNECTAL_BITS_DEPENDENCES=hw/mkTop.bit", "CONNECTAL_RUN_SCRIPT=$(CONNECTALDIR)/scripts/run.aws"],
+        "os" : "ubuntu",
+        "partname" : "xcvu9p-flgb2104-2-i",
+        "TOP" : "AwsF1Top",
+        "constraints": ["constraints/xilinx/awsf1.xdc"],
+        "implconstraints": ["constraints/xilinx/awsf1.xdc"],
+        "runscript" : "run.pcietest",
+        "CONNECTALFLAGS" : ["--mainclockperiod=8", "--derivedclockperiod=4", "--pcieclockperiod=8"],
+        "rewireclockstring" : ""
+    },
+    "pins": {
+	}
+}
+
+
