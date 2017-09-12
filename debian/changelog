@@ -1,3 +1,9 @@
+connectal (17.09.2-1precise1) precise; urgency=medium
+
+  * Removed KBUILD_STR from Makefile.dkms
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 12 Sep 2017 12:46:55 -0400
+
 connectal (17.09.1-1precise1) precise; urgency=medium
 
   * Updated pcie drivers to build with kernel 4.6.0+
