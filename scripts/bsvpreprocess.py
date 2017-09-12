@@ -54,23 +54,57 @@ def preprocess(sourcefilename, source, defs, bsvpath):
             return (s, '')
     lines = source.splitlines()
     outlines = []
+    noncomment = ''
+    # true if a previous line started a block comment and didn't finish it
+    multilinecomment = False
     while lines:
         line = lines[0]
         lines = lines[1:]
         cond  = stack[-1][0]
         valid = stack[-1][1]
 
+        # FIXME
         if (line.endswith('\\')):
             noncomment += line[:-1]
             continue
 
-        commentStart = line.find('//')
-        if commentStart >= 0:
-            noncomment = line[0:commentStart]
-            comment    = line[commentStart:]
-        else:
-            noncomment = line
-            comment    = ''
+        remaining = line
+        comment = ''
+        noncomment = ''
+
+        if multilinecomment:
+            commentEnd = remaining.find('*/')
+            if commentEnd >= 0:
+                comment += remaining[0:commentEnd+2]
+                remaining = remaining[commentEnd+2:]
+                multilinecomment = False
+            else:
+                comment += remaining
+                remaining = ''
+
+        while len(remaining):
+            commentStart = remaining.find('/')
+            if commentStart >= 0:
+                noncomment += remaining[0:commentStart]
+                restofline = remaining[commentStart:]
+                if restofline.startswith('/*'):
+                    commentEnd = restofline.find('*/')
+                    if commentEnd >= 0:
+                        comment += restofline[0:commentEnd+2]
+                        remaining = restofline[commentEnd+2:]
+                    else:
+                        comment += restofline
+                        remaining = ''
+                        multilinecomment = True
+                elif restofline.startswith('//'):
+                    comment += remaining
+                    remaining = ''
+                else:
+                    noncomment += restofline[0]
+                    remaining = remaining[1:]
+            else:
+                noncomment += remaining
+                remaining = ''
         i = noncomment.find('`')
         if i < 0:
             if valid:

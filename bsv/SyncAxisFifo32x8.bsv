@@ -34,10 +34,10 @@ interface SyncAxisFifo8#(numeric type dwidth);
 endinterface
 import "BVI" dual_clock_axis_fifo_32x8 =
 module mkSyncAxisFifo32x8#(Clock s_aclk, Reset s_aresetn, Clock m_aclk, Reset m_aresetn)(SyncAxisFifo8#(32));
-    default_clock clk();
-    default_reset rst();
-        input_clock m_aclk(m_aclk) = m_aclk;
-        input_clock s_aclk(s_aclk) = s_aclk;
+    default_clock no_clock;
+    default_reset no_reset;
+        input_clock m_aclk(m_aclk, (* unused *) GATE) = m_aclk;
+        input_clock s_aclk(s_aclk, (* unused *) GATE) = s_aclk;
         input_reset s_aresetn(s_aresetn) clocked_by (s_aclk) = s_aresetn;
         input_reset m_aresetn_foo() clocked_by (m_aclk) = m_aresetn;
     interface AxiStreamMaster     m_axis;
@@ -57,6 +57,7 @@ module mkSyncAxisFifo32x8#(Clock s_aclk, Reset s_aresetn, Clock m_aclk, Reset m_
     schedule (m_axis.tdata, m_axis.tkeep, m_axis.tlast, m_axis.tready, m_axis.tvalid, s_axis.tdata, s_axis.tkeep, s_axis.tlast, s_axis.tready, s_axis.tvalid) CF (m_axis.tdata, m_axis.tkeep, m_axis.tlast, m_axis.tready, m_axis.tvalid, s_axis.tdata, s_axis.tkeep, s_axis.tlast, s_axis.tready, s_axis.tvalid);
 endmodule
 
+(* no_default_clock, no_default_reset *)
 module mkSyncAxisFifo8#(Clock sclk, Reset srst, Clock dclk, Reset drst)(SyncAxisFifo8#(dwidth))
    provisos (Div#(dwidth, 32, numFifos),
 	     Mul#(numFifos, 32, numBits),
@@ -113,6 +114,7 @@ module mkSyncAxisFifo8#(Clock sclk, Reset srst, Clock dclk, Reset drst)(SyncAxis
    endinterface
 endmodule
 
+(* no_default_clock, no_default_reset *)
 module mkSyncFifo8#(Clock fromClock, Reset fromReset, Clock toClock, Reset toReset)(FIFOF#(a))
    provisos (Bits#(a, asz),
 	     Div#(asz,32,afifos),

@@ -54,7 +54,10 @@
 int simulator_dump_vcd = 0;
 const char *simulator_vcd_name = "dump.vcd";
 // set this to 1 to suppress call to fpgajtag
-int noprogram = 0;
+#ifndef DEFAULT_NOPROGRAM
+#define DEFAULT_NOPROGRAM 0
+#endif
+int noprogram = DEFAULT_NOPROGRAM;
 
 static int trace_portal;//= 1;
 
@@ -385,6 +388,9 @@ if (trace_portal) fprintf(stderr, "[%s:%d] LD_LIBRARY_PATH %s *******\n", __FUNC
 #ifdef __arm__
 	  argv[ind++] = (char *)"-x"; // program via /dev/xdevcfg
 #endif
+#ifdef __aarch64__
+	  argv[ind++] = (char *)"-m"; // program via fpga manager
+#endif
 	  argv[ind++] = filename;
           errno = 0;
           if (filename) // only run fpgajtag if filename was found
@@ -531,8 +537,10 @@ printk("[%s:%d] start %lx end %lx len %x\n", __FUNCTION__, __LINE__, (long)start
 	}
 	asm volatile("mfence");
     }
+#elif defined(__aarch64__)
+    // TBD
 #else
-#error("dCAcheFlush not defined for unspecified architecture")
+#error("portalCacheFlush not defined for unspecified architecture")
 #endif
     if(trace_portal)
         PORTAL_PRINTF("dcache flush\n");

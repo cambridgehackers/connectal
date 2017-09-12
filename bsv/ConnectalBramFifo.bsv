@@ -64,7 +64,11 @@ module  vmkBramFifo#(String fifo_size, Clock wrClock, Reset wrReset, Clock rdClo
 `else
    let fifoReset = wrReset;
 `endif
+`ifdef XilinxUltrascale
+   parameter DEVICE = "ULTRASCALE";
+`else
    parameter DEVICE = "7SERIES";
+`endif
    parameter DATA_WIDTH = valueOf(data_width);
    parameter FIFO_SIZE = fifo_size;
 `ifndef SIMULATION

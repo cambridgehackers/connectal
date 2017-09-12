@@ -197,19 +197,13 @@ connectalspi-adb:
 	adb -s $(RUNIP):$(RUNPORT) shell insmod /mnt/sdcard/connectalspi.ko
 	adb -s $(RUNIP):$(RUNPORT) shell chmod 777 /dev/spi*
 
-distclean:
+distclean: pciedrivers-clean
 	for archname in $(allarchlist) ; do  \
 	   rm -rf examples/*/"$$archname" tests/*/"$$archname"; \
 	done
-	rm -rf drivers/*/.tmp_versions tests/memread_manual/kernel/.tmp_versions/
 	rm -rf pcie/connectalutil/connectalutil tests/memread_manual/kernel/bsim_relay
 	rm -rf out/ exit.status cpp/*.o scripts/*.pyc
 	rm -rf tests/*/train-images-idx3-ubyte examples/*/train-images-idx3-ubyte
-	rm -f drivers/pcieportal/.*.o.cmd drivers/pcieportal/.*.ko.cmd
-	rm -f drivers/portalmem/.*.o.cmd drivers/portalmem/.*.ko.cmd
-	rm -f drivers/zynqportal/.*.o.cmd drivers/zynqportal/.*.ko.cmd
 	rm -rf doc/library/build/ examples/rbm/datasets/
 	rm -f doc/library/source/devguide/connectalbuild-1.png
-	rm -f drivers/*/driver_signature_file.h
-	rm -f drivers/pcieportal/pcieportal_signature_file.h drivers/portalmem/portalmem_signature_file.h
 	rm -rf tests/partial/variant2

@@ -24,7 +24,7 @@ export BS_MOD_DIR=$(DESTDIR)/lib/modules/$(KVERSION)/connectal
 default: pcieportal.ko ../portalmem/portalmem.ko
 
 EXTRA_CFLAGS := -I$(CONNECTALDIR)/drivers/pciportal -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -I$(CONNECTALDIR)/drivers/portalmem -I$(CONNECTALDIR)/generated/cpp \
-	-DDRIVER_VERSION="KBUILD_STR($(VERSION))"
+	-DDRIVER_VERSION="\"$(VERSION)\""
 cflags-y += -I$(PWD)
 
 ../portalmem/portalmem.ko: ../portalmem/portalmem.c
@@ -60,9 +60,11 @@ endif
 
 .PHONY: clean
 clean:
-	rm -rf *.ko *.o *.mod.*
-	rm -rf Module.symvers Module.markers modules.order
+	$(Q)$(MAKE) -C $(KROOT) M=$(PWD) clean
 	cd ../portalmem; make clean
+
+.PHONY: distclean
+distclean: clean
 
 .PHONY: rmmod
 rmmod:

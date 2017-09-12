@@ -23,8 +23,10 @@
 #include "ReadTestRequest.h"
 #include "ReadTestIndication.h"
 
-#ifdef PCIE
+#if defined(PCIE)
 int burstLen = 32;
+#elif defined(ZynqUltrascale)
+int burstLen = 64; // ZynqUltrascale supports upto burstLenByte=4*64=256 (16 beats of 128bit transfer)
 #else
 int burstLen = 16;
 #endif

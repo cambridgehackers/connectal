@@ -25,9 +25,11 @@ import Clocks::*;
 import FIFOF::*;
 import CFFIFO::*;
 import GetPut::*;
+import Probe::*;
 import MemTypes::*;
 import EHRM::*;
 import Axi4MasterSlave::*;
+import Connectable::*;
 import ConnectalBramFifo::*;
 
 interface AxiMasterBits#(numeric type addrWidth, numeric type dataWidth, numeric type tagWidth, type extraType);
@@ -338,21 +340,20 @@ module mkAxiFifoF(FIFOF#(t)) provisos(Bits#(t, tSz));
     vb[1] <= False;
   endrule
 
-  method Bool notFull = !vb[0];
+  method Bool notFull = !vb[0]; // technically, canEnqueue
 
   method Action enq(t x) if(!vb[0]);
     db[0] <= x;
     vb[0] <= True;
   endmethod
 
-  method Bool notEmpty = va[0];
+  method Bool notEmpty = va[0]; // technically, canDequeue
 
   method Action deq if (va[0]);
     va[0] <= False;
   endmethod
 
-  // no implicit guard, to simplify rule guards below
-  method t first;
+  method t first if (va[0]);
     return da[0];
   endmethod
 
@@ -363,6 +364,123 @@ module mkAxiFifoF(FIFOF#(t)) provisos(Bits#(t, tSz));
   endmethod
 endmodule
 
+typedef 40 MpsocMAxiAddrWidth; // MAXI:40bit SAXI:49bit
+typedef 128 MpsocAxiDataWidth;
+typedef 16 MpsocMAxiIdWidth;   // MAXI:16bit SAXI: 6bit
+typedef 32 PhysMemDataWidth;
+typedef 32 PhysMemAddrWidth;
+instance MkPhysMemMaster#(Axi4MasterBits#(MpsocMAxiAddrWidth,MpsocAxiDataWidth,MpsocMAxiIdWidth,extra),PhysMemAddrWidth,PhysMemDataWidth)
+      provisos (Add#(PhysMemAddrWidth,a__,MpsocMAxiAddrWidth),
+		Add#(c__, 6, MpsocMAxiIdWidth)
+		);
+   module mkPhysMemMaster#(Axi4MasterBits#(MpsocMAxiAddrWidth,MpsocAxiDataWidth,MpsocMAxiIdWidth,extra) axiMaster)(PhysMemMaster#(PhysMemAddrWidth,PhysMemDataWidth));
+      FIFOF#(PhysMemRequest#(PhysMemAddrWidth,PhysMemDataWidth)) arfifo <- mkAxiFifoF();
+      FIFOF#(MemData#(PhysMemDataWidth)) rfifo <- mkAxiFifoF();
+      FIFOF#(PhysMemRequest#(PhysMemAddrWidth,PhysMemDataWidth)) awfifo <- mkAxiFifoF();
+      FIFOF#(MemData#(PhysMemDataWidth)) wfifo <- mkAxiFifoF();
+      FIFOF#(Bit#(MemTagSize)) bfifo <- mkAxiFifoF();
+      FIFOF#(Bit#(MpsocMAxiIdWidth)) rtagfifo <- mkAxiFifoF();
+      FIFOF#(Tuple2#(Bit#(MpsocMAxiIdWidth),Bit#(2))) awtagfifo <- mkAxiFifoF();
+      FIFOF#(Bit#(MpsocMAxiIdWidth)) wtagfifo <- mkAxiFifoF();
+
+   let beatShift = fromInteger(valueOf(TLog#(TDiv#(PhysMemDataWidth,8))));
+// req_ar (M=>S)
+      let arreadyProbe <- mkProbe();
+      rule rl_arready;
+	 let arready = pack(arfifo.notFull && rtagfifo.notFull);
+	 arreadyProbe <= arready;
+	 axiMaster.arready(arready);
+      endrule
+      rule rl_arfifo if (axiMaster.arvalid() == 1);
+	 let addr = truncate(axiMaster.araddr());
+	 let burstLen = extend(axiMaster.arlen+1) << beatShift; // calculate burstLen
+	 arfifo.enq(PhysMemRequest{ addr: addr, burstLen: burstLen, tag: 0 } ); // burstlen corrected
+	 rtagfifo.enq(axiMaster.arid()); // what if the single request with multiple transfer
+      endrule
+
+// resp_read (S=>M)
+      let rvalidProbe <- mkProbe();
+      rule rl_rvalid;
+	 let rvalid = pack(rfifo.notEmpty && rtagfifo.notEmpty);
+	 rvalidProbe <= rvalid;
+	 axiMaster.rvalid(rvalid);
+      endrule
+      rule rl_rdata if (axiMaster.rready() == 1);
+	 //let rtag <- toGet(rtagfifo).get();
+	 let rtag = rtagfifo.first();
+	 let rdata <- toGet(rfifo).get();
+
+	 if (rdata.last) begin
+		 rtagfifo.deq(); // deq rtagfifo only if last beat
+	 end
+	 
+	 axiMaster.rresp(0); //okay
+	 Vector#(4,Bit#(32)) words = replicate(rdata.data);
+	 axiMaster.rdata(pack(words));
+	 axiMaster.rid(extend(rtag));
+	 axiMaster.rlast(rdata.last?1:0); // added
+      endrule
+
+// req_aw (M=>S)
+      let awreadyProbe <- mkProbe();
+      rule rl_awvalid_awaddr;
+	 let awready = pack(awfifo.notFull && awtagfifo.notFull);
+	 awreadyProbe <= awready;
+	 axiMaster.awready(awready);
+      endrule
+      rule rl_awfifo if (axiMaster.awvalid() == 1);
+	 Bit#(PhysMemAddrWidth) addr = truncate(axiMaster.awaddr());
+	 let burstLen = extend(axiMaster.awlen+1) << beatShift; // calculate burstLen
+	 let tag = axiMaster.awid();
+	 awfifo.enq(PhysMemRequest{ addr: addr, tag: truncate(tag), burstLen: burstLen }); // burstlen corrected
+	 awtagfifo.enq(tuple2(tag, addr[3:2])); // what if the single request with multiple transfer??
+      endrule
+
+// resp_wr (M=>S) sending data
+      let wreadyProbe <- mkProbe();
+      rule rl_wready;
+	 let wready = pack(wfifo.notFull && awtagfifo.notEmpty && wtagfifo.notFull);
+	 wreadyProbe <= wready;
+	 axiMaster.wready(wready);
+      endrule
+      rule rl_wdata if (axiMaster.wvalid() == 1);
+	 let last = axiMaster.wlast == 1;
+	 match { .tag, .lane } = awtagfifo.first;
+	 Vector#(4, Bit#(PhysMemDataWidth)) words = unpack(axiMaster.wdata());
+	 wfifo.enq(MemData { data: words[lane], tag: truncate(tag), last: last});
+	 if (last) begin
+	    awtagfifo.deq();
+	    wtagfifo.enq(tag);
+	 end
+      endrule
+
+// resp_b (S=>M) 
+      let bvalidProbe <- mkProbe();
+      rule rl_bvalid;
+	 let bvalid = pack(wtagfifo.notEmpty && bfifo.notEmpty);
+	 bvalidProbe <= bvalid;
+	 axiMaster.bvalid(bvalid);
+      endrule
+      rule rl_done if (axiMaster.bready() == 1);
+	 let tag <- toGet(bfifo).get();
+	 let awtag <- toGet(wtagfifo).get();
+	 axiMaster.bid(awtag);
+	 axiMaster.bresp(0); //okay
+	 // where is b_resp?
+      endrule
+
+      interface PhysMemReadClient read_client;
+	 interface Get readReq = toGet(arfifo);
+	 interface Put readData = toPut(rfifo);
+      endinterface
+      interface PhysMemWriteClient write_client;
+	 interface Get writeReq = toGet(awfifo);
+	 interface Get writeData = toGet(wfifo);
+	 interface Put writeDone = toPut(bfifo);
+      endinterface
+   endmodule
+endinstance: MkPhysMemMaster
+
 instance MkPhysMemSlave#(Axi4SlaveLiteBits#(axiAddrWidth,dataWidth),addrWidth,dataWidth)
       provisos (Add#(axiAddrWidth,a__,addrWidth));
    module mkPhysMemSlave#(Axi4SlaveLiteBits#(axiAddrWidth,dataWidth) axiSlave)(PhysMemSlave#(addrWidth,dataWidth));
@@ -370,9 +488,9 @@ instance MkPhysMemSlave#(Axi4SlaveLiteBits#(axiAddrWidth,dataWidth),addrWidth,da
       FIFOF#(MemData#(dataWidth)) rfifo <- mkAxiFifoF();
       FIFOF#(PhysMemRequest#(addrWidth,dataWidth)) awfifo <- mkAxiFifoF();
       FIFOF#(MemData#(dataWidth)) wfifo <- mkAxiFifoF();
-      FIFOF#(Bit#(MemTagSize)) bfifo <- mkAxiFifoF();   
-      FIFOF#(Bit#(MemTagSize)) rtagfifo <- mkAxiFifoF();   
-      FIFOF#(Bit#(MemTagSize)) wtagfifo <- mkAxiFifoF();   
+      FIFOF#(Bit#(MemTagSize)) bfifo <- mkAxiFifoF();
+      FIFOF#(Bit#(MemTagSize)) rtagfifo <- mkAxiFifoF();
+      FIFOF#(Bit#(MemTagSize)) wtagfifo <- mkAxiFifoF();
 
       rule rl_arvalid_araddr;
 	 axiSlave.arvalid(pack(arfifo.notEmpty && rtagfifo.notFull));
@@ -387,7 +505,7 @@ instance MkPhysMemSlave#(Axi4SlaveLiteBits#(axiAddrWidth,dataWidth),addrWidth,da
       endrule
       rule rl_rready;
 	 axiSlave.rready(pack(rfifo.notFull && rtagfifo.notEmpty));
-      endrule   
+      endrule
       rule rl_rdata if (axiSlave.rvalid() == 1);
 	 let rtag <- toGet(rtagfifo).get();
 	 rfifo.enq(MemData { data: axiSlave.rdata(), tag: rtag } );
@@ -399,7 +517,7 @@ instance MkPhysMemSlave#(Axi4SlaveLiteBits#(axiAddrWidth,dataWidth),addrWidth,da
 	 if (awfifo.notEmpty)
 	    addr = truncate(awfifo.first.addr);
 	 axiSlave.awaddr(addr);
-      endrule   
+      endrule
       rule rl_awfifo if (axiSlave.awready() == 1);
 	 let req <- toGet(awfifo).get();
 	 wtagfifo.enq(req.tag);
@@ -411,10 +529,10 @@ instance MkPhysMemSlave#(Axi4SlaveLiteBits#(axiAddrWidth,dataWidth),addrWidth,da
 	 let wdata = wfifo.first.data;
 	 wfifo.deq();
 	 axiSlave.wdata(wdata);
-      endrule   
+      endrule
       rule rl_bready;
 	 axiSlave.bready(pack(wtagfifo.notEmpty && bfifo.notFull));
-      endrule   
+      endrule
       rule rl_done if (axiSlave.bvalid() == 1);
 	 let tag <- toGet(wtagfifo).get();
 	 bfifo.enq(tag);
@@ -423,13 +541,13 @@ instance MkPhysMemSlave#(Axi4SlaveLiteBits#(axiAddrWidth,dataWidth),addrWidth,da
       interface PhysMemReadServer read_server;
 	 interface Put readReq = toPut(arfifo);
 	 interface Get readData = toGet(rfifo);
-      endinterface   
+      endinterface
       interface PhysMemWriteServer write_server;
 	 interface Put writeReq = toPut(awfifo);
 	 interface Put writeData = toPut(wfifo);
 	 interface Get writeDone = toGet(bfifo);
-      endinterface   
-   endmodule   
+      endinterface
+   endmodule
 endinstance
 
 `ifdef BLUECHECK
@@ -479,6 +597,7 @@ endmodule
 `endif
 
 
+`ifdef FOOBAR
 //FIXME burst transfers
 instance MkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,dataWidth,tagWidth,Empty),addrWidth,dataWidth)
       provisos (Add#(axiAddrWidth,a__,addrWidth),
@@ -489,9 +608,9 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,dataWidth,tagWidth,Empty),a
       FIFOF#(PhysMemRequest#(addrWidth,dataWidth)) awfifo <- mkAxiFifoF();
       FIFOF#(MemData#(dataWidth)) wfifo <- mkAxiFifoF();
       FIFOF#(Bit#(TDiv#(dataWidth,8))) wstrbfifo <- mkAxiFifoF();
-      FIFOF#(Bit#(MemTagSize)) bfifo <- mkAxiFifoF();   
-      FIFOF#(Bit#(MemTagSize)) rtagfifo <- mkAxiFifoF();   
-      FIFOF#(Bit#(MemTagSize)) wtagfifo <- mkAxiFifoF();   
+      FIFOF#(Bit#(MemTagSize)) bfifo <- mkAxiFifoF();
+      FIFOF#(Bit#(MemTagSize)) rtagfifo <- mkAxiFifoF();
+      FIFOF#(Bit#(MemTagSize)) wtagfifo <- mkAxiFifoF();
 
       let dataWidthBytes = valueOf(TDiv#(dataWidth,8));
       let dataSizeMask = dataWidthBytes-1;
@@ -579,10 +698,15 @@ instance MkPhysMemSlave#(Axi4SlaveBits#(axiAddrWidth,dataWidth,tagWidth,Empty),a
       endinterface   
    endmodule   
 endinstance
+`endif // FOOBAR
 
 typeclass AxiToMemReadClient#(type objIdType, numeric type axiAddrWidth, numeric type dataWidth);
    module mkMemReadClient#(objIdType objId, Axi4MasterBits#(axiAddrWidth,dataWidth,MemTagSize,Empty) m)(MemReadClient#(dataWidth));
    module mkMemWriteClient#(objIdType objId, Axi4MasterBits#(axiAddrWidth,dataWidth,MemTagSize,Empty) m)(MemWriteClient#(dataWidth));
+endtypeclass
+typeclass AxiToPhysMemReadClient#(numeric type axiAddrWidth, numeric type dataWidth, numeric type idWidth, type extra);
+   module mkPhysMemReadClient#(Axi4MasterBits#(axiAddrWidth,dataWidth,idWidth,extra) m)(PhysMemReadClient#(axiAddrWidth,dataWidth));
+   module mkPhysMemWriteClient#(Axi4MasterBits#(axiAddrWidth,dataWidth,idWidth,extra) m)(PhysMemWriteClient#(axiAaddrWidth,dataWidth));
 endtypeclass
 
 instance AxiToMemReadClient#(Bit#(32),32,dataWidth);

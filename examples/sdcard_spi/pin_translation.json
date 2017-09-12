@@ -1,0 +1,18 @@
+{
+    "spi_sclk": {
+        "PIO_DIRECTION": "OUTPUT",
+        "sdio": "clk"
+    },
+    "spi_mosi": {
+        "PIO_DIRECTION": "OUTPUT",
+        "sdio": "cmd"
+    },
+    "spi_miso": {
+        "PIO_DIRECTION": "INPUT",
+        "sdio": "dat0"
+    },
+    "spi_ncs": {
+        "PIO_DIRECTION": "OUTPUT",
+        "sdio": "cd_dat3"
+    }
+}

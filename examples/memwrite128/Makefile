@@ -7,5 +7,6 @@ BSVFILES = ../memwrite/Memwrite.bsv
 CPPFILES=../memwrite/testmemwrite.cpp
 CONNECTALFLAGS += --bscflags " -show-schedule"
 CONNECTALFLAGS += -D DataBusWidth=128
+CONNECTALFLAGS += -D USE_ACP
 
 include $(CONNECTALDIR)/Makefile.connectal

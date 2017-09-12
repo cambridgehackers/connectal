@@ -91,6 +91,60 @@ if {$need_pcie == "x7_gen3x8"} {
 
 }
 
+if {$need_pcie == "xu_gen3x8"} {
+    if {[version -short] >= "2016.2"} {
+	set pcieversion {4.2}
+    }
+    set maxlinkwidth {X8}
+    connectal_synth_ip pcie3_ultrascale $pcieversion pcie3_7x_0 [list \
+									     CONFIG.PF0_DEVICE_ID {c100} \
+									     CONFIG.PF0_MSIX_CAP_PBA_BIR {BAR_1:0} \
+									     CONFIG.PF0_MSIX_CAP_PBA_OFFSET {000001f0} \
+									     CONFIG.PF0_MSIX_CAP_TABLE_BIR {BAR_1:0} \
+									     CONFIG.PF0_MSIX_CAP_TABLE_OFFSET {00000200} \
+									     CONFIG.PF0_MSIX_CAP_TABLE_SIZE {16} \
+									     CONFIG.PF0_SUBSYSTEM_ID {a705} \
+									     CONFIG.PF0_SUBSYSTEM_VENDOR_ID {1be7} \
+									     CONFIG.PF1_DEVICE_ID {8011} \
+									     CONFIG.PF1_MSIX_CAP_PBA_BIR {BAR_0} \
+									     CONFIG.PF1_MSIX_CAP_TABLE_BIR {BAR_0} \
+									     CONFIG.PL_LINK_CAP_MAX_LINK_SPEED {8.0_GT/s} \
+									     CONFIG.PL_LINK_CAP_MAX_LINK_WIDTH {X8} \
+									     CONFIG.aspm_support {No_ASPM} \
+									     CONFIG.axisten_freq {250} \
+									     CONFIG.axisten_if_width {256_bit} \
+									     CONFIG.coreclk_freq {250} \
+									     CONFIG.mode_selection {Advanced} \
+									     CONFIG.pf0_bar0_64bit {true} \
+									     CONFIG.pf0_bar0_scale {Kilobytes} \
+									     CONFIG.pf0_bar0_size {16} \
+									     CONFIG.pf0_bar2_enabled {true} \
+									     CONFIG.pf0_bar2_scale {Megabytes} \
+									     CONFIG.pf0_bar2_size {1} \
+									     CONFIG.pf0_bar2_type {Memory} \
+									     CONFIG.pf0_dev_cap_max_payload {1024_bytes} \
+									     CONFIG.pf0_dsn_enabled {true} \
+									     CONFIG.pf0_msix_enabled {true} \
+									     CONFIG.plltype {QPLL1} \
+									     CONFIG.vendor_id {1be7} \
+									     CONFIG.xlnx_ref_board {VCU108} \
+									    ]
+# add the following to enable PF1:
+# CONFIG.TL_PF_ENABLE_REG {true} CONFIG.PF1_DEVICE_ID {c100} \
+# CONFIG.pf1_bar0_64bit {true} CONFIG.pf1_bar0_size {16} \
+# CONFIG.pf1_bar2_enabled {true} CONFIG.pf1_bar2_64bit {true} \
+# CONFIG.pf1_bar2_scale {Megabytes} CONFIG.pf1_bar2_size {1} \
+# CONFIG.pf1_msix_enabled {true} CONFIG.PF1_MSIX_CAP_TABLE_OFFSET \
+# {00000400} CONFIG.PF1_MSIX_CAP_PBA_OFFSET {00000500} \
+# CONFIG.pf1_dsn_enabled {true} CONFIG.pf1_bar0_enabled {true} \
+# CONFIG.pf1_bar0_type {Memory} CONFIG.pf1_bar0_scale {Kilobytes} \
+# CONFIG.pf1_bar2_type {Memory} CONFIG.pf1_bar2_size {1} \
+# CONFIG.PF1_MSIX_CAP_TABLE_SIZE {010} \
+# CONFIG.PF1_MSIX_CAP_TABLE_OFFSET {00000200} \
+# CONFIG.PF1_MSIX_CAP_PBA_OFFSET {000001f0} \
+
+}
+
 proc create_pcie_sv_hip_ast {mode} {
     global boardname
     set pcieversion {2.1}

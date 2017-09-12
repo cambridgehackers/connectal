@@ -400,7 +400,7 @@ static void connectal_work_handler(struct work_struct *__xxx)
 	if(num_tiles   != readl(portal_data->map_base+NUM_TILES_OFFSET))
 	  driver_devel("%s: num_tiles mismatch. Expected %d read %d\n", __func__, num_tiles, readl(portal_data->map_base+NUM_TILES_OFFSET));;
       }
-      sprintf(portal_data->name, "portal_%d_%d", t, readl(portal_data->map_base+IID_OFFSET));
+      sprintf(portal_data->name, "portal_b%dt%dp%d", 0, t, readl(portal_data->map_base+IID_OFFSET));
       driver_devel("%s: t=%d fpn=%08x top=%d name=%s\n", __func__, t, fpn, fpn==num_portals, portal_data->misc.name);
       portal_data->misc.minor = MISC_DYNAMIC_MINOR;
       rc = misc_register( &portal_data->misc);
@@ -608,7 +608,7 @@ static int connectal_of_probe(struct platform_device *pdev)
       portal_data->misc.name = portal_data->name;
       portal_data->misc.fops = &portal_fops;
       INIT_LIST_HEAD(&portal_data->pmlist);
-      sprintf(portal_data->irqname, "zynqportal_%d_%d", t, fpn);
+      sprintf(portal_data->irqname, "zynqportal_b%dt%dp%d", 0, t, fpn);
       if (request_irq(connectal_data->portal_irq, portal_isr,
 		      IRQF_TRIGGER_HIGH | IRQF_SHARED , portal_data->irqname, portal_data)) {
 	printk("%s Failed to register irq\n", __func__);

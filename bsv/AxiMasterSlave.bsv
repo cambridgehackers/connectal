@@ -23,6 +23,7 @@
 import FIFOF::*;
 import FIFO::*;
 import GetPut::*;
+import GetPutWithClocks::*;
 import Connectable::*;
 import RegFile::*;
 
@@ -158,3 +159,28 @@ instance Connectable#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Slave#(addrW
    endmodule
 endinstance
 
+
+instance ConnectableWithClocks#(Axi3Master#(addrWidth, busWidth,idWidth), Axi3Slave#(addrWidth, busWidth,idWidth))
+   provisos (ConnectableWithClocks#(Get#(Axi3ReadRequest#(addrWidth, idWidth)), Put#(Axi3ReadRequest#(addrWidth, idWidth)))
+	     ,ConnectableWithClocks#(Get#(Axi3ReadResponse#(busWidth, idWidth)), Put#(Axi3ReadResponse#(busWidth, idWidth)))
+	     ,ConnectableWithClocks#(Get#(Axi3WriteRequest#(addrWidth, idWidth)), Put#(Axi3WriteRequest#(addrWidth, idWidth)))
+	     ,ConnectableWithClocks#(Get#(Axi3WriteData#(busWidth, idWidth)), Put#(Axi3WriteData#(busWidth, idWidth)))
+	     ,ConnectableWithClocks#(Get#(Axi3WriteResponse#(idWidth)), Put#(Axi3WriteResponse#(idWidth)))
+	     );
+
+   module mkConnectionWithClocks2#(Axi3Master#(addrWidth, busWidth,idWidth) m, Axi3Slave#(addrWidth, busWidth,idWidth) s)(Empty);
+      mkConnectionWithClocks(clockOf(m), resetOf(m), clockOf(s), resetOf(s), m, s);
+   endmodule
+
+   module mkConnectionWithClocks#(Clock mClock, Reset mReset, Clock sClock, Reset sReset,
+				  Axi3Master#(addrWidth, busWidth,idWidth) m, Axi3Slave#(addrWidth, busWidth,idWidth) s)(Empty);
+
+      mkConnectionWithClocks(mClock, mReset, sClock, sReset, m.req_ar, s.req_ar);
+      mkConnectionWithClocks(sClock, sReset, mClock, mReset, s.resp_read, m.resp_read);
+
+      mkConnectionWithClocks(mClock, mReset, sClock, sReset, m.req_aw, s.req_aw);
+      mkConnectionWithClocks(mClock, mReset, sClock, sReset, m.resp_write, s.resp_write);
+      mkConnectionWithClocks(sClock, sReset, mClock, mReset, s.resp_b, m.resp_b);
+
+   endmodule
+endinstance

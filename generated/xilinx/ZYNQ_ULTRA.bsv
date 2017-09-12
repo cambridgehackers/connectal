@@ -1,0 +1,771 @@
+
+/*
+   ../scripts/importbvi.py
+   -c
+   maxihpm0_fpd_aclk
+   -c
+   maxihpm0_fpd_aclk
+   -c
+   saxihpc0_fpd_aclk
+   -c
+   saxiacp_fpd_aclk
+   -c
+   saxi_lpd_aclk
+   -c
+   saxihp0_fpd_aclk
+   -c
+   saxihp1_fpd_aclk
+   -c
+   saxihp2_fpd_aclk
+   -c
+   saxihp3_fpd_aclk
+   -c
+   sacefpd_aclk
+   -c
+   maxihpm0_lpd_aclk
+   -I
+   PS8
+   -P
+   PS8
+   -o
+   ZYNQ_ULTRA.bsv
+   ../../out/zcu102/zynq_ultra_ps_e_0/zynq_ultra_ps_e_0_stub.v
+*/
+
+import Clocks::*;
+import DefaultValue::*;
+import XilinxCells::*;
+import GetPut::*;
+import AxiBits::*;
+
+(* always_ready, always_enabled *)
+interface Ps8Maxigp;
+    method Bit#(40)     araddr();
+    method Bit#(2)     arburst();
+    method Bit#(4)     arcache();
+    method Bit#(16)     arid();
+    method Bit#(8)     arlen();
+    method Bit#(1)     arlock();
+    method Bit#(3)     arprot();
+    method Bit#(4)     arqos();
+    method Action      arready(Bit#(1) v);
+    method Bit#(3)     arsize();
+    method Bit#(16)     aruser();
+    method Bit#(1)     arvalid();
+    method Bit#(40)     awaddr();
+    method Bit#(2)     awburst();
+    method Bit#(4)     awcache();
+    method Bit#(16)     awid();
+    method Bit#(8)     awlen();
+    method Bit#(1)     awlock();
+    method Bit#(3)     awprot();
+    method Bit#(4)     awqos();
+    method Action      awready(Bit#(1) v);
+    method Bit#(3)     awsize();
+    method Bit#(16)     awuser();
+    method Bit#(1)     awvalid();
+    method Action      bid(Bit#(16) v);
+    method Bit#(1)     bready();
+    method Action      bresp(Bit#(2) v);
+    method Action      bvalid(Bit#(1) v);
+    method Action      rdata(Bit#(128) v);
+    method Action      rid(Bit#(16) v);
+    method Action      rlast(Bit#(1) v);
+    method Bit#(1)     rready();
+    method Action      rresp(Bit#(2) v);
+    method Action      rvalid(Bit#(1) v);
+    method Bit#(128)     wdata();
+    method Bit#(1)     wlast();
+    method Action      wready(Bit#(1) v);
+    method Bit#(16)     wstrb();
+    method Bit#(1)     wvalid();
+endinterface
+(* always_ready, always_enabled *)
+(* always_ready, always_enabled *)
+interface Ps8Pl;
+    method Action      acpinact(Bit#(1) v);
+    method Bit#(1)     clk0();
+    method Bit#(1)     clk1();
+    method Action      ps_irq0(Bit#(1) v);
+    method Bit#(1)     resetn0();
+endinterface
+(* always_ready, always_enabled *)
+interface Ps8Sacefpd;
+    method Bit#(44)     acaddr();
+    method Bit#(3)     acprot();
+    method Action      acready(Bit#(1) v);
+    method Bit#(4)     acsnoop();
+    method Bit#(1)     acvalid();
+    method Action      araddr(Bit#(44) v);
+    method Action      arbar(Bit#(2) v);
+    method Action      arburst(Bit#(2) v);
+    method Action      arcache(Bit#(4) v);
+    method Action      ardomain(Bit#(2) v);
+    method Action      arid(Bit#(6) v);
+    method Action      arlen(Bit#(8) v);
+    method Action      arlock(Bit#(1) v);
+    method Action      arprot(Bit#(3) v);
+    method Action      arqos(Bit#(4) v);
+    method Bit#(1)     arready();
+    method Action      arregion(Bit#(4) v);
+    method Action      arsize(Bit#(3) v);
+    method Action      arsnoop(Bit#(4) v);
+    method Action      aruser(Bit#(16) v);
+    method Action      arvalid(Bit#(1) v);
+    method Action      awaddr(Bit#(44) v);
+    method Action      awbar(Bit#(2) v);
+    method Action      awburst(Bit#(2) v);
+    method Action      awcache(Bit#(4) v);
+    method Action      awdomain(Bit#(2) v);
+    method Action      awid(Bit#(6) v);
+    method Action      awlen(Bit#(8) v);
+    method Action      awlock(Bit#(1) v);
+    method Action      awprot(Bit#(3) v);
+    method Action      awqos(Bit#(4) v);
+    method Bit#(1)     awready();
+    method Action      awregion(Bit#(4) v);
+    method Action      awsize(Bit#(3) v);
+    method Action      awsnoop(Bit#(3) v);
+    method Action      awuser(Bit#(16) v);
+    method Action      awvalid(Bit#(1) v);
+    method Bit#(6)     bid();
+    method Action      bready(Bit#(1) v);
+    method Bit#(2)     bresp();
+    method Bit#(1)     buser();
+    method Bit#(1)     bvalid();
+    method Action      cddata(Bit#(128) v);
+    method Action      cdlast(Bit#(1) v);
+    method Bit#(1)     cdready();
+    method Action      cdvalid(Bit#(1) v);
+    method Bit#(1)     crready();
+    method Action      crresp(Bit#(5) v);
+    method Action      crvalid(Bit#(1) v);
+    method Action      rack(Bit#(1) v);
+    method Bit#(128)     rdata();
+    method Bit#(6)     rid();
+    method Bit#(1)     rlast();
+    method Action      rready(Bit#(1) v);
+    method Bit#(4)     rresp();
+    method Bit#(1)     ruser();
+    method Bit#(1)     rvalid();
+    method Action      wack(Bit#(1) v);
+    method Action      wdata(Bit#(128) v);
+    method Action      wlast(Bit#(1) v);
+    method Bit#(1)     wready();
+    method Action      wstrb(Bit#(16) v);
+    method Action      wuser(Bit#(1) v);
+    method Action      wvalid(Bit#(1) v);
+endinterface
+(* always_ready, always_enabled *)
+(* always_ready, always_enabled *)
+interface Ps8Saxiacp;
+    method Action      araddr(Bit#(40) v);
+    method Action      arburst(Bit#(2) v);
+    method Action      arcache(Bit#(4) v);
+    method Action      arid(Bit#(5) v);
+    method Action      arlen(Bit#(8) v);
+    method Action      arlock(Bit#(1) v);
+    method Action      arprot(Bit#(3) v);
+    method Action      arqos(Bit#(4) v);
+    method Bit#(1)     arready();
+    method Action      arsize(Bit#(3) v);
+    method Action      aruser(Bit#(2) v);
+    method Action      arvalid(Bit#(1) v);
+    method Action      awaddr(Bit#(40) v);
+    method Action      awburst(Bit#(2) v);
+    method Action      awcache(Bit#(4) v);
+    method Action      awid(Bit#(5) v);
+    method Action      awlen(Bit#(8) v);
+    method Action      awlock(Bit#(1) v);
+    method Action      awprot(Bit#(3) v);
+    method Action      awqos(Bit#(4) v);
+    method Bit#(1)     awready();
+    method Action      awsize(Bit#(3) v);
+    method Action      awuser(Bit#(2) v);
+    method Action      awvalid(Bit#(1) v);
+    method Bit#(5)     bid();
+    method Action      bready(Bit#(1) v);
+    method Bit#(2)     bresp();
+    method Bit#(1)     bvalid();
+    method Bit#(128)     rdata();
+    method Bit#(5)     rid();
+    method Bit#(1)     rlast();
+    method Action      rready(Bit#(1) v);
+    method Bit#(2)     rresp();
+    method Bit#(1)     rvalid();
+    method Action      wdata(Bit#(128) v);
+    method Action      wlast(Bit#(1) v);
+    method Bit#(1)     wready();
+    method Action      wstrb(Bit#(16) v);
+    method Action      wvalid(Bit#(1) v);
+endinterface
+(* always_ready, always_enabled *)
+interface Ps8Saxigp;
+    method Action      araddr(Bit#(49) v);
+    method Action      arburst(Bit#(2) v);
+    method Action      arcache(Bit#(4) v);
+    method Action      arid(Bit#(6) v);
+    method Action      arlen(Bit#(8) v);
+    method Action      arlock(Bit#(1) v);
+    method Action      arprot(Bit#(3) v);
+    method Action      arqos(Bit#(4) v);
+    method Bit#(1)     arready();
+    method Action      arsize(Bit#(3) v);
+    method Action      aruser(Bit#(1) v);
+    method Action      arvalid(Bit#(1) v);
+    method Action      awaddr(Bit#(49) v);
+    method Action      awburst(Bit#(2) v);
+    method Action      awcache(Bit#(4) v);
+    method Action      awid(Bit#(6) v);
+    method Action      awlen(Bit#(8) v);
+    method Action      awlock(Bit#(1) v);
+    method Action      awprot(Bit#(3) v);
+    method Action      awqos(Bit#(4) v);
+    method Bit#(1)     awready();
+    method Action      awsize(Bit#(3) v);
+    method Action      awuser(Bit#(1) v);
+    method Action      awvalid(Bit#(1) v);
+    method Bit#(6)     bid();
+    method Action      bready(Bit#(1) v);
+    method Bit#(2)     bresp();
+    method Bit#(1)     bvalid();
+    method Bit#(128)     rdata();
+    method Bit#(6)     rid();
+    method Bit#(1)     rlast();
+    method Action      rready(Bit#(1) v);
+    method Bit#(2)     rresp();
+    method Bit#(1)     rvalid();
+    method Action      wdata(Bit#(128) v);
+    method Action      wlast(Bit#(1) v);
+    method Bit#(1)     wready();
+    method Action      wstrb(Bit#(16) v);
+    method Action      wvalid(Bit#(1) v);
+endinterface
+(* always_ready, always_enabled *)
+(* always_ready, always_enabled *)
+(* always_ready, always_enabled *)
+interface PS8;
+    interface Ps8Maxigp     maxigp0;
+    interface Ps8Maxigp     maxigp2;
+    interface Ps8Pl     pl;
+    interface Ps8Sacefpd     sacefpd;
+    interface Ps8Saxiacp     saxiacp;
+    interface Ps8Saxigp     saxigp0;
+    interface Ps8Saxigp     saxigp1;
+    interface Ps8Saxigp     saxigp2;
+    interface Ps8Saxigp     saxigp3;
+    interface Ps8Saxigp     saxigp4;
+    interface Ps8Saxigp     saxigp5;
+    interface Ps8Saxigp     saxigp6;
+endinterface
+import "BVI" zynq_ultra_ps_e_0 =
+module mkPS8#(Clock maxihpm0_fpd_aclk, Clock maxihpm0_lpd_aclk, Clock sacefpd_aclk, Clock saxi_lpd_aclk, Clock saxiacp_fpd_aclk, Clock saxihp0_fpd_aclk, Clock saxihp1_fpd_aclk, Clock saxihp2_fpd_aclk, Clock saxihp3_fpd_aclk, Clock saxihpc0_fpd_aclk, Clock saxihpc1_fpd_aclk)(PS8);
+    default_clock no_clock;
+    default_reset no_reset;
+        input_clock maxihpm0_fpd_aclk(maxihpm0_fpd_aclk) = maxihpm0_fpd_aclk;
+         /* from clock*/
+        input_clock maxihpm0_lpd_aclk(maxihpm0_lpd_aclk) = maxihpm0_lpd_aclk;
+         /* from clock*/
+        input_clock sacefpd_aclk(sacefpd_aclk) = sacefpd_aclk;
+         /* from clock*/
+        input_clock saxi_lpd_aclk(saxi_lpd_aclk) = saxi_lpd_aclk;
+         /* from clock*/
+        input_clock saxiacp_fpd_aclk(saxiacp_fpd_aclk) = saxiacp_fpd_aclk;
+         /* from clock*/
+        input_clock saxihp0_fpd_aclk(saxihp0_fpd_aclk) = saxihp0_fpd_aclk;
+         /* from clock*/
+        input_clock saxihp1_fpd_aclk(saxihp1_fpd_aclk) = saxihp1_fpd_aclk;
+         /* from clock*/
+        input_clock saxihp2_fpd_aclk(saxihp2_fpd_aclk) = saxihp2_fpd_aclk;
+         /* from clock*/
+        input_clock saxihp3_fpd_aclk(saxihp3_fpd_aclk) = saxihp3_fpd_aclk;
+         /* from clock*/
+        input_clock saxihpc0_fpd_aclk(saxihpc0_fpd_aclk) = saxihpc0_fpd_aclk;
+         /* from clock*/
+        input_clock saxihpc1_fpd_aclk(saxihpc1_fpd_aclk) = saxihpc1_fpd_aclk;
+         /* from clock*/
+    interface Ps8Maxigp     maxigp0;
+        method maxigp0_araddr araddr() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_arburst arburst() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_arcache arcache() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_arid arid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_arlen arlen() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_arlock arlock() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_arprot arprot() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_arqos arqos() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arready(maxigp0_arready) enable((*inhigh*) EN_maxigp0_arready) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_arsize arsize() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_aruser aruser() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_arvalid arvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_awaddr awaddr() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_awburst awburst() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_awcache awcache() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_awid awid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_awlen awlen() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_awlock awlock() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_awprot awprot() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_awqos awqos() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awready(maxigp0_awready) enable((*inhigh*) EN_maxigp0_awready) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_awsize awsize() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_awuser awuser() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_awvalid awvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method bid(maxigp0_bid) enable((*inhigh*) EN_maxigp0_bid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_bready bready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method bresp(maxigp0_bresp) enable((*inhigh*) EN_maxigp0_bresp) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method bvalid(maxigp0_bvalid) enable((*inhigh*) EN_maxigp0_bvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method rdata(maxigp0_rdata) enable((*inhigh*) EN_maxigp0_rdata) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method rid(maxigp0_rid) enable((*inhigh*) EN_maxigp0_rid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method rlast(maxigp0_rlast) enable((*inhigh*) EN_maxigp0_rlast) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_rready rready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method rresp(maxigp0_rresp) enable((*inhigh*) EN_maxigp0_rresp) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method rvalid(maxigp0_rvalid) enable((*inhigh*) EN_maxigp0_rvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_wdata wdata() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_wlast wlast() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wready(maxigp0_wready) enable((*inhigh*) EN_maxigp0_wready) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_wstrb wstrb() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp0_wvalid wvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+    endinterface
+    interface Ps8Maxigp     maxigp2;
+        method maxigp2_araddr araddr() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_arburst arburst() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_arcache arcache() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_arid arid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_arlen arlen() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_arlock arlock() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_arprot arprot() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_arqos arqos() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arready(maxigp2_arready) enable((*inhigh*) EN_maxigp2_arready) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_arsize arsize() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_aruser aruser() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_arvalid arvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_awaddr awaddr() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_awburst awburst() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_awcache awcache() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_awid awid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_awlen awlen() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_awlock awlock() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_awprot awprot() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_awqos awqos() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awready(maxigp2_awready) enable((*inhigh*) EN_maxigp2_awready) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_awsize awsize() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_awuser awuser() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_awvalid awvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method bid(maxigp2_bid) enable((*inhigh*) EN_maxigp2_bid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_bready bready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method bresp(maxigp2_bresp) enable((*inhigh*) EN_maxigp2_bresp) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method bvalid(maxigp2_bvalid) enable((*inhigh*) EN_maxigp2_bvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method rdata(maxigp2_rdata) enable((*inhigh*) EN_maxigp2_rdata) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method rid(maxigp2_rid) enable((*inhigh*) EN_maxigp2_rid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method rlast(maxigp2_rlast) enable((*inhigh*) EN_maxigp2_rlast) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_rready rready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method rresp(maxigp2_rresp) enable((*inhigh*) EN_maxigp2_rresp) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method rvalid(maxigp2_rvalid) enable((*inhigh*) EN_maxigp2_rvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_wdata wdata() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_wlast wlast() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wready(maxigp2_wready) enable((*inhigh*) EN_maxigp2_wready) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_wstrb wstrb() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method maxigp2_wvalid wvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+    endinterface
+    interface Ps8Pl     pl;
+        method acpinact(pl_acpinact) enable((*inhigh*) EN_pl_acpinact) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method pl_clk0 clk0() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method pl_clk1 clk1() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method ps_irq0(pl_ps_irq0) enable((*inhigh*) EN_pl_ps_irq0) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method pl_resetn0 resetn0() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+    endinterface
+    interface Ps8Sacefpd     sacefpd;
+        method sacefpd_acaddr acaddr() clocked_by (sacefpd_aclk) reset_by (no_reset);
+        method sacefpd_acprot acprot() clocked_by (sacefpd_aclk) reset_by (no_reset);
+        method acready(sacefpd_acready) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_acready);
+        method sacefpd_acsnoop acsnoop() clocked_by (sacefpd_aclk) reset_by (no_reset);
+        method sacefpd_acvalid acvalid() clocked_by (sacefpd_aclk) reset_by (no_reset);
+        method araddr(sacefpd_araddr) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_araddr);
+        method arbar(sacefpd_arbar) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_arbar);
+        method arburst(sacefpd_arburst) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_arburst);
+        method arcache(sacefpd_arcache) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_arcache);
+        method ardomain(sacefpd_ardomain) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_ardomain);
+        method arid(sacefpd_arid) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_arid);
+        method arlen(sacefpd_arlen) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_arlen);
+        method arlock(sacefpd_arlock) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_arlock);
+        method arprot(sacefpd_arprot) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_arprot);
+        method arqos(sacefpd_arqos) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_arqos);
+        method sacefpd_arready arready() clocked_by (sacefpd_aclk) reset_by (no_reset);
+        method arregion(sacefpd_arregion) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_arregion);
+        method arsize(sacefpd_arsize) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_arsize);
+        method arsnoop(sacefpd_arsnoop) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_arsnoop);
+        method aruser(sacefpd_aruser) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_aruser);
+        method arvalid(sacefpd_arvalid) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_arvalid);
+        method awaddr(sacefpd_awaddr) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_awaddr);
+        method awbar(sacefpd_awbar) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_awbar);
+        method awburst(sacefpd_awburst) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_awburst);
+        method awcache(sacefpd_awcache) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_awcache);
+        method awdomain(sacefpd_awdomain) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_awdomain);
+        method awid(sacefpd_awid) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_awid);
+        method awlen(sacefpd_awlen) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_awlen);
+        method awlock(sacefpd_awlock) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_awlock);
+        method awprot(sacefpd_awprot) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_awprot);
+        method awqos(sacefpd_awqos) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_awqos);
+        method sacefpd_awready awready() clocked_by (sacefpd_aclk) reset_by (no_reset);
+        method awregion(sacefpd_awregion) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_awregion);
+        method awsize(sacefpd_awsize) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_awsize);
+        method awsnoop(sacefpd_awsnoop) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_awsnoop);
+        method awuser(sacefpd_awuser) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_awuser);
+        method awvalid(sacefpd_awvalid) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_awvalid);
+        method sacefpd_bid bid() clocked_by (sacefpd_aclk) reset_by (no_reset);
+        method bready(sacefpd_bready) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_bready);
+        method sacefpd_bresp bresp() clocked_by (sacefpd_aclk) reset_by (no_reset);
+        method sacefpd_buser buser() clocked_by (sacefpd_aclk) reset_by (no_reset);
+        method sacefpd_bvalid bvalid() clocked_by (sacefpd_aclk) reset_by (no_reset);
+        method cddata(sacefpd_cddata) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_cddata);
+        method cdlast(sacefpd_cdlast) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_cdlast);
+        method sacefpd_cdready cdready() clocked_by (sacefpd_aclk) reset_by (no_reset);
+        method cdvalid(sacefpd_cdvalid) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_cdvalid);
+        method sacefpd_crready crready() clocked_by (sacefpd_aclk) reset_by (no_reset);
+        method crresp(sacefpd_crresp) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_crresp);
+        method crvalid(sacefpd_crvalid) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_crvalid);
+        method rack(sacefpd_rack) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_rack);
+        method sacefpd_rdata rdata() clocked_by (sacefpd_aclk) reset_by (no_reset);
+        method sacefpd_rid rid() clocked_by (sacefpd_aclk) reset_by (no_reset);
+        method sacefpd_rlast rlast() clocked_by (sacefpd_aclk) reset_by (no_reset);
+        method rready(sacefpd_rready) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_rready);
+        method sacefpd_rresp rresp() clocked_by (sacefpd_aclk) reset_by (no_reset);
+        method sacefpd_ruser ruser() clocked_by (sacefpd_aclk) reset_by (no_reset);
+        method sacefpd_rvalid rvalid() clocked_by (sacefpd_aclk) reset_by (no_reset);
+        method wack(sacefpd_wack) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_wack);
+        method wdata(sacefpd_wdata) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_wdata);
+        method wlast(sacefpd_wlast) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_wlast);
+        method sacefpd_wready wready() clocked_by (sacefpd_aclk) reset_by (no_reset);
+        method wstrb(sacefpd_wstrb) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_wstrb);
+        method wuser(sacefpd_wuser) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_wuser);
+        method wvalid(sacefpd_wvalid) clocked_by (sacefpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_sacefpd_wvalid);
+    endinterface
+    interface Ps8Saxiacp     saxiacp;
+       method araddr(saxiacp_araddr) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_araddr);
+        method arburst(saxiacp_arburst) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_arburst);
+        method arcache(saxiacp_arcache) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_arcache);
+        method arid(saxiacp_arid) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_arid);
+        method arlen(saxiacp_arlen) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_arlen);
+        method arlock(saxiacp_arlock) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_arlock);
+        method arprot(saxiacp_arprot) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_arprot);
+        method arqos(saxiacp_arqos) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_arqos);
+        method saxiacp_arready arready() clocked_by (saxiacp_fpd_aclk) reset_by (no_reset);
+        method arsize(saxiacp_arsize) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_arsize);
+        method aruser(saxiacp_aruser) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_aruser);
+        method arvalid(saxiacp_arvalid) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_arvalid);
+        method awaddr(saxiacp_awaddr) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_awaddr);
+        method awburst(saxiacp_awburst) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_awburst);
+        method awcache(saxiacp_awcache) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_awcache);
+        method awid(saxiacp_awid) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_awid);
+        method awlen(saxiacp_awlen) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_awlen);
+        method awlock(saxiacp_awlock) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_awlock);
+        method awprot(saxiacp_awprot) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_awprot);
+        method awqos(saxiacp_awqos) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_awqos);
+        method saxiacp_awready awready() clocked_by (saxiacp_fpd_aclk) reset_by (no_reset);
+        method awsize(saxiacp_awsize) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_awsize);
+        method awuser(saxiacp_awuser) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_awuser);
+        method awvalid(saxiacp_awvalid) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_awvalid);
+        method saxiacp_bid bid() clocked_by (saxiacp_fpd_aclk) reset_by (no_reset);
+        method bready(saxiacp_bready) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_bready);
+        method saxiacp_bresp bresp() clocked_by (saxiacp_fpd_aclk) reset_by (no_reset);
+        method saxiacp_bvalid bvalid() clocked_by (saxiacp_fpd_aclk) reset_by (no_reset);
+        method saxiacp_rdata rdata() clocked_by (saxiacp_fpd_aclk) reset_by (no_reset);
+        method saxiacp_rid rid() clocked_by (saxiacp_fpd_aclk) reset_by (no_reset);
+        method saxiacp_rlast rlast() clocked_by (saxiacp_fpd_aclk) reset_by (no_reset);
+        method rready(saxiacp_rready) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_rready);
+        method saxiacp_rresp rresp() clocked_by (saxiacp_fpd_aclk) reset_by (no_reset);
+        method saxiacp_rvalid rvalid() clocked_by (saxiacp_fpd_aclk) reset_by (no_reset);
+        method wdata(saxiacp_wdata) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_wdata);
+        method wlast(saxiacp_wlast) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_wlast);
+        method saxiacp_wready wready() clocked_by (saxiacp_fpd_aclk) reset_by (no_reset);
+        method wstrb(saxiacp_wstrb) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_wstrb);
+        method wvalid(saxiacp_wvalid) clocked_by (saxiacp_fpd_aclk) reset_by (no_reset) enable((*inhigh*) EN_saxiacp_wvalid);
+    endinterface
+    interface Ps8Saxigp     saxigp0;
+        method araddr(saxigp0_araddr) enable((*inhigh*) EN_saxigp0_araddr) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arburst(saxigp0_arburst) enable((*inhigh*) EN_saxigp0_arburst) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arcache(saxigp0_arcache) enable((*inhigh*) EN_saxigp0_arcache) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arid(saxigp0_arid) enable((*inhigh*) EN_saxigp0_arid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arlen(saxigp0_arlen) enable((*inhigh*) EN_saxigp0_arlen) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arlock(saxigp0_arlock) enable((*inhigh*) EN_saxigp0_arlock) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arprot(saxigp0_arprot) enable((*inhigh*) EN_saxigp0_arprot) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arqos(saxigp0_arqos) enable((*inhigh*) EN_saxigp0_arqos) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp0_arready arready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arsize(saxigp0_arsize) enable((*inhigh*) EN_saxigp0_arsize) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method aruser(saxigp0_aruser) enable((*inhigh*) EN_saxigp0_aruser) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arvalid(saxigp0_arvalid) enable((*inhigh*) EN_saxigp0_arvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awaddr(saxigp0_awaddr) enable((*inhigh*) EN_saxigp0_awaddr) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awburst(saxigp0_awburst) enable((*inhigh*) EN_saxigp0_awburst) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awcache(saxigp0_awcache) enable((*inhigh*) EN_saxigp0_awcache) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awid(saxigp0_awid) enable((*inhigh*) EN_saxigp0_awid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awlen(saxigp0_awlen) enable((*inhigh*) EN_saxigp0_awlen) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awlock(saxigp0_awlock) enable((*inhigh*) EN_saxigp0_awlock) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awprot(saxigp0_awprot) enable((*inhigh*) EN_saxigp0_awprot) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awqos(saxigp0_awqos) enable((*inhigh*) EN_saxigp0_awqos) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp0_awready awready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awsize(saxigp0_awsize) enable((*inhigh*) EN_saxigp0_awsize) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awuser(saxigp0_awuser) enable((*inhigh*) EN_saxigp0_awuser) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awvalid(saxigp0_awvalid) enable((*inhigh*) EN_saxigp0_awvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp0_bid bid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method bready(saxigp0_bready) enable((*inhigh*) EN_saxigp0_bready) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp0_bresp bresp() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp0_bvalid bvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp0_rdata rdata() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp0_rid rid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp0_rlast rlast() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method rready(saxigp0_rready) enable((*inhigh*) EN_saxigp0_rready) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp0_rresp rresp() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp0_rvalid rvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wdata(saxigp0_wdata) enable((*inhigh*) EN_saxigp0_wdata) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wlast(saxigp0_wlast) enable((*inhigh*) EN_saxigp0_wlast) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp0_wready wready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wstrb(saxigp0_wstrb) enable((*inhigh*) EN_saxigp0_wstrb) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wvalid(saxigp0_wvalid) enable((*inhigh*) EN_saxigp0_wvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+    endinterface
+    interface Ps8Saxigp     saxigp1;
+        method araddr(saxigp1_araddr) enable((*inhigh*) EN_saxigp1_araddr) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arburst(saxigp1_arburst) enable((*inhigh*) EN_saxigp1_arburst) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arcache(saxigp1_arcache) enable((*inhigh*) EN_saxigp1_arcache) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arid(saxigp1_arid) enable((*inhigh*) EN_saxigp1_arid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arlen(saxigp1_arlen) enable((*inhigh*) EN_saxigp1_arlen) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arlock(saxigp1_arlock) enable((*inhigh*) EN_saxigp1_arlock) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arprot(saxigp1_arprot) enable((*inhigh*) EN_saxigp1_arprot) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arqos(saxigp1_arqos) enable((*inhigh*) EN_saxigp1_arqos) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp1_arready arready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arsize(saxigp1_arsize) enable((*inhigh*) EN_saxigp1_arsize) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method aruser(saxigp1_aruser) enable((*inhigh*) EN_saxigp1_aruser) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arvalid(saxigp1_arvalid) enable((*inhigh*) EN_saxigp1_arvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awaddr(saxigp1_awaddr) enable((*inhigh*) EN_saxigp1_awaddr) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awburst(saxigp1_awburst) enable((*inhigh*) EN_saxigp1_awburst) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awcache(saxigp1_awcache) enable((*inhigh*) EN_saxigp1_awcache) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awid(saxigp1_awid) enable((*inhigh*) EN_saxigp1_awid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awlen(saxigp1_awlen) enable((*inhigh*) EN_saxigp1_awlen) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awlock(saxigp1_awlock) enable((*inhigh*) EN_saxigp1_awlock) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awprot(saxigp1_awprot) enable((*inhigh*) EN_saxigp1_awprot) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awqos(saxigp1_awqos) enable((*inhigh*) EN_saxigp1_awqos) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp1_awready awready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awsize(saxigp1_awsize) enable((*inhigh*) EN_saxigp1_awsize) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awuser(saxigp1_awuser) enable((*inhigh*) EN_saxigp1_awuser) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awvalid(saxigp1_awvalid) enable((*inhigh*) EN_saxigp1_awvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp1_bid bid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method bready(saxigp1_bready) enable((*inhigh*) EN_saxigp1_bready) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp1_bresp bresp() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp1_bvalid bvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp1_rdata rdata() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp1_rid rid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp1_rlast rlast() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method rready(saxigp1_rready) enable((*inhigh*) EN_saxigp1_rready) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp1_rresp rresp() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp1_rvalid rvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wdata(saxigp1_wdata) enable((*inhigh*) EN_saxigp1_wdata) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wlast(saxigp1_wlast) enable((*inhigh*) EN_saxigp1_wlast) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp1_wready wready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wstrb(saxigp1_wstrb) enable((*inhigh*) EN_saxigp1_wstrb) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wvalid(saxigp1_wvalid) enable((*inhigh*) EN_saxigp1_wvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+    endinterface
+    interface Ps8Saxigp     saxigp2;
+        method araddr(saxigp2_araddr) enable((*inhigh*) EN_saxigp2_araddr) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arburst(saxigp2_arburst) enable((*inhigh*) EN_saxigp2_arburst) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arcache(saxigp2_arcache) enable((*inhigh*) EN_saxigp2_arcache) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arid(saxigp2_arid) enable((*inhigh*) EN_saxigp2_arid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arlen(saxigp2_arlen) enable((*inhigh*) EN_saxigp2_arlen) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arlock(saxigp2_arlock) enable((*inhigh*) EN_saxigp2_arlock) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arprot(saxigp2_arprot) enable((*inhigh*) EN_saxigp2_arprot) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arqos(saxigp2_arqos) enable((*inhigh*) EN_saxigp2_arqos) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp2_arready arready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arsize(saxigp2_arsize) enable((*inhigh*) EN_saxigp2_arsize) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method aruser(saxigp2_aruser) enable((*inhigh*) EN_saxigp2_aruser) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arvalid(saxigp2_arvalid) enable((*inhigh*) EN_saxigp2_arvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awaddr(saxigp2_awaddr) enable((*inhigh*) EN_saxigp2_awaddr) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awburst(saxigp2_awburst) enable((*inhigh*) EN_saxigp2_awburst) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awcache(saxigp2_awcache) enable((*inhigh*) EN_saxigp2_awcache) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awid(saxigp2_awid) enable((*inhigh*) EN_saxigp2_awid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awlen(saxigp2_awlen) enable((*inhigh*) EN_saxigp2_awlen) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awlock(saxigp2_awlock) enable((*inhigh*) EN_saxigp2_awlock) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awprot(saxigp2_awprot) enable((*inhigh*) EN_saxigp2_awprot) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awqos(saxigp2_awqos) enable((*inhigh*) EN_saxigp2_awqos) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp2_awready awready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awsize(saxigp2_awsize) enable((*inhigh*) EN_saxigp2_awsize) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awuser(saxigp2_awuser) enable((*inhigh*) EN_saxigp2_awuser) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awvalid(saxigp2_awvalid) enable((*inhigh*) EN_saxigp2_awvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp2_bid bid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method bready(saxigp2_bready) enable((*inhigh*) EN_saxigp2_bready) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp2_bresp bresp() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp2_bvalid bvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp2_rdata rdata() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp2_rid rid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp2_rlast rlast() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method rready(saxigp2_rready) enable((*inhigh*) EN_saxigp2_rready) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp2_rresp rresp() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp2_rvalid rvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wdata(saxigp2_wdata) enable((*inhigh*) EN_saxigp2_wdata) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wlast(saxigp2_wlast) enable((*inhigh*) EN_saxigp2_wlast) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp2_wready wready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wstrb(saxigp2_wstrb) enable((*inhigh*) EN_saxigp2_wstrb) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wvalid(saxigp2_wvalid) enable((*inhigh*) EN_saxigp2_wvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+    endinterface
+    interface Ps8Saxigp     saxigp3;
+        method araddr(saxigp3_araddr) enable((*inhigh*) EN_saxigp3_araddr) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arburst(saxigp3_arburst) enable((*inhigh*) EN_saxigp3_arburst) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arcache(saxigp3_arcache) enable((*inhigh*) EN_saxigp3_arcache) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arid(saxigp3_arid) enable((*inhigh*) EN_saxigp3_arid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arlen(saxigp3_arlen) enable((*inhigh*) EN_saxigp3_arlen) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arlock(saxigp3_arlock) enable((*inhigh*) EN_saxigp3_arlock) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arprot(saxigp3_arprot) enable((*inhigh*) EN_saxigp3_arprot) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arqos(saxigp3_arqos) enable((*inhigh*) EN_saxigp3_arqos) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp3_arready arready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arsize(saxigp3_arsize) enable((*inhigh*) EN_saxigp3_arsize) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method aruser(saxigp3_aruser) enable((*inhigh*) EN_saxigp3_aruser) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arvalid(saxigp3_arvalid) enable((*inhigh*) EN_saxigp3_arvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awaddr(saxigp3_awaddr) enable((*inhigh*) EN_saxigp3_awaddr) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awburst(saxigp3_awburst) enable((*inhigh*) EN_saxigp3_awburst) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awcache(saxigp3_awcache) enable((*inhigh*) EN_saxigp3_awcache) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awid(saxigp3_awid) enable((*inhigh*) EN_saxigp3_awid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awlen(saxigp3_awlen) enable((*inhigh*) EN_saxigp3_awlen) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awlock(saxigp3_awlock) enable((*inhigh*) EN_saxigp3_awlock) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awprot(saxigp3_awprot) enable((*inhigh*) EN_saxigp3_awprot) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awqos(saxigp3_awqos) enable((*inhigh*) EN_saxigp3_awqos) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp3_awready awready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awsize(saxigp3_awsize) enable((*inhigh*) EN_saxigp3_awsize) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awuser(saxigp3_awuser) enable((*inhigh*) EN_saxigp3_awuser) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awvalid(saxigp3_awvalid) enable((*inhigh*) EN_saxigp3_awvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp3_bid bid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method bready(saxigp3_bready) enable((*inhigh*) EN_saxigp3_bready) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp3_bresp bresp() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp3_bvalid bvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp3_rdata rdata() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp3_rid rid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp3_rlast rlast() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method rready(saxigp3_rready) enable((*inhigh*) EN_saxigp3_rready) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp3_rresp rresp() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp3_rvalid rvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wdata(saxigp3_wdata) enable((*inhigh*) EN_saxigp3_wdata) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wlast(saxigp3_wlast) enable((*inhigh*) EN_saxigp3_wlast) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp3_wready wready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wstrb(saxigp3_wstrb) enable((*inhigh*) EN_saxigp3_wstrb) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wvalid(saxigp3_wvalid) enable((*inhigh*) EN_saxigp3_wvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+    endinterface
+    interface Ps8Saxigp     saxigp4;
+        method araddr(saxigp4_araddr) enable((*inhigh*) EN_saxigp4_araddr) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arburst(saxigp4_arburst) enable((*inhigh*) EN_saxigp4_arburst) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arcache(saxigp4_arcache) enable((*inhigh*) EN_saxigp4_arcache) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arid(saxigp4_arid) enable((*inhigh*) EN_saxigp4_arid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arlen(saxigp4_arlen) enable((*inhigh*) EN_saxigp4_arlen) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arlock(saxigp4_arlock) enable((*inhigh*) EN_saxigp4_arlock) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arprot(saxigp4_arprot) enable((*inhigh*) EN_saxigp4_arprot) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arqos(saxigp4_arqos) enable((*inhigh*) EN_saxigp4_arqos) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp4_arready arready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arsize(saxigp4_arsize) enable((*inhigh*) EN_saxigp4_arsize) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method aruser(saxigp4_aruser) enable((*inhigh*) EN_saxigp4_aruser) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arvalid(saxigp4_arvalid) enable((*inhigh*) EN_saxigp4_arvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awaddr(saxigp4_awaddr) enable((*inhigh*) EN_saxigp4_awaddr) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awburst(saxigp4_awburst) enable((*inhigh*) EN_saxigp4_awburst) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awcache(saxigp4_awcache) enable((*inhigh*) EN_saxigp4_awcache) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awid(saxigp4_awid) enable((*inhigh*) EN_saxigp4_awid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awlen(saxigp4_awlen) enable((*inhigh*) EN_saxigp4_awlen) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awlock(saxigp4_awlock) enable((*inhigh*) EN_saxigp4_awlock) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awprot(saxigp4_awprot) enable((*inhigh*) EN_saxigp4_awprot) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awqos(saxigp4_awqos) enable((*inhigh*) EN_saxigp4_awqos) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp4_awready awready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awsize(saxigp4_awsize) enable((*inhigh*) EN_saxigp4_awsize) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awuser(saxigp4_awuser) enable((*inhigh*) EN_saxigp4_awuser) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awvalid(saxigp4_awvalid) enable((*inhigh*) EN_saxigp4_awvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp4_bid bid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method bready(saxigp4_bready) enable((*inhigh*) EN_saxigp4_bready) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp4_bresp bresp() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp4_bvalid bvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp4_rdata rdata() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp4_rid rid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp4_rlast rlast() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method rready(saxigp4_rready) enable((*inhigh*) EN_saxigp4_rready) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp4_rresp rresp() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp4_rvalid rvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wdata(saxigp4_wdata) enable((*inhigh*) EN_saxigp4_wdata) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wlast(saxigp4_wlast) enable((*inhigh*) EN_saxigp4_wlast) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp4_wready wready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wstrb(saxigp4_wstrb) enable((*inhigh*) EN_saxigp4_wstrb) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wvalid(saxigp4_wvalid) enable((*inhigh*) EN_saxigp4_wvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+    endinterface
+    interface Ps8Saxigp     saxigp5;
+        method araddr(saxigp5_araddr) enable((*inhigh*) EN_saxigp5_araddr) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arburst(saxigp5_arburst) enable((*inhigh*) EN_saxigp5_arburst) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arcache(saxigp5_arcache) enable((*inhigh*) EN_saxigp5_arcache) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arid(saxigp5_arid) enable((*inhigh*) EN_saxigp5_arid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arlen(saxigp5_arlen) enable((*inhigh*) EN_saxigp5_arlen) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arlock(saxigp5_arlock) enable((*inhigh*) EN_saxigp5_arlock) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arprot(saxigp5_arprot) enable((*inhigh*) EN_saxigp5_arprot) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arqos(saxigp5_arqos) enable((*inhigh*) EN_saxigp5_arqos) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp5_arready arready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arsize(saxigp5_arsize) enable((*inhigh*) EN_saxigp5_arsize) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method aruser(saxigp5_aruser) enable((*inhigh*) EN_saxigp5_aruser) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arvalid(saxigp5_arvalid) enable((*inhigh*) EN_saxigp5_arvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awaddr(saxigp5_awaddr) enable((*inhigh*) EN_saxigp5_awaddr) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awburst(saxigp5_awburst) enable((*inhigh*) EN_saxigp5_awburst) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awcache(saxigp5_awcache) enable((*inhigh*) EN_saxigp5_awcache) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awid(saxigp5_awid) enable((*inhigh*) EN_saxigp5_awid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awlen(saxigp5_awlen) enable((*inhigh*) EN_saxigp5_awlen) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awlock(saxigp5_awlock) enable((*inhigh*) EN_saxigp5_awlock) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awprot(saxigp5_awprot) enable((*inhigh*) EN_saxigp5_awprot) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awqos(saxigp5_awqos) enable((*inhigh*) EN_saxigp5_awqos) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp5_awready awready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awsize(saxigp5_awsize) enable((*inhigh*) EN_saxigp5_awsize) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awuser(saxigp5_awuser) enable((*inhigh*) EN_saxigp5_awuser) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awvalid(saxigp5_awvalid) enable((*inhigh*) EN_saxigp5_awvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp5_bid bid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method bready(saxigp5_bready) enable((*inhigh*) EN_saxigp5_bready) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp5_bresp bresp() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp5_bvalid bvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp5_rdata rdata() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp5_rid rid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp5_rlast rlast() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method rready(saxigp5_rready) enable((*inhigh*) EN_saxigp5_rready) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp5_rresp rresp() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp5_rvalid rvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wdata(saxigp5_wdata) enable((*inhigh*) EN_saxigp5_wdata) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wlast(saxigp5_wlast) enable((*inhigh*) EN_saxigp5_wlast) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp5_wready wready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wstrb(saxigp5_wstrb) enable((*inhigh*) EN_saxigp5_wstrb) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wvalid(saxigp5_wvalid) enable((*inhigh*) EN_saxigp5_wvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+    endinterface
+    interface Ps8Saxigp     saxigp6;
+        method araddr(saxigp6_araddr) enable((*inhigh*) EN_saxigp6_araddr) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arburst(saxigp6_arburst) enable((*inhigh*) EN_saxigp6_arburst) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arcache(saxigp6_arcache) enable((*inhigh*) EN_saxigp6_arcache) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arid(saxigp6_arid) enable((*inhigh*) EN_saxigp6_arid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arlen(saxigp6_arlen) enable((*inhigh*) EN_saxigp6_arlen) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arlock(saxigp6_arlock) enable((*inhigh*) EN_saxigp6_arlock) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arprot(saxigp6_arprot) enable((*inhigh*) EN_saxigp6_arprot) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arqos(saxigp6_arqos) enable((*inhigh*) EN_saxigp6_arqos) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp6_arready arready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arsize(saxigp6_arsize) enable((*inhigh*) EN_saxigp6_arsize) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method aruser(saxigp6_aruser) enable((*inhigh*) EN_saxigp6_aruser) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method arvalid(saxigp6_arvalid) enable((*inhigh*) EN_saxigp6_arvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awaddr(saxigp6_awaddr) enable((*inhigh*) EN_saxigp6_awaddr) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awburst(saxigp6_awburst) enable((*inhigh*) EN_saxigp6_awburst) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awcache(saxigp6_awcache) enable((*inhigh*) EN_saxigp6_awcache) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awid(saxigp6_awid) enable((*inhigh*) EN_saxigp6_awid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awlen(saxigp6_awlen) enable((*inhigh*) EN_saxigp6_awlen) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awlock(saxigp6_awlock) enable((*inhigh*) EN_saxigp6_awlock) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awprot(saxigp6_awprot) enable((*inhigh*) EN_saxigp6_awprot) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awqos(saxigp6_awqos) enable((*inhigh*) EN_saxigp6_awqos) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp6_awready awready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awsize(saxigp6_awsize) enable((*inhigh*) EN_saxigp6_awsize) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awuser(saxigp6_awuser) enable((*inhigh*) EN_saxigp6_awuser) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method awvalid(saxigp6_awvalid) enable((*inhigh*) EN_saxigp6_awvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp6_bid bid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method bready(saxigp6_bready) enable((*inhigh*) EN_saxigp6_bready) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp6_bresp bresp() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp6_bvalid bvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp6_rdata rdata() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp6_rid rid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp6_rlast rlast() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method rready(saxigp6_rready) enable((*inhigh*) EN_saxigp6_rready) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp6_rresp rresp() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp6_rvalid rvalid() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wdata(saxigp6_wdata) enable((*inhigh*) EN_saxigp6_wdata) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wlast(saxigp6_wlast) enable((*inhigh*) EN_saxigp6_wlast) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method saxigp6_wready wready() clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wstrb(saxigp6_wstrb) enable((*inhigh*) EN_saxigp6_wstrb) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+        method wvalid(saxigp6_wvalid) enable((*inhigh*) EN_saxigp6_wvalid) clocked_by (maxihpm0_lpd_aclk) reset_by (no_reset);
+    endinterface
+    schedule (maxigp0.araddr, maxigp0.arburst, maxigp0.arcache, maxigp0.arid, maxigp0.arlen, maxigp0.arlock, maxigp0.arprot, maxigp0.arqos, maxigp0.arready, maxigp0.arsize, maxigp0.aruser, maxigp0.arvalid, maxigp0.awaddr, maxigp0.awburst, maxigp0.awcache, maxigp0.awid, maxigp0.awlen, maxigp0.awlock, maxigp0.awprot, maxigp0.awqos, maxigp0.awready, maxigp0.awsize, maxigp0.awuser, maxigp0.awvalid, maxigp0.bid, maxigp0.bready, maxigp0.bresp, maxigp0.bvalid, maxigp0.rdata, maxigp0.rid, maxigp0.rlast, maxigp0.rready, maxigp0.rresp, maxigp0.rvalid, maxigp0.wdata, maxigp0.wlast, maxigp0.wready, maxigp0.wstrb, maxigp0.wvalid, maxigp2.araddr, maxigp2.arburst, maxigp2.arcache, maxigp2.arid, maxigp2.arlen, maxigp2.arlock, maxigp2.arprot, maxigp2.arqos, maxigp2.arready, maxigp2.arsize, maxigp2.aruser, maxigp2.arvalid, maxigp2.awaddr, maxigp2.awburst, maxigp2.awcache, maxigp2.awid, maxigp2.awlen, maxigp2.awlock, maxigp2.awprot, maxigp2.awqos, maxigp2.awready, maxigp2.awsize, maxigp2.awuser, maxigp2.awvalid, maxigp2.bid, maxigp2.bready, maxigp2.bresp, maxigp2.bvalid, maxigp2.rdata, maxigp2.rid, maxigp2.rlast, maxigp2.rready, maxigp2.rresp, maxigp2.rvalid, maxigp2.wdata, maxigp2.wlast, maxigp2.wready, maxigp2.wstrb, maxigp2.wvalid, pl.acpinact, pl.clk0, pl.clk1, pl.ps_irq0, pl.resetn0, sacefpd.acaddr, sacefpd.acprot, sacefpd.acready, sacefpd.acsnoop, sacefpd.acvalid, sacefpd.araddr, sacefpd.arbar, sacefpd.arburst, sacefpd.arcache, sacefpd.ardomain, sacefpd.arid, sacefpd.arlen, sacefpd.arlock, sacefpd.arprot, sacefpd.arqos, sacefpd.arready, sacefpd.arregion, sacefpd.arsize, sacefpd.arsnoop, sacefpd.aruser, sacefpd.arvalid, sacefpd.awaddr, sacefpd.awbar, sacefpd.awburst, sacefpd.awcache, sacefpd.awdomain, sacefpd.awid, sacefpd.awlen, sacefpd.awlock, sacefpd.awprot, sacefpd.awqos, sacefpd.awready, sacefpd.awregion, sacefpd.awsize, sacefpd.awsnoop, sacefpd.awuser, sacefpd.awvalid, sacefpd.bid, sacefpd.bready, sacefpd.bresp, sacefpd.buser, sacefpd.bvalid, sacefpd.cddata, sacefpd.cdlast, sacefpd.cdready, sacefpd.cdvalid, sacefpd.crready, sacefpd.crresp, sacefpd.crvalid, sacefpd.rack, sacefpd.rdata, sacefpd.rid, sacefpd.rlast, sacefpd.rready, sacefpd.rresp, sacefpd.ruser, sacefpd.rvalid, sacefpd.wack, sacefpd.wdata, sacefpd.wlast, sacefpd.wready, sacefpd.wstrb, sacefpd.wuser, sacefpd.wvalid, saxiacp.araddr, saxiacp.arburst, saxiacp.arcache, saxiacp.arid, saxiacp.arlen, saxiacp.arlock, saxiacp.arprot, saxiacp.arqos, saxiacp.arready, saxiacp.arsize, saxiacp.aruser, saxiacp.arvalid, saxiacp.awaddr, saxiacp.awburst, saxiacp.awcache, saxiacp.awid, saxiacp.awlen, saxiacp.awlock, saxiacp.awprot, saxiacp.awqos, saxiacp.awready, saxiacp.awsize, saxiacp.awuser, saxiacp.awvalid, saxiacp.bid, saxiacp.bready, saxiacp.bresp, saxiacp.bvalid, saxiacp.rdata, saxiacp.rid, saxiacp.rlast, saxiacp.rready, saxiacp.rresp, saxiacp.rvalid, saxiacp.wdata, saxiacp.wlast, saxiacp.wready, saxiacp.wstrb, saxiacp.wvalid, saxigp0.araddr, saxigp0.arburst, saxigp0.arcache, saxigp0.arid, saxigp0.arlen, saxigp0.arlock, saxigp0.arprot, saxigp0.arqos, saxigp0.arready, saxigp0.arsize, saxigp0.aruser, saxigp0.arvalid, saxigp0.awaddr, saxigp0.awburst, saxigp0.awcache, saxigp0.awid, saxigp0.awlen, saxigp0.awlock, saxigp0.awprot, saxigp0.awqos, saxigp0.awready, saxigp0.awsize, saxigp0.awuser, saxigp0.awvalid, saxigp0.bid, saxigp0.bready, saxigp0.bresp, saxigp0.bvalid, saxigp0.rdata, saxigp0.rid, saxigp0.rlast, saxigp0.rready, saxigp0.rresp, saxigp0.rvalid, saxigp0.wdata, saxigp0.wlast, saxigp0.wready, saxigp0.wstrb, saxigp0.wvalid, saxigp1.araddr, saxigp1.arburst, saxigp1.arcache, saxigp1.arid, saxigp1.arlen, saxigp1.arlock, saxigp1.arprot, saxigp1.arqos, saxigp1.arready, saxigp1.arsize, saxigp1.aruser, saxigp1.arvalid, saxigp1.awaddr, saxigp1.awburst, saxigp1.awcache, saxigp1.awid, saxigp1.awlen, saxigp1.awlock, saxigp1.awprot, saxigp1.awqos, saxigp1.awready, saxigp1.awsize, saxigp1.awuser, saxigp1.awvalid, saxigp1.bid, saxigp1.bready, saxigp1.bresp, saxigp1.bvalid, saxigp1.rdata, saxigp1.rid, saxigp1.rlast, saxigp1.rready, saxigp1.rresp, saxigp1.rvalid, saxigp1.wdata, saxigp1.wlast, saxigp1.wready, saxigp1.wstrb, saxigp1.wvalid, saxigp2.araddr, saxigp2.arburst, saxigp2.arcache, saxigp2.arid, saxigp2.arlen, saxigp2.arlock, saxigp2.arprot, saxigp2.arqos, saxigp2.arready, saxigp2.arsize, saxigp2.aruser, saxigp2.arvalid, saxigp2.awaddr, saxigp2.awburst, saxigp2.awcache, saxigp2.awid, saxigp2.awlen, saxigp2.awlock, saxigp2.awprot, saxigp2.awqos, saxigp2.awready, saxigp2.awsize, saxigp2.awuser, saxigp2.awvalid, saxigp2.bid, saxigp2.bready, saxigp2.bresp, saxigp2.bvalid, saxigp2.rdata, saxigp2.rid, saxigp2.rlast, saxigp2.rready, saxigp2.rresp, saxigp2.rvalid, saxigp2.wdata, saxigp2.wlast, saxigp2.wready, saxigp2.wstrb, saxigp2.wvalid, saxigp3.araddr, saxigp3.arburst, saxigp3.arcache, saxigp3.arid, saxigp3.arlen, saxigp3.arlock, saxigp3.arprot, saxigp3.arqos, saxigp3.arready, saxigp3.arsize, saxigp3.aruser, saxigp3.arvalid, saxigp3.awaddr, saxigp3.awburst, saxigp3.awcache, saxigp3.awid, saxigp3.awlen, saxigp3.awlock, saxigp3.awprot, saxigp3.awqos, saxigp3.awready, saxigp3.awsize, saxigp3.awuser, saxigp3.awvalid, saxigp3.bid, saxigp3.bready, saxigp3.bresp, saxigp3.bvalid, saxigp3.rdata, saxigp3.rid, saxigp3.rlast, saxigp3.rready, saxigp3.rresp, saxigp3.rvalid, saxigp3.wdata, saxigp3.wlast, saxigp3.wready, saxigp3.wstrb, saxigp3.wvalid, saxigp4.araddr, saxigp4.arburst, saxigp4.arcache, saxigp4.arid, saxigp4.arlen, saxigp4.arlock, saxigp4.arprot, saxigp4.arqos, saxigp4.arready, saxigp4.arsize, saxigp4.aruser, saxigp4.arvalid, saxigp4.awaddr, saxigp4.awburst, saxigp4.awcache, saxigp4.awid, saxigp4.awlen, saxigp4.awlock, saxigp4.awprot, saxigp4.awqos, saxigp4.awready, saxigp4.awsize, saxigp4.awuser, saxigp4.awvalid, saxigp4.bid, saxigp4.bready, saxigp4.bresp, saxigp4.bvalid, saxigp4.rdata, saxigp4.rid, saxigp4.rlast, saxigp4.rready, saxigp4.rresp, saxigp4.rvalid, saxigp4.wdata, saxigp4.wlast, saxigp4.wready, saxigp4.wstrb, saxigp4.wvalid, saxigp5.araddr, saxigp5.arburst, saxigp5.arcache, saxigp5.arid, saxigp5.arlen, saxigp5.arlock, saxigp5.arprot, saxigp5.arqos, saxigp5.arready, saxigp5.arsize, saxigp5.aruser, saxigp5.arvalid, saxigp5.awaddr, saxigp5.awburst, saxigp5.awcache, saxigp5.awid, saxigp5.awlen, saxigp5.awlock, saxigp5.awprot, saxigp5.awqos, saxigp5.awready, saxigp5.awsize, saxigp5.awuser, saxigp5.awvalid, saxigp5.bid, saxigp5.bready, saxigp5.bresp, saxigp5.bvalid, saxigp5.rdata, saxigp5.rid, saxigp5.rlast, saxigp5.rready, saxigp5.rresp, saxigp5.rvalid, saxigp5.wdata, saxigp5.wlast, saxigp5.wready, saxigp5.wstrb, saxigp5.wvalid, saxigp6.araddr, saxigp6.arburst, saxigp6.arcache, saxigp6.arid, saxigp6.arlen, saxigp6.arlock, saxigp6.arprot, saxigp6.arqos, saxigp6.arready, saxigp6.arsize, saxigp6.aruser, saxigp6.arvalid, saxigp6.awaddr, saxigp6.awburst, saxigp6.awcache, saxigp6.awid, saxigp6.awlen, saxigp6.awlock, saxigp6.awprot, saxigp6.awqos, saxigp6.awready, saxigp6.awsize, saxigp6.awuser, saxigp6.awvalid, saxigp6.bid, saxigp6.bready, saxigp6.bresp, saxigp6.bvalid, saxigp6.rdata, saxigp6.rid, saxigp6.rlast, saxigp6.rready, saxigp6.rresp, saxigp6.rvalid, saxigp6.wdata, saxigp6.wlast, saxigp6.wready, saxigp6.wstrb, saxigp6.wvalid) CF (maxigp0.araddr, maxigp0.arburst, maxigp0.arcache, maxigp0.arid, maxigp0.arlen, maxigp0.arlock, maxigp0.arprot, maxigp0.arqos, maxigp0.arready, maxigp0.arsize, maxigp0.aruser, maxigp0.arvalid, maxigp0.awaddr, maxigp0.awburst, maxigp0.awcache, maxigp0.awid, maxigp0.awlen, maxigp0.awlock, maxigp0.awprot, maxigp0.awqos, maxigp0.awready, maxigp0.awsize, maxigp0.awuser, maxigp0.awvalid, maxigp0.bid, maxigp0.bready, maxigp0.bresp, maxigp0.bvalid, maxigp0.rdata, maxigp0.rid, maxigp0.rlast, maxigp0.rready, maxigp0.rresp, maxigp0.rvalid, maxigp0.wdata, maxigp0.wlast, maxigp0.wready, maxigp0.wstrb, maxigp0.wvalid, maxigp2.araddr, maxigp2.arburst, maxigp2.arcache, maxigp2.arid, maxigp2.arlen, maxigp2.arlock, maxigp2.arprot, maxigp2.arqos, maxigp2.arready, maxigp2.arsize, maxigp2.aruser, maxigp2.arvalid, maxigp2.awaddr, maxigp2.awburst, maxigp2.awcache, maxigp2.awid, maxigp2.awlen, maxigp2.awlock, maxigp2.awprot, maxigp2.awqos, maxigp2.awready, maxigp2.awsize, maxigp2.awuser, maxigp2.awvalid, maxigp2.bid, maxigp2.bready, maxigp2.bresp, maxigp2.bvalid, maxigp2.rdata, maxigp2.rid, maxigp2.rlast, maxigp2.rready, maxigp2.rresp, maxigp2.rvalid, maxigp2.wdata, maxigp2.wlast, maxigp2.wready, maxigp2.wstrb, maxigp2.wvalid, pl.acpinact, pl.clk0, pl.clk1, pl.ps_irq0, pl.resetn0, sacefpd.acaddr, sacefpd.acprot, sacefpd.acready, sacefpd.acsnoop, sacefpd.acvalid, sacefpd.araddr, sacefpd.arbar, sacefpd.arburst, sacefpd.arcache, sacefpd.ardomain, sacefpd.arid, sacefpd.arlen, sacefpd.arlock, sacefpd.arprot, sacefpd.arqos, sacefpd.arready, sacefpd.arregion, sacefpd.arsize, sacefpd.arsnoop, sacefpd.aruser, sacefpd.arvalid, sacefpd.awaddr, sacefpd.awbar, sacefpd.awburst, sacefpd.awcache, sacefpd.awdomain, sacefpd.awid, sacefpd.awlen, sacefpd.awlock, sacefpd.awprot, sacefpd.awqos, sacefpd.awready, sacefpd.awregion, sacefpd.awsize, sacefpd.awsnoop, sacefpd.awuser, sacefpd.awvalid, sacefpd.bid, sacefpd.bready, sacefpd.bresp, sacefpd.buser, sacefpd.bvalid, sacefpd.cddata, sacefpd.cdlast, sacefpd.cdready, sacefpd.cdvalid, sacefpd.crready, sacefpd.crresp, sacefpd.crvalid, sacefpd.rack, sacefpd.rdata, sacefpd.rid, sacefpd.rlast, sacefpd.rready, sacefpd.rresp, sacefpd.ruser, sacefpd.rvalid, sacefpd.wack, sacefpd.wdata, sacefpd.wlast, sacefpd.wready, sacefpd.wstrb, sacefpd.wuser, sacefpd.wvalid, saxiacp.araddr, saxiacp.arburst, saxiacp.arcache, saxiacp.arid, saxiacp.arlen, saxiacp.arlock, saxiacp.arprot, saxiacp.arqos, saxiacp.arready, saxiacp.arsize, saxiacp.aruser, saxiacp.arvalid, saxiacp.awaddr, saxiacp.awburst, saxiacp.awcache, saxiacp.awid, saxiacp.awlen, saxiacp.awlock, saxiacp.awprot, saxiacp.awqos, saxiacp.awready, saxiacp.awsize, saxiacp.awuser, saxiacp.awvalid, saxiacp.bid, saxiacp.bready, saxiacp.bresp, saxiacp.bvalid, saxiacp.rdata, saxiacp.rid, saxiacp.rlast, saxiacp.rready, saxiacp.rresp, saxiacp.rvalid, saxiacp.wdata, saxiacp.wlast, saxiacp.wready, saxiacp.wstrb, saxiacp.wvalid, saxigp0.araddr, saxigp0.arburst, saxigp0.arcache, saxigp0.arid, saxigp0.arlen, saxigp0.arlock, saxigp0.arprot, saxigp0.arqos, saxigp0.arready, saxigp0.arsize, saxigp0.aruser, saxigp0.arvalid, saxigp0.awaddr, saxigp0.awburst, saxigp0.awcache, saxigp0.awid, saxigp0.awlen, saxigp0.awlock, saxigp0.awprot, saxigp0.awqos, saxigp0.awready, saxigp0.awsize, saxigp0.awuser, saxigp0.awvalid, saxigp0.bid, saxigp0.bready, saxigp0.bresp, saxigp0.bvalid, saxigp0.rdata, saxigp0.rid, saxigp0.rlast, saxigp0.rready, saxigp0.rresp, saxigp0.rvalid, saxigp0.wdata, saxigp0.wlast, saxigp0.wready, saxigp0.wstrb, saxigp0.wvalid, saxigp1.araddr, saxigp1.arburst, saxigp1.arcache, saxigp1.arid, saxigp1.arlen, saxigp1.arlock, saxigp1.arprot, saxigp1.arqos, saxigp1.arready, saxigp1.arsize, saxigp1.aruser, saxigp1.arvalid, saxigp1.awaddr, saxigp1.awburst, saxigp1.awcache, saxigp1.awid, saxigp1.awlen, saxigp1.awlock, saxigp1.awprot, saxigp1.awqos, saxigp1.awready, saxigp1.awsize, saxigp1.awuser, saxigp1.awvalid, saxigp1.bid, saxigp1.bready, saxigp1.bresp, saxigp1.bvalid, saxigp1.rdata, saxigp1.rid, saxigp1.rlast, saxigp1.rready, saxigp1.rresp, saxigp1.rvalid, saxigp1.wdata, saxigp1.wlast, saxigp1.wready, saxigp1.wstrb, saxigp1.wvalid, saxigp2.araddr, saxigp2.arburst, saxigp2.arcache, saxigp2.arid, saxigp2.arlen, saxigp2.arlock, saxigp2.arprot, saxigp2.arqos, saxigp2.arready, saxigp2.arsize, saxigp2.aruser, saxigp2.arvalid, saxigp2.awaddr, saxigp2.awburst, saxigp2.awcache, saxigp2.awid, saxigp2.awlen, saxigp2.awlock, saxigp2.awprot, saxigp2.awqos, saxigp2.awready, saxigp2.awsize, saxigp2.awuser, saxigp2.awvalid, saxigp2.bid, saxigp2.bready, saxigp2.bresp, saxigp2.bvalid, saxigp2.rdata, saxigp2.rid, saxigp2.rlast, saxigp2.rready, saxigp2.rresp, saxigp2.rvalid, saxigp2.wdata, saxigp2.wlast, saxigp2.wready, saxigp2.wstrb, saxigp2.wvalid, saxigp3.araddr, saxigp3.arburst, saxigp3.arcache, saxigp3.arid, saxigp3.arlen, saxigp3.arlock, saxigp3.arprot, saxigp3.arqos, saxigp3.arready, saxigp3.arsize, saxigp3.aruser, saxigp3.arvalid, saxigp3.awaddr, saxigp3.awburst, saxigp3.awcache, saxigp3.awid, saxigp3.awlen, saxigp3.awlock, saxigp3.awprot, saxigp3.awqos, saxigp3.awready, saxigp3.awsize, saxigp3.awuser, saxigp3.awvalid, saxigp3.bid, saxigp3.bready, saxigp3.bresp, saxigp3.bvalid, saxigp3.rdata, saxigp3.rid, saxigp3.rlast, saxigp3.rready, saxigp3.rresp, saxigp3.rvalid, saxigp3.wdata, saxigp3.wlast, saxigp3.wready, saxigp3.wstrb, saxigp3.wvalid, saxigp4.araddr, saxigp4.arburst, saxigp4.arcache, saxigp4.arid, saxigp4.arlen, saxigp4.arlock, saxigp4.arprot, saxigp4.arqos, saxigp4.arready, saxigp4.arsize, saxigp4.aruser, saxigp4.arvalid, saxigp4.awaddr, saxigp4.awburst, saxigp4.awcache, saxigp4.awid, saxigp4.awlen, saxigp4.awlock, saxigp4.awprot, saxigp4.awqos, saxigp4.awready, saxigp4.awsize, saxigp4.awuser, saxigp4.awvalid, saxigp4.bid, saxigp4.bready, saxigp4.bresp, saxigp4.bvalid, saxigp4.rdata, saxigp4.rid, saxigp4.rlast, saxigp4.rready, saxigp4.rresp, saxigp4.rvalid, saxigp4.wdata, saxigp4.wlast, saxigp4.wready, saxigp4.wstrb, saxigp4.wvalid, saxigp5.araddr, saxigp5.arburst, saxigp5.arcache, saxigp5.arid, saxigp5.arlen, saxigp5.arlock, saxigp5.arprot, saxigp5.arqos, saxigp5.arready, saxigp5.arsize, saxigp5.aruser, saxigp5.arvalid, saxigp5.awaddr, saxigp5.awburst, saxigp5.awcache, saxigp5.awid, saxigp5.awlen, saxigp5.awlock, saxigp5.awprot, saxigp5.awqos, saxigp5.awready, saxigp5.awsize, saxigp5.awuser, saxigp5.awvalid, saxigp5.bid, saxigp5.bready, saxigp5.bresp, saxigp5.bvalid, saxigp5.rdata, saxigp5.rid, saxigp5.rlast, saxigp5.rready, saxigp5.rresp, saxigp5.rvalid, saxigp5.wdata, saxigp5.wlast, saxigp5.wready, saxigp5.wstrb, saxigp5.wvalid, saxigp6.araddr, saxigp6.arburst, saxigp6.arcache, saxigp6.arid, saxigp6.arlen, saxigp6.arlock, saxigp6.arprot, saxigp6.arqos, saxigp6.arready, saxigp6.arsize, saxigp6.aruser, saxigp6.arvalid, saxigp6.awaddr, saxigp6.awburst, saxigp6.awcache, saxigp6.awid, saxigp6.awlen, saxigp6.awlock, saxigp6.awprot, saxigp6.awqos, saxigp6.awready, saxigp6.awsize, saxigp6.awuser, saxigp6.awvalid, saxigp6.bid, saxigp6.bready, saxigp6.bresp, saxigp6.bvalid, saxigp6.rdata, saxigp6.rid, saxigp6.rlast, saxigp6.rready, saxigp6.rresp, saxigp6.rvalid, saxigp6.wdata, saxigp6.wlast, saxigp6.wready, saxigp6.wstrb, saxigp6.wvalid);
+endmodule

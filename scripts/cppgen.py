@@ -576,7 +576,7 @@ def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
         'params': ', '.join(respParams),
         }
 # 'className' : classNameOrig,
-    respCase = '((%(classNameOrig)sCb *)p->cb)->%(name)s(%(params)s);'
+    respCase = '\n        ((%(classNameOrig)sCb *)p->cb)->%(name)s(%(params)s);'
     if not classVariant:
         respCase = handleMessagePrep + respCase
     substs['responseCase'] = respCase % substs

@@ -180,6 +180,8 @@ NEED_XILINX_PCIE_vc707g2=$(PCIEGEN)
 NEED_XILINX_PCIE_kc705=$(PCIEGEN)
 NEED_XILINX_PCIE_vc707=$(PCIEGEN)
 NEED_XILINX_PCIE_kcu105=$(PCIEGEN)
+NEED_XILINX_PCIE_vcu108=3
+NEED_XILINX_PCIE_zcu102=$(PCIEGEN)
 NEED_XILINX_PCIE_nfsume=3
 NEED_XILINX_PCIE_vc709=3
 NEED_XILINX_PCIE_v2000t=1
@@ -216,6 +218,9 @@ ifeq ($(NEED_ALTERA_PCIE_$(BOARD)),1)
 	FPGAMAKE_CONNECTALFLAGS += --tcl=$(PROJECTDIR)/generatedbsv/$(BOARD).qsf
 	FPGAMAKE_CONNECTALFLAGS += --tcl=$(CONNECTALDIR)/constraints/altera/$(BOARD).sdc
 	CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS -demote-errors G0066:G0045 -suppress-warnings G0046:G0020:S0015:S0080:S0039"
+endif
+ifeq ($(BOARD),zcu102)
+    CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/zynq_ultra_ps_e_0/zynq_ultra_ps_e_0.xci
 endif
 
 CONNECTALFLAGS += $(FPGAMAKE_CONNECTALFLAGS)
@@ -290,6 +295,11 @@ ifneq ($(NEED_XILINX_PCIE_$(BOARD)),)
 	@echo "building ... $(BOARD) PCIe gen$(PCIEGEN)"
 	$(Q)[ -e $(IPDIR) ] || mkdir -p $(IPDIR)
 	cd $(PROJECTDIR); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) vivado -notrace -mode batch -source $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
+endif
+ifeq ($(BOARD),zcu102)
+	@echo "building ... $(BOARD) Zynq MPSOC core"
+	$(Q)[ -e $(IPDIR) ] || mkdir -p $(IPDIR)
+	cd $(PROJECTDIR); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) vivado -notrace -mode batch -source $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-zynq-mpsoc.tcl
 endif
 
 ifneq (, $(QUARTUS_SH))
