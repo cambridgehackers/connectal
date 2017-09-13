@@ -61,7 +61,7 @@ module awsf1(
 
 	      //Write data
 	      .sda_wvalid_v(sda_cl_wvalid),
-	      .sda_wvalid_v(sda_cl_wdata),
+	      .sda_wdata_v(sda_cl_wdata),
 	      //.(sda_cl_wstrb),
 	      .sda_wready(cl_sda_wready),
 
