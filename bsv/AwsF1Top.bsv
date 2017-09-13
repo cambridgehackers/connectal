@@ -39,6 +39,9 @@ import MemServerRequest::*;
 import SimDma::*;
 import IfcNames::*;
 import BuildVector::*;
+import AxiBits::*;
+import FIFOF::*;
+import CFFIFO::*;
 
 `include "ConnectalProjectConfig.bsv"
 
@@ -53,7 +56,7 @@ typedef Empty PinType;
 
 (* always_enabled, always_ready *)
 interface AwsF1ClSh;
-   method Bit#(1) done();
+   method Bit#(1) flr_done();
    method Bit#(32) status0();
    method Bit#(32) status1();
    method Bit#(32) id0();
@@ -79,10 +82,129 @@ interface AwsF1Top;
    interface PinType pins;
    interface AwsF1ShCl sh_cl;
    interface AwsF1ClSh cl_sh;
+   interface Axi4SlaveBits#(64,512,6,Empty) dmasink;
+   interface Axi4SlaveLiteBits#(32,32) sda;
+   interface Axi4SlaveLiteBits#(32,32) ocl;
+   interface Axi4SlaveLiteBits#(32,32) bar1;
 endinterface
 
+module mkAxi4SlaveLiteBitsFromPhysMemSlave#(PhysMemSlave#(addrWidth,dataWidth) slave)
+       (Axi4SlaveLiteBits#(axiaddrWidth,dataWidth)) provisos (Div#(dataWidth,8,burstLen),Add#(addrWidth,a__,axiaddrWidth));
+
+    let burstLen = fromInteger(valueOf(burstLen));
+
+    Wire#(Bit#(addrWidth)) araddrWire <- mkDWire(0);
+    Wire#(Bit#(1)) arvalidWire <- mkDWire(0);
+    Wire#(Bit#(1)) rreadyWire <- mkDWire(0);
+    Wire#(Bit#(dataWidth)) rdataWire <- mkDWire(0);
+
+    Wire#(Bit#(addrWidth)) awaddrWire <- mkDWire(0);
+    Wire#(Bit#(1)) awvalidWire <- mkDWire(0);
+    Wire#(Bit#(1)) wvalidWire <- mkDWire(0);
+    Wire#(Bit#(dataWidth)) wdataWire <- mkDWire(0);
+    Wire#(Bit#(1)) breadyWire <- mkDWire(0);
+
+    FIFOF#(PhysMemRequest#(addrWidth,dataWidth)) arFifo <- mkCFFIFOF();
+    FIFOF#(PhysMemRequest#(addrWidth,dataWidth)) awFifo <- mkCFFIFOF();
+    FIFOF#(MemData#(dataWidth)) rdataFifo <- mkCFFIFOF();
+    FIFOF#(MemData#(dataWidth)) wdataFifo <- mkCFFIFOF();
+    FIFOF#(Bit#(MemTagSize)) brespFifo <- mkCFFIFOF();
+
+    rule ar_rule if (arvalidWire == 1 && arFifo.notFull());
+       let req = PhysMemRequest {addr: araddrWire, burstLen: burstLen, tag: 0 };
+       arFifo.enq(req);
+    endrule
+    rule ar_to_slave;
+       let req <- toGet(arFifo).get();
+       slave.read_server.readReq.put(req);
+    endrule
+
+    rule aw_rule if (awvalidWire == 1 && awFifo.notFull());
+       let req = PhysMemRequest {addr: awaddrWire, burstLen: burstLen, tag: 0 };
+       awFifo.enq(req);
+    endrule
+    rule aw_to_slave;
+       let req <- toGet(awFifo).get();
+       slave.read_server.readReq.put(req);
+    endrule
+
+    rule r_rule if (rreadyWire == 1 && rdataFifo.notEmpty());
+       rdataFifo.deq();
+    endrule
+    rule rdata_from_slave;
+       let mdata <- slave.read_server.readData.get();
+       rdataFifo.enq(mdata);
+    endrule
+
+    rule wdata_rule if (wvalidWire == 1 && wdataFifo.notFull());
+       wdataFifo.enq(MemData { data: wdataWire, tag: 0, last: True });
+    endrule
+    rule wdata_to_slave;
+       let mdata <- toGet(wdataFifo).get();
+       slave.write_server.writeData.put(mdata);
+    endrule
+
+    rule b_rule if (breadyWire == 1 && brespFifo.notEmpty());
+       brespFifo.deq();
+    endrule
+    rule bresp_from_slave;
+       let done <- slave.write_server.writeDone.get();
+       brespFifo.enq(done);
+    endrule
+
+    method Action      araddr(Bit#(axiaddrWidth) v);
+       araddrWire <= truncate(v);
+    endmethod
+    method Bit#(1)     arready();
+       return pack(arFifo.notFull());
+    endmethod
+    method Action      arvalid(Bit#(1) v);
+       arvalidWire <= v;
+    endmethod
+    method Action      awaddr(Bit#(axiaddrWidth) v);
+       awaddrWire <= truncate(v);
+    endmethod
+    method Bit#(1)     awready();
+       return pack(awFifo.notFull());
+    endmethod
+    method Action      awvalid(Bit#(1) v);
+       awvalidWire <= v;
+    endmethod
+    method Action      bready(Bit#(1) v);
+       breadyWire <= v;
+    endmethod
+    method Bit#(2)     bresp();
+       return 0; // brespFifo.first();
+    endmethod
+    method Bit#(1)     bvalid();
+       return pack(brespFifo.notEmpty());
+    endmethod
+    method Bit#(dataWidth)     rdata();
+       return rdataFifo.first.data;
+    endmethod
+    method Action      rready(Bit#(1) v);
+       rreadyWire <= v;
+    endmethod
+    method Bit#(2)     rresp();
+       return 0;
+    endmethod
+    method Bit#(1)     rvalid();
+      return pack(rdataFifo.notEmpty);
+    endmethod
+    method Action      wdata(Bit#(dataWidth) v);
+       wdataWire <= v;
+    endmethod
+    method Bit#(1)     wready();
+       return pack(wdataFifo.notFull());
+    endmethod
+    method Action      wvalid(Bit#(1) v);
+       wvalidWire <= v;
+    endmethod
+endmodule
+
+
 (* no_default_clock, no_default_reset, clock_prefix="", reset_prefix="" *)
-module mkAwsF1Top#(Clock clk_main_a0, Clock clk_extra_a1, Clock clk_extra_a2,
+module mkAwsF1Top#(Clock clk_main_a0, Clock clk_extra_a1, Clock clk_extra_a2, Clock clk_extra_a3,
        Clock  clk_extra_b0, Clock clk_extra_b1, Clock clk_extra_c0, Clock clk_extra_c1,
        Reset kernel_rst_n, Reset rst_main_n
        )(AwsF1Top);
@@ -121,6 +243,14 @@ module mkAwsF1Top#(Clock clk_main_a0, Clock clk_extra_a1, Clock clk_extra_a2,
    let lMemServerIndicationOutputNoc <- mkPortalMsgIndication(extend(pack(PlatformIfcNames_MemServerIndicationH2S)), lMemServerIndicationOutput.portalIfc.indications, lMemServerIndicationOutput.portalIfc.messageSize, clocked_by defaultClock, reset_by defaultReset);
    let lMemServerRequestInputNoc <- mkPortalMsgRequest(extend(pack(PlatformIfcNames_MemServerRequestS2H)), lMemServerRequestInput.portalIfc.requests, clocked_by defaultClock, reset_by defaultReset);
 
+   Axi4SlaveLiteBits#(32,32) sdaSlave <- mkAxi4SlaveLiteBitsFromPhysMemSlave(top.slave, clocked_by defaultClock, reset_by defaultReset);
+
+   interface AwsF1ClSh cl_sh;
+      method id0 = 32'hF000_1D0F; // 32'hc100_1be7;
+      method id1 = 32'h1D51_FEDD; // 32'hc101_1be7;
+   endinterface
+
+   interface sda = sdaSlave;
 
 `ifdef PinType
    interface pins = top.pins;
