@@ -50,11 +50,11 @@
 /* stem used for module and device names */
 #define DEV_NAME "portal"
 
-/* Bluespec's standard vendor ID */
 #define BLUESPEC_VENDOR_ID 0x1be7
+#define AMAZON_VENDOR_ID 0x1d0f
 
-/* CONNECTAL device ID */
 #define CONNECTAL_DEVICE_ID 0xc100
+#define AMAZON_DEVICE_ID 0xf000
 
 /* CSR address space offsets */
 #define CSR_ID                        (   0 << 2) /* 64-bit */
@@ -446,6 +446,7 @@ static int board_activate(int activate, tBoard *this_board, struct pci_dev *dev)
 	int fpn = 0;
 	int num_tiles, tile_index;
 	void __iomem *ptile;
+	void *portal_base;
 
 printk("[%s:%d]\n", __FUNCTION__, __LINE__);
         for (i = 0; i < MAX_NUM_PORTALS; i++)
@@ -490,6 +491,8 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                 printk("bar1io=%p\n", this_board->bar1io);
                 this_board->bar2io = pci_iomap(dev, 2, 0);
                 printk("bar2io=%p\n", this_board->bar2io);
+                this_board->bar4io = pci_iomap(dev, 4, 0);
+                printk("bar4io=%p\n", this_board->bar4io);
                 if (!this_board->bar1io) {
                         this_board->bar1io = pci_iomap(dev, 1, 8192);
                         printk("bar1io=%p\n", this_board->bar1io);
@@ -550,7 +553,13 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		iowrite32(0, this_board->bar0io + CSR_MSIX_MASKED);
                 pci_set_master(dev); /* enable PCI bus master */
 		
-		ptile = this_board->bar2io;
+		if (this_board->bar4io) {
+			portal_base = this_board->bar2io;
+			ptile = this_board->bar2io;
+		} else {
+			portal_base = this_board->bar2io;
+			ptile = this_board->bar2io;
+		}
 		num_tiles = *(volatile uint32_t *)(ptile + PCR_NUM_TILES_OFFSET);
 		tile_index = 0;
 		do {  // loop over all tiles
@@ -563,7 +572,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		    int freep;
 		    uint32_t iid = *(volatile uint32_t *)(pportal + PCR_IID_OFFSET);
 		    tPortal *this_portal = &this_board->portal[fpn];
-		    unsigned long offs = ((unsigned long)pportal) - ((unsigned long)this_board->bar2io);
+		    unsigned long offs = ((unsigned long)pportal) - ((unsigned long)portal_base);
 		    printk("%s:%d num_tiles %x/%x num_portals %x/%x fpn %x iid=%d pportal %p offset %lx\n", __FUNCTION__, __LINE__, tile_index, num_tiles, portal_index, num_portals, fpn, iid, pportal, offs);
 		    traceInfo.intval[fpn] = ioread32(this_board->bar0io + CSR_MSIX_MSG_DATA  + 16*fpn);
 		    traceInfo.name[fpn] = iid;
@@ -666,6 +675,8 @@ BARS_MAPPED_label:
                 pci_iounmap(dev, this_board->bar1io);
         if (this_board->bar2io)
                 pci_iounmap(dev, this_board->bar2io);
+        if (this_board->bar4io)
+                pci_iounmap(dev, this_board->bar4io);
 BARS_ALLOCATED_label:
         pci_release_regions(dev); /* release PCI memory regions */
 PCI_DEV_ENABLED_label:
@@ -686,7 +697,8 @@ static int pcieportal_probe(struct pci_dev *dev, const struct pci_device_id *id)
 printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__, &pcieportal_probe, dev, id, pci_get_drvdata(dev));
         printk(KERN_INFO "%s: PCI probe for 0x%04x 0x%04x\n", DEV_NAME, dev->vendor, dev->device); 
         /* double-check vendor and device */
-        if (dev->vendor != BLUESPEC_VENDOR_ID || dev->device != CONNECTAL_DEVICE_ID) {
+        if (!(dev->vendor == BLUESPEC_VENDOR_ID && dev->device == CONNECTAL_DEVICE_ID)
+	    && !(dev->vendor == AMAZON_VENDOR_ID && dev->device == AMAZON_DEVICE_ID)) {
                 printk(KERN_ERR "%s: probe with invalid vendor or device ID\n", DEV_NAME);
                 return -EINVAL;
         }
