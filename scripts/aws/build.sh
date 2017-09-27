@@ -1,10 +1,14 @@
 #!/bin/bash
 
+export CONNECTALDIR=~/connectal
+echo "CONNECTALDIR=$CONNECTALDIR"
+
 SCRIPTSDIR=`pwd`
 echo SCRIPTSDIR=$SCRIPTSDIR
 if [ `basename $SCRIPTSDIR` = 'scripts' ]; then
   cd ../..
 else
+  mkdir -p design
   mkdir -p build/checkpoints/to_aws
   mkdir -p build/constraints
   mkdir -p build/reports
@@ -18,6 +22,8 @@ rsync -v $CONNECTALDIR/scripts/aws/* $SCRIPTSDIR
 
 export CL_DIR=`pwd`
 cd $SCRIPTSDIR
+
+cp -fv $CONNECTALDIR/verilog/cl_id_defines.vh $SCRIPTSDIR/../../design
 
 pushd ~/aws-fpga
 source ./hdk_setup.sh
