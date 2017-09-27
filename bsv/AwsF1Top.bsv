@@ -78,6 +78,7 @@ interface AwsF1ShCl;
    method Action pwr_state(Bit#(2) pwr_state);
 endinterface
 
+(* always_ready, always_enabled *)
 interface AwsF1Top;
    interface PinType pins;
    interface AwsF1ShCl sh_cl;
@@ -125,11 +126,14 @@ module mkAxi4SlaveLiteBitsFromPhysMemSlave#(PhysMemSlave#(addrWidth,dataWidth) s
     endrule
     rule aw_to_slave;
        let req <- toGet(awFifo).get();
-       slave.read_server.readReq.put(req);
+       slave.write_server.writeReq.put(req);
     endrule
 
     rule r_rule if (rreadyWire == 1 && rdataFifo.notEmpty());
        rdataFifo.deq();
+    endrule
+    rule rdata_rule;
+       rdataWire <= rdataFifo.first.data;
     endrule
     rule rdata_from_slave;
        let mdata <- slave.read_server.readData.get();
@@ -180,7 +184,7 @@ module mkAxi4SlaveLiteBitsFromPhysMemSlave#(PhysMemSlave#(addrWidth,dataWidth) s
        return pack(brespFifo.notEmpty());
     endmethod
     method Bit#(dataWidth)     rdata();
-       return rdataFifo.first.data;
+       return rdataWire;
     endmethod
     method Action      rready(Bit#(1) v);
        rreadyWire <= v;
