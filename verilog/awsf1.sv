@@ -6,19 +6,56 @@ module awsf1(
 	     );
 
 //`include "cl_common_defines.vh"      // CL Defines for all examples
-//`include "cl_id_defines.vh"          // Defines for ID0 and ID1 (PCI ID's)
+`include "cl_id_defines.vh"          // Defines for ID0 and ID1 (PCI ID's)
 `include "unused_flr_template.inc"
 `include "unused_ddr_a_b_d_template.inc"
 `include "unused_ddr_c_template.inc"
 `include "unused_pcim_template.inc"
 `include "unused_dma_pcis_template.inc"
-//`include "unused_cl_sda_template.inc"
+`include "unused_cl_sda_template.inc"
 `include "unused_sh_bar1_template.inc"
 `include "unused_apppf_irq_template.inc"
-`include "cl_id_defines.vh"
+//`include "unused_sh_ocl_template.inc"
 
    assign cl_sh_id0 = `CL_SH_ID0;
    assign cl_sh_id1 = `CL_SH_ID1;
+
+   ila_0 CL_ILA_0 (
+                   .clk    (clk_main_a0),
+                   .probe0 (sh_ocl_awvalid),
+                   .probe1 (sh_ocl_awaddr),
+                   .probe2 (ocl_sh_awready),
+                   .probe3 (sh_ocl_arvalid),
+                   .probe4 (sh_ocl_araddr),
+                   .probe5 (ocl_sh_arready)
+                   );
+
+   ila_0 CL_ILA_1 (
+                   .clk    (clk_main_a0),
+                   .probe0 (ocl_sh_bvalid),
+                   .probe1 (ocl_sh_bresp),
+                   .probe2 (sh_ocl_bready),
+                   .probe3 (ocl_sh_rvalid),
+                   .probe4 ({32'b0,ocl_sh_rdata[31:0]}),
+                   .probe5 (sh_ocl_rready)
+                   );
+
+// Debug Bridge 
+ cl_debug_bridge CL_DEBUG_BRIDGE (
+      .clk(clk_main_a0),
+      .S_BSCAN_drck(drck),
+      .S_BSCAN_shift(shift),
+      .S_BSCAN_tdi(tdi),
+      .S_BSCAN_update(update),
+      .S_BSCAN_sel(sel),
+      .S_BSCAN_tdo(tdo),
+      .S_BSCAN_tms(tms),
+      .S_BSCAN_tck(tck),
+      .S_BSCAN_runtest(runtest),
+      .S_BSCAN_reset(reset),
+      .S_BSCAN_capture(capture),
+      .S_BSCAN_bscanid_en(bscanid_en)
+   );
 
    mkAwsF1Top(
 	      .clk_main_a0(clk_main_a0),	//Main clock.  This is the clock for all of the interfaces to the SH
@@ -55,32 +92,32 @@ module awsf1(
    // If the CL is created through  Xilinx’s SDAccel, then this configuration bus
    // would be connected automatically to SDAccel generic logic (SmartConnect, APM etc)
    //------------------------------------------------------------------------------------------
-	      .sda_awvalid_v(sda_cl_awvalid),
-	      .sda_awaddr_v(sda_cl_awaddr),
-	      .sda_awready(cl_sda_awready),
+	      .ocl_awvalid_v(sh_ocl_awvalid),
+	      .ocl_awaddr_v(sh_ocl_awaddr),
+	      .ocl_awready(ocl_sh_awready),
 
 	      //Write data
-	      .sda_wvalid_v(sda_cl_wvalid),
-	      .sda_wdata_v(sda_cl_wdata),
-	      //.(sda_cl_wstrb),
-	      .sda_wready(cl_sda_wready),
+	      .ocl_wvalid_v(sh_ocl_wvalid),
+	      .ocl_wdata_v(sh_ocl_wdata),
+	      //.(sh_ocl_wstrb),
+	      .ocl_wready(ocl_sh_wready),
 
 	      //Write response
-	      .sda_bvalid(cl_sda_bvalid),
-	      .sda_bresp(cl_sda_bresp),
-	      .sda_bready_v(sda_cl_bready),
+	      .ocl_bvalid(ocl_sh_bvalid),
+	      .ocl_bresp(ocl_sh_bresp),
+	      .ocl_bready_v(sh_ocl_bready),
 
    //Read address
-	      .sda_arvalid_v(sda_cl_arvalid),
-	      .sda_araddr_v(sda_cl_araddr),
-	      .sda_arready(cl_sda_arready),
+	      .ocl_arvalid_v(sh_ocl_arvalid),
+	      .ocl_araddr_v(sh_ocl_araddr),
+	      .ocl_arready(ocl_sh_arready),
 
    //Read data/response
-	      .sda_rvalid(cl_sda_rvalid),
-	      .sda_rdata(cl_sda_rdata),
-	      .sda_rresp(cl_sda_rresp),
+	      .ocl_rvalid(ocl_sh_rvalid),
+	      .ocl_rdata(ocl_sh_rdata),
+	      .ocl_rresp(ocl_sh_rresp),
 
-	      .sda_rready_v(sda_cl_rready)
+	      .ocl_rready_v(sh_ocl_rready)
 
 );
    endmodule
