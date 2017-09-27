@@ -83,8 +83,8 @@ interface AwsF1Top;
    interface AwsF1ShCl sh_cl;
    interface AwsF1ClSh cl_sh;
    interface Axi4SlaveBits#(64,512,6,Empty) dmasink;
-   interface Axi4SlaveLiteBits#(32,32) sda;
    interface Axi4SlaveLiteBits#(32,32) ocl;
+   interface Axi4SlaveLiteBits#(32,32) sda;
    interface Axi4SlaveLiteBits#(32,32) bar1;
 endinterface
 
@@ -243,14 +243,14 @@ module mkAwsF1Top#(Clock clk_main_a0, Clock clk_extra_a1, Clock clk_extra_a2, Cl
    let lMemServerIndicationOutputNoc <- mkPortalMsgIndication(extend(pack(PlatformIfcNames_MemServerIndicationH2S)), lMemServerIndicationOutput.portalIfc.indications, lMemServerIndicationOutput.portalIfc.messageSize, clocked_by defaultClock, reset_by defaultReset);
    let lMemServerRequestInputNoc <- mkPortalMsgRequest(extend(pack(PlatformIfcNames_MemServerRequestS2H)), lMemServerRequestInput.portalIfc.requests, clocked_by defaultClock, reset_by defaultReset);
 
-   Axi4SlaveLiteBits#(32,32) sdaSlave <- mkAxi4SlaveLiteBitsFromPhysMemSlave(top.slave, clocked_by defaultClock, reset_by defaultReset);
+   Axi4SlaveLiteBits#(32,32) oclSlave <- mkAxi4SlaveLiteBitsFromPhysMemSlave(top.slave, clocked_by defaultClock, reset_by defaultReset);
 
    interface AwsF1ClSh cl_sh;
       method id0 = 32'hF000_1D0F; // 32'hc100_1be7;
       method id1 = 32'h1D51_FEDD; // 32'hc101_1be7;
    endinterface
 
-   interface sda = sdaSlave;
+   interface ocl = oclSlave;
 
 `ifdef PinType
    interface pins = top.pins;
