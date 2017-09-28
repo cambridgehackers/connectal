@@ -10,7 +10,7 @@ module awsf1(
 `include "unused_flr_template.inc"
 `include "unused_ddr_a_b_d_template.inc"
 `include "unused_ddr_c_template.inc"
-`include "unused_pcim_template.inc"
+//`include "unused_pcim_template.inc"
 `include "unused_dma_pcis_template.inc"
 `include "unused_cl_sda_template.inc"
 `include "unused_sh_bar1_template.inc"
