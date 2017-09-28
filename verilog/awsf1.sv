@@ -117,7 +117,52 @@ module awsf1(
 	      .ocl_rdata(ocl_sh_rdata),
 	      .ocl_rresp(ocl_sh_rresp),
 
-	      .ocl_rready_v(sh_ocl_rready)
+	      .ocl_rready_v(sh_ocl_rready),
 
+	      .pcim_araddr(cl_sh_pcim_araddr),
+	      //.pcim_arburst(pcim_arburst),
+	      //.pcim_arcache(pcim_arcache),
+	      //.pcim_aresetn(pcim_aresetn),
+	      .pcim_arid(cl_sh_pcim_arid),
+	      .pcim_arlen(cl_sh_pcim_arlen),
+	      //.pcim_arlock(pcim_arlock),
+	      //.pcim_arprot(pcim_arprot),
+	      //.pcim_arqos(pcim_arqos),
+	      .pcim_arready_v(sh_cl_pcim_arready),
+	      .pcim_arsize(cl_sh_pcim_arsize),
+	      .pcim_arvalid(cl_sh_pcim_arvalid),
+	      //FIXME: .pcim_aruser(pcim_extra_aruser),
+
+	      .pcim_awaddr(cl_sh_pcim_awaddr),
+	      //.pcim_awburst(pcim_awburst),
+	      //.pcim_awcache(pcim_awcache),
+	      .pcim_awid(cl_sh_pcim_awid),
+	      .pcim_awlen(cl_sh_pcim_awlen),
+	      //.pcim_awlock(pcim_awlock),
+	      //.pcim_awprot(pcim_awprot),
+	      //.pcim_awqos(pcim_awqos),
+	      .pcim_awready_v(sh_cl_pcim_awready),
+	      .pcim_awsize(cl_sh_pcim_awsize),
+	      .pcim_awvalid(cl_sh_pcim_awvalid),
+	      //FIXME .pcim_awuser(pcim_extra_awuser),
+
+	      .pcim_bid_v(sh_cl_pcim_bid),
+	      .pcim_bready(cl_sh_pcim_bready),
+	      .pcim_bresp_v(sh_cl_pcim_bresp),
+	      .pcim_bvalid_v(sh_cl_pcim_bvalid),
+
+	      .pcim_rdata_v(sh_cl_pcim_rdata),
+	      .pcim_rid_v(sh_cl_pcim_rid),
+	      .pcim_rlast_v(sh_cl_pcim_rlast),
+	      .pcim_rready(cl_sh_pcim_rready),
+	      .pcim_rresp_v(sh_cl_pcim_rresp),
+	      .pcim_rvalid_v(sh_cl_pcim_rvalid),
+
+	      .pcim_wdata(cl_sh_pcim_wdata),
+	      .pcim_wid(cl_sh_pcim_wid),
+	      .pcim_wlast(cl_sh_pcim_wlast),
+	      .pcim_wready_v(sh_cl_pcim_wready),
+	      .pcim_wstrb(cl_sh_pcim_wstrb),
+	      .pcim_wvalid(cl_sh_pcim_wvalid)
 );
    endmodule

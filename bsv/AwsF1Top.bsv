@@ -39,7 +39,10 @@ import MemServerRequest::*;
 import SimDma::*;
 import IfcNames::*;
 import BuildVector::*;
+import Axi4MasterSlave::*;
 import AxiBits::*;
+import AxiDma::*;
+import PS8LIB::*; // mkPhysMemSlave
 import FIFOF::*;
 import CFFIFO::*;
 
@@ -87,6 +90,7 @@ interface AwsF1Top;
    interface Axi4SlaveLiteBits#(32,32) ocl;
    interface Axi4SlaveLiteBits#(32,32) sda;
    interface Axi4SlaveLiteBits#(32,32) bar1;
+   interface Axi4MasterBits#(PhysAddrWidth,512,16,Empty) pcim;
 endinterface
 
 module mkAxi4SlaveLiteBitsFromPhysMemSlave#(PhysMemSlave#(addrWidth,dataWidth) slave)
@@ -206,7 +210,6 @@ module mkAxi4SlaveLiteBitsFromPhysMemSlave#(PhysMemSlave#(addrWidth,dataWidth) s
     endmethod
 endmodule
 
-
 (* no_default_clock, no_default_reset, clock_prefix="", reset_prefix="" *)
 module mkAwsF1Top#(Clock clk_main_a0, Clock clk_extra_a1, Clock clk_extra_a2, Clock clk_extra_a3,
        Clock  clk_extra_b0, Clock clk_extra_b1, Clock clk_extra_c0, Clock clk_extra_c1,
@@ -249,12 +252,18 @@ module mkAwsF1Top#(Clock clk_main_a0, Clock clk_extra_a1, Clock clk_extra_a2, Cl
 
    Axi4SlaveLiteBits#(32,32) oclSlave <- mkAxi4SlaveLiteBitsFromPhysMemSlave(top.slave, clocked_by defaultClock, reset_by defaultReset);
 
+   Vector#(NumberOfMasters, Axi4Master#(PhysAddrWidth,DataBusWidth,MemTagSize)) axiMasters
+       <- mapM(mkAxi4DmaMaster, lMemServer.masters, clocked_by defaultClock, reset_by defaultReset);
+   Axi4MasterBits#(PhysAddrWidth,512,16,Empty) masterBits
+       <- mkAxi4MasterBits(axiMasters[0], clocked_by defaultClock, reset_by defaultReset);
+
    interface AwsF1ClSh cl_sh;
       method id0 = 32'hF000_1D0F; // 32'hc100_1be7;
       method id1 = 32'h1D51_FEDD; // 32'hc101_1be7;
    endinterface
 
    interface ocl = oclSlave;
+   interface pcim = masterBits;
 
 `ifdef PinType
    interface pins = top.pins;
