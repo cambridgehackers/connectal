@@ -20,24 +20,21 @@ module awsf1(
    assign cl_sh_id0 = `CL_SH_ID0;
    assign cl_sh_id1 = `CL_SH_ID1;
 
-   ila_0 CL_ILA_0 (
+   ila_connectal_1 CL_ILA_0 (
                    .clk    (clk_main_a0),
                    .probe0 (sh_ocl_awvalid),
-                   .probe1 (sh_ocl_awaddr),
+                   .probe1 ({32'b0,sh_ocl_awaddr}),
                    .probe2 (ocl_sh_awready),
                    .probe3 (sh_ocl_arvalid),
-                   .probe4 (sh_ocl_araddr),
-                   .probe5 (ocl_sh_arready)
-                   );
+                   .probe4 ({32'b0,sh_ocl_araddr}),
+                   .probe5 (ocl_sh_arready),
 
-   ila_0 CL_ILA_1 (
-                   .clk    (clk_main_a0),
-                   .probe0 (ocl_sh_bvalid),
-                   .probe1 (ocl_sh_bresp),
-                   .probe2 (sh_ocl_bready),
-                   .probe3 (ocl_sh_rvalid),
-                   .probe4 ({32'b0,ocl_sh_rdata[31:0]}),
-                   .probe5 (sh_ocl_rready)
+                   .probe6 (sh_ocl_wvalid),
+                   .probe7 ({32'b0,sh_ocl_wdata[31:0]}),
+                   .probe8 (ocl_sh_wready),
+                   .probe9 (ocl_sh_rvalid),
+                   .probe10 ({32'b0,ocl_sh_rdata[31:0]}),
+                   .probe11 (sh_ocl_rready)
                    );
 
 // Debug Bridge 
