@@ -28,6 +28,9 @@ puts "AWS FPGA: ([clock format [clock seconds] -format %T]) Reading developer's 
 
 read_verilog -sv [glob $ENC_SRC_DIR/*.sv] [glob $ENC_SRC_DIR/*.v]
 
+read_ip [list "$CONNECTALDIR/out/awsf1/ila_connectal_1/ila_connectal_1.xci"]
+read_ip [list "$CONNECTALDIR/out/awsf1/ila_connectal_2/ila_connectal_2.xci"]
+
 #---- End of section replaced by User ----
 
 puts "AWS FPGA: Reading AWS Shell design";
