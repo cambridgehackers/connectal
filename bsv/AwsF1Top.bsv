@@ -25,6 +25,7 @@ import Vector            :: *;
 import GetPut::*;
 import Connectable::*;
 import Portal            :: *;
+import Platform          :: *;
 import Top               :: *;
 import HostInterface     :: *;
 import Pipe::*;
@@ -235,25 +236,12 @@ module mkAwsF1Top#(Clock clk_main_a0, Clock clk_extra_a1, Clock clk_extra_a2, Cl
 	clocked_by defaultClock, reset_by defaultReset
        );
 
-   MMUIndicationOutput lMMUIndicationOutput <- mkMMUIndicationOutput(clocked_by defaultClock, reset_by defaultReset);
-   MMURequestInput lMMURequestInput <- mkMMURequestInput(clocked_by defaultClock, reset_by defaultReset);
-   MMU#(PhysAddrWidth) lMMU <- mkMMU(0,True, lMMUIndicationOutput.ifc, clocked_by defaultClock, reset_by defaultReset);
-   mkConnection(lMMURequestInput.pipes, lMMU.request, clocked_by defaultClock, reset_by defaultReset);
+   let platform <- mkPlatform(vec(top), clocked_by defaultClock, reset_by defaultReset);
 
-   MemServerIndicationOutput lMemServerIndicationOutput <- mkMemServerIndicationOutput(clocked_by defaultClock, reset_by defaultReset);
-   MemServerRequestInput lMemServerRequestInput <- mkMemServerRequestInput(clocked_by defaultClock, reset_by defaultReset);
-   MemServer::MemServer#(PhysAddrWidth,DataBusWidth,NumberOfMasters) lMemServer <- mkMemServer(top.readers, top.writers, cons(lMMU,nil), lMemServerIndicationOutput.ifc, clocked_by defaultClock, reset_by defaultReset);
-   mkConnection(lMemServerRequestInput.pipes, lMemServer.request, clocked_by defaultClock, reset_by defaultReset);
-
-   let lMMUIndicationOutputNoc <- mkPortalMsgIndication(extend(pack(PlatformIfcNames_MMUIndicationH2S)), lMMUIndicationOutput.portalIfc.indications, lMMUIndicationOutput.portalIfc.messageSize, clocked_by defaultClock, reset_by defaultReset);
-   let lMMURequestInputNoc <- mkPortalMsgRequest(extend(pack(PlatformIfcNames_MMURequestS2H)), lMMURequestInput.portalIfc.requests, clocked_by defaultClock, reset_by defaultReset);
-   let lMemServerIndicationOutputNoc <- mkPortalMsgIndication(extend(pack(PlatformIfcNames_MemServerIndicationH2S)), lMemServerIndicationOutput.portalIfc.indications, lMemServerIndicationOutput.portalIfc.messageSize, clocked_by defaultClock, reset_by defaultReset);
-   let lMemServerRequestInputNoc <- mkPortalMsgRequest(extend(pack(PlatformIfcNames_MemServerRequestS2H)), lMemServerRequestInput.portalIfc.requests, clocked_by defaultClock, reset_by defaultReset);
-
-   Axi4SlaveLiteBits#(32,32) oclSlave <- mkAxi4SlaveLiteBitsFromPhysMemSlave(top.slave, clocked_by defaultClock, reset_by defaultReset);
+   Axi4SlaveLiteBits#(32,32) oclSlave <- mkAxi4SlaveLiteBitsFromPhysMemSlave(platform.slave, clocked_by defaultClock, reset_by defaultReset);
 
    Vector#(NumberOfMasters, Axi4Master#(PhysAddrWidth,DataBusWidth,MemTagSize)) axiMasters
-       <- mapM(mkAxi4DmaMaster, lMemServer.masters, clocked_by defaultClock, reset_by defaultReset);
+       <- mapM(mkAxi4DmaMaster, platform.masters, clocked_by defaultClock, reset_by defaultReset);
    Axi4MasterBits#(PhysAddrWidth,512,16,AwsF1Extra) masterBits
        <- mkAxi4MasterBits(axiMasters[0], clocked_by defaultClock, reset_by defaultReset);
 
