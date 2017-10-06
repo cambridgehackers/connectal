@@ -262,8 +262,20 @@ function Axi4MasterBits#(addrWidth,dataWidth,tagWidth,Empty) toAxi4MasterBits(Ax
 endfunction
 endinstance
 
-module mkAxi4MasterBits#(Axi4Master#(addrWidth,dataWidth,tagWidth) m)(Axi4MasterBits#(addrWidth,busDataWidth,busTagWidth,Empty))
+(* always_ready, always_enabled *)
+interface AwsF1Extra;
+    //10:0 Length in DW of the transaction
+    //14:11 are the byte-enable for the first DW (bit value 1 mean byte is enable, i.e. not masked)
+    //18:15 are the byte-enable for the last DW (bit value 1 mean byte is enable, i.e. not masked)
+    method Bit#(19) awuser;
+    // 10:0 Length in DW of the transaction
+    // 18:11 Must be set to 0xFF, could be ignored in next release
+    method Bit#(19) aruser;
+endinterface
+
+module mkAxi4MasterBits#(Axi4Master#(addrWidth,dataWidth,tagWidth) m)(Axi4MasterBits#(addrWidth,busDataWidth,busTagWidth,AwsF1Extra))
     provisos (Add#(dataWidth,d__,busDataWidth),
+              Div#(dataWidth,32,dataWidthWords),
     	      Add#(tagWidth,t__,busTagWidth),
     	      Add#(a__, TDiv#(dataWidth, 8), TDiv#(busDataWidth, 8)));
 	    let arfifo <- mkCFFIFOF();
@@ -275,6 +287,7 @@ module mkAxi4MasterBits#(Axi4Master#(addrWidth,dataWidth,tagWidth) m)(Axi4Master
 	    let arprotWire <- mkDWire(0);
 	    let arlenWire <- mkDWire(0);
 	    let arsizeWire <- mkDWire(0);
+	    let aruserWire <- mkDWire(0);
 
 	    let awfifo <- mkCFFIFOF();
 	    let awaddrWire <- mkDWire(0);
@@ -285,6 +298,7 @@ module mkAxi4MasterBits#(Axi4Master#(addrWidth,dataWidth,tagWidth) m)(Axi4Master
 	    let awprotWire <- mkDWire(0);
 	    let awlenWire <- mkDWire(0);
 	    let awsizeWire <- mkDWire(0);
+	    let awuserWire <- mkDWire(0);
 
 	    let rfifo <- mkCFFIFOF();
 	    let rdataWire <- mkDWire(0);
@@ -313,6 +327,9 @@ module mkAxi4MasterBits#(Axi4Master#(addrWidth,dataWidth,tagWidth) m)(Axi4Master
 	    rule arwire_rule;
 	       araddrWire <= arfifo.first.address;
 	       arlenWire <= arfifo.first.len;
+	       Bit#(11) dwlen = extend(arfifo.first.len) / fromInteger(valueOf(dataWidthWords));
+	       Bit#(8) mustbeone = 8'hf;
+	       aruserWire <= { mustbeone, dwlen };
 	       arsizeWire <= arfifo.first.size;
 	       arburstWire <= 2'b01; //arfifo.first.burst;
 	       arprotWire <= 3'b000; //arfifo.first.prot;
@@ -331,7 +348,12 @@ module mkAxi4MasterBits#(Axi4Master#(addrWidth,dataWidth,tagWidth) m)(Axi4Master
 
 	    rule awwire_rule;
 	       awaddrWire <= awfifo.first.address;
-	       awlenWire <= awfifo.first.len;
+	       let lenbytes = awfifo.first.len;
+	       awlenWire <= lenbytes;
+	       Bit#(11) dwlen = extend(lenbytes) / fromInteger(valueOf(dataWidthWords));
+	       Bit#(4) firstBE = 4'hf;
+	       Bit#(4) lastBE = (lenbytes > 4) ? 4'hf : 0;
+	       awuserWire <= { lastBE, firstBE, dwlen };
 	       awsizeWire <= awfifo.first.size;
 	       awburstWire <= 2'b01; //awfifo.first.burst;
 	       awprotWire <= 3'b000; //awfifo.first.prot;
@@ -377,6 +399,11 @@ module mkAxi4MasterBits#(Axi4Master#(addrWidth,dataWidth,tagWidth) m)(Axi4Master
 	      bfifo.enq(Axi4WriteResponse {resp: brespWire,
 					  id: bidWire });
 	    endrule
+
+	    interface AwsF1Extra extra;
+	       method aruser = aruserWire;
+	       method awuser = awuserWire;
+	    endinterface
 
 	    method araddr = araddrWire;
 	    method arburst = arburstWire;

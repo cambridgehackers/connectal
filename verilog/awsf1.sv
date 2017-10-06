@@ -20,21 +20,40 @@ module awsf1(
    assign cl_sh_id0 = `CL_SH_ID0;
    assign cl_sh_id1 = `CL_SH_ID1;
 
-   ila_connectal_1 CL_ILA_0 (
+   ila_connectal_1 cl_ila_slave (
                    .clk    (clk_main_a0),
                    .probe0 (sh_ocl_awvalid),
-                   .probe1 ({32'b0,sh_ocl_awaddr}),
+                   .probe1 (sh_ocl_awaddr),
                    .probe2 (ocl_sh_awready),
                    .probe3 (sh_ocl_arvalid),
-                   .probe4 ({32'b0,sh_ocl_araddr}),
+                   .probe4 (sh_ocl_araddr),
                    .probe5 (ocl_sh_arready),
 
                    .probe6 (sh_ocl_wvalid),
-                   .probe7 ({32'b0,sh_ocl_wdata[31:0]}),
+                   .probe7 (sh_ocl_wdata),
                    .probe8 (ocl_sh_wready),
                    .probe9 (ocl_sh_rvalid),
-                   .probe10 ({32'b0,ocl_sh_rdata[31:0]}),
+                   .probe10 (ocl_sh_rdata),
                    .probe11 (sh_ocl_rready)
+                   );
+
+   ila_connectal_2 cl_ila_master  (
+                   .clk    (clk_main_a0),
+                   .probe0 (cl_sh_pcim_awvalid),
+                   .probe1 (cl_sh_pcim_awaddr),
+                   .probe2 (sh_cl_pcim_awready),
+                   .probe3 (cl_sh_pcim_arvalid),
+                   .probe4 (cl_sh_pcim_araddr),
+                   .probe5 (sh_cl_pcim_arready),
+
+                   .probe6 (cl_sh_pcim_wvalid),
+                   .probe7 (cl_sh_pcim_wdata),
+                   .probe8 (sh_cl_pcim_wready),
+                   .probe9 (sh_cl_pcim_rvalid),
+                   .probe10 (sh_cl_pcim_rdata),
+                   .probe11 (cl_sh_pcim_rready),
+                   .probe12 (cl_sh_pcim_aruser),
+                   .probe13 (cl_sh_pcim_awuser)
                    );
 
 // Debug Bridge 
@@ -70,7 +89,8 @@ module awsf1(
 	      .rst_main_n(rst_main_n),	//Reset sync to main clock.
 
 	      .sh_cl_flr_assert(sh_cl_flr_assert), //Function level reset assertion.  Level signal that indicates PCIe function level reset is asserted
-	      .cl_sh_flr_done(cl_sh_flr_done),	//Function level reset done indication.  Must be asserted by CL when done processing functional
+	      // remove import  "unused_flr_template.inc" if the flr_done signal is needed
+	      //.cl_sh_flr_done(cl_sh_flr_done),	//Function level reset done indication.  Must be asserted by CL when done processing functional
 	      .cl_sh_status0(cl_sh_status0),	//Functionality TBD
 	      .cl_sh_status1(cl_sh_status1),	//Functionality TBD
 	      //.cl_sh_id0(cl_sh_id0),	
@@ -128,7 +148,7 @@ module awsf1(
 	      .pcim_arready_v(sh_cl_pcim_arready),
 	      .pcim_arsize(cl_sh_pcim_arsize),
 	      .pcim_arvalid(cl_sh_pcim_arvalid),
-	      //FIXME: .pcim_aruser(pcim_extra_aruser),
+	      .pcim_extra_aruser(cl_sh_pcim_aruser),
 
 	      .pcim_awaddr(cl_sh_pcim_awaddr),
 	      //.pcim_awburst(pcim_awburst),
@@ -141,7 +161,7 @@ module awsf1(
 	      .pcim_awready_v(sh_cl_pcim_awready),
 	      .pcim_awsize(cl_sh_pcim_awsize),
 	      .pcim_awvalid(cl_sh_pcim_awvalid),
-	      //FIXME .pcim_awuser(pcim_extra_awuser),
+	      .pcim_extra_awuser(cl_sh_pcim_awuser),
 
 	      .pcim_bid_v(sh_cl_pcim_bid),
 	      .pcim_bready(cl_sh_pcim_bready),

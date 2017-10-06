@@ -90,7 +90,7 @@ interface AwsF1Top;
    interface Axi4SlaveLiteBits#(32,32) ocl;
    interface Axi4SlaveLiteBits#(32,32) sda;
    interface Axi4SlaveLiteBits#(32,32) bar1;
-   interface Axi4MasterBits#(PhysAddrWidth,512,16,Empty) pcim;
+   interface Axi4MasterBits#(PhysAddrWidth,512,16,AwsF1Extra) pcim;
 endinterface
 
 module mkAxi4SlaveLiteBitsFromPhysMemSlave#(PhysMemSlave#(addrWidth,dataWidth) slave)
@@ -254,7 +254,7 @@ module mkAwsF1Top#(Clock clk_main_a0, Clock clk_extra_a1, Clock clk_extra_a2, Cl
 
    Vector#(NumberOfMasters, Axi4Master#(PhysAddrWidth,DataBusWidth,MemTagSize)) axiMasters
        <- mapM(mkAxi4DmaMaster, lMemServer.masters, clocked_by defaultClock, reset_by defaultReset);
-   Axi4MasterBits#(PhysAddrWidth,512,16,Empty) masterBits
+   Axi4MasterBits#(PhysAddrWidth,512,16,AwsF1Extra) masterBits
        <- mkAxi4MasterBits(axiMasters[0], clocked_by defaultClock, reset_by defaultReset);
 
    interface AwsF1ClSh cl_sh;
