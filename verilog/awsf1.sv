@@ -14,7 +14,7 @@ module awsf1(
 `include "unused_dma_pcis_template.inc"
 `include "unused_cl_sda_template.inc"
 `include "unused_sh_bar1_template.inc"
-`include "unused_apppf_irq_template.inc"
+//`include "unused_apppf_irq_template.inc"
 //`include "unused_sh_ocl_template.inc"
 
    assign cl_sh_id0 = `CL_SH_ID0;
@@ -103,6 +103,9 @@ module awsf1(
 	      .cl_sh_status_vled(cl_sh_status_vled),	//Virtual LEDs, monitored through FPGA management PF and tools
 
 	      .sh_cl_pwr_state(sh_cl_pwr_state),	//Power state, 2'b00: Normal, 2'b11: Critical
+
+	      .interrupt_apppf_irq_req(cl_sh_apppf_irq_req),
+	      .interrupt_apppf_irq_ack_ack(sh_cl_apppf_irq_ack),
 
    //------------------------------------------------------------------------------------------
    // AXI-L maps to any inbound PCIe access through ManagementPF BAR4 for developer's use

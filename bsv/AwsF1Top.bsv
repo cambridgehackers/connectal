@@ -37,6 +37,8 @@ import MMURequest::*;
 import MMUIndication::*;
 import MemServerIndication::*;
 import MemServerRequest::*;
+import Platform          :: *;
+import Vector            :: *;
 import SimDma::*;
 import IfcNames::*;
 import BuildVector::*;
@@ -83,10 +85,51 @@ interface AwsF1ShCl;
 endinterface
 
 (* always_ready, always_enabled *)
+interface AwsF1Interrupt;
+   (* prefix="" *)
+   method Bit#(16) apppf_irq_req();
+   method Action apppf_irq_ack(Bit#(16) ack);
+endinterface
+
+module mkAwsF1Interrupt#(Platform platform)(AwsF1Interrupt);
+   Vector#(NumberOfTiles, Reg#(Bool)) intrRegs <- replicateM(mkReg(False));
+   Vector#(NumberOfTiles, Reg#(Bool)) readyRegs <- replicateM(mkReg(True));
+   Vector#(NumberOfTiles, Wire#(Bool)) ackWires <- replicateM(mkDWire(False));
+   
+   for (Integer i = 0; i < valueOf(NumberOfTiles); i = i + 1) begin
+      rule intr_rule if (!intrRegs[i]);
+	 if (platform.interrupt[i] && readyRegs[i]) begin
+	    intrRegs[i] <= True;
+	    readyRegs[i] <= False;
+	 end
+      endrule
+      rule ack_rule if (intrRegs[i]);
+	 if  (ackWires[i]) begin
+	    intrRegs[i] <= False;
+	 end
+      endrule
+      rule ready_rule if (!platform.interrupt[i]);
+	 readyRegs[i] <= True;
+      endrule
+   end
+   method Bit#(16) apppf_irq_req();
+      Bit#(16) bits = 0;
+      for (Integer i = 0; i < valueOf(NumberOfTiles); i = i + 1)
+	 bits[i] = pack(intrRegs[i]);
+      return bits;
+   endmethod
+   method Action apppf_irq_ack(Bit#(16) ack);
+      for (Integer i = 0; i < valueOf(NumberOfTiles); i = i + 1)
+	 ackWires[i] <= unpack(ack[i]);
+   endmethod
+endmodule
+
+(* always_ready, always_enabled *)
 interface AwsF1Top;
    interface PinType pins;
    interface AwsF1ShCl sh_cl;
    interface AwsF1ClSh cl_sh;
+   interface AwsF1Interrupt interrupt;
    interface Axi4SlaveBits#(64,512,6,Empty) dmasink;
    interface Axi4SlaveLiteBits#(32,32) ocl;
    interface Axi4SlaveLiteBits#(32,32) sda;
@@ -245,6 +288,8 @@ module mkAwsF1Top#(Clock clk_main_a0, Clock clk_extra_a1, Clock clk_extra_a2, Cl
    Axi4MasterBits#(PhysAddrWidth,512,16,AwsF1Extra) masterBits
        <- mkAxi4MasterBits(axiMasters[0], clocked_by defaultClock, reset_by defaultReset);
 
+   let awsF1Interrupt <- mkAwsF1Interrupt(platform, clocked_by defaultClock, reset_by defaultReset);
+
    interface AwsF1ClSh cl_sh;
       method id0 = 32'hF000_1D0F; // 32'hc100_1be7;
       method id1 = 32'h1D51_FEDD; // 32'hc101_1be7;
@@ -252,6 +297,7 @@ module mkAwsF1Top#(Clock clk_main_a0, Clock clk_extra_a1, Clock clk_extra_a2, Cl
 
    interface ocl = oclSlave;
    interface pcim = masterBits;
+   interface interrupt = awsF1Interrupt;
 
 `ifdef PinType
    interface pins = top.pins;
