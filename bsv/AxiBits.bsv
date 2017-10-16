@@ -27,7 +27,7 @@ import CFFIFO::*;
 import GetPut::*;
 import Probe::*;
 import ConnectalMemTypes::*;
-import EHRM::*;
+import ConnectalEHR::*;
 import Axi4MasterSlave::*;
 import Connectable::*;
 import ConnectalBramFifo::*;
