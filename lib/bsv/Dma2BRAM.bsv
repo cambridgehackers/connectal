@@ -27,7 +27,7 @@ import FIFOF::*;
 import SpecialFIFOs::*;
 import GetPut::*;
 import ClientServer::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemWriteEngine::*;
 import MemUtils::*;
 import Pipe::*;

@@ -28,7 +28,7 @@ import Top               :: *;
 import HostInterface     :: *;
 import Pipe::*;
 import CnocPortal::*;
-import MemTypes:: *;
+import ConnectalMemTypes:: *;
 import MMU:: *;
 import MemServer:: *;
 import MMURequest::*;

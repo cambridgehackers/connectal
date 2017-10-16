@@ -4,7 +4,7 @@ import CFFIFO::*;
 import DefaultValue::*;
 import FIFOF::*;
 import GetPut::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 
 typedef struct {
    MemRequest readReq;

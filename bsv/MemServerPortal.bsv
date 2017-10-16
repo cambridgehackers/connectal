@@ -27,7 +27,7 @@ import ConfigCounter::*;
 import CFFIFO::*;
 
 import ConnectalConfig::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 
 //
 // provides softare ability to read/write a PhysMemSlave or MemServer

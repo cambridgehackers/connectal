@@ -33,7 +33,7 @@ import Probe        :: *;
 
 import ConnectalMimo :: *;
 import MIFO         :: *;
-import MemTypes     :: *;
+import ConnectalMemTypes     :: *;
 import ConfigCounter ::*;
 import ConnectalConfig::*;
 

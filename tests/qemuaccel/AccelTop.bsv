@@ -8,7 +8,7 @@ import HostInterface::*;
 import Connectable::*;
 import MemReadEngine::*;
 import MemWriteEngine::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemServer::*;
 import AccelIfcNames::*;
 import `PinTypeInclude::*;

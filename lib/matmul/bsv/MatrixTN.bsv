@@ -29,7 +29,7 @@ import DefaultValue::*;
 import SpecialFIFOs::*;
 import Vector::*;
 import ConnectalMemory::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemUtils::*;
 import FloatingPoint::*;
 import Pipe::*;

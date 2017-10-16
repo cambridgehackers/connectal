@@ -25,7 +25,7 @@ import FIFO::*;
 import FIFOF::*;
 import GetPut::*;
 
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import ConnectalConfig::*;
 
 `include "ConnectalProjectConfig.bsv"

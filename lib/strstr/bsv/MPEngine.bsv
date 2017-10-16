@@ -39,7 +39,7 @@ import StmtFSM::*;
 import Probe::*;
 
 import MemUtils::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import Dma2BRAM::*;
 import Pipe::*;
 import EHR::*;

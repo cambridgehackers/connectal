@@ -27,7 +27,7 @@ import Portal::*;
 import HostInterface::*;
 import BlueScope::*;
 import ConnectalMemory::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemServer::*;
 import MMU::*;
 import MemcpyRequest::*;

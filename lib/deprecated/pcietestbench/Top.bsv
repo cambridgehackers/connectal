@@ -4,7 +4,7 @@ import Connectable::*;
 import Directory::*;
 import CtrlMux::*;
 import Portal::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import PcieTestBenchIndicationProxy::*;
 import PcieTestBenchRequestWrapper::*;
 import PcieTestBench::*;

@@ -43,7 +43,7 @@ import GearboxGetPut::*;
 import GetPutWithClocks::*;
 import HostInterface::*;
 import MemReadEngine::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import PhysMemSlaveFromBram::*;
 import Pipe::*;
 import TraceMemClient::*;

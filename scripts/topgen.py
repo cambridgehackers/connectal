@@ -55,7 +55,7 @@ import HostInterface::*;
 import Connectable::*;
 import MemReadEngine::*;
 import MemWriteEngine::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemServer::*;
 `include "ConnectalProjectConfig.bsv"
 import %(ifcnames)s::*;
@@ -122,7 +122,7 @@ import Portal::*;
 import CnocPortal::*;
 import Connectable::*;
 import HostInterface::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 `include "ConnectalProjectConfig.bsv"
 import %(ifcnames)s::*;
 %(generatedImport)s

@@ -28,7 +28,7 @@ import SpecialFIFOs::*;
 import Vector::*;
 import BRAM::*;
 import ConnectalMemory::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemReadEngine::*;
 import MemWriteEngine::*;
 import MemUtils::*;

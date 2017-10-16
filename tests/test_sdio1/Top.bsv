@@ -25,7 +25,7 @@ import HostInterface::*;
 import Vector::*;
 import CtrlMux::*;
 import Portal::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import SDIORequest::*;
 import SDIOResponse::*;
 import SDIO::*;

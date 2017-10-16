@@ -31,7 +31,7 @@ import RegFile   :: *;
 import DefaultValue::*;
 import Pipe      :: *;
 import SharedMemoryFifo::*;
-import MemTypes  :: *;
+import ConnectalMemTypes  :: *;
 import Portal    :: *;
 import MemReadEngine :: *;
 import MemWriteEngine :: *;

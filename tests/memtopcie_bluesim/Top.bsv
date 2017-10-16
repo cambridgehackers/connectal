@@ -34,7 +34,7 @@ import MMU::*;
 import CtrlMux::*;
 import Portal::*;
 import ConnectalMemory::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import ConnectalConfig::*;
 import MemToPcie::*;
 import AddressGenerator::*;

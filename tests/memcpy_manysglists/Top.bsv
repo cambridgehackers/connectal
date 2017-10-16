@@ -27,7 +27,7 @@ import FIFO::*;
 import CtrlMux::*;
 import Portal::*;
 import ConnectalMemory::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemServer::*;
 import MMU::*;
 import ConnectalConfig::*;

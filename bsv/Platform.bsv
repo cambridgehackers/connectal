@@ -26,7 +26,7 @@ import Portal::*;
 import HostInterface::*;
 import MMU::*;
 import MemServer::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import CtrlMux::*;
 import FIFO::*;
 import GetPut::*;

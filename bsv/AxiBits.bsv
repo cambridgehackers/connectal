@@ -26,7 +26,7 @@ import FIFOF::*;
 import CFFIFO::*;
 import GetPut::*;
 import Probe::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import EHRM::*;
 import Axi4MasterSlave::*;
 import Connectable::*;

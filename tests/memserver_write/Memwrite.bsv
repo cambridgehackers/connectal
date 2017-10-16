@@ -29,7 +29,7 @@ import BRAMFIFO::*;
 import ClientServer::*;
 import GetPut::*;
 import ConnectalConfig::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemWriteEngine::*;
 import Pipe::*;
 import AddressGenerator::*;

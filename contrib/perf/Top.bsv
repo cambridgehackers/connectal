@@ -27,7 +27,7 @@ import Portal::*;
 import HostInterface::*;
 import ConnectalMemory::*;
 import DmaUtils::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemServer::*;
 import MMU::*;
 import PerfRequest::*;

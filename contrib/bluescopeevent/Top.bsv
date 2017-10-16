@@ -27,7 +27,7 @@ import Portal::*;
 import HostInterface::*;
 import BlueScopeEvent::*;
 import ConnectalMemory::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemServer::*;
 import MMU::*;
 import SignalGen::*;

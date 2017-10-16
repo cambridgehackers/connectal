@@ -22,7 +22,7 @@
 import FIFO::*;
 import FIFOF::*;
 import Vector::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemReadEngine::*;
 
 interface MemreadRequest;

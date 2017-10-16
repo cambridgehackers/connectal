@@ -25,7 +25,7 @@ import Vector::*;
 import GetPut::*;
 import Connectable::*;
 import BRAMFIFO::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import AddressGenerator::*;
 
 interface MemWriteEngineTest;

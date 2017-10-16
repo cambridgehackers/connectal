@@ -27,7 +27,7 @@ import Vector            :: *;
 import Connectable       :: *;
 import ConnectableWithTrace::*;
 import Portal            :: *;
-import MemTypes          :: *;
+import ConnectalMemTypes          :: *;
 import AxiMasterSlave    :: *;
 import XilinxCells       :: *;
 import ConnectalXilinxCells   :: *;

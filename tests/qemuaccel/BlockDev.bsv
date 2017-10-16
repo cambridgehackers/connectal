@@ -30,7 +30,7 @@ import Vector::*;
 
 import ConnectalConfig::*;
 import ConnectalMemory::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemReadEngine::*;
 import MemWriteEngine::*;
 import Pipe::*;

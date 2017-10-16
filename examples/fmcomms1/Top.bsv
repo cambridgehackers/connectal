@@ -29,7 +29,7 @@ import Portal::*;
 import ConnectalConfig::*;
 import HostInterface::*;
 import CtrlMux::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemServer::*;
 import MMU::*;
 import PS7LIB::*;

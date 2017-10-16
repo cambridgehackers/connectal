@@ -32,7 +32,7 @@ import Vector::*;
 
 import Pipe::*;
 import Portal::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import ConnectalMemory::*;
 import SharedMemoryFifo::*;
 

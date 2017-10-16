@@ -25,7 +25,7 @@ import FIFOF::*;
 import Vector::*;
 import ClientServer::*;
 import GetPut::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemWriteEngine::*;
 import Pipe::*;
 import Arith::*;

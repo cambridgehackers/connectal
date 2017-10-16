@@ -26,7 +26,7 @@ import FIFOF::*;
 import ClientServer::*;
 import GetPut::*;
 import Connectable::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemWriteEngine::*;
 import Pipe::*;
 import MemWriteEngineTest::*;

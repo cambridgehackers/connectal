@@ -24,7 +24,7 @@ import Vector::*;
 import GetPut::*;
 import Clocks :: *;
 import BRAMFIFO::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import ClientServer::*;
 import Pipe::*;
 import MemWriteEngine::*;

@@ -29,7 +29,7 @@ import ConnectalMemory::*;
 import FIFOF::*;
 import Gearbox::*;
 import GearboxGetPut::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemReadEngine::*;
 import MemWriteEngine::*;
 import Pipe::*;

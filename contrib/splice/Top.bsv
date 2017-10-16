@@ -28,7 +28,7 @@ import HostInterface::*;
 import BlueScope::*;
 import ConnectalMemory::*;
 import DmaUtils::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemServer::*;
 import MMU::*;
 import SpliceRequest::*;

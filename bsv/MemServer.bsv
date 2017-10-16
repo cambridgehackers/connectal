@@ -29,7 +29,7 @@ import StmtFSM::*;
 import SpecialFIFOs::*;
 import Connectable::*;
 import HostInterface::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import ConnectalConfig::*;
 import ConnectalMemory::*;
 import MMU::*;

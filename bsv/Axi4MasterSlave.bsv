@@ -26,7 +26,7 @@ import FIFO::*;
 import GetPut::*;
 import Connectable::*;
 import RegFile::*;
-import MemTypes::*; // null_get, null_put
+import ConnectalMemTypes::*; // null_get, null_put
 
 typedef struct {
    Bit#(addrWidth) address;

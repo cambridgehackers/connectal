@@ -33,7 +33,7 @@ import ConfigCounter::*;
 import Connectable::*;
 import ConnectalMemory::*;
 import ConnectalBramFifo::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import Pipe::*;
 import MemUtils::*;
 import ConnectalConfig::*;

@@ -29,7 +29,7 @@ import StmtFSM::*;
 import BRAM::*;
 import Connectable::*;
 import MCSAlgorithm::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import DmaUtils::*;
 import Dma2BRAM::*;
 

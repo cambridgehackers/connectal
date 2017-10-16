@@ -31,7 +31,7 @@ import CtrlMux::*;
 import Portal::*;
 import HostInterface::*;
 import ConnectalMemory::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemServer::*;
 import MemServerInternal::*;
 import MMU::*;

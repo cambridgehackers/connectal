@@ -39,7 +39,7 @@ import Portal            :: *;
 import MemToPcie    :: *;
 import PcieToMem   :: *;
 import PcieCsr           :: *;
-import MemTypes          :: *;
+import ConnectalMemTypes          :: *;
 `include "ConnectalProjectConfig.bsv"
 `ifndef SIMULATION
 `ifdef XILINX

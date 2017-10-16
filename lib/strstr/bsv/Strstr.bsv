@@ -28,7 +28,7 @@ import BRAM::*;
 import Gearbox::*;
 import Connectable::*;
 import StmtFSM::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MPEngine::*;
 import MemReadEngine::*;
 import Pipe::*;

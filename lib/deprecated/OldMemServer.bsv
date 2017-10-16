@@ -29,7 +29,7 @@ import ClientServer::*;
 import Assert::*;
 
 // CONNECTAL Libraries
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import ConnectalMemory::*;
 import MMU::*;
 
