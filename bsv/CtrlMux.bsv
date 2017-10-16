@@ -399,7 +399,7 @@ module mkPhysMemSlaveMux#(Vector#(numSlaves,PhysMemSlave#(aw,dataWidth)) slaves)
    provisos(Add#(selWidth,aw,addrWidth)
 	    ,Add#(a__, TLog#(numSlaves), selWidth)
 	    ,Min#(4,TLog#(numSlaves),bpc)
-	    ,Pipe::FunnelPipesPipelined#(1, numSlaves, ConnectalConnectalMemTypes::MemData#(dataWidth),bpc)
+	    ,Pipe::FunnelPipesPipelined#(1, numSlaves, ConnectalMemTypes::MemData#(dataWidth),bpc)
 	    );
    let port_sel_low = valueOf(aw);
    let port_sel_high = valueOf(TSub#(addrWidth,1));
