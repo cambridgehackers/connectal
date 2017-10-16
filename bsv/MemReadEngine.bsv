@@ -48,7 +48,7 @@ module mkMemReadEngine(MemReadEngine#(busWidth, userWidth, cmdQDepth, numServers
 	    ,Add#(busWidth, 0, userWidth)
 //	     ,Min#(MemReadFunnelBPC, TLog#(numServers), bpc)
 	     ,Add#(0,MemReadFunnelBPC,bpc)
-	    ,FunnelPipesPipelined#(1, numServers, MemTypes::MemData#(userWidth), bpc)
+	    ,FunnelPipesPipelined#(1, numServers, ConnectalMemTypes::MemData#(userWidth), bpc)
 	    ,Pipe::FunnelPipesPipelined#(1, numServers, MemTypes::MemRequest, bpc)
 	    ,Add#(b__, TLog#(numServers), MemTagSize)
       	    );
@@ -242,7 +242,7 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
 	     Add#(busWidth, 0, userWidth),
 //	     Min#(MemReadFunnelBPC, TLog#(numServers), bpc),
 	     Add#(0,MemReadFunnelBPC,bpc),
-	     FunnelPipesPipelined#(1, numServers, MemTypes::MemData#(userWidth), bpc),
+	     FunnelPipesPipelined#(1, numServers, ConnectalMemTypes::MemData#(userWidth), bpc),
 	     FunnelPipesPipelined#(1, numServers, MemTypes::MemRequest, bpc),
 	     Add#(a__, TLog#(numServers), MemTagSize)
       );

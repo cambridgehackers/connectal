@@ -53,7 +53,7 @@ module mkPhysMemSlavePortal#(PhysMemSlave#(addrWidth,dataBusWidth) ms, MemServer
    provisos (Add#(dataBusWidth,7,a__)
 	     ,Add#(b__,addrWidth,32)
 	     ,Add#(c__, dataBusWidth, 128)
-	     ,Bits#(MemTypes::MemData#(dataBusWidth), a__));
+	     ,Bits#(ConnectalMemTypes::MemData#(dataBusWidth), a__));
 
    FIFOF#(PhysMemRequest#(addrWidth,dataBusWidth)) araddrFifo <- mkFIFOF();
    FIFOF#(PhysMemRequest#(addrWidth,dataBusWidth)) awaddrFifo <- mkFIFOF();
