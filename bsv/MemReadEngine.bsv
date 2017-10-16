@@ -35,7 +35,7 @@ import ConnectalMemory::*;
 import ConnectalBramFifo::*;
 import ConnectalMemTypes::*;
 import Pipe::*;
-import MemUtils::*;
+import ConnectalMemUtils::*;
 import ConnectalConfig::*;
 
 `include "ConnectalProjectConfig.bsv"

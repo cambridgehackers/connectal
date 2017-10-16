@@ -30,7 +30,7 @@ import SpecialFIFOs::*;
 import Vector::*;
 import ConnectalMemory::*;
 import ConnectalMemTypes::*;
-import MemUtils::*;
+import ConnectalMemUtils::*;
 import FloatingPoint::*;
 import Pipe::*;
 import Arith::*;

@@ -38,7 +38,7 @@ import ConfigReg::*;
 import StmtFSM::*;
 import Probe::*;
 
-import MemUtils::*;
+import ConnectalMemUtils::*;
 import ConnectalMemTypes::*;
 import Dma2BRAM::*;
 import Pipe::*;

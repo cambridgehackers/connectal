@@ -31,7 +31,7 @@ import ConfigCounter::*;
 import ConnectalMemory::*;
 import ConnectalMemTypes::*;
 import Pipe::*;
-import MemUtils::*;
+import ConnectalMemUtils::*;
 
 typedef struct {
    Bit#(busWidth)  data;

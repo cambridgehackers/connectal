@@ -31,7 +31,7 @@ import ConnectalMemory::*;
 import ConnectalMemTypes::*;
 import MemReadEngine::*;
 import MemWriteEngine::*;
-import MemUtils::*;
+import ConnectalMemUtils::*;
 import FloatingPoint::*;
 import Pipe::*;
 import Arith::*;

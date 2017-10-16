@@ -28,7 +28,7 @@ import ConnectalMemTypes::*;
 import MemWriteEngine::*;
 import Pipe::*;
 import Arith::*;
-import MemUtils::*;
+import ConnectalMemUtils::*;
 import ConnectalConfig::*;
 import StmtFSM ::*;
 
