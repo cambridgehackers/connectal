@@ -29,7 +29,7 @@ import Portal::*;
 import ConnectalMemory::*;
 import ConnectalMemTypes::*;
 import MemServer::*;
-import MMU::*;
+import ConnectalMMU::*;
 import ConnectalConfig::*;
 import MemcpyRequest::*;
 import MemServerRequest::*;

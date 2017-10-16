@@ -34,7 +34,7 @@ import ConnectalMemory::*;
 import ConnectalMemTypes::*;
 import MemServer::*;
 import MemServerInternal::*;
-import MMU::*;
+import ConnectalMMU::*;
 import MemReadEngine::*;
 import MemWriteEngine::*;
 import MMURequest::*;

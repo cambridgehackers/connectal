@@ -29,7 +29,7 @@ import BlueScopeEvent::*;
 import ConnectalMemory::*;
 import ConnectalMemTypes::*;
 import MemServer::*;
-import MMU::*;
+import ConnectalMMU::*;
 import SignalGen::*;
 import BlueScopeEventRequest::*;
 import BlueScopeEventIndication::*;

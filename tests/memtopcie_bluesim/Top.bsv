@@ -30,7 +30,7 @@ import Connectable::*;
 import PCIE::*;
 import DefaultValue::*;
 import MemServer::*;
-import MMU::*;
+import ConnectalMMU::*;
 import CtrlMux::*;
 import Portal::*;
 import ConnectalMemory::*;

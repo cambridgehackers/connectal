@@ -29,7 +29,7 @@ import HostInterface     :: *;
 import Pipe::*;
 import CnocPortal::*;
 import ConnectalMemTypes:: *;
-import MMU:: *;
+import ConnectalMMU:: *;
 import MemServer:: *;
 import MMURequest::*;
 import MMUIndication::*;

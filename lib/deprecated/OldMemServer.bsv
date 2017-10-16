@@ -31,7 +31,7 @@ import Assert::*;
 // CONNECTAL Libraries
 import ConnectalMemTypes::*;
 import ConnectalMemory::*;
-import MMU::*;
+import ConnectalMMU::*;
 
 `ifdef SIMULATION
 import "BDPI" function ActionValue#(Bit#(32)) pareff(Bit#(32) handle, Bit#(32) size);

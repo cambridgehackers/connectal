@@ -33,7 +33,7 @@ import IserdesDatadeserIF::*;
 import Connectable :: *;
 import FIFO::*;
 import MemServer::*;
-import MMU::*;
+import ConnectalMMU::*;
 import Portal::*;
 import XilinxCells::*;
 import ConnectalClocks::*;

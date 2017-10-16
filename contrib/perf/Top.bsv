@@ -29,7 +29,7 @@ import ConnectalMemory::*;
 import DmaUtils::*;
 import ConnectalMemTypes::*;
 import MemServer::*;
-import MMU::*;
+import ConnectalMMU::*;
 import PerfRequest::*;
 import MemServerRequest::*;
 import MMURequest::*;

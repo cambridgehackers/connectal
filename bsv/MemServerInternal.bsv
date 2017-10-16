@@ -35,7 +35,7 @@ import DefaultValue::*;
 import ConnectalMemTypes::*;
 import ConnectalMemory::*;
 import ConnectalClocks::*;
-import MMU::*;
+import ConnectalMMU::*;
 import ConnectalCompletionBuffer::*;
 import ConnectalConfig::*;
 `include "ConnectalProjectConfig.bsv"

@@ -8,7 +8,7 @@ import ConnectalConfig::*;
 import ConnectalMemory::*;
 import ConnectalMemTypes::*;
 import MemServer::*;
-import MMU::*;
+import ConnectalMMU::*;
 
 import NandSim::*;
 import Strstr::*;

@@ -29,7 +29,7 @@ import BlueScope::*;
 import ConnectalMemory::*;
 import ConnectalMemTypes::*;
 import MemServer::*;
-import MMU::*;
+import ConnectalMMU::*;
 import MemcpyRequest::*;
 import BlueScopeRequest::*;
 import MemServerRequest::*;

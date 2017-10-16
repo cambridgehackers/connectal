@@ -24,7 +24,7 @@ import Vector::*;
 import BuildVector::*;
 import Portal::*;
 import HostInterface::*;
-import MMU::*;
+import ConnectalMMU::*;
 import MemServer::*;
 import ConnectalMemTypes::*;
 import CtrlMux::*;
