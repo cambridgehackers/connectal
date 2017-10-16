@@ -24,7 +24,7 @@ import Connectable::*;
 import GetPut::*;
 import FIFOF::*;
 import ConfigCounter::*;
-import CFFIFO::*;
+import ConnectalFIFO::*;
 
 import ConnectalConfig::*;
 import ConnectalMemTypes::*;

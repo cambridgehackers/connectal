@@ -23,7 +23,7 @@
 import Vector::*;
 import Clocks::*;
 import FIFOF::*;
-import CFFIFO::*;
+import ConnectalFIFO::*;
 import GetPut::*;
 import Probe::*;
 import ConnectalMemTypes::*;

@@ -47,7 +47,7 @@ import AxiBits::*;
 import AxiDma::*;
 import PS8LIB::*; // mkPhysMemSlave
 import FIFOF::*;
-import CFFIFO::*;
+import ConnectalFIFO::*;
 
 `include "ConnectalProjectConfig.bsv"
 

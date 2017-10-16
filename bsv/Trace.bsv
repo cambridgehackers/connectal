@@ -1,6 +1,6 @@
 import BRAM::*;
 import BRAMFIFO::*;
-import CFFIFO::*;
+import ConnectalFIFO::*;
 import DefaultValue::*;
 import FIFOF::*;
 import GetPut::*;
