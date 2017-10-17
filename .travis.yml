@@ -15,7 +15,6 @@ env:
     - BLUESPECDIR=$PWD/Bluespec-2016.07.beta1/lib
     - PATH=$PATH:$PWD/Bluespec-2016.07.beta1/bin:$PWD/open-src-cvc-700c-1/src:$PWD/verilator/bin
     - LD_LIBRARY_PATH=$PWD/lib
-    - MAKEFLAGS="-j4"
   matrix:
     - CONNECTAL_TEST=examples/echo CONNECTAL_ARCH=verilator
     - CONNECTAL_TEST=examples/echopy CONNECTAL_ARCH=verilator
