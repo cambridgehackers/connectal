@@ -1,7 +1,7 @@
 {
     "options": {
-        "bsvdefines" : ["XILINX=1", "VirtexUltrascale", "PhysAddrWidth=40", "DataBusWidth=128", "XsimHostInterface",
-		       	"CONNECTAL_BITS_DEPENDENCES=hw/mkTop.bit", "CONNECTAL_RUN_SCRIPT=$(CONNECTALDIR)/scripts/run.aws"],
+        "bsvdefines" : ["XILINX=1", "VirtexUltrascale", "PhysAddrWidth=40", "DataBusWidth=128", "XsimHostInterface", "AWSF1=1",
+		       	"CONNECTAL_BITS_DEPENDENCES=build/checkpoints/to_aws/mkTop.SH_CL_routed.dcp", "CONNECTAL_RUN_SCRIPT=$(CONNECTALDIR)/scripts/run.aws"],
         "os" : "ubuntu",
         "partname" : "xcvu9p-flgb2104-2-i",
         "TOP" : "AwsF1Top",
