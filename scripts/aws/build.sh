@@ -1,11 +1,14 @@
 #!/bin/bash
 
-export CONNECTALDIR=~/connectal
+scriptname=`which $0`
+scriptdir=`dirname $scriptname`
+scriptdir=`dirname $scriptdir`
+export CONNECTALDIR=`dirname $scriptdir`
 echo "CONNECTALDIR=$CONNECTALDIR"
 
-SCRIPTSDIR=`pwd`
-echo SCRIPTSDIR=$SCRIPTSDIR
-if [ `basename $SCRIPTSDIR` = 'scripts' ]; then
+BUILD_DIR=`pwd`
+echo BUILD_DIR=$BUILD_DIR
+if [ `basename $BUILD_DIR` = 'scripts' ]; then
   cd ../..
 else
   mkdir -p design
@@ -14,16 +17,28 @@ else
   mkdir -p build/reports
   mkdir -p build/scripts
   mkdir -p build/src_post_encryption
-  SCRIPTSDIR=`pwd`/build/scripts
-  echo SCRIPTSDIR=$SCRIPTSDIR
+  BUILD_DIR=`pwd`/build/scripts
+  echo BUILD_DIR=$BUILD_DIR
 fi
 
-rsync -v $CONNECTALDIR/scripts/aws/* $SCRIPTSDIR
+rsync -v $CONNECTALDIR/scripts/aws/* $BUILD_DIR
+
+if [ ! -f $CONNECTALDIR/out/awsf1/ila_connectal_1/ila_connectal_1.xci ]; then
+    echo
+    echo 'Generating Integrated Logic Analyzer core'
+    echo
+    vivado -mode batch -source $CONNECTALDIR/scripts/connectal-synth-ila.tcl
+    echo 
+    echo 'Finished generating Integrated Logic Analyzer core'
+    echo
+fi
 
 export CL_DIR=`pwd`
-cd $SCRIPTSDIR
+cd $BUILD_DIR
+echo CL_DIR=$CL_DIR
+echo BUILD_DIR=$BUILD_DIR
 
-cp -fv $CONNECTALDIR/verilog/cl_id_defines.vh $SCRIPTSDIR/../../design
+cp -fv $CONNECTALDIR/verilog/cl_id_defines.vh $BUILD_DIR/../../design
 
 pushd ~/aws-fpga
 source ./hdk_setup.sh
