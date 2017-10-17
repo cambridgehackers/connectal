@@ -1,6 +1,9 @@
 language: cpp
 cache:
   directories:
+    - Bluespec-2016.07.beta1
+    - open-src-cvc-7000c-1
+    - verilator-3.888
 before_script:
 - if [ -d Bluespec-2016.07.beta1 ] ; then echo bluespec cached; else curl http://buildbot.connectal.org/Bluespec-2016.07.beta1.tar.gz | tar -zxf - ; fi
 - mkdir -p lib
@@ -15,6 +18,7 @@ env:
     - BLUESPECDIR=$PWD/Bluespec-2016.07.beta1/lib
     - PATH=$PATH:$PWD/Bluespec-2016.07.beta1/bin:$PWD/open-src-cvc-700c-1/src:$PWD/verilator/bin
     - LD_LIBRARY_PATH=$PWD/lib
+    - MAKEFLAGS="-j4"
   matrix:
     - CONNECTAL_TEST=examples/echo CONNECTAL_ARCH=verilator
     - CONNECTAL_TEST=examples/echopy CONNECTAL_ARCH=verilator
