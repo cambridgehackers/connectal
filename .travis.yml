@@ -1,9 +1,6 @@
 language: cpp
 cache:
   directories:
-    - Bluespec-2016.07.beta1
-    - open-src-cvc-7000c-1
-    - verilator-3.888
 before_script:
 - if [ -d Bluespec-2016.07.beta1 ] ; then echo bluespec cached; else curl http://buildbot.connectal.org/Bluespec-2016.07.beta1.tar.gz | tar -zxf - ; fi
 - mkdir -p lib
