@@ -26,7 +26,7 @@ import GetPut::*;
 import ClientServer::*;
 import AxiMasterSlave::*;
 import Axi4MasterSlave::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import ConnectalMemory::*;
 
 module mkAxiDmaSlave#(PhysMemSlave#(addrWidth,dataWidth) slave) (Axi3Slave#(addrWidth,dataWidth,12));

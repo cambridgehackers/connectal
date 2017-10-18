@@ -32,7 +32,7 @@ import BRAM::*;
 import RegFile::*;
 
 // CONNECTAL Libraries
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import ConnectalMemory::*;
 import ConfigCounter::*;
 

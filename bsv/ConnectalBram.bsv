@@ -27,7 +27,7 @@ import BRAM::*;
 import BRAMCore::*;
 import GetPut::*;
 import ClientServer::*;
-import EHR::*;
+import OldEHR::*;
 import ConfigCounter::*;
 
 interface BRAMServers#(numeric type numServers, type addr, type data);

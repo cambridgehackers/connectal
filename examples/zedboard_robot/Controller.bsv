@@ -25,7 +25,7 @@ import MaxSonarController::*;
 import GyroController::*;
 import HBridgeController::*;
 import ConnectalSpi::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import Leds::*;
 
 interface ZedboardRobotPins;

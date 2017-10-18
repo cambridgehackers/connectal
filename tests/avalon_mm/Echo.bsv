@@ -30,7 +30,7 @@ import AvalonMasterSlave::*;
 import AvalonBits::*;
 import AvalonDma::*;
 import AvalonGather::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemServerIndication::*;
 import MMUIndication::*;
 

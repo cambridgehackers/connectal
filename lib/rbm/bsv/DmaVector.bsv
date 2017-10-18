@@ -24,14 +24,14 @@ import GetPut::*;
 import ClientServer::*;
 import FIFOF::*;
 import ConnectalMemory::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemReadEngine::*;
 import MemWriteEngine::*;
 import Adapter::*;
 import BRAM::*;
 import Pipe::*;
 import RbmTypes::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 
 typedef 8 BurstLen;
 

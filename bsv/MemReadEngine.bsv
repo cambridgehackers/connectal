@@ -33,9 +33,9 @@ import ConfigCounter::*;
 import Connectable::*;
 import ConnectalMemory::*;
 import ConnectalBramFifo::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import Pipe::*;
-import MemUtils::*;
+import ConnectalMemUtils::*;
 import ConnectalConfig::*;
 
 `include "ConnectalProjectConfig.bsv"
@@ -48,8 +48,8 @@ module mkMemReadEngine(MemReadEngine#(busWidth, userWidth, cmdQDepth, numServers
 	    ,Add#(busWidth, 0, userWidth)
 //	     ,Min#(MemReadFunnelBPC, TLog#(numServers), bpc)
 	     ,Add#(0,MemReadFunnelBPC,bpc)
-	    ,FunnelPipesPipelined#(1, numServers, MemTypes::MemData#(userWidth), bpc)
-	    ,Pipe::FunnelPipesPipelined#(1, numServers, MemTypes::MemRequest, bpc)
+	    ,FunnelPipesPipelined#(1, numServers, ConnectalMemTypes::MemData#(userWidth), bpc)
+	    ,Pipe::FunnelPipesPipelined#(1, numServers, ConnectalMemTypes::MemRequest, bpc)
 	    ,Add#(b__, TLog#(numServers), MemTagSize)
       	    );
    let rv <- mkMemReadEngineBuff(valueOf(cmdQDepth) * valueOf(TExp#(BurstLenSize)));
@@ -242,8 +242,8 @@ module mkMemReadEngineBuff#(Integer bufferSizeBytes) (MemReadEngine#(busWidth, u
 	     Add#(busWidth, 0, userWidth),
 //	     Min#(MemReadFunnelBPC, TLog#(numServers), bpc),
 	     Add#(0,MemReadFunnelBPC,bpc),
-	     FunnelPipesPipelined#(1, numServers, MemTypes::MemData#(userWidth), bpc),
-	     FunnelPipesPipelined#(1, numServers, MemTypes::MemRequest, bpc),
+	     FunnelPipesPipelined#(1, numServers, ConnectalMemTypes::MemData#(userWidth), bpc),
+	     FunnelPipesPipelined#(1, numServers, ConnectalMemTypes::MemRequest, bpc),
 	     Add#(a__, TLog#(numServers), MemTagSize)
       );
    let verbose = False;

@@ -28,7 +28,7 @@ import MIMO         :: *;
 import PCIE         :: *;
 import DefaultValue :: *;
 import ClientServer :: *;
-import MemTypes     :: *;
+import ConnectalMemTypes     :: *;
 import ConnectalConfig::*;
 
 `include "ConnectalProjectConfig.bsv"

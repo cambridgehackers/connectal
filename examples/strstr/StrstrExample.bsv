@@ -24,7 +24,7 @@ import Strstr::*;
 import Vector::*;
 import BuildVector::*;
 
-import MemTypes::*;
+import ConnectalMemTypes::*;
 
 interface StrstrExample;
    interface StrstrRequest request;

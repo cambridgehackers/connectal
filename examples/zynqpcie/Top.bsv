@@ -27,7 +27,7 @@ import GetPutWithClocks::*;
 import CtrlMux::*;
 import Portal::*;
 import ConnectalConfig::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import PcieHost ::*;
 `ifndef SIMULATION
 import PCIEWRAPPER          ::*;

@@ -38,7 +38,7 @@ import AxiMasterSlave::*;
 import Axi4MasterSlave::*;
 import AxiDma::*;
 import AxiBits::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import Platform::*;
 import ZYNQ_ULTRA::*;
 import Probe::*;

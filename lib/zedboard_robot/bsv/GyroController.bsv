@@ -27,7 +27,7 @@ import FIFO::*;
 import SpecialFIFOs::*;
 import Gearbox::*;
 import ClientServer::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import Leds::*;
 import ConnectalSpi::*;
 import MemWriteEngine::*;

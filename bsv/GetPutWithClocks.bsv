@@ -25,7 +25,7 @@ import GetPut :: *;
 import Connectable :: *;
 import ClientServer :: *;
 import Clocks :: *;
-import MemTypes :: *;
+import ConnectalMemTypes :: *;
 import FIFOF :: *;
 import ConnectalBramFifo::*;
 import Pipe :: *;

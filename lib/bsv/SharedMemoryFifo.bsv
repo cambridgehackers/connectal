@@ -30,7 +30,7 @@ import FIFOF::*;
 import MIMO::*;
 import Pipe::*;
 import Portal::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import ConnectalMemory::*;
 
 interface SharedMemoryPipeOut#(numeric type dataBusWidth, numeric type pipeCount);

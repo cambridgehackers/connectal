@@ -19,7 +19,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-import MemTypes::*;
+import ConnectalMemTypes::*;
 
 typedef 6 MemTagSize;
 typedef 40 PhysAddrWidth;

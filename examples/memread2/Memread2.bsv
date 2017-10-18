@@ -24,7 +24,7 @@ import Vector::*;
 import GetPut::*;
 import ClientServer::*;
 import Connectable::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemReadEngine::*;
 import Pipe::*;
 

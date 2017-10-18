@@ -43,7 +43,7 @@ import GearboxGetPut::*;
 import GetPutWithClocks::*;
 import HostInterface::*;
 import MemReadEngine::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import PhysMemSlaveFromBram::*;
 import Pipe::*;
 import TraceMemClient::*;
@@ -1011,7 +1011,7 @@ endinterface
 module mkPhysMemSlavePortal#(PhysMemSlave#(32,dataBusWidth) ms, MemServerPortalIndication ind)(MemServerPortal)
    provisos (Add#(dataBusWidth,7,a__)
 	     ,Add#(b__,64,dataBusWidth)
-	     ,Bits#(MemTypes::MemData#(dataBusWidth), a__));
+	     ,Bits#(ConnectalMemTypes::MemData#(dataBusWidth), a__));
 
    FIFOF#(PhysMemRequest#(32,dataBusWidth)) araddrFifo <- mkFIFOF();
    FIFOF#(PhysMemRequest#(32,dataBusWidth)) awaddrFifo <- mkFIFOF();

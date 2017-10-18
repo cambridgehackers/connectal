@@ -30,7 +30,7 @@ import DefaultValue::*;
 import FloatingPoint::*;
 import Real::*;
 import ConnectalMemory::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import DmaVector::*;
 import Pipe::*;
 import FloatOps::*;

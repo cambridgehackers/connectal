@@ -27,7 +27,7 @@ import BRAMFIFO::*;
 import Vector::*;
 import Pipe::*;
 import ConnectalMemory::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemReadEngine::*;
 import MemWriteEngine::*;
 

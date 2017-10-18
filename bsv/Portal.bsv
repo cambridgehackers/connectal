@@ -21,7 +21,7 @@
 // SOFTWARE.
 import ConnectalConfig::*;
 import Vector::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import Pipe::*;
 import ConnectalMemory::*;
 import HostInterface::*;

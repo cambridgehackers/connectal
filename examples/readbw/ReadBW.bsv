@@ -24,7 +24,7 @@ import FIFO::*;
 import GetPut::*;
 import PcieToAxiBridge::*;
 import ConnectalMemory::*;
-import MMU::*;
+import ConnectalMMU::*;
 
 interface CoreIndication;
     method Action loadValue(Bit#(128) value, Bit#(32) cycles);

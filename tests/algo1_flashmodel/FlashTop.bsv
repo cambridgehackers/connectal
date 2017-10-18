@@ -31,7 +31,7 @@ import Vector::*;
 import BuildVector::*;
 import List::*;
 import ConnectalMemory::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemReadEngine::*;
 import MemWriteEngine::*;
 import Pipe::*;
