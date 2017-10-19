@@ -20,12 +20,16 @@ import boto3
 import json
 import os
 import sys
+import requests
+import hmac
 
 argparser = argparse.ArgumentParser(description="Notify via email or HTTP that FPGA CL build is complete")
-argparser.add_argument('--email', help='Email to notify', default=os.environ.get('EMAIL', None))
-argparser.add_argument('--url', help='url to notify', default=os.environ.get('SNS_NOTIFY_URL', None))
-argparser.add_argument('--user', help='User performing build', default=os.environ.get('USER', 'default'))
-argparser.add_argument('--project', help='Name of project built', default=None)
+argparser.add_argument('--email', help='Email to notify', default=os.environ.get('SNS_NOTIFY_EMAIL', None))
+argparser.add_argument('--sns-notify-url', help='url to notify via SNS', default=os.environ.get('SNS_NOTIFY_URL', None))
+argparser.add_argument('--notify-url', help='url to notify via POST', default=os.environ.get('NOTIFY_URL', None))
+argparser.add_argument('--secret-key-file', help='Sign message with secret key', default=None)
+argparser.add_argument('--build-user', help='User performing build', default=os.environ.get('BUILD_USER', 'default'))
+argparser.add_argument('--build-project', help='Name of project built', default=os.environ.get('BUILD_PROJECT', None))
 argparser.add_argument('--filename', help='Name of checkpoint archive', default=None)
 argparser.add_argument('--timestamp', help='Timestamp of build', default=None)
 argparser.add_argument('--sourcehash', help='md5sum of the RTL', default=None)
@@ -36,12 +40,12 @@ sns = boto3.client('sns')
 topic_resp = sns.create_topic(Name="FPGA_CL_BUILD_%s" % options.user)
 print(topic_resp['TopicArn'])
 
-if options.url:
+if options.sns_notify_url:
     topic_resp_json = sns.create_topic(Name="FPGA_CL_BUILD_JSON")
     list_resp_json = sns.list_subscriptions_by_topic(TopicArn=topic_resp_json['TopicArn'])
-    if not any(i['Endpoint'] == options.url for i in list_resp_json.get('Subscriptions')):
+    if not any(i['Endpoint'] == options.sns_notify_url for i in list_resp_json.get('Subscriptions')):
         print("Subscribing to the FPGA_CL_BUILD topic")
-        sub_resp_json = sns.subscribe(TopicArn=topic_resp_json['TopicArn'], Protocol='http', Endpoint=options.url)
+        sub_resp_json = sns.subscribe(TopicArn=topic_resp_json['TopicArn'], Protocol='http', Endpoint=options.sns_notify_url)
         print(sub_resp_json)
 
 list_resp = sns.list_subscriptions_by_topic(TopicArn=topic_resp['TopicArn'])
@@ -68,8 +72,8 @@ message_dict = { 'subject': 'Your FPGA CL build is complete.',
                  'filename': options.filename,
                  'timestamp': options.timestamp,
                  'sourceHash': options.sourcehash,
-                 'FpgaImageId': '',
-                 'FpgaImageGlobalId': '',
+                 'fpgaImageId': '',
+                 'fpgaImageGlobalId': '',
 }
 if options.fpga_image_ids:
     fpga_image_ids = json.loads(options.fpga_image_ids)
@@ -87,11 +91,21 @@ Your FPGA CL build is complete:
 pub_resp = sns.publish(TopicArn=topic_resp['TopicArn'],
                        Message=email_message_template % message_dict,
                        Subject='Your FPGA CL build is complete.')
-if options.url:
-    print('notifying %s' % options.url);
+if options.sns_notify_url:
+    print('notifying %s' % options.sns_notify_url);
     imageIds = json.loads(options.fpga_image_ids) if options.fpga_image_ids else None
     pub_resp = sns.publish(TopicArn=topic_resp_json['TopicArn'],
                            Message=json.dumps(message_dict),
                            Subject='Your FPGA CL build is complete.')
+
+if options.notify_url:
+    message = bytes(json.dumps(message_dict), 'utf8')
+    signature = None
+    if options.secret_key_file:
+        secret_key = bytes(open(options.secret_key_file, 'r').read(), 'utf8')
+        signature = hmac.new(secret_key, message).hexdigest()
+    resp = requests.post(options.notify_url, data={'message': message, 'signature': signature })
+    print('Posted to url %s got response %s' % (options.notify_url, resp))
+    print(json.dumps({'message': message.decode('utf8'), 'signature': signature }))
 
 sys.exit(0)

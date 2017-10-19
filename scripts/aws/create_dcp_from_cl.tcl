@@ -342,7 +342,11 @@ if { [file exists $CL_DIR/build/checkpoints/to_aws/${timestamp}.Developer_CL.tar
 # Tar checkpoint to aws
 cd $CL_DIR/build/checkpoints
 tar::create to_aws/${timestamp}.Developer_CL.tar [glob to_aws/${timestamp}*]
-set projname [file tail [file dirname $CL_DIR]]
+if {[info exists ::env(BUILD_PROJECT)]} {
+    set projname $::env(BUILD_PROJECT)
+} else {
+    set projname [file tail [file dirname $CL_DIR]]
+}
 puts "PROJNAME ${projname}"
 
 set filename "${timestamp}.Developer_CL.tar"
@@ -355,7 +359,7 @@ puts "AWS FPGA: ([clock format [clock seconds] -format %T]) - Finished creating 
 if {[string compare $notify_via_sns "1"] == 0} {
     puts "AWS FPGA: ([clock format [clock seconds] -format %T]) - Calling notification script to send e-mail to $env(EMAIL)";
     if {[info exists ::env(CONNECTALDIR)]} {
-	exec $env(CONNECTALDIR)/scripts/aws/notify_via_sns.py --project ${projname} --filename ${filename} --timestamp ${timestamp} --image-ids $fpga_image_ids
+	exec $env(CONNECTALDIR)/scripts/aws/notify_via_sns.py --build-project ${projname} --filename ${filename} --timestamp ${timestamp} --image-ids $fpga_image_ids
     } else {
 	exec $env(HDK_COMMON_DIR)/scripts/notify_via_sns.py
     }
