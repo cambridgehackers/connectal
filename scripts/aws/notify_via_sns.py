@@ -16,6 +16,7 @@
 # limitations under the License.
 
 import argparse
+import base64
 import boto3
 import json
 import os
@@ -27,7 +28,7 @@ argparser = argparse.ArgumentParser(description="Notify via email or HTTP that F
 argparser.add_argument('--email', help='Email to notify', default=os.environ.get('SNS_NOTIFY_EMAIL', None))
 argparser.add_argument('--sns-notify-url', help='url to notify via SNS', default=os.environ.get('SNS_NOTIFY_URL', None))
 argparser.add_argument('--notify-url', help='url to notify via POST', default=os.environ.get('NOTIFY_URL', None))
-argparser.add_argument('--secret-key-file', help='Sign message with secret key', default=None)
+argparser.add_argument('--secret-key-file', help='File containing base64 encoded secret key for signing message sent to notify_url', default=None)
 argparser.add_argument('--build-user', help='User performing build', default=os.environ.get('BUILD_USER', 'default'))
 argparser.add_argument('--build-project', help='Name of project built', default=os.environ.get('BUILD_PROJECT', None))
 argparser.add_argument('--filename', help='Name of checkpoint archive', default=None)
@@ -37,7 +38,7 @@ argparser.add_argument('--fpga-image-ids', help='JSON output from aws ec2 create
 options = argparser.parse_args()
 
 sns = boto3.client('sns')
-topic_resp = sns.create_topic(Name="FPGA_CL_BUILD_%s" % options.user)
+topic_resp = sns.create_topic(Name="FPGA_CL_BUILD_%s" % options.build_user)
 print(topic_resp['TopicArn'])
 
 if options.sns_notify_url:
@@ -66,9 +67,9 @@ if not any(i['Endpoint'] == os.environ.get('EMAIL') for i in list_resp.get('Subs
     print(sub_resp)
 
 message_dict = { 'subject': 'Your FPGA CL build is complete.',
-                 'user': options.user,
+                 'user': options.build_user,
                  'email': options.email,
-                 'project': options.project,
+                 'project': options.build_project,
                  'filename': options.filename,
                  'timestamp': options.timestamp,
                  'sourceHash': options.sourcehash,
@@ -102,7 +103,8 @@ if options.notify_url:
     message = bytes(json.dumps(message_dict), 'utf8')
     signature = None
     if options.secret_key_file:
-        secret_key = bytes(open(options.secret_key_file, 'r').read(), 'utf8')
+        secret_key_b64 = open(options.secret_key_file, 'r').read()
+        secret_key = base64.b64decode(secret_key_b64)
         signature = hmac.new(secret_key, message).hexdigest()
     resp = requests.post(options.notify_url, data={'message': message, 'signature': signature })
     print('Posted to url %s got response %s' % (options.notify_url, resp))
