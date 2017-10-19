@@ -15,6 +15,26 @@
 
 package require tar
 
+if [info exists ::env(BUILD_PROJECT)] {
+    set projname $::env(BUILD_PROJECT)
+} else {
+    set projname [file tail [file dirname $CL_DIR]]
+}
+if [info exists ::env(BUILD_USER)] {
+    set build_user $::env(BUILD_USER)
+    set imagename "${build_user} ${projname}"
+} else if [info exists ::env(USER)] {
+    set build_user $::env(USER)
+    set imagename "${build_user} ${projname}"
+} else {
+    set build_user "default"
+    set imagename "${projname}"
+}
+
+set s3_key "${build_user}/${projname}"
+set s3_folder "s3://aws-fpga/${s3_key}"
+puts "BUILD_USER ${build_user} BUILD_PROJECT ${projname} S3_FOLDER ${s3_folder}"
+
 ## Do not edit $TOP
 set TOP top_sp
 
@@ -342,17 +362,11 @@ if { [file exists $CL_DIR/build/checkpoints/to_aws/${timestamp}.Developer_CL.tar
 # Tar checkpoint to aws
 cd $CL_DIR/build/checkpoints
 tar::create to_aws/${timestamp}.Developer_CL.tar [glob to_aws/${timestamp}*]
-if {[info exists ::env(BUILD_PROJECT)]} {
-    set projname $::env(BUILD_PROJECT)
-} else {
-    set projname [file tail [file dirname $CL_DIR]]
-}
-puts "PROJNAME ${projname}"
 
 set filename "${timestamp}.Developer_CL.tar"
-exec aws s3 cp $CL_DIR/build/checkpoints/to_aws/${filename} s3://aws-fpga/${projname}/${filename}
-exec aws s3 cp $CL_DIR/build/checkpoints/${timestamp}.debug_probes.ltx s3://aws-fpga/${projname}/${timestamp}.debug_probes.ltx
-set fpga_image_ids [exec aws ec2 create-fpga-image --name ${projname} --description "${filename}" --input-storage-location Bucket=aws-fpga,Key=${projname}/${filename} --logs-storage-location Bucket=aws-fpga,Key=logs-folder]
+exec aws s3 cp $CL_DIR/build/checkpoints/to_aws/${filename} ${s3_folder}/${filename}
+exec aws s3 cp $CL_DIR/build/checkpoints/${timestamp}.debug_probes.ltx ${s3_folder}/${timestamp}.debug_probes.ltx
+set fpga_image_ids [exec aws ec2 create-fpga-image --name ${imagename} --description "${filename}" --input-storage-location Bucket=aws-fpga,Key=${s3_key}/${filename} --logs-storage-location Bucket=aws-fpga,Key=logs-folder]
 
 puts "AWS FPGA: ([clock format [clock seconds] -format %T]) - Finished creating final tar file in to_aws directory.";
 
