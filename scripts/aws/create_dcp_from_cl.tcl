@@ -353,8 +353,12 @@ exec aws ec2 create-fpga-image --name ${projname} --description "${filename}" --
 puts "AWS FPGA: ([clock format [clock seconds] -format %T]) - Finished creating final tar file in to_aws directory.";
 
 if {[string compare $notify_via_sns "1"] == 0} {
-  puts "AWS FPGA: ([clock format [clock seconds] -format %T]) - Calling notification script to send e-mail to $env(EMAIL)";
-  exec $env(HDK_COMMON_DIR)/scripts/notify_via_sns.py
+    puts "AWS FPGA: ([clock format [clock seconds] -format %T]) - Calling notification script to send e-mail to $env(EMAIL)";
+    if {[info exists ::env(CONNECTALDIR)]} {
+	exec $env(CONNECTALDIR)/scripts/aws/notify_via_sns.py --project ${projname} --filename ${filename} --timestamp ${timestamp}
+    } else {
+	exec $env(HDK_COMMON_DIR)/scripts/notify_via_sns.py
+    }
 }
 
 puts "AWS FPGA: ([clock format [clock seconds] -format %T]) - Build complete.";
