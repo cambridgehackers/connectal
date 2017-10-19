@@ -348,14 +348,14 @@ puts "PROJNAME ${projname}"
 set filename "${timestamp}.Developer_CL.tar"
 exec aws s3 cp $CL_DIR/build/checkpoints/to_aws/${filename} s3://aws-fpga/${projname}/${filename}
 exec aws s3 cp $CL_DIR/build/checkpoints/${timestamp}.debug_probes.ltx s3://aws-fpga/${projname}/${timestamp}.debug_probes.ltx
-exec aws ec2 create-fpga-image --name ${projname} --description "${filename}" --input-storage-location Bucket=aws-fpga,Key=${projname}/${filename} --logs-storage-location Bucket=aws-fpga,Key=logs-folder
+set fpga_image_ids [exec aws ec2 create-fpga-image --name ${projname} --description "${filename}" --input-storage-location Bucket=aws-fpga,Key=${projname}/${filename} --logs-storage-location Bucket=aws-fpga,Key=logs-folder]
 
 puts "AWS FPGA: ([clock format [clock seconds] -format %T]) - Finished creating final tar file in to_aws directory.";
 
 if {[string compare $notify_via_sns "1"] == 0} {
     puts "AWS FPGA: ([clock format [clock seconds] -format %T]) - Calling notification script to send e-mail to $env(EMAIL)";
     if {[info exists ::env(CONNECTALDIR)]} {
-	exec $env(CONNECTALDIR)/scripts/aws/notify_via_sns.py --project ${projname} --filename ${filename} --timestamp ${timestamp}
+	exec $env(CONNECTALDIR)/scripts/aws/notify_via_sns.py --project ${projname} --filename ${filename} --timestamp ${timestamp} --image-ids $fpga_image_ids
     } else {
 	exec $env(HDK_COMMON_DIR)/scripts/notify_via_sns.py
     }

@@ -29,6 +29,7 @@ argparser.add_argument('--project', help='Name of project built', default=None)
 argparser.add_argument('--filename', help='Name of checkpoint archive', default=None)
 argparser.add_argument('--timestamp', help='Timestamp of build', default=None)
 argparser.add_argument('--sourcehash', help='md5sum of the RTL', default=None)
+argparser.add_argument('--fpga-image-ids', help='JSON output from aws ec2 create-fpga-image', default=None)
 options = argparser.parse_args()
 
 sns = boto3.client('sns')
@@ -60,21 +61,37 @@ if not any(i['Endpoint'] == os.environ.get('EMAIL') for i in list_resp.get('Subs
     sub_resp = sns.subscribe(TopicArn=topic_resp['TopicArn'], Protocol='email', Endpoint=os.environ.get('EMAIL'))
     print(sub_resp)
 
+message_dict = { 'subject': 'Your FPGA CL build is complete.',
+                 'user': options.user,
+                 'email': options.email,
+                 'project': options.project,
+                 'filename': options.filename,
+                 'timestamp': options.timestamp,
+                 'sourceHash': options.sourcehash,
+                 'FpgaImageId': '',
+                 'FpgaImageGlobalId': '',
+}
+if options.fpga_image_ids:
+    fpga_image_ids = json.loads(options.fpga_image_ids)
+    message_dict['fpgaImageId'] = fpga_image_ids.get('FpgaImageId', '')
+    message_dict['fpgaImageGlobalId'] = fpga_image_ids.get('FpgaImageGlobalId', '')
+
+email_message_template = '''
+Your FPGA CL build is complete:
+    Project: %(project)s
+    Timestamp: %(timestamp)s
+    FPGA Image Id: %(fpgaImageId)s 
+    FPGA Image Global Id: %(fpgaImageGlobalId)s
+'''
+
 pub_resp = sns.publish(TopicArn=topic_resp['TopicArn'],
-                       Message='Your FPGA CL build is complete.',
+                       Message=email_message_template % message_dict,
                        Subject='Your FPGA CL build is complete.')
 if options.url:
-    print('notifying %s' % options.url)
+    print('notifying %s' % options.url);
+    imageIds = json.loads(options.fpga_image_ids) if options.fpga_image_ids else None
     pub_resp = sns.publish(TopicArn=topic_resp_json['TopicArn'],
-                           Message=json.dumps({
-                               'subject': 'Your FPGA CL build is complete.',
-                               'user': options.user,
-                               'useremail': options.email,
-                               'project': options.project,
-                               'filename': options.filename,
-                               'timestamp': options.timestamp,
-                               'sourcehash': options.sourcehash
-                               }),
+                           Message=json.dumps(message_dict),
                            Subject='Your FPGA CL build is complete.')
 
 sys.exit(0)
