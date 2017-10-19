@@ -15,26 +15,6 @@
 
 package require tar
 
-if [info exists ::env(BUILD_PROJECT)] {
-    set projname $::env(BUILD_PROJECT)
-} else {
-    set projname [file tail [file dirname $CL_DIR]]
-}
-if [info exists ::env(BUILD_USER)] {
-    set build_user $::env(BUILD_USER)
-    set imagename "${build_user} ${projname}"
-} else if [info exists ::env(USER)] {
-    set build_user $::env(USER)
-    set imagename "${build_user} ${projname}"
-} else {
-    set build_user "default"
-    set imagename "${projname}"
-}
-
-set s3_key "${build_user}/${projname}"
-set s3_folder "s3://aws-fpga/${s3_key}"
-puts "BUILD_USER ${build_user} BUILD_PROJECT ${projname} S3_FOLDER ${s3_folder}"
-
 ## Do not edit $TOP
 set TOP top_sp
 
@@ -112,6 +92,26 @@ if { [info exists ::env(HDK_SHELL_DESIGN_DIR)] } {
         puts "Run the hdk_setup.sh script from the root directory of aws-fpga";
         exit 2
 }
+
+if [info exists ::env(BUILD_PROJECT)] {
+    set projname $::env(BUILD_PROJECT)
+} else {
+    set projname [file tail [file dirname $CL_DIR]]
+}
+if [info exists ::env(BUILD_USER)] {
+    set build_user $::env(BUILD_USER)
+    set imagename "${build_user} ${projname}"
+} elseif [info exists ::env(USER)] {
+    set build_user $::env(USER)
+    set imagename "${build_user} ${projname}"
+} else {
+    set build_user "default"
+    set imagename "${projname}"
+}
+
+set s3_key "${build_user}/${projname}"
+set s3_folder "s3://aws-fpga/${s3_key}"
+puts "BUILD_USER ${build_user} BUILD_PROJECT ${projname} S3_FOLDER ${s3_folder}"
 
 ##################################################
 ### Output Directories used by step_user.tcl
