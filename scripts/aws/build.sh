@@ -47,4 +47,4 @@ popd
 echo '#placeholder' > ../constraints/cl_pnr_user.xdc
 echo '#placeholder' > ../constraints/cl_synth_user.xdc
 
-~/aws-fpga/hdk/cl/examples/cl_hello_world/build/scripts/aws_build_dcp_from_cl.sh -ignore_memory_requirement -notify
+~/aws-fpga/hdk/common/shell_stable/build/scripts/aws_build_dcp_from_cl.sh -ignore_memory_requirement -notify
