@@ -16,16 +16,17 @@
 # limitations under the License.
 
 import argparse
+import boto3
+import json
 import os
 import sys
-import boto3
 
 argparser = argparse.ArgumentParser(description="Notify via email or HTTP that FPGA CL build is complete")
-argparser.add_argument('--email', help='Email to notify', default='default')
-argparser.add_argument('--url', help='url to notify', default=None)
-argparser.add_argument('--user', help='User performing build', default=os.environ.get('USER', ''))
-argparser.add_argument('--projname', help='Name of project built', default=None)
-argparser.add_argument('--filenmame', help='Name of checkpoint archive', default=None)
+argparser.add_argument('--email', help='Email to notify', default=os.environ.get('EMAIL', None))
+argparser.add_argument('--url', help='url to notify', default=os.environ.get('SNS_NOTIFY_URL', None))
+argparser.add_argument('--user', help='User performing build', default=os.environ.get('USER', 'default'))
+argparser.add_argument('--project', help='Name of project built', default=None)
+argparser.add_argument('--filename', help='Name of checkpoint archive', default=None)
 argparser.add_argument('--timestamp', help='Timestamp of build', default=None)
 argparser.add_argument('--sourcehash', help='md5sum of the RTL', default=None)
 options = argparser.parse_args()
@@ -63,8 +64,17 @@ pub_resp = sns.publish(TopicArn=topic_resp['TopicArn'],
                        Message='Your FPGA CL build is complete.',
                        Subject='Your FPGA CL build is complete.')
 if options.url:
+    print('notifying %s' % options.url)
     pub_resp = sns.publish(TopicArn=topic_resp_json['TopicArn'],
-                           Message='Your FPGA CL build is complete.',
+                           Message=json.dumps({
+                               'subject': 'Your FPGA CL build is complete.',
+                               'user': options.user,
+                               'useremail': options.email,
+                               'project': options.project,
+                               'filename': options.filename,
+                               'timestamp': options.timestamp,
+                               'sourcehash': options.sourcehash
+                               }),
                            Subject='Your FPGA CL build is complete.')
 
 sys.exit(0)
