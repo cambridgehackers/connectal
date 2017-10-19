@@ -28,7 +28,7 @@ argparser = argparse.ArgumentParser(description="Notify via email or HTTP that F
 argparser.add_argument('--email', help='Email to notify', default=os.environ.get('SNS_NOTIFY_EMAIL', None))
 argparser.add_argument('--sns-notify-url', help='url to notify via SNS', default=os.environ.get('SNS_NOTIFY_URL', None))
 argparser.add_argument('--notify-url', help='url to notify via POST', default=os.environ.get('NOTIFY_URL', None))
-argparser.add_argument('--secret-key-file', help='File containing base64 encoded secret key for signing message sent to notify_url', default=os.environ.get('NOTIFY_SECRET_KEY_FILE', None)))
+argparser.add_argument('--secret-key-file', help='File containing base64 encoded secret key for signing message sent to notify_url', default=os.environ.get('NOTIFY_SECRET_KEY_FILE', None))
 argparser.add_argument('--build-user', help='User performing build', default=os.environ.get('BUILD_USER', 'default'))
 argparser.add_argument('--build-project', help='Name of project built', default=os.environ.get('BUILD_PROJECT', None))
 argparser.add_argument('--filename', help='Name of checkpoint archive', default=None)
