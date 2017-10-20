@@ -373,7 +373,7 @@ puts "AWS FPGA: ([clock format [clock seconds] -format %T]) - Finished creating 
 if {[string compare $notify_via_sns "1"] == 0} {
     puts "AWS FPGA: ([clock format [clock seconds] -format %T]) - Calling notification script to send e-mail to $env(EMAIL)";
     if {[info exists ::env(CONNECTALDIR)]} {
-	exec $env(CONNECTALDIR)/scripts/aws/notify_via_sns.py --build-project ${projname} --filename ${filename} --timestamp ${timestamp} --image-ids $fpga_image_ids
+	exec $env(CONNECTALDIR)/scripts/aws/notify_via_sns.py --build-project ${projname} --filename ${filename} --timestamp ${timestamp} --fpga-image-ids $fpga_image_ids
     } else {
 	exec $env(HDK_COMMON_DIR)/scripts/notify_via_sns.py
     }
