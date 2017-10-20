@@ -395,7 +395,7 @@ bsim: prepare_bin_target $(DTOP)/bin/libconnectal-sim.so obj/mkXsimTop.ba
 
 
 build/checkpoints/to_aws/mkTop.SH_CL_routed.dcp: verilog
-	$(CONNECTALDIR)/scripts/aws/build.sh
+	CONNECTALDIR=$(CONNECTALDIR) $(CONNECTALDIR)/scripts/aws/build.sh
 
 syntax.timestamp: $(BSVFILES)
 	@#$syntax.py uses environment variables: V INTERFACES BSVDEFINES_LIST DTOP DUT_NAME
