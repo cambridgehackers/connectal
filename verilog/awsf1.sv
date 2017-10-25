@@ -20,6 +20,7 @@ module awsf1(
    assign cl_sh_id0 = `CL_SH_ID0;
    assign cl_sh_id1 = `CL_SH_ID1;
 
+`ifdef CL_DEBUG_BRIDGE
    ila_connectal_1 cl_ila_slave (
                    .clk    (clk_main_a0),
                    .probe0 (sh_ocl_awvalid),
@@ -72,6 +73,7 @@ module awsf1(
       .S_BSCAN_capture(capture),
       .S_BSCAN_bscanid_en(bscanid_en)
    );
+`endif
 
    mkAwsF1Top(
 	      .clk_main_a0(clk_main_a0),	//Main clock.  This is the clock for all of the interfaces to the SH
