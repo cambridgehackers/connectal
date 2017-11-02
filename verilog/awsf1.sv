@@ -1,5 +1,5 @@
 
-
+`include "ConnectalProjectConfig.bsv"
 
 module awsf1(
 	     `include "cl_ports.vh"
