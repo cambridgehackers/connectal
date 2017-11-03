@@ -54,16 +54,16 @@ list_resp = sns.list_subscriptions_by_topic(TopicArn=topic_resp['TopicArn'])
 if list_resp.get('Subscriptions'):
     print(list_resp.get('Subscriptions'))
 
-if os.environ.get('EMAIL') is None:
+if options.email is None:
     print('Please set your EMAIL environment variable to your email address.')
     sys.exit(1)
 
-print("Using email address: %s" % os.environ.get('EMAIL'))
+print("Using email address: %s" % options.email)
 
 # subscribe if email is not in list
-if not any(i['Endpoint'] == os.environ.get('EMAIL') for i in list_resp.get('Subscriptions')):
+if not any(i['Endpoint'] == options.email for i in list_resp.get('Subscriptions')):
     print("Subscribing to the FPGA_CL_BUILD topic")
-    sub_resp = sns.subscribe(TopicArn=topic_resp['TopicArn'], Protocol='email', Endpoint=os.environ.get('EMAIL'))
+    sub_resp = sns.subscribe(TopicArn=topic_resp['TopicArn'], Protocol='email', Endpoint=options.email)
     print(sub_resp)
 
 message_dict = { 'subject': 'Your FPGA CL build is complete.',
