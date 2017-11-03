@@ -106,7 +106,9 @@ if options.notify_url:
         secret_key_b64 = open(options.secret_key_file, 'r').read()
         secret_key = base64.b64decode(secret_key_b64)
         signature = hmac.new(secret_key, message).hexdigest()
-    resp = requests.post(options.notify_url, data={'message': message, 'signature': signature })
+    data = {'message': message, 'signature': signature }
+    resp = requests.post(options.notify_url, data=data)
+    print('Posting to url %s \n data %s' % (options.notify_url, data))
     print('Posted to url %s got response %s' % (options.notify_url, resp))
     print(json.dumps({'message': message.decode('utf8'), 'signature': signature }))
 
