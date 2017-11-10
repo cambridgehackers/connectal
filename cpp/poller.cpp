@@ -49,7 +49,7 @@ PortalPoller::PortalPoller(int autostart)
 
     timeout = -1; // wait for interrupt
 #if defined(AWSF1)
-    timeout = 10;
+    timeout = 1;
 #endif
 #if defined(SIMULATION)
     timeout = 100;
