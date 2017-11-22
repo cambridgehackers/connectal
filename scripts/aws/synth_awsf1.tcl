@@ -7,11 +7,17 @@ create_project -in_memory -part [DEVICE_TYPE] -force
 source {../../board.tcl}
 
 if [info exists AWSF1_DDR_A] {
+    if {$AWSF1_DDR_A == ""} {
+	set AWSF1_DDR_A 1
+    }
     puts "AWSF1_DDR_A=$AWSF1_DDR_A"
 } else {
     set AWSF1_DDR_A 0
 }
 if [info exists AWSF1_CL_DEBUG_BRIDGE] {
+    if {$AWSF1_CL_DEBUG_BRIDGE == ""} {
+	set AWSF1_CL_DEBUG_BRIDGE 1
+    }
     puts "AWSF1_CL_DEBUG_BRIDGE=$AWSF1_CL_DEBUG_BRIDGE"
 } else {
     set AWSF1_CL_DEBUG_BRIDGE 0
