@@ -380,6 +380,12 @@ if {[string compare $notify_via_sns "1"] == 0} {
     }
 }
 
+puts "Writing FPGA image ids to $CL_DIR/build/scripts/fpga_image_ids.json"
+set fd [open "$CL_DIR/build/scripts/fpga_image_ids.json" "w"]
+puts $fd $fpga_image_ids
+close $fd
+exec aws s3 cp "$CL_DIR/build/scripts/fpga_image_ids.json" "${s3_folder}/fpga_image_ids.json"
+
 puts "AWS FPGA: ([clock format [clock seconds] -format %T]) - Build complete.";
 
 
