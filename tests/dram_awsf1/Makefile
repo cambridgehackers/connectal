@@ -13,4 +13,6 @@ PIN_TYPE = Axi4
 PIN_TYPE_INCLUDE = Axi4
 AUTOTOP = --interface pins:DdrAws.ddr3
 
+CONNECTALFLAGS += -D AWSF1_DDR_A
+
 include $(CONNECTALDIR)/Makefile.connectal
