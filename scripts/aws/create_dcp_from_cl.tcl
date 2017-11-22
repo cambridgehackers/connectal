@@ -363,9 +363,10 @@ if { [file exists $CL_DIR/build/checkpoints/to_aws/${timestamp}.Developer_CL.tar
 cd $CL_DIR/build/checkpoints
 tar::create to_aws/${timestamp}.Developer_CL.tar [glob to_aws/${timestamp}*]
 
+
 set filename "${timestamp}.Developer_CL.tar"
-exec aws s3 cp $CL_DIR/build/checkpoints/to_aws/${filename} ${s3_folder}/${filename}
-exec aws s3 cp $CL_DIR/build/checkpoints/${timestamp}.debug_probes.ltx ${s3_folder}/${timestamp}.debug_probes.ltx
+exec aws s3 cp "$CL_DIR/build/checkpoints/to_aws/${filename}" "${s3_folder}/${filename}"
+exec aws s3 cp "$CL_DIR/build/checkpoints/${timestamp}.debug_probes.ltx" "${s3_folder}/${timestamp}.debug_probes.ltx"
 set fpga_image_ids [exec aws ec2 create-fpga-image --name ${imagename} --description "${filename}" --input-storage-location Bucket=aws-fpga,Key=${s3_key}/${filename} --logs-storage-location Bucket=aws-fpga,Key=logs-folder]
 
 puts "AWS FPGA: ([clock format [clock seconds] -format %T]) - Finished creating final tar file in to_aws directory.";
