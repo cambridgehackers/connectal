@@ -483,7 +483,7 @@ module awsf1(
    );
 `endif // AWSF1_CL_DEBUG_BRIDGE
 
-   mkAwsF1Top(
+   mkAwsF1Top awsF1Top(
 	      .clk_main_a0(clk_main_a0),	//Main clock.  This is the clock for all of the interfaces to the SH
 	      .clk_extra_a1(clk_extra_a1),	//Extra clock A1 (phase aligned to "A" clock group)
 	      .clk_extra_a2(clk_extra_a2),	//Extra clock A2 (phase aligned to "A" clock group)
