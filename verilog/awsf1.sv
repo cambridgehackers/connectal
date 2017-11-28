@@ -69,6 +69,8 @@ module awsf1(
 //`include "cl_common_defines.vh"      // CL Defines for all examples
 `include "cl_id_defines.vh"          // Defines for ID0 and ID1 (PCI ID's)
 
+   assign cl_sh_id0 = `CL_SH_ID0;
+   assign cl_sh_id1 = `CL_SH_ID1;
 
 //Put module name of the CL design here.  This is used to instantiate in top.sv
 `define CL_NAME cl_awsf1
@@ -102,9 +104,6 @@ module awsf1(
 //   localparam DDR_SCRB_MAX_ADDR = 64'h3FFFFFFFF; //16GB 
 //   localparam DDR_SCRB_BURST_LEN_MINUS1 = 15;
 
-
-   assign cl_sh_id0 = `CL_SH_ID0;
-   assign cl_sh_id1 = `CL_SH_ID1;
 
  `ifdef AWSF1_DDR_A
    //---------------------------- 
