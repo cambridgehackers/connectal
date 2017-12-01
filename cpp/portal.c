@@ -88,6 +88,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     pint->cb = (PortalHandlerTemplate *)cb;
     pint->parent = parent;
     pint->reqinfo = reqinfo;
+    pint->busyType = BUSY_SPIN;
     if (getenv("FPGA_NUMBER") != 0)
 	pint->board_number = strtoul(getenv("FPGA_NUMBER"), 0, 0);
     if(trace_portal)
