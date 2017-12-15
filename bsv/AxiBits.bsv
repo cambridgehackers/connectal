@@ -358,7 +358,7 @@ module mkAxi4MasterBits#(Axi4Master#(addrWidth,dataWidth,tagWidth) m)(Axi4Master
 	       awburstWire <= 2'b01; //awfifo.first.burst;
 	       awprotWire <= 3'b000; //awfifo.first.prot;
 	       awcacheWire <= 4'b0011; // awfifo.first.cache;
-	       awidWire <= arfifo.first.id;
+	       awidWire <= awfifo.first.id;
 	    endrule
 
 	    rule aw_handshake if (awreadyWire);
