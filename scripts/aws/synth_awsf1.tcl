@@ -50,9 +50,9 @@ read_verilog -sv [glob $ENC_SRC_DIR/*.sv] [glob $ENC_SRC_DIR/*.v]
 
 if {$AWSF1_CL_DEBUG_BRIDGE} {
     puts "Reading connectal ILA IP"
-    read_ip [list
-	     "$CONNECTALDIR/out/awsf1/ila_connectal_1/ila_connectal_1.xci"
-	     "$CONNECTALDIR/out/awsf1/ila_connectal_2/ila_connectal_2.xci"
+    read_ip [list \
+	     "$CONNECTALDIR/out/awsf1/ila_connectal_1/ila_connectal_1.xci" \
+	     "$CONNECTALDIR/out/awsf1/ila_connectal_2/ila_connectal_2.xci" \
 	    ]
 }
 
