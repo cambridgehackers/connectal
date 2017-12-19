@@ -1,66 +1,5 @@
 
 `include "ConnectalProjectConfig.bsv"
-interface axi_bus_t;
-      logic[15:0] awid;
-      logic[63:0] awaddr;
-      logic[7:0] awlen;
-      logic [2:0] awsize;
-      logic awvalid;
-      logic awready;
-   
-      logic[15:0] wid;
-      logic[511:0] wdata;
-      logic[63:0] wstrb;
-      logic wlast;
-      logic wvalid;
-      logic wready;
-         
-      logic[15:0] bid;
-      logic[1:0] bresp;
-      logic bvalid;
-      logic bready;
-         
-      logic[15:0] arid;
-      logic[63:0] araddr;
-      logic[7:0] arlen;
-      logic [2:0] arsize;
-      logic arvalid;
-      logic arready;
-         
-      logic[15:0] rid;
-      logic[511:0] rdata;
-      logic[1:0] rresp;
-      logic rlast;
-      logic rvalid;
-      logic rready;
-
-      modport master (input awid, awaddr, awlen, awsize, awvalid, output awready,
-                      input wid, wdata, wstrb, wlast, wvalid, output wready,
-                      output bid, bresp, bvalid, input bready,
-                      input arid, araddr, arlen, arsize, arvalid, output arready,
-                      output rid, rdata, rresp, rlast, rvalid, input rready);
-
-      modport slave (output awid, awaddr, awlen, awsize, awvalid, input awready,
-                     output wid, wdata, wstrb, wlast, wvalid, input wready,
-                     input bid, bresp, bvalid, output bready,
-                     output arid, araddr, arlen, arsize, arvalid, input arready,
-                     input rid, rdata, rresp, rlast, rvalid, output rready);
-   endinterface
-
-
-   interface cfg_bus_t;
-      logic [31:0] addr;
-      logic [31:0] wdata;
-      logic wr;
-      logic rd;
-      logic ack;
-      logic[31:0] rdata;
-
-      modport master (input addr, wdata, wr, rd, output ack, rdata);
-
-      modport slave (output addr, wdata, wr, rd, input ack, rdata);
-   endinterface
-
 
 module awsf1(
 	     `include "cl_ports.vh"
@@ -98,37 +37,36 @@ module awsf1(
    
 `ifdef AWSF1_DDR_A
    localparam DDR_A_PRESENT=1;
-   localparam DDR_B_PRESENT=1;
-   localparam DDR_D_PRESENT=1;
+   // DDR B and D are not used, disable them
+   localparam DDR_B_PRESENT=0;
+   localparam DDR_D_PRESENT=0;
 
 //   localparam DDR_SCRB_MAX_ADDR = 64'h3FFFFFFFF; //16GB 
 //   localparam DDR_SCRB_BURST_LEN_MINUS1 = 15;
 
 
- `ifdef AWSF1_DDR_A
    //---------------------------- 
    // Internal signals
    //---------------------------- 
-   axi_bus_t lcl_cl_sh_ddra();
-   axi_bus_t lcl_cl_sh_ddrb();
-   axi_bus_t lcl_cl_sh_ddrd();
- `endif //  AWSF1_DDR_A
+   //axi_bus_t lcl_cl_sh_ddra();
+   //axi_bus_t lcl_cl_sh_ddrb();
+   //axi_bus_t lcl_cl_sh_ddrd();
 
    //axi_bus_t sh_cl_dma_pcis_bus();
    //axi_bus_t sh_cl_dma_pcis_q();
    //
    //axi_bus_t cl_sh_pcim_bus();
-   axi_bus_t cl_sh_ddr_bus();
+   //axi_bus_t cl_sh_ddr_bus();
 
-   axi_bus_t sda_cl_bus();
-   axi_bus_t sh_ocl_bus();
+   //axi_bus_t sda_cl_bus();
+   //axi_bus_t sh_ocl_bus();
 
-   cfg_bus_t pcim_tst_cfg_bus();
-   cfg_bus_t ddra_tst_cfg_bus();
-   cfg_bus_t ddrb_tst_cfg_bus();
-   cfg_bus_t ddrc_tst_cfg_bus();
-   cfg_bus_t ddrd_tst_cfg_bus();
-   cfg_bus_t int_tst_cfg_bus();
+   //cfg_bus_t pcim_tst_cfg_bus();
+   //cfg_bus_t ddra_tst_cfg_bus();
+   //cfg_bus_t ddrb_tst_cfg_bus();
+   //cfg_bus_t ddrc_tst_cfg_bus();
+   //cfg_bus_t ddrd_tst_cfg_bus();
+   //cfg_bus_t int_tst_cfg_bus();
 
    // scrb_bus_t ddra_scrb_bus();
    // scrb_bus_t ddrb_scrb_bus();
@@ -199,27 +137,39 @@ module awsf1(
 										    );
 
 
-   lib_pipe #(.WIDTH(1+1+8+32), .STAGES(NUM_CFG_STGS_CL_DDR_ATG)) PIPE_DDR_STAT1 (.clk(clk), .rst_n(sync_rst_n),
-										  .in_bus({sh_ddr_stat_wr1, sh_ddr_stat_rd1, sh_ddr_stat_addr1, sh_ddr_stat_wdata1}),
-										  .out_bus({sh_ddr_stat_wr_q[1], sh_ddr_stat_rd_q[1], sh_ddr_stat_addr_q[1], sh_ddr_stat_wdata_q[1]})
-										  );
+   // tie DRAM B to 0
+   //lib_pipe #(.WIDTH(1+1+8+32), .STAGES(NUM_CFG_STGS_CL_DDR_ATG)) PIPE_DDR_STAT1 (.clk(clk), .rst_n(sync_rst_n),
+   //                                     .in_bus({sh_ddr_stat_wr1, sh_ddr_stat_rd1, sh_ddr_stat_addr1, sh_ddr_stat_wdata1}),
+   //                                     .out_bus({sh_ddr_stat_wr_q[1], sh_ddr_stat_rd_q[1], sh_ddr_stat_addr_q[1], sh_ddr_stat_wdata_q[1]})
+   //                                     );
+   //lib_pipe #(.WIDTH(1+8+32), .STAGES(NUM_CFG_STGS_CL_DDR_ATG)) PIPE_DDR_STAT_ACK1 (.clk(clk), .rst_n(sync_rst_n),
+   //                                   .in_bus({ddr_sh_stat_ack_q[1], ddr_sh_stat_int_q[1], ddr_sh_stat_rdata_q[1]}),
+   //                                   .out_bus({ddr_sh_stat_ack1, ddr_sh_stat_int1, ddr_sh_stat_rdata1})
+   //                                   );
+   assign {sh_ddr_stat_wr_q[   1],
+           sh_ddr_stat_rd_q[   1],
+           sh_ddr_stat_addr_q[ 1],
+           sh_ddr_stat_wdata_q[1]} = '0;
+   assign ddr_sh_stat_ack1 = 1'b1; // Needed in order not to hang the interface
+   assign {ddr_sh_stat_int1,
+           ddr_sh_stat_rddata1} = '0;
 
-
-   lib_pipe #(.WIDTH(1+8+32), .STAGES(NUM_CFG_STGS_CL_DDR_ATG)) PIPE_DDR_STAT_ACK1 (.clk(clk), .rst_n(sync_rst_n),
-										    .in_bus({ddr_sh_stat_ack_q[1], ddr_sh_stat_int_q[1], ddr_sh_stat_rdata_q[1]}),
-										    .out_bus({ddr_sh_stat_ack1, ddr_sh_stat_int1, ddr_sh_stat_rdata1})
-										    );
-
-   lib_pipe #(.WIDTH(1+1+8+32), .STAGES(NUM_CFG_STGS_CL_DDR_ATG)) PIPE_DDR_STAT2 (.clk(clk), .rst_n(sync_rst_n),
-										  .in_bus({sh_ddr_stat_wr2, sh_ddr_stat_rd2, sh_ddr_stat_addr2, sh_ddr_stat_wdata2}),
-										  .out_bus({sh_ddr_stat_wr_q[2], sh_ddr_stat_rd_q[2], sh_ddr_stat_addr_q[2], sh_ddr_stat_wdata_q[2]})
-										  );
-
-
-   lib_pipe #(.WIDTH(1+8+32), .STAGES(NUM_CFG_STGS_CL_DDR_ATG)) PIPE_DDR_STAT_ACK2 (.clk(clk), .rst_n(sync_rst_n),
-										    .in_bus({ddr_sh_stat_ack_q[2], ddr_sh_stat_int_q[2], ddr_sh_stat_rdata_q[2]}),
-										    .out_bus({ddr_sh_stat_ack2, ddr_sh_stat_int2, ddr_sh_stat_rdata2})
-										    ); 
+   // tie DRAM D to 0
+   //lib_pipe #(.WIDTH(1+1+8+32), .STAGES(NUM_CFG_STGS_CL_DDR_ATG)) PIPE_DDR_STAT2 (.clk(clk), .rst_n(sync_rst_n),
+   //                                     .in_bus({sh_ddr_stat_wr2, sh_ddr_stat_rd2, sh_ddr_stat_addr2, sh_ddr_stat_wdata2}),
+   //                                     .out_bus({sh_ddr_stat_wr_q[2], sh_ddr_stat_rd_q[2], sh_ddr_stat_addr_q[2], sh_ddr_stat_wdata_q[2]})
+   //                                     );
+   //lib_pipe #(.WIDTH(1+8+32), .STAGES(NUM_CFG_STGS_CL_DDR_ATG)) PIPE_DDR_STAT_ACK2 (.clk(clk), .rst_n(sync_rst_n),
+   //                                   .in_bus({ddr_sh_stat_ack_q[2], ddr_sh_stat_int_q[2], ddr_sh_stat_rdata_q[2]}),
+   //                                   .out_bus({ddr_sh_stat_ack2, ddr_sh_stat_int2, ddr_sh_stat_rdata2})
+   //                                   ); 
+   assign {sh_ddr_stat_wr_q[   2],
+           sh_ddr_stat_rd_q[   2],
+           sh_ddr_stat_addr_q[ 2],
+           sh_ddr_stat_wdata_q[2]} = '0;
+   assign ddr_sh_stat_ack2 = 1'b1; // Needed in order not to hang the interface
+   assign {ddr_sh_stat_int2,
+           ddr_sh_stat_rddata2} = '0;
 
    //convert to 2D 
    logic [15:0] cl_sh_ddr_awid_2d[2:0];
@@ -255,37 +205,43 @@ module awsf1(
    logic [2:0] 	 sh_cl_ddr_rvalid_2d;
    logic [2:0] 	 cl_sh_ddr_rready_2d;
 
-   assign cl_sh_ddr_awid_2d = '{lcl_cl_sh_ddrd.awid, lcl_cl_sh_ddrb.awid, lcl_cl_sh_ddra.awid};
-   assign cl_sh_ddr_awaddr_2d = '{lcl_cl_sh_ddrd.awaddr, lcl_cl_sh_ddrb.awaddr, lcl_cl_sh_ddra.awaddr};
-   assign cl_sh_ddr_awlen_2d = '{lcl_cl_sh_ddrd.awlen, lcl_cl_sh_ddrb.awlen, lcl_cl_sh_ddra.awlen};
-   assign cl_sh_ddr_awsize_2d = '{lcl_cl_sh_ddrd.awsize, lcl_cl_sh_ddrb.awsize, lcl_cl_sh_ddra.awsize};
-   assign cl_sh_ddr_awvalid_2d = '{lcl_cl_sh_ddrd.awvalid, lcl_cl_sh_ddrb.awvalid, lcl_cl_sh_ddra.awvalid};
-   assign {lcl_cl_sh_ddrd.awready, lcl_cl_sh_ddrb.awready, lcl_cl_sh_ddra.awready} = sh_cl_ddr_awready_2d;
+   // tie DRAM B to 0
+   assign {cl_sh_ddr_awid_2d[   1],
+           cl_sh_ddr_awaddr_2d[ 1],
+           cl_sh_ddr_awlen_2d[  1],
+           cl_sh_ddr_awsize_2d[ 1],
+           cl_sh_ddr_awvalid_2d[1],
+           cl_sh_ddr_wid_2d[    1],
+           cl_sh_ddr_wdata_2d[  1],
+           cl_sh_ddr_wstrb_2d[  1],
+           cl_sh_ddr_wlast_2d[  1],
+           cl_sh_ddr_wvalid_2d[ 1],
+           cl_sh_ddr_bready_2d[ 1],
+           cl_sh_ddr_arid_2d[   1],
+           cl_sh_ddr_araddr_2d[ 1],
+           cl_sh_ddr_arlen_2d[  1],
+           cl_sh_ddr_arsize_2d[ 1],
+           cl_sh_ddr_arvalid_2d[1],
+           cl_sh_ddr_rready_2d[ 1]} = '0;
 
-   assign cl_sh_ddr_wid_2d = '{lcl_cl_sh_ddrd.wid, lcl_cl_sh_ddrb.wid, lcl_cl_sh_ddra.wid};
-   assign cl_sh_ddr_wdata_2d = '{lcl_cl_sh_ddrd.wdata, lcl_cl_sh_ddrb.wdata, lcl_cl_sh_ddra.wdata};
-   assign cl_sh_ddr_wstrb_2d = '{lcl_cl_sh_ddrd.wstrb, lcl_cl_sh_ddrb.wstrb, lcl_cl_sh_ddra.wstrb};
-   assign cl_sh_ddr_wlast_2d = {lcl_cl_sh_ddrd.wlast, lcl_cl_sh_ddrb.wlast, lcl_cl_sh_ddra.wlast};
-   assign cl_sh_ddr_wvalid_2d = {lcl_cl_sh_ddrd.wvalid, lcl_cl_sh_ddrb.wvalid, lcl_cl_sh_ddra.wvalid};
-   assign {lcl_cl_sh_ddrd.wready, lcl_cl_sh_ddrb.wready, lcl_cl_sh_ddra.wready} = sh_cl_ddr_wready_2d;
-
-   assign {lcl_cl_sh_ddrd.bid, lcl_cl_sh_ddrb.bid, lcl_cl_sh_ddra.bid} = {sh_cl_ddr_bid_2d[2], sh_cl_ddr_bid_2d[1], sh_cl_ddr_bid_2d[0]}; assign {lcl_cl_sh_ddrd.bresp, lcl_cl_sh_ddrb.bresp, lcl_cl_sh_ddra.bresp} = {sh_cl_ddr_bresp_2d[2], sh_cl_ddr_bresp_2d[1], sh_cl_ddr_bresp_2d[0]};
-   assign {lcl_cl_sh_ddrd.bvalid, lcl_cl_sh_ddrb.bvalid, lcl_cl_sh_ddra.bvalid} = sh_cl_ddr_bvalid_2d;
-   assign cl_sh_ddr_bready_2d = {lcl_cl_sh_ddrd.bready, lcl_cl_sh_ddrb.bready, lcl_cl_sh_ddra.bready};
-
-   assign cl_sh_ddr_arid_2d = '{lcl_cl_sh_ddrd.arid, lcl_cl_sh_ddrb.arid, lcl_cl_sh_ddra.arid};
-   assign cl_sh_ddr_araddr_2d = '{lcl_cl_sh_ddrd.araddr, lcl_cl_sh_ddrb.araddr, lcl_cl_sh_ddra.araddr};
-   assign cl_sh_ddr_arlen_2d = '{lcl_cl_sh_ddrd.arlen, lcl_cl_sh_ddrb.arlen, lcl_cl_sh_ddra.arlen};
-   assign cl_sh_ddr_arsize_2d = '{lcl_cl_sh_ddrd.arsize, lcl_cl_sh_ddrb.arsize, lcl_cl_sh_ddra.arsize};
-   assign cl_sh_ddr_arvalid_2d = {lcl_cl_sh_ddrd.arvalid, lcl_cl_sh_ddrb.arvalid, lcl_cl_sh_ddra.arvalid};
-   assign {lcl_cl_sh_ddrd.arready, lcl_cl_sh_ddrb.arready, lcl_cl_sh_ddra.arready} = sh_cl_ddr_arready_2d;
-
-   assign {lcl_cl_sh_ddrd.rid, lcl_cl_sh_ddrb.rid, lcl_cl_sh_ddra.rid} = {sh_cl_ddr_rid_2d[2], sh_cl_ddr_rid_2d[1], sh_cl_ddr_rid_2d[0]};
-   assign {lcl_cl_sh_ddrd.rresp, lcl_cl_sh_ddrb.rresp, lcl_cl_sh_ddra.rresp} = {sh_cl_ddr_rresp_2d[2], sh_cl_ddr_rresp_2d[1], sh_cl_ddr_rresp_2d[0]};
-   assign {lcl_cl_sh_ddrd.rdata, lcl_cl_sh_ddrb.rdata, lcl_cl_sh_ddra.rdata} = {sh_cl_ddr_rdata_2d[2], sh_cl_ddr_rdata_2d[1], sh_cl_ddr_rdata_2d[0]};
-   assign {lcl_cl_sh_ddrd.rlast, lcl_cl_sh_ddrb.rlast, lcl_cl_sh_ddra.rlast} = sh_cl_ddr_rlast_2d;
-   assign {lcl_cl_sh_ddrd.rvalid, lcl_cl_sh_ddrb.rvalid, lcl_cl_sh_ddra.rvalid} = sh_cl_ddr_rvalid_2d;
-   assign cl_sh_ddr_rready_2d = {lcl_cl_sh_ddrd.rready, lcl_cl_sh_ddrb.rready, lcl_cl_sh_ddra.rready};
+   // tie DRAM D to 0
+   assign {cl_sh_ddr_awid_2d[   2],
+           cl_sh_ddr_awaddr_2d[ 2],
+           cl_sh_ddr_awlen_2d[  2],
+           cl_sh_ddr_awsize_2d[ 2],
+           cl_sh_ddr_awvalid_2d[2],
+           cl_sh_ddr_wid_2d[    2],
+           cl_sh_ddr_wdata_2d[  2],
+           cl_sh_ddr_wstrb_2d[  2],
+           cl_sh_ddr_wlast_2d[  2],
+           cl_sh_ddr_wvalid_2d[ 2],
+           cl_sh_ddr_bready_2d[ 2],
+           cl_sh_ddr_arid_2d[   2],
+           cl_sh_ddr_araddr_2d[ 2],
+           cl_sh_ddr_arlen_2d[  2],
+           cl_sh_ddr_arsize_2d[ 2],
+           cl_sh_ddr_arvalid_2d[2],
+           cl_sh_ddr_rready_2d[ 2]} = '0;
 
    (* dont_touch = "true" *) logic sh_ddr_sync_rst_n;
    lib_pipe #(.WIDTH(1), .STAGES(4)) SH_DDR_SLC_RST_N (.clk(clk), .rst_n(1'b1), .in_bus(sync_rst_n), .out_bus(sh_ddr_sync_rst_n));
