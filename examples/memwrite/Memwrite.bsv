@@ -119,7 +119,7 @@ module  mkMemwrite#(MemwriteIndication indication) (Memwrite);
    interface MemWriteClient dmaClient = cons(we.dmaClient, nil);
    interface MemwriteRequest request;
        method Action startWrite(Bit#(32) wp, Bit#(32) off, Bit#(32) nw, Bit#(32) bl, Bit#(32) ic);
-	  $display("startWrite pointer=%d offset=%d numWords=%h burstLen=%d iterCnt=%d", pointer, off, nw, bl, ic);
+	  $display("startWrite pointer=%d offset=%d numWords=%h burstLen=%d iterCnt=%d", wp, off, nw, bl, ic);
 	  indication.started(nw);
 	  pointer <= wp;
 	  cf.enq(?);
