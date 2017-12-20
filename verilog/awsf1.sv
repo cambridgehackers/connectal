@@ -12,7 +12,7 @@ module awsf1(
    assign cl_sh_id1 = `CL_SH_ID1;
 
 //Put module name of the CL design here.  This is used to instantiate in top.sv
-`define CL_NAME cl_awsf1
+`define CL_NAME awsf1
 
 //Highly recommeneded.  For lib FIFO block, uses less async reset (take advantage of
 // FPGA flop init capability).  This will help with routing resources.
@@ -242,6 +242,9 @@ module awsf1(
            cl_sh_ddr_arsize_2d[ 2],
            cl_sh_ddr_arvalid_2d[2],
            cl_sh_ddr_rready_2d[ 2]} = '0;
+
+   assign cl_sh_pcim_araddr[63:40] = 24'd0;
+   assign cl_sh_pcim_awaddr[63:40] = 24'd0;
 
    (* dont_touch = "true" *) logic sh_ddr_sync_rst_n;
    lib_pipe #(.WIDTH(1), .STAGES(4)) SH_DDR_SLC_RST_N (.clk(clk), .rst_n(1'b1), .in_bus(sync_rst_n), .out_bus(sh_ddr_sync_rst_n));
@@ -545,7 +548,7 @@ module awsf1(
 
 // DDR3 END
 
-	      .pcim_araddr(cl_sh_pcim_araddr),
+	      .pcim_araddr(cl_sh_pcim_araddr[39:0]),
 	      //.pcim_arburst(pcim_arburst),
 	      //.pcim_arcache(pcim_arcache),
 	      //.pcim_aresetn(pcim_aresetn),
@@ -559,7 +562,7 @@ module awsf1(
 	      .pcim_arvalid(cl_sh_pcim_arvalid),
 	      .pcim_extra_aruser(cl_sh_pcim_aruser),
 
-	      .pcim_awaddr(cl_sh_pcim_awaddr),
+	      .pcim_awaddr(cl_sh_pcim_awaddr[39:0]),
 	      //.pcim_awburst(pcim_awburst),
 	      //.pcim_awcache(pcim_awcache),
 	      .pcim_awid(cl_sh_pcim_awid),
@@ -585,7 +588,7 @@ module awsf1(
 	      .pcim_rvalid_v(sh_cl_pcim_rvalid),
 
 	      .pcim_wdata(cl_sh_pcim_wdata),
-	      .pcim_wid(cl_sh_pcim_wid),
+	      //.pcim_wid(cl_sh_pcim_wid), // No longer part of AXI4 spec
 	      .pcim_wlast(cl_sh_pcim_wlast),
 	      .pcim_wready_v(sh_cl_pcim_wready),
 	      .pcim_wstrb(cl_sh_pcim_wstrb),
