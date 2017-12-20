@@ -1,6 +1,7 @@
 {
     "options": {
-        "bsvdefines" : ["XILINX=1", "VirtexUltrascale", "PhysAddrWidth=40", "DataBusWidth=128", "XsimHostInterface", "AWSF1=1",
+        "bsvdefines" : ["XILINX=1", "VirtexUltrascale", "PhysAddrWidth=40", "DataBusWidth=512", "XsimHostInterface", "AWSF1=1",
+			"MemTagSize=16", "MemServerTags=8",
 			"DEFAULT_NOPROGRAM=1",
 		       	"CONNECTAL_BITS_DEPENDENCES=build/checkpoints/to_aws/mkTop.SH_CL_routed.dcp", "CONNECTAL_RUN_SCRIPT=$(CONNECTALDIR)/scripts/run.aws"],
         "os" : "ubuntu",
