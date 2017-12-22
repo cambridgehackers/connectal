@@ -55,8 +55,10 @@ typedef struct {
 } Axi3ReadRequest#(numeric type addrWidth, numeric type idWidth) deriving (Bits);
 
 function Bit#(3) axiBusSize(Integer busWidth);
-   if (busWidth == 32)
-      return 3'b010; // 3'b010: 32bit, 3'b011: 64bit, 3'b100: 128bit
+   if (busWidth == 16)
+      return 3'b001;
+   else if (busWidth == 32)
+      return 3'b010;
    else if (busWidth == 64)
       return 3'b011;
    else if (busWidth == 128)
