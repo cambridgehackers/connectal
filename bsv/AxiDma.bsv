@@ -29,10 +29,11 @@ import Axi4MasterSlave::*;
 import ConnectalMemTypes::*;
 import ConnectalMemory::*;
 
-module mkAxiDmaSlave#(PhysMemSlave#(addrWidth,dataWidth) slave) (Axi3Slave#(addrWidth,dataWidth,12));
+module mkAxiDmaSlave#(PhysMemSlave#(addrWidth,dataWidth) slave) (Axi3Slave#(addrWidth,dataWidth,axiIdSize))
+       provisos (Add#(MemTagSize, sz__, axiIdSize));
    let beatShift = fromInteger(valueOf(TLog#(TDiv#(dataWidth,8))));
    interface Put req_ar;
-      method Action put((Axi3ReadRequest#(addrWidth, 12)) req);
+      method Action put((Axi3ReadRequest#(addrWidth, axiIdSize)) req);
 	 let burstLen = extend(req.len+1) << beatShift;
 	 slave.read_server.readReq.put(PhysMemRequest{addr:req.address, burstLen:burstLen,  tag:truncate(req.id)
 `ifdef BYTE_ENABLES
@@ -42,13 +43,13 @@ module mkAxiDmaSlave#(PhysMemSlave#(addrWidth,dataWidth) slave) (Axi3Slave#(addr
       endmethod
    endinterface
    interface Get resp_read;
-      method ActionValue#(Axi3ReadResponse#(dataWidth, 12)) get;
+      method ActionValue#(Axi3ReadResponse#(dataWidth, axiIdSize)) get;
 	 let resp <- slave.read_server.readData.get;
 	 return Axi3ReadResponse{data:resp.data, resp:0, last:1, id:extend(resp.tag)};
       endmethod
    endinterface
    interface Put req_aw;
-      method Action put(Axi3WriteRequest#(addrWidth, 12) req);
+      method Action put(Axi3WriteRequest#(addrWidth, axiIdSize) req);
 	 let burstLen = extend(req.len+1) << beatShift;
 	 slave.write_server.writeReq.put(PhysMemRequest{addr:req.address, burstLen:burstLen, tag:truncate(req.id)
 `ifdef BYTE_ENABLES
@@ -58,12 +59,12 @@ module mkAxiDmaSlave#(PhysMemSlave#(addrWidth,dataWidth) slave) (Axi3Slave#(addr
       endmethod
    endinterface
    interface Put resp_write;
-      method Action put(Axi3WriteData#(dataWidth, 12) resp);
+      method Action put(Axi3WriteData#(dataWidth, axiIdSize) resp);
 	 slave.write_server.writeData.put(MemData{data:resp.data, tag:truncate(resp.id), last: resp.last == 1});
       endmethod
    endinterface
    interface Get resp_b;
-      method ActionValue#(Axi3WriteResponse#(12)) get;
+      method ActionValue#(Axi3WriteResponse#(axiIdSize)) get;
 	 let rv <- slave.write_server.writeDone.get;
 	 return Axi3WriteResponse{resp:0, id:extend(rv)};
       endmethod
@@ -133,10 +134,11 @@ module mkAxiDmaMaster#(PhysMemMaster#(addrWidth,dataWidth) master) (Axi3Master#(
 
 endmodule
 
-module mkAxi4DmaSlave#(PhysMemSlave#(addrWidth,dataWidth) slave) (Axi4Slave#(addrWidth,dataWidth,12));
+module mkAxi4DmaSlave#(PhysMemSlave#(addrWidth,dataWidth) slave) (Axi4Slave#(addrWidth,dataWidth,axiIdSize))
+       provisos (Add#(MemTagSize, sz__, axiIdSize));
    let beatShift = fromInteger(valueOf(TLog#(TDiv#(dataWidth,8))));
    interface Put req_ar;
-      method Action put((Axi4ReadRequest#(addrWidth, 12)) req);
+      method Action put((Axi4ReadRequest#(addrWidth, axiIdSize)) req);
 	 let burstLen = extend(req.len+1) << beatShift;
 	 slave.read_server.readReq.put(PhysMemRequest{addr:req.address, burstLen:burstLen,  tag:truncate(req.id)
 `ifdef BYTE_ENABLES
@@ -146,13 +148,13 @@ module mkAxi4DmaSlave#(PhysMemSlave#(addrWidth,dataWidth) slave) (Axi4Slave#(add
       endmethod
    endinterface
    interface Get resp_read;
-      method ActionValue#(Axi4ReadResponse#(dataWidth, 12)) get;
+      method ActionValue#(Axi4ReadResponse#(dataWidth, axiIdSize)) get;
 	 let resp <- slave.read_server.readData.get;
 	 return Axi4ReadResponse{data:resp.data, resp:0, last:1, id:extend(resp.tag)};
       endmethod
    endinterface
    interface Put req_aw;
-      method Action put(Axi4WriteRequest#(addrWidth, 12) req);
+      method Action put(Axi4WriteRequest#(addrWidth, axiIdSize) req);
 	 let burstLen = extend(req.len+1) << beatShift;
 	 slave.write_server.writeReq.put(PhysMemRequest{addr:req.address, burstLen:burstLen, tag:truncate(req.id)
 `ifdef BYTE_ENABLES
@@ -162,12 +164,12 @@ module mkAxi4DmaSlave#(PhysMemSlave#(addrWidth,dataWidth) slave) (Axi4Slave#(add
       endmethod
    endinterface
    interface Put resp_write;
-      method Action put(Axi4WriteData#(dataWidth, 12) resp);
+      method Action put(Axi4WriteData#(dataWidth, axiIdSize) resp);
 	 slave.write_server.writeData.put(MemData{data:resp.data, tag:truncate(resp.id), last: resp.last == 1});
       endmethod
    endinterface
    interface Get resp_b;
-      method ActionValue#(Axi4WriteResponse#(12)) get;
+      method ActionValue#(Axi4WriteResponse#(axiIdSize)) get;
 	 let rv <- slave.write_server.writeDone.get;
 	 return Axi4WriteResponse{resp:0, id:extend(rv)};
       endmethod

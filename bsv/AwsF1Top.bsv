@@ -45,7 +45,6 @@ import BuildVector::*;
 import Axi4MasterSlave::*;
 import AxiBits::*;
 import AxiDma::*;
-import PS8LIB::*; // mkPhysMemSlave
 import FIFOF::*;
 import ConnectalFIFO::*;
 

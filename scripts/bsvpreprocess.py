@@ -119,17 +119,21 @@ def preprocess(sourcefilename, source, defs, bsvpath):
             (sym, s) = nexttok(s)
             new_cond = sym in defs
             new_valid = new_cond and valid
+            #sys.stderr.write('ifdef %s new_cond=%d new_valid=%d cond=%d valid=%d\n' % (sym, new_cond, new_valid, cond, valid))
             stack.append((new_cond,new_valid))
         elif tok == 'ifndef':
             (sym, s) = nexttok(s)
             new_cond = not sym in defs
             new_valid = valid and new_cond
+            #sys.stderr.write('ifndef %s new_cond=%d new_valid=%d cond=%d valid=%d\n' % (sym, new_cond, new_valid, cond, valid))
             stack.append((new_cond,new_valid))
         elif tok == 'else':
-            new_cond = not cond
             stack.pop()
             valid = stack[-1][1]
-            stack.append((new_cond,valid))
+            new_cond = not cond
+            new_valid = new_cond and valid
+            #sys.stderr.write('else %s new_cond=%d new_valid=%d cond=%d valid=%d\n' % (sym, new_cond, new_valid, cond, valid))
+            stack.append((new_cond,new_valid))
         elif tok == 'elsif':
             stack.pop()
             valid = stack[-1][1]
@@ -175,8 +179,9 @@ def preprocess(sourcefilename, source, defs, bsvpath):
                     val = ''
                 #sys.stderr.write('sym=%s val=%s\n' % (tok, val))
                 noncomment = noncomment.replace('`%s' % tok, val)
+            prefix='//SKIPPED ' if not valid else ''
             outlines.append('//PREPROCESSED: %s' % line)
-            outlines.append(noncomment + comment)
+            outlines.append(prefix + noncomment + comment)
             continue
         else:
             sys.stderr.write('syntax.preprocess %s: unhandled preprocessor token %s\n' % (sourcefilename, tok))
