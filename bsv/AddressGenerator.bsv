@@ -25,7 +25,7 @@ import FIFO::*;
 import GetPut::*;
 import Connectable::*;
 import RegFile::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import ConnectalConfig::*;
 
 typedef struct {

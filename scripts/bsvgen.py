@@ -47,7 +47,7 @@ import ConnectalConfig::*;
 import ConnectalMemory::*;
 import Portal::*;
 import CtrlMux::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import Pipe::*;
 import HostInterface::*;
 import LinkerLib::*;

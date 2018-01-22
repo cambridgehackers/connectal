@@ -30,7 +30,7 @@ import ConnectalConfig::*;
 
 import Vector            :: *;
 import AxiMasterSlave    :: *;
-import MemTypes          :: *;
+import ConnectalMemTypes          :: *;
 
 // this interface should allow for different master and slave bus paraters;		 
 interface BsimHost#(numeric type clientAddrWidth, numeric type clientBusWidth, numeric type clientIdWidth,  
@@ -50,7 +50,7 @@ typedef BsimHost#(32,32,12,40,DataBusWidth,6,NumberOfMasters) HostInterface;
 
 import Vector            :: *;
 import AxiMasterSlave    :: *;
-import MemTypes          :: *;
+import ConnectalMemTypes          :: *;
 
 // this interface should allow for different master and slave bus paraters;
 interface XsimHost;
@@ -85,7 +85,7 @@ import PCIE              :: *;
 import Bscan             :: *;
 import PcieCsr           :: *;
 import PcieTracer        :: *;
-import MemTypes          :: *;
+import ConnectalMemTypes          :: *;
 import Pipe              :: *;
 `ifndef SIMULATION
 `ifdef XILINX

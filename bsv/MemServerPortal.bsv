@@ -24,10 +24,10 @@ import Connectable::*;
 import GetPut::*;
 import FIFOF::*;
 import ConfigCounter::*;
-import CFFIFO::*;
+import ConnectalFIFO::*;
 
 import ConnectalConfig::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 
 //
 // provides softare ability to read/write a PhysMemSlave or MemServer
@@ -53,7 +53,7 @@ module mkPhysMemSlavePortal#(PhysMemSlave#(addrWidth,dataBusWidth) ms, MemServer
    provisos (Add#(dataBusWidth,7,a__)
 	     ,Add#(b__,addrWidth,32)
 	     ,Add#(c__, dataBusWidth, 128)
-	     ,Bits#(MemTypes::MemData#(dataBusWidth), a__));
+	     ,Bits#(ConnectalMemTypes::MemData#(dataBusWidth), a__));
 
    FIFOF#(PhysMemRequest#(addrWidth,dataBusWidth)) araddrFifo <- mkFIFOF();
    FIFOF#(PhysMemRequest#(addrWidth,dataBusWidth)) awaddrFifo <- mkFIFOF();

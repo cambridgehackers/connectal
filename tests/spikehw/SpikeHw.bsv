@@ -19,7 +19,7 @@ import ConnectalConfig::*;
 import GetPutWithClocks::*;
 import CtrlMux::*;
 import HostInterface::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import Pipe::*;
 import AxiBits::*;
 import PhysMemSlaveFromBram::*;

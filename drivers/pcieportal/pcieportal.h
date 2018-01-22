@@ -101,7 +101,7 @@ struct pmentry {
 };
 
 typedef struct tBoard {
-        void __iomem     *bar0io, *bar1io, *bar2io; /* bars */
+        void __iomem     *bar0io, *bar1io, *bar2io, *bar4io; /* bars */
         struct pci_dev   *pci_dev; /* pci device pointer */
         tPortal           portal[MAX_NUM_PORTALS];
         struct {

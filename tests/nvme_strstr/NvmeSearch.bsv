@@ -42,7 +42,7 @@ import DefaultValue::*;
 import GearboxGetPut::*;
 import HostInterface::*;
 import MemReadEngine::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import PhysMemSlaveFromBram::*;
 import Pipe::*;
 import TraceMemClient::*;

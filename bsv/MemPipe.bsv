@@ -28,7 +28,7 @@ import BRAM::*;
 import Vector::*;
 import Probe::*;
 
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import Pipe::*;
 import ConfigCounter::*;
 

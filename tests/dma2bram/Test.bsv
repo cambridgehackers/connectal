@@ -24,7 +24,7 @@ import BuildVector::*;
 import ClientServer::*;
 import BRAM::*;
 import ConnectalMemory::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import BlueScope::*;
 import MemReadEngine::*;
 import MemWriteEngine::*;

@@ -33,7 +33,7 @@ import ConnectalClocks::*;
 import ConnectalConfig::*;
 import DefaultValue::*;
 import HostInterface::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import Pipe::*;
 import TraceMemClient::*;
 import XilinxCells::*;

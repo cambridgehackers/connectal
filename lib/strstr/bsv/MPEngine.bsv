@@ -38,11 +38,11 @@ import ConfigReg::*;
 import StmtFSM::*;
 import Probe::*;
 
-import MemUtils::*;
-import MemTypes::*;
+import ConnectalMemUtils::*;
+import ConnectalMemTypes::*;
 import Dma2BRAM::*;
 import Pipe::*;
-import EHR::*;
+import OldEHR::*;
 
 interface MPEngine#(numeric type haystackBusWidth, numeric type configBusWidth);
    interface PipeIn#(Triplet#(Bit#(32))) setsearch;

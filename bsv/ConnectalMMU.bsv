@@ -32,7 +32,7 @@ import BRAM::*;
 import Probe::*;
 
 import ConnectalBram::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import StmtFSM::*;
 import ClientServer::*;
 import ConnectalConfig::*;

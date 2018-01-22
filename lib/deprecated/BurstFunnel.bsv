@@ -29,9 +29,9 @@ import BRAMFIFO::*;
 import Connectable::*;
 import ConfigCounter::*;
 import ConnectalMemory::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import Pipe::*;
-import MemUtils::*;
+import ConnectalMemUtils::*;
 
 typedef struct {
    Bit#(busWidth)  data;

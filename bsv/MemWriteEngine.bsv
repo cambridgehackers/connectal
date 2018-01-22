@@ -28,7 +28,7 @@ import GetPut::*;
 import Connectable::*;
 import BRAMFIFO::*;
 import ConfigCounter::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import Pipe::*;
 import ConnectalConfig::*;
 

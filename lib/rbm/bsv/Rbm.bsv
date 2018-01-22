@@ -29,7 +29,7 @@ import Connectable::*;
 import FloatingPoint::*;
 import BRAM::*;
 import ConnectalMemory::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import DmaVector::*;
 import HostInterface::*;
 import MemReadEngine::*;

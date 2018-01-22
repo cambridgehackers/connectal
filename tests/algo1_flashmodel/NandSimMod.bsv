@@ -28,7 +28,7 @@ import BRAM::*;
 import GetPut::*;
 import Connectable::*;
 import Pipe::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemReadEngine::*;
 import MemWriteEngine::*;
 import FlashCtrlModel::*;

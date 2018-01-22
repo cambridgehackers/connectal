@@ -23,7 +23,7 @@
 import FIFOF::*;
 import Pipe::*;
 import GetPut::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import ConnectalMemory::*;
 
 module mkTraceReadClient#(PipeIn#(Tuple4#(dmaChanId,Bool,MemRequest,Bit#(timeStampWidth))) tracePipe,

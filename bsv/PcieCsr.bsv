@@ -29,7 +29,7 @@ import Connectable    :: *;
 import PCIE           :: *;
 import Clocks         :: *;
 import PcieTracer     :: *;
-import MemTypes       :: *;
+import ConnectalMemTypes       :: *;
 import AddressGenerator::*;
 import Pipe           :: *;
 

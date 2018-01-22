@@ -25,7 +25,7 @@ import Vector::*;
 import StmtFSM::*;
 import GetPut::*;
 import ClientServer::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemReadEngine::*;
 import Pipe::*;
 

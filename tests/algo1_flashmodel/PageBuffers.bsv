@@ -9,7 +9,7 @@ import Arbiter::*;
 import Vector::*;
 import List::*;
 
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import ControllerTypes::*;
 
 

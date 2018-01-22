@@ -16,7 +16,7 @@ import ConnectalXilinxCells::*;
 import ConnectalConfig::*;
 import CtrlMux::*;
 import HostInterface::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import Pipe::*;
 import AxiBits::*;
 import PhysMemSlaveFromBram::*;

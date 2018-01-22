@@ -22,7 +22,7 @@
 import ConnectalConfig::*;
 import FIFOF::*;
 import Vector::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import Pipe::*;
 import Portal::*;
 import HostInterface::*;

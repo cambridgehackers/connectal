@@ -24,7 +24,7 @@
 import FIFOF::*;
 import FIFO::*;
 import GetPut::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import AddressGenerator::*;
 import BRAM::*;
 import Memory::*;

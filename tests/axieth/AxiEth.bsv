@@ -13,7 +13,7 @@ import ConnectalXilinxCells::*;
 import ConnectalConfig::*;
 import CtrlMux::*;
 import HostInterface::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import AxiBits::*;
 
 import AxiIntcBvi::*;

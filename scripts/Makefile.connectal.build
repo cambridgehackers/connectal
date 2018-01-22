@@ -197,8 +197,12 @@ else
 ifneq ($(SIMULATION),)
 	@echo "not zipping xilinx"
 else
+ifneq ($(AWSF1),)
+	@echo "not zipping awsf1"
+else
 	@echo "zipping xilinx"
 	gzip -c hw/mkTop.bin > bin/mkTop.bin.gz
+endif # AWSF1
 endif #xsim
 endif #android
 else #!xilinx
@@ -389,6 +393,9 @@ bsim: prepare_bin_target $(DTOP)/bin/libconnectal-sim.so obj/mkXsimTop.ba
 	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -O -L $(DTOP)/bin  -l connectal-sim -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba
 	g++ -O -g -o bin/bsim -Iobj -I$(BLUESPECDIR)/Bluesim obj/*.o $(CONNECTALDIR)/cpp/bluesim_main.cxx -L$(BLUESPECDIR)/Bluesim/g++4_64 -lbskernel -lbsprim -lpthread -L bin -lconnectal-sim
 
+
+build/checkpoints/to_aws/mkTop.SH_CL_routed.dcp: verilog
+	CONNECTALDIR=$(CONNECTALDIR) $(CONNECTALDIR)/scripts/aws/build.sh
 
 syntax.timestamp: $(BSVFILES)
 	@#$syntax.py uses environment variables: V INTERFACES BSVDEFINES_LIST DTOP DUT_NAME

@@ -29,7 +29,7 @@ import SCCB::*;
 import FIFOF::*;
 import BRAMFIFO::*;
 import Gearbox::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import ConnectalConfig::*;
 import MemWriteEngine::*;
 import Pipe::*;

@@ -30,7 +30,7 @@ import Portal::*;
 import ConnectalMemory::*;
 import MemServer::*;
 import MemServerInternal::*;
-import MMU::*;
+import ConnectalMMU::*;
 import ConnectalConfig::*;
 import NandCfgRequest::*;
 import MMURequest::*;

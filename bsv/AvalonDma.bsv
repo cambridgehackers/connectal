@@ -25,7 +25,7 @@ import FIFO::*;
 import GetPut::*;
 import Vector::*;
 import ClientServer::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import ConnectalMemory::*;
 import AvalonMasterSlave::*;
 import AvalonBits::*;
