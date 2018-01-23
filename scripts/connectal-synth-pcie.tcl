@@ -44,7 +44,9 @@ CONFIG.AER_Enabled {true} CONFIG.AER_Multiheader {true} CONFIG.AER_Permit_Root_E
 }
 
 if {$need_pcie == "x7_gen3x8"} {
-    if {[version -short] >= "2016.1"} {
+    if {[version -short] >= "2017.1"} {
+	set pcieversion {4.4}
+    } elseif {[version -short] >= "2016.1"} {
 	set pcieversion {4.2}
     } elseif {[version -short] >= "2015.3"} {
 	set pcieversion {4.1}
@@ -92,11 +94,13 @@ if {$need_pcie == "x7_gen3x8"} {
 }
 
 if {$need_pcie == "xu_gen3x8"} {
-    if {[version -short] >= "2016.2"} {
+    if {[version -short] >= "2017.1"} {
+	set pcieversion {4.4}
+    } elseif {[version -short] >= "2016.2"} {
 	set pcieversion {4.2}
     }
     set maxlinkwidth {X8}
-    connectal_synth_ip pcie3_ultrascale $pcieversion pcie3_7x_0 [list \
+    connectal_synth_ip pcie3_ultrascale $pcieversion pcie3_ultrascale_0 [list \
 									     CONFIG.PF0_DEVICE_ID {c100} \
 									     CONFIG.PF0_MSIX_CAP_PBA_BIR {BAR_1:0} \
 									     CONFIG.PF0_MSIX_CAP_PBA_OFFSET {000001f0} \
