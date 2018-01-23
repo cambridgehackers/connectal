@@ -37,7 +37,7 @@ import DReg              ::*;
 import Gearbox           ::*;
 import FIFO              ::*;
 import FIFOF             ::*;
-import CFFIFO            ::*;
+import ConnectalFIFO     ::*;
 import SpecialFIFOs      ::*;
 import ClientServer      ::*;
 import Real              ::*;
