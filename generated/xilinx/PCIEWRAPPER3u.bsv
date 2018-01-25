@@ -296,11 +296,12 @@ interface PcieWrap#(numeric type lanes);
     method Reset     user_reset();
 endinterface
 import "BVI" pcie3_ultrascale_0 =
-module mkPcieWrap#(Clock sys_clk, Reset sys_reset)(PcieWrap#(lanes));
+module mkPcieWrap#(Clock sys_clk, Clock sys_clk_gt, Reset sys_reset)(PcieWrap#(lanes));
     let lanes = valueOf(lanes);
     output_clock user_clk(user_clk);
     output_reset user_reset(user_reset);
-    default_clock sys_clk(sys_clk_gt) = sys_clk;
+    default_clock sys_clk(sys_clk) = sys_clk;
+    input_clock sys_clk_gt(sys_clk_gt) = sys_clk_gt;
      /* from clock*/
     default_reset sys_reset(sys_reset) = sys_reset;
     interface PciewrapCfg     cfg;

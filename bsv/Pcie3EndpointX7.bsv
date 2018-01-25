@@ -193,15 +193,15 @@ typedef enum {
    } Pcie3CfgType deriving (Bits,Eq);
 
 (* synthesize *)
-module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
+module mkPcieEndpointX7#(Clock pcie_sys_clk_gt)(PcieEndpointX7#(PcieLanes));
 
    PCIEParams params = defaultValue;
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
    Reset defaultResetInverted <- mkResetInverter(defaultReset, clocked_by defaultClock);
-   PcieWrap#(PcieLanes) pcie_ep <- mkPcieWrap(defaultClock, 
+   PcieWrap#(PcieLanes) pcie_ep <- mkPcieWrap(defaultClock,
 `ifdef XilinxUltrascale
-      defaultReset
+      pcie_sys_clk_gt, defaultReset
 `else
       defaultResetInverted
 `endif
@@ -556,6 +556,13 @@ module mkPcieEndpointX7(PcieEndpointX7#(PcieLanes));
       endrule
       return toPipeOut(changeFifo);
    endmodule
+
+   // let phy_link_status_probe <- mkProbe(clocked_by pcie_ep.user_clk, reset_by pcie_ep.user_reset);
+   // let ltssm_state_probe <- mkProbe(clocked_by pcie_ep.user_clk, reset_by pcie_ep.user_reset);
+   // rule probe_phy_link_status;
+   //    phy_link_status_probe <= pcie_ep.cfg.phy_link_status;
+   //    ltssm_state_probe <= pcie_ep.cfg.ltssm_state;
+   // endrule
 
 `ifdef DebugPcieStateMachine
    Vector#(21,Tuple2#(Pcie3CfgType,Bit#(24))) changeValues = vec(
