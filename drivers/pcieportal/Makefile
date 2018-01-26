@@ -83,14 +83,14 @@ insmod: rmmod
 	chmod agu+rw /dev/portalmem
 
 .PHONY: install-dkms
-install-dkms: pcieportal_signature_file.h
+install-dkms: pcieportal_signature_file.h driverversion.h
 	make -C ../portalmem portalmem_signature_file.h
 	mkdir -p $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
 	sed "s/@VERSION@/$(VERSION)/" dkms.conf | sed "s/@PKG_NAME@/$(PKG_NAME)/" > dkms.conf.out
 	sed "s/@VERSION@/$(VERSION)/" Makefile.dkms > Makefile.dkms.out
 	cp -fv dkms.conf.out $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/dkms.conf
 	cp -fv Makefile.dkms.out $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/Makefile
-	cp -fv pcieportal_signature_file.h pcieportal.c pcieportal.h $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
+	cp -fv pcieportal_signature_file.h pcieportal.c pcieportal.h driverversion.h $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
 	cp -fv ../../cpp/*.[ch] ../portalmem/*.[ch] \
 	../../generated/cpp/*.[ch] \
 	$(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)

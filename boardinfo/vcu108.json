@@ -6,8 +6,8 @@
         "partname" : "xcvu095-ffva2104-2-e",
         "need_pcie" : "xu_gen3x8",
         "TOP" : "PcieTop",
-        "constraints": ["constraints/xilinx/nfsume.xdc"],
-        "implconstraints": ["constraints/xilinx/nfsume.xdc", "constraints/xilinx/pcie-clocks.xdc"],
+        "constraints": ["constraints/xilinx/vcu108.xdc"],
+        "implconstraints": ["constraints/xilinx/vcu108.xdc", "constraints/xilinx/pcie-clocks.xdc"],
         "runscript" : "run.pcietest",
         "CONNECTALFLAGS" : ["--mainclockperiod=4", "--derivedclockperiod=4", "--pcieclockperiod=4"],
         "rewireclockstring" : ""
@@ -448,25 +448,25 @@
         }
     },
     "PCIE": {
-        "PCIE_SYS_RESETN": {
+        "RST_N_pci_sys_reset_n": {
             "IOSTANDARD": "LVCMOS18",
-            "PACKAGE_PIN": "TBD"
+            "PACKAGE_PIN": "AM17"
         },
         "PCIE_PRSNT_B_LS": {
             "IOSTANDARD": "LVCMOS18",
-            "PACKAGE_PIN": "TBD"
+            "PACKAGE_PIN": "NOTCONNECTED"
         },
         "PCIE_WAKE": {
             "IOSTANDARD": "LVCMOS18",
-            "PACKAGE_PIN": "TBD"
+            "PACKAGE_PIN": "AY17"
         },
-        "PCIE_SYSCLK_N": {
+        "CLK_pci_sys_clk_n": {
             "IOSTANDARD": "LVDS",
-            "PACKAGE_PIN": "TBD"
+            "PACKAGE_PIN": "AL8"
         },
-        "PCIE_SYSCLK_P": {
+        "CLK_pci_sys_clk_p": {
             "IOSTANDARD": "LVDS",
-            "PACKAGE_PIN": "TBD"
+            "PACKAGE_PIN": "AL9"
         }
     },
     "PMODCTRL": {
