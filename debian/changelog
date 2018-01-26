@@ -1,3 +1,9 @@
+connectal (18.01.2-1precise1) precise; urgency=medium
+
+  * Attemt to fix DKMS build
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 26 Jan 2018 09:10:40 -0500
+
 connectal (18.01.1-1precise1) precise; urgency=medium
 
   * Updated pcie drivers for lack of KBUILD_STR
