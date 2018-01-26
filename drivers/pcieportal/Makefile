@@ -33,12 +33,10 @@ cflags-y += -I$(PWD)
 pcieportal_signature_file.h:
 	md5sum *.c ../../generated/cpp/*.c | grep -v mod.c | sed -f ../../scripts/driver_signature.sed >pcieportal_signature_file.h
 
-pcieportal.c: driverversion.h
-
 driverversion.h:
-	echo '#define DRIVER_VERSION "@VERSION@"' > driverversion.h
+	VERSION=$(VERSION) echo "#define DRIVER_VERSION \"$$VERSION\"" > driverversion.h
 
-pcieportal.ko: pcieportal.c pcieportal.h pcieportal_signature_file.h
+pcieportal.ko: pcieportal.c pcieportal.h pcieportal_signature_file.h driverversion.h
 	$(Q)$(MAKE) -C $(KROOT) M=$(PWD) modules
 
 .PHONY: modules_check
@@ -83,7 +81,9 @@ insmod: rmmod
 	chmod agu+rw /dev/portalmem
 
 .PHONY: install-dkms
-install-dkms: pcieportal_signature_file.h driverversion.h
+install-dkms: pcieportal_signature_file.h
+	rm -f driverversion.h
+	make driverversion.h
 	make -C ../portalmem portalmem_signature_file.h
 	mkdir -p $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
 	sed "s/@VERSION@/$(VERSION)/" dkms.conf | sed "s/@PKG_NAME@/$(PKG_NAME)/" > dkms.conf.out

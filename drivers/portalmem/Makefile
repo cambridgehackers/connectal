@@ -11,8 +11,7 @@ include $(CONNECTALDIR)/Makefile.version
 
 obj-m = portalmem.o
 
-ccflags-y := -I$(CONNECTALDIR) \
-	-DDRIVER_VERSION="\"$(VERSION)\""
+ccflags-y := -I$(CONNECTALDIR)
 
 ifeq ("$(KROOT)","")
 KVERSION=$(shell uname -r)
@@ -24,12 +23,15 @@ endif
 
 .PHONY: portalmem_signature_file.h
 
-portalmem.ko: portalmem.h portalmem.c portalmem_signature_file.h
+portalmem.ko: portalmem.h portalmem.c portalmem_signature_file.h driverversion.h
 ifneq ("$(PARAM)","")
 	$(Q)$(MAKE) $(PARAM) -C $(KROOT) $(DEFCONFIG)
 	$(Q)$(MAKE) $(PARAM) -C $(KROOT) -j8 zImage
 endif
 	$(Q)$(MAKE) $(PARAM) -C $(KROOT) M=$(PWD) modules
+
+driverversion.h:
+	VERSION=$(VERSION) echo "#define DRIVER_VERSION \"$VERSION\"" > driverversion.h
 
 portalmem_signature_file.h:
 	md5sum *.c | grep -v mod.c | sed -f ../../scripts/driver_signature.sed >portalmem_signature_file.h
