@@ -30,7 +30,7 @@ import Leds::*;
 
 interface ZedboardRobotPins;
    interface MaxSonarPins maxsonar;
-   interface SpiMasterPins spi;
+   interface SpiMasterPins#(1) spi;
    interface HBridge2Pins hbridge;
    interface LEDS leds;
 endinterface

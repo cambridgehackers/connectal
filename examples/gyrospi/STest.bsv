@@ -31,7 +31,7 @@ interface STestIndication;
 endinterface
 
 interface STestPins;
-   interface SpiMasterPins spi;
+   interface SpiMasterPins#(1) spi;
 endinterface
 
 interface STest;
@@ -40,17 +40,17 @@ interface STest;
 endinterface
 
 module mkSTest#(STestIndication indication)(STest);
-   SPIMaster#(Bit#(16))  spiMaster <- mkSPIMaster(1000, True);
+   SPIMaster#(Bit#(16),1)  spiMaster <- mkSPIMaster(1000, True);
    Reg#(Bool) inUse <- mkReg(False);
    rule read_reg_resp;
-      let rv <- spiMaster.response.get;
+      let rv <- spiMaster.response[0].get;
       indication.result(rv);
       inUse <= False;
    endrule
       
    interface STestRequest request;
       method Action request(Bit#(16) addr_data) if (!inUse);
-         spiMaster.request.put(addr_data);
+         spiMaster.request[0].put(addr_data);
          inUse <= True;
       endmethod
    endinterface
