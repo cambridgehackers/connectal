@@ -88,16 +88,16 @@ spkg:
 	git clean -fdx
 	git checkout debian
 	sed -i s/precise/precise/g debian/changelog
-	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu --git-ignore-new -S -tc '--git-upstream-tag=v%(version)s'
+	gbp buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu --git-ignore-new -S -tc '--git-upstream-tag=v%(version)s'
 	git checkout debian
 	sed -i s/precise/trusty/g debian/changelog
-	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu --git-ignore-new -S -tc '--git-upstream-tag=v%(version)s'
+	gbp buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu --git-ignore-new -S -tc '--git-upstream-tag=v%(version)s'
 	git checkout debian
 	sed -i s/precise/xenial/g debian/changelog
-	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu --git-ignore-new -S -tc '--git-upstream-tag=v%(version)s'
+	gbp buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu --git-ignore-new -S -tc '--git-upstream-tag=v%(version)s'
 	git checkout debian
 	sed -i s/precise/artful/g debian/changelog
-	git buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu --git-ignore-new -S -tc '--git-upstream-tag=v%(version)s'
+	gbp buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu --git-ignore-new -S -tc '--git-upstream-tag=v%(version)s'
 	git checkout debian
 
 upload:
