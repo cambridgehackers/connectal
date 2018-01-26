@@ -343,10 +343,17 @@ static struct dma_buf_ops dma_buf_ops = {
         .release          = pa_dma_buf_release,
         .begin_cpu_access = pa_dma_buf_begin_cpu_access,
         .end_cpu_access   = pa_dma_buf_end_cpu_access,
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,12,0))
         .kmap_atomic      = pa_dma_buf_kmap,
         .kunmap_atomic    = pa_dma_buf_kunmap,
         .kmap             = pa_dma_buf_kmap,
         .kunmap           = pa_dma_buf_kunmap,
+#else
+        .map_atomic       = pa_dma_buf_kmap,
+        .unmap_atomic     = pa_dma_buf_kunmap,
+        .map              = pa_dma_buf_kmap,
+        .unmap            = pa_dma_buf_kunmap,
+#endif
         .vmap             = pa_dma_buf_vmap,
         .vunmap           = pa_dma_buf_vunmap,
 };
