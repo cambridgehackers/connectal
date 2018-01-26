@@ -27,9 +27,9 @@
 //import Portal::*;
 //import ConnectalConfig::*;
 //import CtrlMux::*;
-//import MemTypes::*;
+//import ConnectalMemTypes::*;
 //import MemServer::*;
-//import MMU::*;
+//import ConnectalMMU::*;
 //import PS7LIB::*;
 //import PPS7LIB::*;
 //import FMComms1Request::*;

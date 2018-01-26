@@ -29,7 +29,7 @@ import SpecialFIFOs::*;
 
 //Connectal libraries
 import Portal::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import RegFileA::*;
 
 interface Directory#(numeric type _n,

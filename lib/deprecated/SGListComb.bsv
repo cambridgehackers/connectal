@@ -28,7 +28,7 @@ import Vector::*;
 import GetPut::*;
 import BRAMFIFO::*;
 import BRAM::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import StmtFSM::*;
 import ClientServer::*;
 import ConnectalMemory::*;

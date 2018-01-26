@@ -25,7 +25,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import FIFOF::*;
-import EHRM::*;
+import ConnectalEHR::*;
 
 // This Fifo2 <- mkCFFifo generates a two element FIFO where enq and deq are conflict free
 // {notEmpty, first} < deq < clear < canon

@@ -35,7 +35,7 @@ import MemServer         :: *;
 import SGList::*;
 import MemReadEngine     :: *;
 import AxiDma            :: *;
-import MemTypes          :: *;
+import ConnectalMemTypes          :: *;
 import AxiMasterSlave    :: *;
 import DmaUtils          :: *;
 

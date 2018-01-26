@@ -29,7 +29,7 @@ import StmtFSM::*;
 import ClientServer::*;
 import GetPut::*;
 import Probe::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemReadEngine::*;
 import Pipe::*;
 import Dma2BRAM::*;

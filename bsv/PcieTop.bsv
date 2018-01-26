@@ -34,7 +34,7 @@ import Xilinx            :: *;
 import Portal            :: *;
 import Top               :: *;
 import PcieCsr           :: *;
-import MemTypes          :: *;
+import ConnectalMemTypes          :: *;
 import Bscan             :: *;
 import ConnectalClocks   :: *;
 import GetPutWithClocks  :: *;

@@ -25,7 +25,7 @@ import FIFO::*;
 import FIFOF::*;
 import Vector::*;
 import StmtFSM::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemReadEngine::*;
 import MemWriteEngine::*;
 import ConnectalConfig::*;

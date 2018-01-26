@@ -30,7 +30,7 @@ import Connectable::*;
 import ConnectalConfig::*;
 import ConnectalMemory::*;
 import Pipe::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import HostInterface::*;
 import MemReadEngine::*;
 import MemWriteEngine::*;

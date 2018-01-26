@@ -28,7 +28,7 @@ import GetPut::*;
 import StmtFSM::*;
 import BRAM::*;
 import Connectable::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import DmaUtils::*;
 import Dma2BRAM::*;
 

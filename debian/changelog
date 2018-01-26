@@ -1,8 +1,15 @@
+connectal (18.01.1-1precise1) precise; urgency=medium
+
+  * Updated pcie drivers for lack of KBUILD_STR
+  * Some AWS F1 support
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 10 Jan 2018 13:03:58 -0500
+
 connectal (17.09.2-1precise1) precise; urgency=medium
 
   * Removed KBUILD_STR from Makefile.dkms
 
- -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 12 Sep 2017 12:46:55 -0400
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 12 Sep 2017 12:46:55 -
 
 connectal (17.09.1-1precise1) precise; urgency=medium
 

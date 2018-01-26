@@ -26,7 +26,7 @@ import HostInterface::*;
 import Vector::*;
 import CtrlMux::*;
 import Portal::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import Leds::*;
 import PS7LIB::*;
 import SPI::*;

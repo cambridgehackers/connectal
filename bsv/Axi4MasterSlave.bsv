@@ -26,7 +26,7 @@ import FIFO::*;
 import GetPut::*;
 import Connectable::*;
 import RegFile::*;
-import MemTypes::*; // null_get, null_put
+import ConnectalMemTypes::*; // null_get, null_put
 
 typedef struct {
    Bit#(addrWidth) address;
@@ -133,7 +133,7 @@ endinstance
 
 function Axi4ReadRequest#(axiAddrWidth,idWidth) toAxi4ReadRequest(PhysMemRequest#(addrWidth,dataBusWidth) req)
    provisos (Add#(axiAddrWidth,a__,addrWidth)
-	     ,Add#(b__, idWidth, 6));
+	     ,Add#(b__, idWidth, MemTagSize));
    Axi4ReadRequest#(axiAddrWidth,idWidth) axireq  = unpack(0);
    axireq.address = truncate(req.addr);
    axireq.id   = truncate(req.tag);
@@ -150,7 +150,7 @@ function Axi4ReadRequest#(axiAddrWidth,idWidth) toAxi4ReadRequest(PhysMemRequest
 endfunction
 function Axi4WriteRequest#(axiAddrWidth,idWidth) toAxi4WriteRequest(PhysMemRequest#(addrWidth,dataBusWidth) req)
    provisos (Add#(axiAddrWidth,a__,addrWidth)
-	     ,Add#(b__, idWidth, 6));
+	     ,Add#(b__, idWidth, MemTagSize));
    Axi4WriteRequest#(axiAddrWidth,idWidth) axireq  = unpack(0);
    axireq.address = truncate(req.addr);
    axireq.id   = truncate(req.tag);
@@ -167,7 +167,7 @@ function Axi4WriteRequest#(axiAddrWidth,idWidth) toAxi4WriteRequest(PhysMemReque
 endfunction
 
 instance MkPhysMemSlave#(Axi4Slave#(axiAddrWidth,dataWidth,idWidth),addrWidth,dataWidth)
-      provisos (Add#(axiAddrWidth,a__,addrWidth),Add#(b__, idWidth, 6));
+      provisos (Add#(axiAddrWidth,a__,addrWidth),Add#(b__, idWidth, MemTagSize));
    module mkPhysMemSlave#(Axi4Slave#(axiAddrWidth,dataWidth,idWidth) axiSlave)(PhysMemSlave#(addrWidth,dataWidth));
       FIFOF#(PhysMemRequest#(addrWidth,dataWidth)) arfifo <- mkFIFOF();
       FIFOF#(MemData#(dataWidth)) rfifo <- mkFIFOF();

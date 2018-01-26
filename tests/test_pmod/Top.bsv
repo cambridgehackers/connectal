@@ -23,7 +23,7 @@
 import Vector::*;
 import CtrlMux::*;
 import Portal::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import ConnectalConfig::*;
 import PmodControllerRequest::*;
 import PmodControllerIndication::*;

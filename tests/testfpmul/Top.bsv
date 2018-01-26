@@ -24,7 +24,7 @@ import FIFO::*;
 import Connectable::*;
 import Portal::*;
 import CtrlMux::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import FpMulIndication::*;
 import FpMulRequest::*;
 import RbmTypes::*;

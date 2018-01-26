@@ -17,7 +17,7 @@
 */
 
 import Clocks::*;
-import CFFIFO::*;
+import ConnectalFIFO::*;
 import DefaultValue::*;
 import FIFOF::*;
 import XilinxCells::*;

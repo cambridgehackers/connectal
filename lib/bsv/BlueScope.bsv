@@ -28,7 +28,7 @@ import BRAMFIFO::*;
 import GetPut::*;
 import Connectable::*;
 
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemWriteEngine::*;
 import ClientServer::*;
 

@@ -31,7 +31,7 @@ import SpecialFIFOs::*;
 import ConfigCounter::*;
 import BRAMFIFOFLevel::*;
 import GetPut::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 
 function MemReadClient#(dataWidth) orc(DmaReadBuffer#(dataWidth,bufferDepth) rb) = rb.dmaClient;
 function MemWriteClient#(dataWidth) owc(DmaWriteBuffer#(dataWidth,bufferDepth) wb) = wb.dmaClient;

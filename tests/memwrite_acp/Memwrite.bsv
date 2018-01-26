@@ -23,7 +23,7 @@ import Vector::*;
 import FIFOF::*;
 import ClientServer::*;
 import GetPut::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import MemWriteEngine::*;
 import Pipe::*;
 import ConnectalConfig::*;

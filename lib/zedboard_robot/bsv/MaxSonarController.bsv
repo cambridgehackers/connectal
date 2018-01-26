@@ -24,7 +24,7 @@
 `include "ConnectalProjectConfig.bsv"
 import Leds::*;
 import Vector::*;
-import MemTypes::*;
+import ConnectalMemTypes::*;
 import GetPut::*;
 import Gearbox::*;
 import FIFO::*;

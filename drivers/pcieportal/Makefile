@@ -23,8 +23,7 @@ export BS_MOD_DIR=$(DESTDIR)/lib/modules/$(KVERSION)/connectal
 .PHONY: default
 default: pcieportal.ko ../portalmem/portalmem.ko
 
-EXTRA_CFLAGS := -I$(CONNECTALDIR)/drivers/pciportal -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -I$(CONNECTALDIR)/drivers/portalmem -I$(CONNECTALDIR)/generated/cpp \
-	-DDRIVER_VERSION="\"$(VERSION)\""
+EXTRA_CFLAGS := -I$(CONNECTALDIR)/drivers/pciportal -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -I$(CONNECTALDIR)/drivers/portalmem -I$(CONNECTALDIR)/generated/cpp
 cflags-y += -I$(PWD)
 
 ../portalmem/portalmem.ko: ../portalmem/portalmem.c
@@ -33,6 +32,11 @@ cflags-y += -I$(PWD)
 .PHONY: pcieportal_signature_file.h
 pcieportal_signature_file.h:
 	md5sum *.c ../../generated/cpp/*.c | grep -v mod.c | sed -f ../../scripts/driver_signature.sed >pcieportal_signature_file.h
+
+pcieportal.c: driverversion.h
+
+driverversion.h:
+	echo '#define DRIVER_VERSION "@VERSION@"' > driverversion.h
 
 pcieportal.ko: pcieportal.c pcieportal.h pcieportal_signature_file.h
 	$(Q)$(MAKE) -C $(KROOT) M=$(PWD) modules
