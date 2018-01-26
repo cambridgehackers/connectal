@@ -1,3 +1,9 @@
+connectal (18.01.4-1precise1) precise; urgency=medium
+
+  * Fix portalmem DKMS build
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 26 Jan 2018 15:39:21 -0500
+
 connectal (18.01.3-1precise1) precise; urgency=medium
 
   * Update pcieportal and portalmem for kernel 4.13.x
