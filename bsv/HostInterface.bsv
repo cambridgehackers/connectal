@@ -140,6 +140,12 @@ interface PcieHostTop;
 `ifdef XILINX_SYS_CLK
    interface Clock tsys_clk_200mhz;
    interface Clock tsys_clk_200mhz_buf;
+`ifdef VirtexUltrascale
+   interface Clock tsys_clk1_300mhz;
+   interface Clock tsys_clk1_300mhz_buf;
+   interface Clock tsys_clk2_300mhz;
+   interface Clock tsys_clk2_300mhz_buf;
+`endif
 `endif
    interface Clock tpci_clk_100mhz_buf;
    interface PcieEndpointX7#(PcieLanes) tep7;
@@ -175,6 +181,12 @@ interface HostInterface;
 `ifdef XILINX_SYS_CLK
    interface Clock tsys_clk_200mhz;
    interface Clock tsys_clk_200mhz_buf;
+`ifdef VirtexUltrascale
+   interface Clock tsys_clk1_300mhz;
+   interface Clock tsys_clk1_300mhz_buf;
+   interface Clock tsys_clk2_300mhz;
+   interface Clock tsys_clk2_300mhz_buf;
+`endif
 `endif
 endinterface
 
