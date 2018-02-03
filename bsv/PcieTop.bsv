@@ -68,8 +68,13 @@ import Platform          :: *;
 `endif
 
 `ifdef XILINX_SYS_CLK
-`define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n,
+`ifdef VirtexUltrascale
+`define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n, Clock sys_clk1_300_p, Clock sys_clk1_300_n, Clock sys_clk2_300_p, Clock sys_clk2_300_n, 
+`define SYS_CLK_ARG sys_clk_p, sys_clk_n, sys_clk1_300_p, sys_clk1_300_n, sys_clk2_300_p, sys_clk2_300_n, 
+`else
+`define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n, 
 `define SYS_CLK_ARG sys_clk_p, sys_clk_n,
+`endif
 `else
 `define SYS_CLK_PARAM
 `define SYS_CLK_ARG
