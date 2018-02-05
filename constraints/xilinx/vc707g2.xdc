@@ -73,7 +73,8 @@ set_property PULLUP     true        [get_ports { RST_N_pci_sys_reset_n }]
 # Please refer to the Virtex-7 GT Transceiver User Guide
 # (UG) for guidelines regarding clock resource selection.
 #
-set_property LOC IBUFDS_GTE2_X1Y5  [get_cells { *pci_clk_100mhz_buf }]
+set_property LOC IBUFDS_GTE2_X1Y5  [get_cells { host_pcieHostTop_clockGen }]
+
 
 set_property LOC MMCME2_ADV_X1Y1 [get_cells -hier -filter { NAME =~ *clkgen_pll }]
 
