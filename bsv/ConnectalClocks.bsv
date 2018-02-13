@@ -59,7 +59,8 @@ module mkB2C1(B2C1);
     default_clock clk();
     default_reset rst();
     output_clock c(OUT);
-    method inputclock(IN) enable((*inhigh*) en_inputclock);
+    // method inputclock(IN) enable((*inhigh*) en_inputclock);
+   method inputclock(IN) enable((*inhigh*) en_inputclock) clocked_by(c);
     schedule ( inputclock) CF ( inputclock);
 endmodule
 

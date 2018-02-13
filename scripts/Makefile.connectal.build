@@ -399,7 +399,8 @@ $(VFILE): $(addprefix obj/, $(patsubst %.bsv, %.bo, $(notdir $(TOPBSVFILE))))
 	$(Q)sed -i 's|Prelude_inst_changeSpecialWires|csw|g' verilog/*.v
 	$(Q)sed -i 's|  reg.*PROBE[,;]|(* mark_debug="true" *)&|' verilog/*.v 
 	$(Q)sed -i 's|  wire.*PROBE[,;]|(* mark_debug="true" *)&|' verilog/*.v 
-	$(Q)sed -i 's|  wire.*PROBE_VALID[,;]|(* mark_debug="true" *)&|' verilog/*.v 
+	$(Q)sed -i 's|  wire.*PROBE_VALID[,;]|(* mark_debug="true" *)&|' verilog/*.v
+	$(Q)sed -i '/assign/{N; s|^\s*assign\s\+CLK_.*_deleteme_unused_clock =.*;|\/\/deleteme CLK ports disconnected from nets|}' verilog/$(MKTOP).v
 
 obj/Makefile: $(OBJMAKEFILE_DEP) syntax.timestamp
 	@mkdir -p obj
