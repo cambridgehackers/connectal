@@ -15,11 +15,13 @@ set_property LOC M26 [get_ports {GPIO_leds[0]}]
 set_property LOC T24 [get_ports {GPIO_leds[1]}]
 set_property LOC T25 [get_ports {GPIO_leds[2]}]
 set_property LOC R26 [get_ports {GPIO_leds[3]}]
+set_property LOC U4 [get_ports {RST_cpu_reset}]
 
 set_property IOSTANDARD LVCMOS33 [get_ports {GPIO_leds[0]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {GPIO_leds[1]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {GPIO_leds[2]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {GPIO_leds[3]}]
+set_property IOSTANDARD LVCMOS15 [get_ports {RST_cpu_reset}]
 
 set_property SLEW SLOW [get_ports GPIO_leds]
 set_property DRIVE 12 [get_ports GPIO_leds]
