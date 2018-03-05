@@ -58,6 +58,10 @@ build.%: gen.%
 
 verilog.%: gen.%
 	$(MAKE) -C $(PROJECTDIR) --no-print-directory verilog
+exe.%: gen.%
+	$(MAKE) -C $(PROJECTDIR) --no-print-directory exe
+bits.%: verilog.%
+	$(MAKE) -C $(PROJECTDIR) --no-print-directory bits
 
 run.%:
 ifeq ($(PROJECTDIR),)
