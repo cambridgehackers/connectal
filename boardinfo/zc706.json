@@ -765,25 +765,25 @@
 	}
     },
     "pins": {
-	"GPIO_leds[0]": {
+	"GPIO_LEDS[0]": {
 	    "PACKAGE_PIN": "A17",
 	    "IOSTANDARD": "LVCMOS15",
 	    "slew": "SLOW",
 	    "PIO_DIRECTION": "OUTPUT"
 	},
-	"GPIO_leds[1]": {
+	"GPIO_LEDS[1]": {
 	    "PACKAGE_PIN": "W21",
 	    "IOSTANDARD": "LVCMOS25",
 	    "slew": "SLOW",
 	    "PIO_DIRECTION": "OUTPUT"
 	},
-	"GPIO_leds[2]": {
+	"GPIO_LEDS[2]": {
 	    "PACKAGE_PIN": "G2",
 	    "IOSTANDARD": "LVCMOS15",
 	    "slew": "SLOW",
 	    "PIO_DIRECTION": "OUTPUT"
 	},
-	"GPIO_leds[3]": {
+	"GPIO_LEDS[3]": {
 	    "PACKAGE_PIN": "Y21",
 	    "IOSTANDARD": "LVCMOS25",
 	    "slew": "SLOW",
