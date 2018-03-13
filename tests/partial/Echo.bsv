@@ -21,7 +21,9 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 import Bounce::*;
+`ifdef RedefInstance
 import `RedefInstance::*;
+`endif
 import Pipe::*;
 
 interface EchoIndication;

@@ -12,6 +12,6 @@ module mkProcessorTop(Pins);
    Vector#(NumCaches, Cache)  caches <- mapM(mkCache, mems); // and here
 
    interface mod;
-     interface pins = memory.pins;
+     interface Pins pins = memory.pins;
    endinterface
 endmodule

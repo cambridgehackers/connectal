@@ -1,3 +1,4 @@
+`include "ConnectalProjectConfig.bsv"
 
 import ConnectalConfig::*;
 import Vector::*;
@@ -11,7 +12,9 @@ import MemWriteEngine::*;
 import ConnectalMemTypes::*;
 import MemServer::*;
 import AccelIfcNames::*;
+`ifdef PinTypeInclude
 import `PinTypeInclude::*;
+`endif
 import SerialIndication::*;
 import Serial::*;
 import SimpleRequest::*;
@@ -21,7 +24,6 @@ import BlockDev::*;
 import SerialRequest::*;
 import SimpleRequest::*;
 import BlockDevRequest::*;
-`include "ConnectalProjectConfig.bsv"
 
 interface Pins;
      interface SerialPort pins0;
