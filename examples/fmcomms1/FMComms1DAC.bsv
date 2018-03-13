@@ -32,7 +32,7 @@ import Clocks::*;
 import DefaultValue::*;
 
 
-import extraXilinxCells::*;
+import ExtraXilinxCells::*;
 
 (* always_enabled *)
 interface FMComms1DACPins;

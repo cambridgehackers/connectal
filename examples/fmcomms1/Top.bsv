@@ -49,7 +49,7 @@ import BlueScopeEventPIO::*;
 import FMComms1ADC::*;
 import FMComms1DAC::*;
 import FMComms1::*;
-import extraXilinxCells::*;
+import ExtraXilinxCells::*;
 import FMComms1Pins::*;
 
 
