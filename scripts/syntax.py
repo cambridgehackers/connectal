@@ -195,7 +195,7 @@ t_LPAREN = r'\('
 t_LPARENSTAR = r'\(\*'
 t_MINUS = r'[-]'
 t_NEQ = r'!='
-t_NUM = r'(([0-9]+\'?[bdh\.]?[0-9a-zA-Z]*)|(\'[bdh\.]?[0-9a-zA-Z]+))'
+t_NUM = r'(([0-9]+\'?[bdh\.]?[0-9a-zA-Z?]*)|(\'[bdh\.]?[0-9a-zA-Z?]+))'
 t_PERCENT = r'%'
 t_PLUS = r'\+'
 t_QUESTION = r'\?'
@@ -227,7 +227,7 @@ def p_error(errtoken):
     return None
     
 def t_VAR(t):
-    r'`?([a-zA-Z_][$a-zA-Z0-9_]*)|(\\[-+*/%][*]?)'
+    r'`?([a-zA-Z_][$a-zA-Z0-9_]*)|(\\[-+*/|^&][*]?)'
     t.type = reserved.get(t.value,'VAR')    
     return t
 
@@ -304,8 +304,25 @@ def p_colonVar(p):
                 | COLON VAR'''
 
 def p_expression(p):
-    '''expression : binaryExpression'''
+    '''expression : caseExpr
+                  | binaryExpression'''
     p[0] = p[1]
+
+def p_caseExprItem(p):
+    '''caseExprItem : pattern COLON expression SEMICOLON'''
+
+def p_caseExprItems(p):
+    '''caseExprItems :
+                 | caseExprItems caseExprItem'''
+
+def p_defaultExprItem(p):
+    '''defaultExprItem :
+                   | TOKDEFAULT expression SEMICOLON
+                   | TOKDEFAULT COLON expression SEMICOLON'''
+
+def p_caseExpr(p):
+    '''caseExpr : TOKCASE LPAREN expression RPAREN caseExprItems defaultExprItem TOKENDCASE
+                | TOKCASE LPAREN expression RPAREN TOKMATCHES caseExprItems defaultExprItem TOKENDCASE'''
 
 def p_binaryExpression(p):
     '''binaryExpression : unaryExpression
@@ -399,7 +416,8 @@ def p_pattern(p):
                | TOKTAGGED VAR LBRACE structPatternElements RBRACE
                | LBRACE patterns RBRACE
                | DOT VAR
-               | DOT STAR'''
+               | DOT STAR
+               | NUM'''
 
 def p_patterns(p):
     '''patterns : pattern
