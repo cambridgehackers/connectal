@@ -71,7 +71,7 @@ endmodule
 // This wrapper was written by hand but could be generated from the
 // HLS-generated Verilog by knowing its conventions for generating
 // module interfaces
-interface Vadd64;
+interface Vaddhls;
    interface Put#(Bit#(32)) in0;
    interface Put#(Bit#(32)) in1;
    interface Get#(Bit#(32)) out;
@@ -79,7 +79,7 @@ interface Vadd64;
    method ActionValue#(Bit#(1)) done();
 endinterface
 
-module mkVadd64#(Integer fifoDepth)(Vadd64);
+module mkVaddhls#(Integer fifoDepth)(Vaddhls);
    VaddBvi vadd <- mkVaddBvi();
    
    FIFOF#(Bit#(32)) in0Fifo <- mkSizedFIFOF(fifoDepth);
