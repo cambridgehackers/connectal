@@ -88,6 +88,9 @@ endif
 ifeq ($(BSCMAJOR), 2016)
     BSCFLAGS_COMMON += -D ClockDefaultParam
 endif
+ifeq ($(BSCMAJOR), 2017)
+    BSCFLAGS_COMMON += -D ClockDefaultParam
+endif
 ifeq ($(BOARD),bluesim)
     BSCFLAGS_COMMON += -sim
 else
