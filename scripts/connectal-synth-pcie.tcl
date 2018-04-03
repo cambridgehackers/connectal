@@ -16,9 +16,6 @@ if {"$XILINX" == "1"} {
     if {[version -short] >= "2016.1"} {
 	set x7_pcieversion {3.3}
     }
-    if {[version -short] >= "2017.1"} {
-	set x7_pcieversion {4.3}
-    }
 }
 
 if {$need_pcie == "x7_gen1x8"} {
@@ -44,6 +41,11 @@ CONFIG.AER_Enabled {true} CONFIG.AER_Multiheader {true} CONFIG.AER_Permit_Root_E
 }
 
 if {$need_pcie == "x7_gen3x8"} {
+
+    if {[version -short] >= "2017.1"} {
+	set x7_pcieversion {4.3}
+    }
+
     set maxlinkwidth {X8}
     connectal_synth_ip pcie3_7x $x7_pcieversion pcie3_7x_0 [list \
 							 CONFIG.PL_LINK_CAP_MAX_LINK_WIDTH {X8} CONFIG.PL_LINK_CAP_MAX_LINK_SPEED {8.0_GT/s} \
