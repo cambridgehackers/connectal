@@ -93,7 +93,7 @@ module mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    TLPDispatcher dispatcher <- mkTLPDispatcher;
    TLPArbiter arbiter <- mkTLPArbiter;
    MemToPcie#(DataBusWidth) sEngine <- mkMemToPcieSynth(my_pciId);
-`ifdef PCIE3
+`ifdef XilinxUltrascale
    MemInterrupt intr <- mkMemInterrupt(my_pciId);
 `endif
    Vector#(PortMax, PcieToMem) mvec;
@@ -304,7 +304,9 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_
 `ifdef PCIE3
    mkConnection(ep7.tlpr, pciehost.pcir, clocked_by pcieClock_, reset_by pcieReset_);
    mkConnection(ep7.tlpc, pciehost.pcic, clocked_by pcieClock_, reset_by pcieReset_);
+`ifndef PCIE_CHANGES_HOSTIF
    mkConnection(ep7.regChanges, pciehost.changes);
+`endif
    let ipciehost = (interface PcieHost;
 		    interface msixEntry = pciehost.msixEntry;
 		    interface master = pciehost.master;
@@ -316,7 +318,9 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_
 		    endinterface);
 `else
    mkConnection(ep7.tlp, pciehost.pci, clocked_by pcieClock_, reset_by pcieReset_);
+`ifndef PCIE_CHANGES_HOSTIF
    mkConnection(ep7.regChanges, pciehost.changes, clocked_by pcieClock_, reset_by pcieReset_);
+`endif
    let ipciehost = pciehost;
 `endif
 
@@ -334,6 +338,9 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_
 
    interface PcieEndpointX7 tep7 = ep7;
    interface PcieHost tpciehost = ipciehost;
+`ifdef PCIE_CHANGES_HOSTIF
+   interface PipeOut tchanges = ep7.regChanges;
+`endif
 
    interface pcieClock = ep7.epPcieClock;
    interface pcieReset = ep7.epPcieReset;

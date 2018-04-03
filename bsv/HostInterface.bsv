@@ -136,6 +136,9 @@ endinterface
 
 interface PcieHostTop;
    interface PcieHost#(DataBusWidth, NumberOfMasters) tpciehost;
+`ifdef PCIE_CHANGES_HOSTIF
+   interface PipeOut#(Bit#(64)) tchanges;
+`endif
 `ifdef XILINX
 `ifdef XILINX_SYS_CLK
    interface Clock tsys_clk_200mhz;
