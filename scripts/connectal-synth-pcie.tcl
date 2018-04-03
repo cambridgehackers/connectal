@@ -16,6 +16,9 @@ if {"$XILINX" == "1"} {
     if {[version -short] >= "2016.1"} {
 	set x7_pcieversion {3.3}
     }
+    if {[version -short] >= "2017.1"} {
+	set x7_pcieversion {4.3}
+    }
 }
 
 if {$need_pcie == "x7_gen1x8"} {
