@@ -55,6 +55,7 @@ interface ChangeIndication;
 endinterface
 `endif
 
+// these are here so the app can drive some traffic
 interface EchoIndication;
     method Action heard(Bit#(32) v);
     method Action heard2(Bit#(16) a, Bit#(16) b);
@@ -66,7 +67,7 @@ interface EchoRequest;
    method Action setLeds(Bit#(8) v);
 endinterface
 
-interface Echo;
+interface TracePcie;
    interface EchoRequest request;
    interface ChangeRequest changeRequest;
 `ifdef PCIE_CHANGES_UART
@@ -79,12 +80,12 @@ typedef struct {
 	Bit#(16) b;
 } EchoPair deriving (Bits);
 
-module mkEcho#(
+module mkTracePcie#(
 `ifdef PCIE_CHANGES_HOSTIF
    HostInterface host, ChangeIndication changeIndication,
 `endif
    EchoIndication indication
-)(Echo);
+)(TracePcie);
     FIFO#(Bit#(32)) delay <- mkSizedFIFO(8);
     FIFO#(EchoPair) delay2 <- mkSizedFIFO(8);
 
