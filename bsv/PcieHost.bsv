@@ -93,7 +93,7 @@ module mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    TLPDispatcher dispatcher <- mkTLPDispatcher;
    TLPArbiter arbiter <- mkTLPArbiter;
    MemToPcie#(DataBusWidth) sEngine <- mkMemToPcieSynth(my_pciId);
-`ifdef XilinxUltrascale
+`ifdef PCIE3
    MemInterrupt intr <- mkMemInterrupt(my_pciId);
 `endif
    Vector#(PortMax, PcieToMem) mvec;
@@ -280,7 +280,7 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_
        defaultValue,
 `endif
        True, pci_sys_clk_p, pci_sys_clk_n);
-`ifdef PCIE3
+`ifdef XilinxUltrascale
    Clock pci_clk_100mhz_buf = clockGen.gen_clk2;
 `else
    Clock pci_clk_100mhz_buf = clockGen.gen_clk;
