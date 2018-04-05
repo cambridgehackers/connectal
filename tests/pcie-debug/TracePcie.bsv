@@ -162,9 +162,11 @@ module mkTracePcie#(
    endrule
    rule rl_trace_from_pcie_resp if (requested);
       let resp <- host.tpciehost.traceBramServer.response.get();
-      Vector#(TDiv#(SizeOf#(TimestampedTlpData),8), Bit#(8)) tracebytes = reverse(unpack(pack(resp)));
+      Bit#(SizeOf#(TimestampedTlpData)) tracebits = pack(resp);
+      Vector#(TDiv#(SizeOf#(TimestampedTlpData),8), Bit#(8)) tracebytes = reverse(unpack(tracebits));
       let bytes = append(toHexVector(tracebytes), endl);
-      if (bytes != replicate(0)) begin
+      // wait until there is a valid entry
+      if (resp.source != 'ha && resp.source != 0) begin
 	 traceGearbox.enq(bytes);
 	 traceAddrReg <= traceAddrReg + 1;
       end
@@ -173,7 +175,7 @@ module mkTracePcie#(
    // FIXME
    rule rl_trace_serial;
       Bit#(8) char = traceGearbox.first()[0];
-      serializeGearbox.deq();
+      traceGearbox.deq();
       uart.rx.put(char);
    endrule
 
