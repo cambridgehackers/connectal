@@ -1,0 +1,8 @@
+{
+    "uart_sout": {
+        "uart": "d_out"
+    },
+    "uart_sin_v": {
+        "uart": "d_in"
+    }
+}
