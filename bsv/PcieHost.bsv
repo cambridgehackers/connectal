@@ -183,7 +183,7 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
 `ifdef PCIE_BSCAN
    Reg#(Bit#(TAdd#(TlpTraceAddrSize,1))) bscanPcieTraceBramWrAddrReg <- mkReg(0);
    BscanBram#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) pcieBscanBram <- mkBscanBram(127, bscanPcieTraceBramWrAddrReg, lbscan.loc[1]);
-   mkConnection(pcieBscanBram.bramClient, traceif.tlpdata.bscanBramServer);
+   mkConnection(pcieBscanBram.bramClient, traceif.tlpdata.altBramServer);
    rule tdorule;
       lbscan.loc[1].tdo(pcieBscanBram.data_out());
    endrule
@@ -204,7 +204,7 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    interface BscanTop bscanif = lbscan.loc[0];
 `else
 `ifdef PCIE_TRACE_PORT
-   interface BRAMServer traceBramServer = traceif.tlpdata.bscanBramServer;
+   interface BRAMServer traceBramServer = traceif.tlpdata.altBramServer;
 `endif
 `endif
 endmodule: mkPcieHost
