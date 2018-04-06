@@ -24,6 +24,7 @@
 `include "ConnectalProjectConfig.bsv"
 
 import FIFO::*;
+import FIFOF::*;
 import Vector::*;
 `ifdef PCIE_CHANGES_HOSTIF
 import BuildVector::*;
@@ -80,6 +81,16 @@ typedef struct {
 	Bit#(16) b;
 } EchoPair deriving (Bits);
 
+
+(* synthesize *)
+module mkTraceGearbox(Gearbox#(TAdd#(TMul#(2,TDiv#(SizeOf#(TimestampedTlpData),8)),2), 1, Bit#(8)));
+   let clock <- exposeCurrentClock;
+   let reset <- exposeCurrentReset;
+   let gb <- mkNto1Gearbox(clock, reset, clock, reset);
+   return gb;
+endmodule
+
+
 module mkTracePcie#(
 `ifdef PCIE_CHANGES_HOSTIF
    HostInterface host, ChangeIndication changeIndication,
@@ -130,8 +141,8 @@ module mkTracePcie#(
 
    rule rl_changes;
       Bit#(64) bits <- toGet(host.tchanges).get();
-      Vector#(8, Bit#(8)) bytes = reverse(unpack(bits));
-      Vector#(18, Bit#(8)) chars = append(toHexVector(bytes), endl);
+      Vector#(8, Bit#(8)) bytes = unpack(bits);
+      Vector#(18, Bit#(8)) chars = append(reverse(toHexVector(bytes)), endl);
       serializeGearbox.enq(chars);
    endrule
 
@@ -149,34 +160,65 @@ module mkTracePcie#(
 
    Reg#(Bit#(12)) traceAddrReg <- mkReg(0);
    Reg#(Bool) requested <- mkReg(False);
-   Gearbox#(TAdd#(TMul#(2,TDiv#(SizeOf#(TimestampedTlpData),8)),2), 1, Bit#(8)) traceGearbox <- mkNto1Gearbox(clock, reset, clock, reset);
-   rule rl_trace_from_pcie_req if (!requested);
-      requested <= True;
-      if (traceAddrReg <= 1024) begin
+   Gearbox#(TAdd#(TMul#(2,TDiv#(SizeOf#(TimestampedTlpData),8)),2), 1, Bit#(8)) testGearbox <- mkTraceGearbox();
+   Gearbox#(TAdd#(TMul#(2,TDiv#(SizeOf#(TimestampedTlpData),8)),2), 1, Bit#(8)) traceGearbox <- mkTraceGearbox();
+   FIFOF#(Bit#(8)) testFifo <- mkFIFOF();
+   FIFOF#(Bit#(8)) traceFifo <- mkFIFOF();
+
+   Reg#(Bool) testPattern <- mkReg(False);
+   rule rl_testpattern if (!testPattern);
+      testPattern <= True;
+      Vector#(TDiv#(SizeOf#(TimestampedTlpData),8), Bit#(8)) tracebytes;
+      for (Integer i = 0; i < valueOf(TDiv#(SizeOf#(TimestampedTlpData),8)); i = i + 1) begin
+	 tracebytes[i]= fromInteger(i);
+      end
+      let bytes = append(reverse(toHexVector(tracebytes)), endl);
+      testGearbox.enq(bytes);
+   endrule
+   rule rl_test_pipeline;
+      let char = testGearbox.first()[0];
+      testGearbox.deq();
+      testFifo.enq(char);
+   endrule
+
+   rule rl_trace_from_pcie_req if (!requested && testPattern);
+      if (traceAddrReg < extend(host.tpciehost.tlpTraceBramWrAddr)) begin
 	 host.tpciehost.traceBramServer.request.put(BRAMRequest {
 								 write: False,
 								 responseOnWrite: False,
 								 address: traceAddrReg,
 								 datain: ? });
+	 requested <= True;
       end
    endrule
    rule rl_trace_from_pcie_resp if (requested);
       let resp <- host.tpciehost.traceBramServer.response.get();
       Bit#(SizeOf#(TimestampedTlpData)) tracebits = pack(resp);
-      Vector#(TDiv#(SizeOf#(TimestampedTlpData),8), Bit#(8)) tracebytes = reverse(unpack(tracebits));
-      let bytes = append(toHexVector(tracebytes), endl);
+      Vector#(TDiv#(SizeOf#(TimestampedTlpData),8), Bit#(8)) tracebytes = unpack(tracebits);
+      let bytes = append(reverse(toHexVector(tracebytes)), endl);
       // wait until there is a valid entry
-      if (resp.source != 'ha && resp.source != 0) begin
+      if (True) begin
 	 traceGearbox.enq(bytes);
 	 traceAddrReg <= traceAddrReg + 1;
       end
       requested <= False;
    endrule
-   // FIXME
-   rule rl_trace_serial;
-      Bit#(8) char = traceGearbox.first()[0];
+   rule rl_trace_pipeline;
+      let char = traceGearbox.first()[0];
       traceGearbox.deq();
-      uart.rx.put(char);
+      traceFifo.enq(char);
+   endrule
+   rule rl_trace_serial;
+      if (testFifo.notEmpty()) begin
+	 Bit#(8) char = testFifo.first();
+	 testFifo.deq();
+	 uart.rx.put(char);
+      end
+      else if (traceFifo.notEmpty()) begin
+	 Bit#(8) char = traceFifo.first();
+	 traceFifo.deq();
+	 uart.rx.put(char);
+      end
    endrule
 
 `else
