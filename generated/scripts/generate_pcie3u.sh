@@ -11,6 +11,7 @@ set -e
    -r sys_reset \
    -n sys_clk \
    -c sys_clk \
+   -c sys_clk_gt \
    -n user_clk \
    -c user_clk \
    -n user_reset \
@@ -58,7 +59,7 @@ set -e
    -o \
    ../xilinx/PCIEWRAPPER3u.bsv \
    -p lanes \
-   ../../out/vcu108/pcie3_7x_0/pcie3_7x_0_stub.v
+   ../../out/vcu108/pcie3_ultrascale_0/pcie3_ultrascale_0_stub.v
 
 # remove junk emitted into "import BVI ="
 sed -i 's/(pci_exp_txn,//' ../xilinx/PCIEWRAPPER3u.bsv
