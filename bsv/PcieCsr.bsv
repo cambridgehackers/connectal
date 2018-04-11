@@ -35,7 +35,7 @@ import Pipe           :: *;
 
 `include "ConnectalProjectConfig.bsv"
 
-`define msix_base 1024
+`define msix_base 128
 
 // An MSIX table entry, as defined in the PCIe spec
 interface MSIX_Entry;
