@@ -528,6 +528,11 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 				err = -EINVAL;
 				goto BARS_MAPPED_label;
 			}
+			// check for xdma on bar2
+		} else {
+			printk("  xdma block ID %x\n", ioread32(this_board->bar2io + 0x0000));
+			printk("   irq block ID %x\n", ioread32(this_board->bar2io + 0x2000));
+			printk("config block ID %x\n", ioread32(this_board->bar2io + 0x3000));
 		}
                 /* set DMA mask */
                 if (pci_set_dma_mask(dev, DMA_BIT_MASK(48))) {
@@ -565,6 +570,10 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 			portal_base = this_board->bar0io;
 			ptile = this_board->bar0io;
 			printk("bar0io[0]=%08x\n", *(int *)this_board->bar0io);
+
+			// enable user interrupts via XDMA block in AWS F1 Shell
+			iowrite32(0xFFFF, this_board->bar2io + 0x2000 + 4);
+			printk("enabled user interrupts in XDMA %x\n", ioread32(this_board->bar2io + 0x2000 + 4));
 
 		} else {
 			portal_base = this_board->bar2io;
