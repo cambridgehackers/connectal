@@ -35,7 +35,8 @@ import Pipe           :: *;
 
 `include "ConnectalProjectConfig.bsv"
 
-`define msix_base 128
+// starting word of MSIX config registers
+`define msix_base (4096/4)
 
 // An MSIX table entry, as defined in the PCIe spec
 interface MSIX_Entry;
@@ -198,7 +199,7 @@ module mkPcieControlAndStatusRegs(PcieControlAndStatusRegs);
    	  if (oneHotDecode774[802-774] == 1) data = (changeFifo.notEmpty()) ? (changeFifo.first()[63:32]) : 0;
 
          //******************************** msix_base has to match CONFIG.MXIx_PBA_Offset in scripts/connectal-synth-pcie.tcl
-	  // 4-bit MSIx pending bit field
+	  // 16-bit MSIx pending bit field
 	  if (oneHotDecode992[992-992] == 1) data = '0;                               // PBA structure (low)
 	  if (oneHotDecode992[993-992] == 1) data = '0;                               // PBA structure (high)
 	  //******************************** end of PBA Table
