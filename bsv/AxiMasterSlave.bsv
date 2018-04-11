@@ -61,8 +61,14 @@ function Bit#(3) axiBusSize(Integer busWidth);
       return 3'b011;
    else if (busWidth == 128)
       return 3'b100;
+   else if (busWidth == 256)
+      return 3'b101;
+   else if (busWidth == 512)
+      return 3'b110;
+   else if (busWidth == 1024)
+      return 3'b111;
    else
-      return 3'b011;
+      return 3'b000;
 endfunction
 
 typedef struct {
