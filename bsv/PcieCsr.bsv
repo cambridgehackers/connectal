@@ -36,7 +36,7 @@ import Pipe           :: *;
 `include "ConnectalProjectConfig.bsv"
 
 // starting word of MSIX config registers
-`define msix_base (4096/4)
+`define msix_base 4096
 
 // An MSIX table entry, as defined in the PCIe spec
 interface MSIX_Entry;
@@ -139,7 +139,7 @@ module mkPcieControlAndStatusRegs(PcieControlAndStatusRegs);
       let addr = beat.addr >> 2; // word address
       Bit#(32) data = 0;
       let modaddr = (addr % 8192);
-      let msixaddr = modaddr - `msix_base;
+      let msixaddr = modaddr - (`msix_base >> 2);
 
       csrRagBeatFifo.enq(beat);
       csrIsMsixAddrFifo.enq(msixaddr >= 0 && msixaddr <= 63);
@@ -154,7 +154,7 @@ module mkPcieControlAndStatusRegs(PcieControlAndStatusRegs);
       let addr = beat.addr >> 2; // word address
       Bit#(32) data = 32'hbad0add0;
       let modaddr = (addr % 8192);
-      let msix_base = `msix_base;
+      let msix_base = (`msix_base >> 2);
       let msixaddr = modaddr - msix_base;
       let oneHotDecode000 <- toGet(csrOneHotFifo000).get();
       let oneHotDecode774 <- toGet(csrOneHotFifo774).get();
