@@ -48,13 +48,7 @@ PortalPoller::PortalPoller(int autostart)
     addFd(pipefd[0]);
 
     timeout = -1; // wait for interrupt
-#if defined(AWSF1)
-    timeout = 1;
-#endif
 #if defined(SIMULATION)
-    timeout = 100;
-#endif
-#if defined(PCIE3)
     timeout = 100;
 #endif
 }
