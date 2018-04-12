@@ -18,6 +18,7 @@ set_property LOC AD12 [get_ports { CLK_sys_clk_p }]
 set_property LOC AD11 [get_ports { CLK_sys_clk_n }]
 #set_property LOC K28  [get_ports { CLK_user_clk_p }]
 #set_property LOC K29  [get_ports { CLK_user_clk_n }]
+set_property LOC G25  [get_ports { RST_cpu_reset }]
 
 set_property LOC M6   [get_ports { PCIE_rxp_v[0] }]
 set_property LOC P6   [get_ports { PCIE_rxp_v[1] }]
@@ -63,6 +64,7 @@ set_property IOSTANDARD DIFF_SSTL15 [get_ports { CLK_sys_clk_* }]
 #set_property IOSTANDARD DIFF_SSTL15 [get_ports { CLK_user_clk_* }]
 set_property IOSTANDARD LVCMOS25    [get_ports { RST_N_pci_sys_reset_n }]
 set_property PULLUP     true        [get_ports { RST_N_pci_sys_reset_n }]
+set_property IOSTANDARD LVCMOS15    [get_ports { RST_cpu_reset }]
 
 ######################################################################################################
 # CELL LOCATIONS

@@ -69,6 +69,8 @@ if __name__=='__main__':
 
     makef = open(options.output, 'w')
     makef.write('# BSV dependences\n')
+    for bsvdef in options.bsvdefine:
+        makef.write('#  -D%s\n' % bsvdef)
     makef.write('OBJMAKEFILE_DEP = %s\n' % ' '.join(['$(wildcard %s/*.bsv)' % path for path in bsvpath]))
     makef.write('\n')
     for bsvfilename,packages,includes,synthesizedModules in bsvdep:

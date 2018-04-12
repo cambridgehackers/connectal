@@ -12,6 +12,7 @@ interface CacheInverse;
 endinterface
 
 instance InverseIFC#(Cache, CacheInverse);
+endinstance
 
 //define how to connect Cache and it's inverse
 instance Connectable#(Cache, CacheInverse);
@@ -44,7 +45,7 @@ endmodule
 //linked version of mkCache. Hooks ups missing memory module
 module mkCacheSynth(SynthInverter1IFC#(MemoryInverse, Cache));
   // parameter setup
-  let memoryInverter <- mkMemoryInverter()
+  let memoryInverter <- mkMemoryInverter();
   // build base module (use original version)
   let cache <- Cache::mkCache(memoryInverter.mod);
   // hook up interface
@@ -54,7 +55,7 @@ endmodule
 
 import "BVI" mkCacheSynth =
 module mkCacheBVI(Cache);
-...
+//...
 endmodule
 
 module mkCache#(Memory arg1)(Cache);
@@ -84,10 +85,10 @@ endmodule
    
 // to enable separate compilation
 import "BVI" mkProcessorSynth =
-   module mkProcessorBVI(...)
-   endmodule
+module mkProcessorBVI(ProcessorBvi);
+endmodule
 
-module mkProcessor(Cache arg1, Peripherals arg2)(Processor);
+module mkProcessor#(Cache arg1, Peripherals arg2)(Processor);
    let x <- mkProcessorBVI();
    mkConnection(cache, x.arg1);
    mkConnection(peripherals, x.arg2);  

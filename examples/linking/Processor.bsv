@@ -4,7 +4,7 @@ interface Cache;
 endinterface   
 
 // we want to be able to synthesize this, but it has interface parameters
-module mkProcessor(Cache cache, Peripherals peripherals)(Processor);
+module mkProcessor#(Cache cache, Peripherals peripherals)(Processor);
    rule foo;
       cache.request.put(req);
    endrule

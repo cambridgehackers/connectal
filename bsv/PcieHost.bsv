@@ -66,8 +66,13 @@ import PcieEndpointS5    :: *;
 import HostInterface     :: *;
 
 `ifdef XILINX_SYS_CLK
+`ifdef VirtexUltrascale
+`define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n, Clock sys_clk1_300_p, Clock sys_clk1_300_n, Clock sys_clk2_300_p, Clock sys_clk2_300_n, 
+`define SYS_CLK_ARG sys_clk_p, sys_clk_n, sys_clk1_300_p, sys_clk1_300_n, sys_clk2_300_p, sys_clk2_300_n, 
+`else
 `define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n,
 `define SYS_CLK_ARG sys_clk_p, sys_clk_n,
+`endif
 `else
 `define SYS_CLK_PARAM
 `define SYS_CLK_ARG
@@ -178,7 +183,7 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
 `ifdef PCIE_BSCAN
    Reg#(Bit#(TAdd#(TlpTraceAddrSize,1))) bscanPcieTraceBramWrAddrReg <- mkReg(0);
    BscanBram#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) pcieBscanBram <- mkBscanBram(127, bscanPcieTraceBramWrAddrReg, lbscan.loc[1]);
-   mkConnection(pcieBscanBram.bramClient, traceif.tlpdata.bscanBramServer);
+   mkConnection(pcieBscanBram.bramClient, traceif.tlpdata.altBramServer);
    rule tdorule;
       lbscan.loc[1].tdo(pcieBscanBram.data_out());
    endrule
@@ -199,7 +204,7 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    interface BscanTop bscanif = lbscan.loc[0];
 `else
 `ifdef PCIE_TRACE_PORT
-   interface BRAMServer traceBramServer = traceif.tlpdata.bscanBramServer;
+   interface BRAMServer traceBramServer = traceif.tlpdata.altBramServer;
 `endif
 `endif
 endmodule: mkPcieHost
@@ -251,15 +256,41 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_
 `endif
        sys_clk_p, sys_clk_n);
    Clock sys_clk_200mhz_buf <- mkClockBUFG(clocked_by sys_clk_200mhz);
+   
+`ifdef VirtexUltrascale 
+   Clock sys_clk1_300mhz <- mkClockIBUFDS(
+`ifdef ClockDefaultParam
+       defaultValue,
+`endif
+       sys_clk1_300_p, sys_clk1_300_n);
+   Clock sys_clk1_300mhz_buf <- mkClockBUFG(clocked_by sys_clk1_300mhz);
+   
+   Clock sys_clk2_300mhz <- mkClockIBUFDS(
+`ifdef ClockDefaultParam
+       defaultValue,
+`endif
+       sys_clk2_300_p, sys_clk2_300_n);
+   Clock sys_clk2_300mhz_buf <- mkClockBUFG(clocked_by sys_clk2_300mhz);
+`endif // VirtexUltrascale
+   
 `endif // XILINX_SYS_CLK
+   
    GTE2ClockGenIfc clockGen <- mkClockIBUFDS_GTE(
 `ifdef ClockDefaultParam
        defaultValue,
 `endif
        True, pci_sys_clk_p, pci_sys_clk_n);
+`ifdef XilinxUltrascale
    Clock pci_clk_100mhz_buf = clockGen.gen_clk2;
+`else
+   Clock pci_clk_100mhz_buf = clockGen.gen_clk;
+`endif
    // Instantiate the PCIE endpoint
-   PcieEndpointX7#(PcieLanes) ep7 <- mkPcieEndpointX7(clockGen.gen_clk, clocked_by pci_clk_100mhz_buf, reset_by pci_sys_reset_n);
+   PcieEndpointX7#(PcieLanes) ep7 <- mkPcieEndpointX7(
+`ifdef PCIE3
+      clockGen.gen_clk,
+`endif
+      clocked_by pci_clk_100mhz_buf, reset_by pci_sys_reset_n);
 
    Clock pcieClock_ = ep7.epPcieClock;
    Reset pcieReset_ = ep7.epPcieReset;
@@ -273,7 +304,9 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_
 `ifdef PCIE3
    mkConnection(ep7.tlpr, pciehost.pcir, clocked_by pcieClock_, reset_by pcieReset_);
    mkConnection(ep7.tlpc, pciehost.pcic, clocked_by pcieClock_, reset_by pcieReset_);
+`ifndef PCIE_CHANGES_HOSTIF
    mkConnection(ep7.regChanges, pciehost.changes);
+`endif
    let ipciehost = (interface PcieHost;
 		    interface msixEntry = pciehost.msixEntry;
 		    interface master = pciehost.master;
@@ -285,18 +318,29 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_
 		    endinterface);
 `else
    mkConnection(ep7.tlp, pciehost.pci, clocked_by pcieClock_, reset_by pcieReset_);
+`ifndef PCIE_CHANGES_HOSTIF
    mkConnection(ep7.regChanges, pciehost.changes, clocked_by pcieClock_, reset_by pcieReset_);
+`endif
    let ipciehost = pciehost;
 `endif
 
 `ifdef XILINX_SYS_CLK
    interface Clock tsys_clk_200mhz = sys_clk_200mhz;
    interface Clock tsys_clk_200mhz_buf = sys_clk_200mhz_buf;
+`ifdef VirtexUltrascale
+   interface Clock tsys_clk1_300mhz = sys_clk1_300mhz;
+   interface Clock tsys_clk1_300mhz_buf = sys_clk1_300mhz_buf;
+   interface Clock tsys_clk2_300mhz = sys_clk2_300mhz;
+   interface Clock tsys_clk2_300mhz_buf = sys_clk2_300mhz_buf;
+`endif
 `endif
    interface Clock tpci_clk_100mhz_buf = pci_clk_100mhz_buf;
 
    interface PcieEndpointX7 tep7 = ep7;
    interface PcieHost tpciehost = ipciehost;
+`ifdef PCIE_CHANGES_HOSTIF
+   interface PipeOut tchanges = ep7.regChanges;
+`endif
 
    interface pcieClock = ep7.epPcieClock;
    interface pcieReset = ep7.epPcieReset;

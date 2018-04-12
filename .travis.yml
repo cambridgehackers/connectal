@@ -2,7 +2,7 @@ language: cpp
 cache:
   directories:
 before_script:
-- if [ -d Bluespec-2016.07.beta1 ] ; then echo bluespec cached; else curl http://buildbot.connectal.org/Bluespec-2016.07.beta1.tar.gz | tar -zxf - ; fi
+- if [ -d Bluespec-2017.07.A ] ; then echo bluespec cached; else curl http://buildbot.connectal.org/downloads/Bluespec-2017.07.A.tar.gz | tar -zxf - ; fi
 - mkdir -p lib
 - ln -s /usr/lib/x86_64-linux-gnu/libgmp.so.10 lib/libgmp.so.3
 - if [ "$CONNECTAL_ARCH" == "cvc" ]; then if [ -d open-src-cvc-700c-1 ] ; then echo cvc cached; else curl -L https://github.com/cambridgehackers/open-src-cvc/archive/700c-1.tar.gz | tar -zxf - ; (cd open-src-cvc-700c-1/src; make -j4 -f makefile.cvc64); fi; fi
@@ -12,8 +12,8 @@ before_script:
 - ls -l scripts/ply
 env:
   global:
-    - BLUESPECDIR=$PWD/Bluespec-2016.07.beta1/lib
-    - PATH=$PATH:$PWD/Bluespec-2016.07.beta1/bin:$PWD/open-src-cvc-700c-1/src:$PWD/verilator/bin
+    - BLUESPECDIR=$PWD/Bluespec-2017.07.A/lib
+    - PATH=$PATH:$PWD/Bluespec-2017.07.A/bin:$PWD/open-src-cvc-700c-1/src:$PWD/verilator/bin
     - LD_LIBRARY_PATH=$PWD/lib
   matrix:
     - CONNECTAL_TEST=examples/echo CONNECTAL_ARCH=verilator

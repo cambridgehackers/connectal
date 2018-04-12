@@ -101,7 +101,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 
    mimoCfg.bram_based = True;
    mimoCfg.unguarded = True;
-    MIMO#(busWidthWords,TlpDataWords,WriteDataMimoSize,Bit#(32)) writeDataMimo <- ConnectalMimo::mkMIMOBram(mimoCfg);
+    MIMO#(busWidthWords,TlpDataWords,WriteDataMimoSize,Bit#(32)) writeDataMimo <- MIMO::mkMIMO(mimoCfg);
     ConfigCounter#(8) writeDataCnt <- mkConfigCounter(0);
     Reg#(Bit#(WriteDataBurstLenSize)) writeBurstCount <- mkReg(0);
     FIFO#(Bit#(WriteDataBurstLenSize)) writeBurstCountFifo <- mkFIFO();

@@ -2,7 +2,7 @@ import BlockDev::*;
 import Serial::*;
 import Simple::*;
 
-interface DevicesPorts ports;
+interface DevicesPorts;
    interface SerialPort serial;
    interface Client#(BlockDevTransfer,Bit#(32)) blockDev;
 endinterface
@@ -14,19 +14,19 @@ interface Devices;
    interface DevicesPorts ports;
 endinterface
 
-interface Devices#(SimpleIndication simpleIndication,
-		   SerialIndication serialIndication,
-		   BlockDevResponse blockDevResponse)(Devices);
+module mkDevices#(SimpleIndication simpleIndication,
+		  SerialIndication serialIndication,
+		  BlockDevResponse blockDevResponse)(Devices);
    let simple <- mksimple(simpleIndication);
    let serial <- mkSerial(serialIndication);
    let blockDev <- mkBlockDev(blockDevResponse);
 
    interface SimpleRequest simple= simple.request;
    interface SerialPort   serial = serial.request;
-   interface BlockDevPort blockDev = blockDev.request;;
+   interface BlockDevPort blockDev = blockDev.request;
 
    interface DevicesPorts ports;
       interface SerialPort serial = serial.port;
-      interface Client#(BlockDevTransfer,Bit#(32)) blockDev.client;
+      interface Client client = blockDev.client;
    endinterface
-endinterface
+endmodule

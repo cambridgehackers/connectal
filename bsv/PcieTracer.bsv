@@ -33,6 +33,10 @@ import ConnectalBram  ::*;
 
 `include "ConnectalProjectConfig.bsv"
 
+`ifdef PCIE_BSCAN
+`define PCIE_ALT_BRAM_SERVER
+`endif
+
 typedef 11 TlpTraceAddrSize;
 typedef TAdd#(TlpTraceAddrSize,1) TlpTraceAddrSize1;
 
@@ -53,8 +57,8 @@ interface TlpTraceServer;
    interface Reg#(Bit#(TlpTraceAddrSize)) tlpTraceLimit;
    interface Reg#(Bit#(TlpTraceAddrSize)) tlpTraceBramWrAddr;
    interface BRAMServer#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) bramServer;
-`ifdef PCIE_BSCAN
-   interface BRAMServer#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) bscanBramServer;
+`ifdef PCIE_ALT_BRAM_SERVER
+   interface BRAMServer#(Bit#(TAdd#(TlpTraceAddrSize,1)), TimestampedTlpData) altBramServer;
 `endif
 endinterface
 interface TlpTraceClient;
@@ -84,7 +88,7 @@ module mkPcieTracer(PcieTracer);
    BRAM_Configure bramCfg = defaultValue;
    bramCfg.memorySize = memorySize;
    bramCfg.latency = 1;
-`ifdef PCIE_BSCAN
+`ifdef PCIE_ALT_BRAM_SERVER
    BRAM2Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) fromPcieTraceBram <- ConnectalBram::mkBRAM2Server(bramCfg);
    BRAM2Port#(Bit#(TlpTraceAddrSize), TimestampedTlpData) toPcieTraceBram <- ConnectalBram::mkBRAM2Server(bramCfg);
 `else
@@ -100,11 +104,11 @@ module mkPcieTracer(PcieTracer);
       endinterface);
    BramServerMux#(TAdd#(TlpTraceAddrSize,1), TimestampedTlpData) bramMuxReg <- mkGatedBramServerMux(tlpNotTracingReg, bramServers);
 
-`ifdef PCIE_BSCAN
-   Vector#(2, BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData)) bscanBramServers;
-   bscanBramServers[0] = fromPcieTraceBram.portB;
-   bscanBramServers[1] =   toPcieTraceBram.portB;
-   BramServerMux#(TAdd#(TlpTraceAddrSize,1), TimestampedTlpData) bscanBramMux <- mkBramServerMux(bscanBramServers);
+`ifdef PCIE_ALT_BRAM_SERVER
+   Vector#(2, BRAMServer#(Bit#(TlpTraceAddrSize), TimestampedTlpData)) altBramServers;
+   altBramServers[0] = fromPcieTraceBram.portB;
+   altBramServers[1] =   toPcieTraceBram.portB;
+   BramServerMux#(TAdd#(TlpTraceAddrSize,1), TimestampedTlpData) altBramMux <- mkBramServerMux(altBramServers);
 `endif
 
    Reg#(Bit#(32)) timestamp <- mkReg(0);
@@ -206,8 +210,8 @@ module mkPcieTracer(PcieTracer);
 	 method Action _write(Bit#(TlpTraceAddrSize) v); tlpTraceBramWrAddrFifo.enq(v); endmethod
       endinterface
       interface Server bramServer = bramMuxReg.bramServer;
-`ifdef PCIE_BSCAN
-      interface Server bscanBramServer = bscanBramMux.bramServer;
+`ifdef PCIE_ALT_BRAM_SERVER
+      interface Server altBramServer = altBramMux.bramServer;
 `endif
    endinterface
 endmodule: mkPcieTracer

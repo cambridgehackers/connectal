@@ -881,7 +881,7 @@
             "PACKAGE_PIN": "AU26"
         }
     },
-    "UART": {
+    "uart": {
         "UART_CTS": {
             "IOSTANDARD": "LVCMOS15",
             "PACKAGE_PIN": "BA16"
@@ -890,13 +890,15 @@
             "IOSTANDARD": "LVCMOS15",
             "PACKAGE_PIN": "BB16"
         },
-        "UART_RXD_OUT": {
+        "d_out": {
             "IOSTANDARD": "LVCMOS15",
-            "PACKAGE_PIN": "BA19"
+            "PACKAGE_PIN": "BA19",
+	    "PIO_DIRECTION": "OUTPUT"
         },
-        "UART_TXD_IN": {
+        "d_in": {
             "IOSTANDARD": "LVCMOS15",
-            "PACKAGE_PIN": "AY19"
+            "PACKAGE_PIN": "AY19",
+	    "PIO_DIRECTION": "INPUT"
         }
     },
     "pins": {

@@ -17,9 +17,9 @@ endinterface
 
 import "BVI" GetInverse =
 module mkGetInverseBvi(GetInverse#(Bits#(asz)));
-   param DATA_SIZE = asz;
+   parameter DATA_SIZE = asz;
    default_clock (CLK);
-   default_rest (RST);
+   default_reset (RST);
    interface Get mod;
       method get get() enable(EN_get) ready (RDY_get);
    endinterface
@@ -40,13 +40,13 @@ module mkGetInverse(GetInverse#(a)) provisos (Bits#(a, asz));
 	 inverter.inverse.put(pack(v));
       endmethod
    endinterface
-endinterface
+endmodule
 
 import "BVI" PutInverse =
 module mkPutInverseBvi(PutInverse#(Bits#(asz)));
-   param DATA_SIZE = asz;
+   parameter DATA_SIZE = asz;
    default_clock (CLK);
-   default_rest (RST);
+   default_reset (RST);
    interface Put mod;
       method put(put) enable(EN_put) ready (RDY_put);
    endinterface
@@ -67,31 +67,31 @@ module mkPutInverse(PutInverse#(a)) provisos (Bits#(a, asz));
 	 return unpack(v);
       endmethod
    endinterface
-endinterface
+endmodule
 
-interface Inverter#(interface ifcType, interface invifcType);
+interface Inverter#(type ifcType, type invifcType);
   interface ifcType mod;
   interface invifcType inverse;
 endinterface
     
-interface SynthInverter0IFC#(interface ifcType);
+interface SynthInverter0IFC#(type ifcType);
   interface ifcType mod;
 endinterface
   
-interface SynthInverter1IFC#(interface param1, interface ifcType);
+interface SynthInverter1IFC#(type param1, type ifcType);
   interface param1  arg1;
   interface ifcType mod;
 endinterface  
   
-interface SynthInverter2IFC#(interface param1, interface param2, interface ifcType);
+interface SynthInverter2IFC#(type param1, type param2, type ifcType);
   interface param1 arg1;
   interface param2 arg2;
   interface ifcType mod;
 endinterface    
   
-interface SynthInverter3IFC#(interface param1, interface param2, interface param3, interface ifcType);
+interface SynthInverter3IFC#(type param1, type param2, type param3, type ifcType);
   interface param1 arg1;
   interface param2 arg2;
   interface param3 arg3;
   interface ifcType mod;
-endinterface      
+endinterface     

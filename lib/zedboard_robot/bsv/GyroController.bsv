@@ -51,7 +51,7 @@ interface GyroSampleStream;
 endinterface
 
 interface GyroSimplePins;
-   interface SpiMasterPins spi;
+   interface SpiMasterPins#(1) spi;
    interface LEDS leds;
 endinterface
 
@@ -63,7 +63,7 @@ endinterface
 
 module mkGyroController#(GyroCtrlIndication ind)(GyroController);
 
-   SPIMaster#(Bit#(16))  spiCtrl    <- mkSPIMaster(1000, True);
+   SPIMaster#(Bit#(16), 1)  spiCtrl    <- mkSPIMaster(1000, True);
    FIFO#(Bool)     spi_aux    <- mkPipelineFIFO;
    Reg#(Bit#(32))  sampleFreq <- mkReg(0);
    Reg#(Bit#(32))  sampleCnt  <- mkReg(0);
@@ -94,7 +94,7 @@ module mkGyroController#(GyroCtrlIndication ind)(GyroController);
    let verbose = False;
    
    rule read_reg_resp;
-      let rv <- spiCtrl.response.get;
+      let rv <- spiCtrl.response[0].get;
       if (rc_fifo.first)
 	 ind.read_reg_resp(truncate(rv));
       rc_fifo.deq;
@@ -104,27 +104,27 @@ module mkGyroController#(GyroCtrlIndication ind)(GyroController);
       let new_sampleCnt = sampleCnt+1; 
       let sampling = True;
       if (new_sampleCnt == sampleFreq-5) begin
-	 spiCtrl.request.put({1'b1,1'b0,out_X_L,8'h00});
+	 spiCtrl.request[0].put({1'b1,1'b0,out_X_L,8'h00});
 	 if(verbose) $display("sample_x_l");
       end
       else if (new_sampleCnt == sampleFreq-4) begin
-	 spiCtrl.request.put({1'b1,1'b0,out_X_H,8'h00});
+	 spiCtrl.request[0].put({1'b1,1'b0,out_X_H,8'h00});
 	 if(verbose) $display("sample_x_h");
       end
       else if (new_sampleCnt == sampleFreq-3) begin
-	 spiCtrl.request.put({1'b1,1'b0,out_Y_L,8'h00});
+	 spiCtrl.request[0].put({1'b1,1'b0,out_Y_L,8'h00});
 	 if(verbose) $display("sample_y_l");
       end
       else if (new_sampleCnt == sampleFreq-2) begin
-	 spiCtrl.request.put({1'b1,1'b0,out_Y_H,8'h00});
+	 spiCtrl.request[0].put({1'b1,1'b0,out_Y_H,8'h00});
 	 if(verbose) $display("sample_y_h");
       end
       else if (new_sampleCnt == sampleFreq-1) begin
-	 spiCtrl.request.put({1'b1,1'b0,out_Z_L,8'h00});
+	 spiCtrl.request[0].put({1'b1,1'b0,out_Z_L,8'h00});
 	 if(verbose) $display("sample_z_l");
       end
       else if (new_sampleCnt >= sampleFreq-0) begin
-	 spiCtrl.request.put({1'b1,1'b0,out_Z_H,8'h00});
+	 spiCtrl.request[0].put({1'b1,1'b0,out_Z_H,8'h00});
 	 if(verbose) $display("sample_z_h");
 	 new_sampleCnt = 0;
       end
@@ -138,7 +138,7 @@ module mkGyroController#(GyroCtrlIndication ind)(GyroController);
    rule sample_resp(sampleFreq > 0);
       spi_aux.deq;
       if(verbose) $display("sample_resp");
-      let rv <- spiCtrl.response.get;
+      let rv <- spiCtrl.response[0].get;
 `ifdef SIMULATION
       bsim_cnt <= (bsim_cnt == 5) ? 0 : bsim_cnt+1;
       let bsim_val = bsim_cnt[0]==1'b0 ? bsim_cnt+1 : 0;
@@ -174,12 +174,12 @@ module mkGyroController#(GyroCtrlIndication ind)(GyroController);
    
    interface GyroCtrlRequest req;
       method Action write_reg_req(Bit#(8) addr, Bit#(8) val);
-	 spiCtrl.request.put({1'b0,1'b0,addr[5:0],val});
+	 spiCtrl.request[0].put({1'b0,1'b0,addr[5:0],val});
 	 ind.write_reg_resp(addr);
 	 rc_fifo.enq(False);
       endmethod
       method Action read_reg_req(Bit#(8) addr);
-	 spiCtrl.request.put({1'b1,1'b0,addr[5:0],8'h00});
+	 spiCtrl.request[0].put({1'b1,1'b0,addr[5:0],8'h00});
 	 rc_fifo.enq(True);
       endmethod
       method Action sample(Bit#(32) sgl_id, Bit#(32) alloc_sz, Bit#(32) sample_freq);

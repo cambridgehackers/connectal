@@ -1,0 +1,87 @@
+{
+    "options": {
+        "bsvdefines" : ["XILINX=1", "Artix7", "PhysAddrWidth=40", "PcieLanes=4", "UNTETHERED=1",
+		       	"CONNECTAL_BITS_DEPENDENCES=hw/mkTop.bit", "CONNECTAL_RUN_SCRIPT=$(CONNECTALDIR)/scripts/run.pcietest"],
+        "os" : "ubuntu",
+        "partname" : "xc7a200tfbg676-2",
+        "TOP" : "UntetheredTop",
+        "constraints": [],
+        "implconstraints": ["constraints/xilinx/ac701.xdc", "constraints/xilinx/pcie-clocks.xdc"],
+        "runscript" : "run.pcietest",
+        "CONNECTALFLAGS" : ["--mainclockperiod=8", "--derivedclockperiod=4", "--pcieclockperiod=8"],
+        "rewireclockstring" : ""
+    },
+    "uart": {
+		"d_in": {
+			"PACKAGE_PIN": "T19",
+			"IOSTANDARD": "LVCMOS25",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"d_out": {
+			"PACKAGE_PIN": "U19",
+			"IOSTANDARD": "LVCMOS25",
+			"PIO_DIRECTION": "OUTPUT"
+		},
+		"rts": {
+			"PACKAGE_PIN": "V19",
+			"IOSTANDARD": "LVCMOS25",
+			"PIO_DIRECTION": "INPUT"
+		},
+		"cts": {
+			"PACKAGE_PIN": "W19",
+			"IOSTANDARD": "LVCMOS25",
+			"PIO_DIRECTION": "OUTPUT"
+		}
+    },
+    "sdio": {
+        "dat0": {
+            "PACKAGE_PIN": "P19",
+            "IOSTANDARD": "LVCMOS25",
+            "PIO_DIRECTION": "BIDIR"
+        },
+        "dat1": {
+            "PACKAGE_PIN": "N19",
+            "IOSTANDARD": "LVCMOS25",
+            "PIO_DIRECTION": "BIDIR"
+        },
+        "dat2": {
+            "PACKAGE_PIN": "P23",
+            "IOSTANDARD": "LVCMOS25",
+            "PIO_DIRECTION": "BIDIR"
+        },
+        "cd_dat3": {
+            "PACKAGE_PIN": "P21",
+            "IOSTANDARD": "LVCMOS25",
+            "PIO_DIRECTION": "BIDIR"
+        },
+        "clk": {
+            "PACKAGE_PIN": "N24",
+            "IOSTANDARD": "LVCMOS25",
+            "PIO_DIRECTION": "OUTPUT"
+        },
+        "cmd": {
+            "PACKAGE_PIN": "N23",
+            "IOSTANDARD": "LVCMOS25",
+            "PIO_DIRECTION": "BIDIR"
+        },
+        "sddet": {
+            "PACKAGE_PIN": "P24",
+            "IOSTANDARD": "LVCMOS25",
+            "PIO_DIRECTION": "INPUT"
+        },
+        "sdwp": {
+            "PACKAGE_PIN": "R20",
+            "IOSTANDARD": "LVCMOS25",
+            "PIO_DIRECTION": "INPUT"
+        }
+    },
+    "fmc": {
+    },
+    "pins": {
+	"cpu_reset": {
+	    "PACKAGE_PIN": "U4",
+	    "IOSTANDARD": "LVCMOS15",
+	    "PIO_DIRECTION": "INPUT"
+	}
+    }	
+}

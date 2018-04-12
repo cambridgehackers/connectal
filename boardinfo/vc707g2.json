@@ -297,6 +297,48 @@
 			"PIO_DIRECTION": "OUTPUT"
 		}
     },
+    "sdio": {
+        "dat0": {
+            "PACKAGE_PIN": "AR30",
+            "IOSTANDARD": "LVCMOS18",
+            "PIO_DIRECTION": "BIDIR"
+        },
+        "dat1": {
+            "PACKAGE_PIN": "AU31",
+            "IOSTANDARD": "LVCMOS18",
+            "PIO_DIRECTION": "BIDIR"
+        },
+        "dat2": {
+            "PACKAGE_PIN": "AV31",
+            "IOSTANDARD": "LVCMOS18",
+            "PIO_DIRECTION": "BIDIR"
+        },
+        "cd_dat3": {
+            "PACKAGE_PIN": "AT30",
+            "IOSTANDARD": "LVCMOS18",
+            "PIO_DIRECTION": "BIDIR"
+        },
+        "clk": {
+            "PACKAGE_PIN": "AN30",
+            "IOSTANDARD": "LVCMOS18",
+            "PIO_DIRECTION": "OUTPUT"
+        },
+        "cmd": {
+            "PACKAGE_PIN": "AP30",
+            "IOSTANDARD": "LVCMOS18",
+            "PIO_DIRECTION": "BIDIR"
+        },
+        "sddet": {
+            "PACKAGE_PIN": "AP32",
+            "IOSTANDARD": "LVCMOS18",
+            "PIO_DIRECTION": "INPUT"
+        },
+        "sdwp": {
+            "PACKAGE_PIN": "AR32",
+            "IOSTANDARD": "LVCMOS18",
+            "PIO_DIRECTION": "INPUT"
+        }
+    },
     "iic_main": {
 		"sda": {
 			"LOC": "AU32",

@@ -2,8 +2,23 @@ source "board.tcl"
 source "$connectaldir/scripts/connectal-synth-ip.tcl"
 source "$scriptsdir/../../fpgamake/tcl/ipcore.tcl"
 
+if {"$XILINX" == "1"} {
+    set x7_pcie_version 2.1
+    if {[version -short] == "2013.2"} {
+	set x7_pcieversion {2.1}
+    }
+    if {[version -short] >= "2015.1"} {
+	set x7_pcieversion {3.1}
+    }
+    if {[version -short] >= "2015.3"} {
+	set x7_pcieversion {3.2}
+    }
+    if {[version -short] >= "2016.1"} {
+	set x7_pcieversion {3.3}
+    }
+}
+
 if {$need_pcie == "x7_gen1x8"} {
-    set pcieversion {3.0}
     set maxlinkwidth {X8}
     if {$boardname == {zc706}} {
 	set maxlinkwidth {X4}
@@ -11,52 +26,31 @@ if {$need_pcie == "x7_gen1x8"} {
     if {$boardname == {ac701}} {
 	set maxlinkwidth {X4}
     }
-    if {[version -short] == "2013.2"} {
-	set pcieversion {2.1}
-    }
-    if {[version -short] >= "2015.1"} {
-	set pcieversion {3.1}
-    }
-    if {[version -short] >= "2015.3"} {
-	set pcieversion {3.2}
-    }
-    connectal_synth_ip pcie_7x $pcieversion pcie_7x_0 [list CONFIG.mode_selection {Advanced} CONFIG.ASPM_Optionality {true} CONFIG.Disable_Tx_ASPM_L0s {true} CONFIG.Buf_Opt_BMA {true} CONFIG.Bar0_64bit {true} CONFIG.Bar0_Size {16} CONFIG.Bar0_Scale {Kilobytes} CONFIG.Bar2_64bit {true} CONFIG.Bar2_Enabled {true} CONFIG.Bar2_Scale {Megabytes} CONFIG.Bar2_Size {1} CONFIG.Base_Class_Menu {Memory_controller} CONFIG.Device_ID {c100} CONFIG.IntX_Generation {false} CONFIG.MSI_Enabled {false} CONFIG.MSIx_Enabled {true} CONFIG.MSIx_PBA_Offset {1f0} CONFIG.MSIx_Table_Offset {200} CONFIG.MSIx_Table_Size {10} CONFIG.Maximum_Link_Width $maxlinkwidth CONFIG.Subsystem_ID {a705} CONFIG.Subsystem_Vendor_ID {1be7} CONFIG.Use_Class_Code_Lookup_Assistant {false} CONFIG.Vendor_ID {1be7} ]
+
+    ##
+    ## MSIX Table and PBA offset here is multiplied by 8, so 0x200 -> 4096
+    connectal_synth_ip pcie_7x $x7_pcieversion pcie_7x_0 [list CONFIG.mode_selection {Advanced} CONFIG.ASPM_Optionality {true} CONFIG.Disable_Tx_ASPM_L0s {true} CONFIG.Buf_Opt_BMA {true} CONFIG.Bar0_64bit {true} CONFIG.Bar0_Size {16} CONFIG.Bar0_Scale {Kilobytes} CONFIG.Bar2_64bit {true} CONFIG.Bar2_Enabled {true} CONFIG.Bar2_Scale {Megabytes} CONFIG.Bar2_Size {1} CONFIG.Base_Class_Menu {Memory_controller} CONFIG.Device_ID {c100} CONFIG.IntX_Generation {false} CONFIG.MSI_Enabled {false} CONFIG.MSIx_Enabled {true} CONFIG.MSIx_PBA_Offset {1f0} CONFIG.MSIx_Table_Offset {200} CONFIG.MSIx_Table_Size {10} CONFIG.Maximum_Link_Width $maxlinkwidth CONFIG.Subsystem_ID {a705} CONFIG.Subsystem_Vendor_ID {1be7} CONFIG.Use_Class_Code_Lookup_Assistant {false} CONFIG.Vendor_ID {1be7} ]
 }
 
 if {$need_pcie == "x7_gen2x8"} {
-    set pcieversion {3.0}
     set maxlinkwidth "X$PcieLanes"
     set maxinterfacebits [expr 16 * $PcieLanes]
     set maxinterfacewidth "${maxinterfacebits}_bit"
     set linkspeed {5.0_GT/s}
-    if {[version -short] >= "2015.1"} {
-	set pcieversion {3.1}
-    }
-    if {[version -short] >= "2015.3"} {
-	set pcieversion {3.2}
-    }
-    if {[version -short] >= "2016.1"} {
-	set pcieversion {3.3}
-    }
-    connectal_synth_ip pcie_7x $pcieversion pcie2_7x_0 [list CONFIG.mode_selection {Advanced} CONFIG.ASPM_Optionality {true} CONFIG.Disable_Tx_ASPM_L0s {true} CONFIG.Buf_Opt_BMA {true} CONFIG.Bar0_64bit {true} CONFIG.Bar0_Size {16} CONFIG.Bar0_Scale {Kilobytes} CONFIG.Bar2_64bit {true} CONFIG.Bar2_Enabled {true} CONFIG.Bar2_Scale {Megabytes} CONFIG.Bar2_Size {1} CONFIG.Base_Class_Menu {Memory_controller} CONFIG.Device_ID {c100} CONFIG.IntX_Generation {false} CONFIG.MSI_Enabled {false} CONFIG.MSIx_Enabled {true} CONFIG.MSIx_PBA_Offset {1f0} CONFIG.MSIx_Table_Offset {200} CONFIG.MSIx_Table_Size {10} CONFIG.Maximum_Link_Width $maxlinkwidth CONFIG.Subsystem_ID {a705} CONFIG.Subsystem_Vendor_ID {1be7} CONFIG.Use_Class_Code_Lookup_Assistant {false} CONFIG.Vendor_ID {1be7} CONFIG.Link_Speed $linkspeed CONFIG.Interface_Width $maxinterfacewidth CONFIG.en_ext_clk {false} CONFIG.PCIe_Debug_Ports {false} CONFIG.shared_logic_in_core {true} \
+    ## MSIX Table and PBA offset here is multiplied by 8, so 0x200 -> 4096
+    connectal_synth_ip pcie_7x $x7_pcieversion pcie2_7x_0 [list CONFIG.mode_selection {Advanced} CONFIG.ASPM_Optionality {true} CONFIG.Disable_Tx_ASPM_L0s {true} CONFIG.Buf_Opt_BMA {true} CONFIG.Bar0_64bit {true} CONFIG.Bar0_Size {16} CONFIG.Bar0_Scale {Kilobytes} CONFIG.Bar2_64bit {true} CONFIG.Bar2_Enabled {true} CONFIG.Bar2_Scale {Megabytes} CONFIG.Bar2_Size {1} CONFIG.Base_Class_Menu {Memory_controller} CONFIG.Device_ID {c100} CONFIG.IntX_Generation {false} CONFIG.MSI_Enabled {false} CONFIG.MSIx_Enabled {true} CONFIG.MSIx_PBA_Offset {1f0} CONFIG.MSIx_Table_Offset {200} CONFIG.MSIx_Table_Size {10} CONFIG.Maximum_Link_Width $maxlinkwidth CONFIG.Subsystem_ID {a705} CONFIG.Subsystem_Vendor_ID {1be7} CONFIG.Use_Class_Code_Lookup_Assistant {false} CONFIG.Vendor_ID {1be7} CONFIG.Link_Speed $linkspeed CONFIG.Interface_Width $maxinterfacewidth CONFIG.en_ext_clk {false} CONFIG.PCIe_Debug_Ports {false} CONFIG.shared_logic_in_core {true} \
 CONFIG.VC_Cap_Enabled {true} \
 CONFIG.AER_Enabled {true} CONFIG.AER_Multiheader {true} CONFIG.AER_Permit_Root_Error_Update {true} CONFIG.AER_Completion_Timeout {true} CONFIG.AER_Uncorrectable_Internal_Error {true} CONFIG.AER_MC_Blocked_TLP {true} CONFIG.AER_Receiver_Overflow {true} CONFIG.AER_TLP_Prefix_Blocked {true}  CONFIG.Optional_Error_Support {059400}]
 }
 
 if {$need_pcie == "x7_gen3x8"} {
+
     if {[version -short] >= "2017.1"} {
-	set pcieversion {4.4}
-    } elseif {[version -short] >= "2016.1"} {
-	set pcieversion {4.2}
-    } elseif {[version -short] >= "2015.3"} {
-	set pcieversion {4.1}
-    } elseif {[version -short] >= "2015.2"} {
-	set pcieversion {4.0}
-    } else {
-	set pcieversion {3.0}
+	set x7_pcieversion {4.3}
     }
+
     set maxlinkwidth {X8}
-    connectal_synth_ip pcie3_7x $pcieversion pcie3_7x_0 [list \
+    connectal_synth_ip pcie3_7x $x7_pcieversion pcie3_7x_0 [list \
 							 CONFIG.PL_LINK_CAP_MAX_LINK_WIDTH {X8} CONFIG.PL_LINK_CAP_MAX_LINK_SPEED {8.0_GT/s} \
 							 CONFIG.TL_PF_ENABLE_REG {false} CONFIG.vendor_id {1be7} CONFIG.PF0_DEVICE_ID {c100} \
 							 CONFIG.PF0_SUBSYSTEM_VENDOR_ID {1be7} CONFIG.PF0_SUBSYSTEM_ID {a705} \
@@ -65,8 +59,8 @@ if {$need_pcie == "x7_gen3x8"} {
 							 CONFIG.pf0_bar2_enabled {true} CONFIG.pf0_bar2_64bit {true} CONFIG.pf0_bar2_scale \
 							 {Megabytes} CONFIG.pf0_bar2_size {1} CONFIG.PF0_INTERRUPT_PIN {NONE} \
 							 CONFIG.pf0_msi_enabled {false} CONFIG.pf0_msix_enabled {true} \
-							 CONFIG.PF0_MSIX_CAP_TABLE_SIZE {010} CONFIG.PF0_MSIX_CAP_TABLE_OFFSET {00000200} \
-							 CONFIG.PF0_MSIX_CAP_PBA_OFFSET {000001f0} CONFIG.axisten_if_width {256_bit} \
+							 CONFIG.PF0_MSIX_CAP_TABLE_SIZE {010} CONFIG.PF0_MSIX_CAP_TABLE_OFFSET {00001000} \
+							 CONFIG.PF0_MSIX_CAP_PBA_OFFSET {00000f80} CONFIG.axisten_if_width {256_bit} \
 							 CONFIG.AXISTEN_IF_RC_STRADDLE {false} CONFIG.AXISTEN_IF_ENABLE_CLIENT_TAG {false} \
 							 CONFIG.cfg_ctl_if {true} CONFIG.cfg_ext_if {false} CONFIG.cfg_fc_if {false} \
 							 CONFIG.cfg_mgmt_if {false} CONFIG.cfg_status_if {true} CONFIG.cfg_tx_msg_if \
@@ -95,17 +89,17 @@ if {$need_pcie == "x7_gen3x8"} {
 
 if {$need_pcie == "xu_gen3x8"} {
     if {[version -short] >= "2017.1"} {
-	set pcieversion {4.4}
+	set ultrascale_pcieversion {4.4}
     } elseif {[version -short] >= "2016.2"} {
-	set pcieversion {4.2}
+	set ultrascale_pcieversion {4.2}
     }
     set maxlinkwidth {X8}
-    connectal_synth_ip pcie3_ultrascale $pcieversion pcie3_ultrascale_0 [list \
+    connectal_synth_ip pcie3_ultrascale $ultrascale_pcieversion pcie3_ultrascale_0 [list \
 									     CONFIG.PF0_DEVICE_ID {c100} \
 									     CONFIG.PF0_MSIX_CAP_PBA_BIR {BAR_1:0} \
-									     CONFIG.PF0_MSIX_CAP_PBA_OFFSET {000001f0} \
+									     CONFIG.PF0_MSIX_CAP_PBA_OFFSET {00000f80} \
 									     CONFIG.PF0_MSIX_CAP_TABLE_BIR {BAR_1:0} \
-									     CONFIG.PF0_MSIX_CAP_TABLE_OFFSET {00000200} \
+									     CONFIG.PF0_MSIX_CAP_TABLE_OFFSET {00001000} \
 									     CONFIG.PF0_MSIX_CAP_TABLE_SIZE {16} \
 									     CONFIG.PF0_SUBSYSTEM_ID {a705} \
 									     CONFIG.PF0_SUBSYSTEM_VENDOR_ID {1be7} \
