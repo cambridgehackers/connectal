@@ -1,3 +1,10 @@
+connectal (18.04.1-1precise1) precise; urgency=medium
+
+  * Fixed interrupts on PCIE3 and awsf1
+  * Fixed DMA on awsf1
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 12 Apr 2018 08:28:56 -0400
+
 connectal (18.01.4-1precise1) precise; urgency=medium
 
   * Fix portalmem DKMS build
