@@ -401,7 +401,9 @@ module awsf1(
                    .probe8 (ocl_sh_wready),
                    .probe9 (ocl_sh_rvalid),
                    .probe10 (ocl_sh_rdata),
-                   .probe11 (sh_ocl_rready)
+                   .probe11 (sh_ocl_rready),
+                   .probe12 (cl_sh_apppf_irq_req),
+                   .probe13 (sh_cl_apppf_irq_ack)
                    );
 
    ila_connectal_2 cl_ila_master  (
@@ -419,8 +421,19 @@ module awsf1(
                    .probe9 (sh_cl_pcim_rvalid),
                    .probe10 (sh_cl_pcim_rdata),
                    .probe11 (cl_sh_pcim_rready),
-                   .probe12 (cl_sh_pcim_aruser),
-                   .probe13 (cl_sh_pcim_awuser)
+                   .probe12(cl_sh_pcim_wstrb),
+                   .probe13 (cl_sh_pcim_aruser),
+                   .probe14 (cl_sh_pcim_awuser),
+                   .probe15 (cl_sh_pcim_arlen),
+                   .probe16 (cl_sh_pcim_awlen),
+                   .probe17 (cl_sh_pcim_arid),
+                   .probe18 (cl_sh_pcim_awid),
+                   .probe19 (cl_sh_pcim_arsize),
+                   .probe20 (cl_sh_pcim_awsize),
+                   .probe21 (sh_cl_pcim_bid),
+                   .probe22 (sh_cl_pcim_bresp),
+                   .probe23 (cl_sh_pcim_bready),
+                   .probe24 (sh_cl_pcim_bvalid)
                    );
 
 // Debug Bridge 
@@ -440,6 +453,9 @@ module awsf1(
       .S_BSCAN_bscanid_en(bscanid_en)
    );
 `endif // AWSF1_CL_DEBUG_BRIDGE
+
+   assign cl_sh_pcim_awuser = 0;
+   assign cl_sh_pcim_aruser = 0;
 
    mkAwsF1Top awsF1Top(
 	      .clk_main_a0(clk_main_a0),	//Main clock.  This is the clock for all of the interfaces to the SH
@@ -560,7 +576,7 @@ module awsf1(
 	      .pcim_arready_v(sh_cl_pcim_arready),
 	      .pcim_arsize(cl_sh_pcim_arsize),
 	      .pcim_arvalid(cl_sh_pcim_arvalid),
-	      .pcim_extra_aruser(cl_sh_pcim_aruser),
+	      //RESERVED: .pcim_extra_aruser(cl_sh_pcim_aruser),
 
 	      .pcim_awaddr(cl_sh_pcim_awaddr[39:0]),
 	      //.pcim_awburst(pcim_awburst),
@@ -573,7 +589,7 @@ module awsf1(
 	      .pcim_awready_v(sh_cl_pcim_awready),
 	      .pcim_awsize(cl_sh_pcim_awsize),
 	      .pcim_awvalid(cl_sh_pcim_awvalid),
-	      .pcim_extra_awuser(cl_sh_pcim_awuser),
+	      //RESERVED: .pcim_extra_awuser(cl_sh_pcim_awuser),
 
 	      .pcim_bid_v(sh_cl_pcim_bid),
 	      .pcim_bready(cl_sh_pcim_bready),
