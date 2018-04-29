@@ -43,13 +43,15 @@
 #include <libgen.h>  // dirname
 #include <pthread.h>
 #endif
-#include "drivers/portalmem/portalmem.h" // PA_MALLOC
 
+#ifndef __APPLE__
+#include "drivers/portalmem/portalmem.h" // PA_MALLOC
 #if defined(ZYNQ) || defined(__riscv__)
 #include "drivers/zynqportal/zynqportal.h"
 #else
 #include "drivers/pcieportal/pcieportal.h" // BNOC_TRACE
 #endif
+#endif // !__APPLE__
 
 int simulator_dump_vcd = 0;
 const char *simulator_vcd_name = "dump.vcd";
@@ -95,7 +97,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
 	PORTAL_PRINTF("%s: **initialize portal_b%dt%dp%d handler %p cb %p parent %p\n", __FUNCTION__, pint->board_number, pint->fpga_tile, pint->fpga_number, handler, cb, parent);
     if (!transport) {
         // Use defaults for transport handling methods
-#ifdef SIMULATION
+#if defined(SIMULATION) && !defined(__APPLE__)
         transport = &transportXsim;
 #else
         transport = &transportHardware;
@@ -122,7 +124,7 @@ int portal_disconnect(struct PortalInternal *pint)
 
 int portal_event(struct PortalInternal *pint)
 {
-#ifdef SIMULATION
+#if defined(SIMULATION) && !defined(__APPLE__)
     return event_xsim(pint);
 #else
     return event_hardware(pint);
@@ -190,6 +192,9 @@ static void checkSignature(const char *filename, int ioctlnum)
 
 char *getExecutionFilename(char *buf, int buflen)
 {
+#ifdef __APPLE__ // hack for debugging
+    return (char *)"bin/ubuntu.exe";
+#endif
     int rc, fd;
     char *filename = 0;
     buf[0] = 0;
