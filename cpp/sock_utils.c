@@ -75,7 +75,7 @@ int init_listening(const char *arg_name, PortalSocketParam *param)
 
     int tmp = 1;
     setsockopt(listening_socket, SOL_SOCKET, SO_REUSEADDR, &tmp, sizeof(tmp));
-    if (listening_socket == -1 || bind(listening_socket, addr->ai_addr, addrinfo.ai_addrlen) == -1) {
+    if (listening_socket == -1 || bind(listening_socket, addr->ai_addr, addr->ai_addrlen) == -1) {
         fprintf(stderr, "%s[%d]: bind error %s\n",__FUNCTION__, listening_socket, strerror(errno));
         exit(1);
     }
