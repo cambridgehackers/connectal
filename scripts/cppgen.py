@@ -25,6 +25,7 @@
 import functools, json, math, os, re, sys, util
 
 verbose = False
+generateJson = True
 sizeofUint32_t = 4
 generatedVectors = []
 itypeNames = ['int', 'int8_t', 'uint8_t', 'int16_t', 'uint16_t', 'int32_t', 'uint32_t', 'uint64_t', 'SpecialTypeForSendingFd', 'ChannelType', 'DmaDbgRec']
@@ -857,7 +858,8 @@ def generate_cpp(project_dir, noisyFlag, jsondata):
         if verbose:
             print 'generateclass', item
         generate_class(item['cname'],     '', item['cdecls'], generatedCFiles, create_cpp_file, generated_hpp, generated_cpp)
-        generate_class(item['cname'], 'Json', item['cdecls'], generatedCFiles, create_cpp_file, generated_hpp, generated_cpp)
+        if generateJson:
+            generate_class(item['cname'], 'Json', item['cdecls'], generatedCFiles, create_cpp_file, generated_hpp, generated_cpp)
     generated_cpp.write('#endif //NO_CPP_PORTAL_CODE\n')
     generated_cpp.close()
     generated_hpp.write('#ifdef __cplusplus\n')
