@@ -24,6 +24,7 @@
 
 import functools, json, math, os, re, sys, util
 
+generatedSubdirectory = 'jni'
 verbose = False
 generateJson = True
 sizeofUint32_t = 4
@@ -608,10 +609,18 @@ int %(classNameOrig)sdisconnect_cb (struct PortalInternal *p) {
 };
 '''
 
-def generate_class(classNameOrig, classVariant, declList, generatedCFiles, create_cpp_file, generated_hpp, generated_cpp):
+def generate_class(classNameOrig, classVariant, declList, generatedCFiles, create_cpp_file, generated_hpp, generated_cpp, direction):
     global generatedVectors
     className = classNameOrig + classVariant
     classCName = cName(className)
+    generateProxy = True
+    generateWrapper = True
+    if direction == '0':
+        generateWrapper = False
+        print 'JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ Proxy ', className
+    if direction == '1':
+        generateProxy = False
+        print 'JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ Wrapper ', className
     if classVariant == 'Json':
         cppname = '%s.cpp' % className
     else:
@@ -632,6 +641,7 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         hpp = create_cpp_file(hppname)
         hpp.write('#ifndef _%(name)s_H_\n#define _%(name)s_H_\n' % {'name': className.upper()})
         hpp.write('#include "portal.h"\n')
+    if (not classVariant) and generateWrapper:
         generated_cpp.write(wrapperStartTemplate % cnSubst)
     for mitem in declList:
         if verbose:
@@ -642,24 +652,25 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         methodList.append(substs['methodName'])
         reqChanNums.append(substs['channelNumber'])
     methodJsonDeclarations = ['{"%(methodName)s", %(classNameOrig)s_%(methodName)sInfo},' % {'methodName': p, 'classNameOrig': classNameOrig} for p in methodList]
-    for mitem in declList:
-        substs, t = gatherMethodInfo(mitem['dname'], mitem['dparams'], className, classNameOrig, classVariant)
-        if classVariant:
-            cpp.write((proxyMethodTemplateDecl + proxyJMethodTemplate) % substs)
-        else:
-            cpp.write((proxyMethodTemplateDecl + proxyMethodTemplate) % substs)
-            for t in generatedVectors:
-                #'Vector'
-                generated_hpp.write('\ntypedef %s bsvvector_L%s_L%d[%d];' % (t[1], t[1], t[0], t[0]))
-            generatedVectors = []
-    for mitem in declList:
-        substs, t = gatherMethodInfo(mitem['dname'], mitem['dparams'], className, classNameOrig, classVariant)
-        generated_hpp.write((proxyMethodTemplateDecl % substs) + ';')
-    methodTable = ['%(className)s_%(methodName)s,' % {'methodName': p, 'className': className} for p in methodList]
-    cpp.write(proxyMethodTableDecl % {'className': className, 'classNameOrig': classNameOrig, 'methodTable': '\n    '.join(['portal_disconnect,'] + methodTable)})
+    if generateProxy:
+        for mitem in declList:
+            substs, t = gatherMethodInfo(mitem['dname'], mitem['dparams'], className, classNameOrig, classVariant)
+            if classVariant:
+                cpp.write((proxyMethodTemplateDecl + proxyJMethodTemplate) % substs)
+            else:
+                cpp.write((proxyMethodTemplateDecl + proxyMethodTemplate) % substs)
+                for t in generatedVectors:
+                    #'Vector'
+                    generated_hpp.write('\ntypedef %s bsvvector_L%s_L%d[%d];' % (t[1], t[1], t[0], t[0]))
+                generatedVectors = []
+        for mitem in declList:
+            substs, t = gatherMethodInfo(mitem['dname'], mitem['dparams'], className, classNameOrig, classVariant)
+            generated_hpp.write((proxyMethodTemplateDecl % substs) + ';')
+        methodTable = ['%(className)s_%(methodName)s,' % {'methodName': p, 'className': className} for p in methodList]
+        cpp.write(proxyMethodTableDecl % {'className': className, 'classNameOrig': classNameOrig, 'methodTable': '\n    '.join(['portal_disconnect,'] + methodTable)})
     subs = {'className': classCName, 'maxSize': (maxSize+1) * sizeofUint32_t,
-            'reqInfo': '0x%x' % ((len(declList) << 16) + (maxSize+1) * sizeofUint32_t),
-            'classNameOrig': classNameOrig }
+        'reqInfo': '0x%x' % ((len(declList) << 16) + (maxSize+1) * sizeofUint32_t),
+        'classNameOrig': classNameOrig }
     if classVariant:
         subs['handleStartup'] = 'Json::Value msg = Json::Value(connectalJsonReceive(p));' % subs
     else:
@@ -667,34 +678,37 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n' % subs)
         generated_hpp.write('extern const uint32_t %(className)s_reqinfo;\n' % subs)
         cpp.write('\nconst uint32_t %(className)s_reqinfo = %(reqInfo)s;\n' % subs)
-        hpp.write(proxyClassPrefixTemplate % subs)
+        if generateProxy:
+            hpp.write(proxyClassPrefixTemplate % subs)
+            for mitem in declList:
+                emitMethodDeclaration(mitem['dname'], mitem['dparams'], hpp, classCName)
+            hpp.write('};\n')
+    if generateWrapper:
+        cpp.write('const char * %(className)s_methodSignatures()\n{\n' % subs)
+        signatures = dict([(mitem['dname'], ['long' for param in mitem['dparams']]) for mitem in declList])
+        cpp.write('    return %s;\n}\n' % json.dumps(json.dumps(signatures)))
+        cpp.write((handleMessageTemplateDecl % subs))
+        cpp.write(handleMessageTemplate1 % subs)
         for mitem in declList:
-            emitMethodDeclaration(mitem['dname'], mitem['dparams'], hpp, classCName)
-        hpp.write('};\n')
-    cpp.write('const char * %(className)s_methodSignatures()\n{\n' % subs)
-    signatures = dict([(mitem['dname'], ['long' for param in mitem['dparams']]) for mitem in declList])
-    cpp.write('    return %s;\n}\n' % json.dumps(json.dumps(signatures)))
-    cpp.write((handleMessageTemplateDecl % subs))
-    cpp.write(handleMessageTemplate1 % subs)
-    for mitem in declList:
-        substs, t = gatherMethodInfo(mitem['dname'], mitem['dparams'], className, classNameOrig, classVariant)
+            substs, t = gatherMethodInfo(mitem['dname'], mitem['dparams'], className, classNameOrig, classVariant)
+            if not classVariant:
+                generated_hpp.write(messageStructTemplate % substs)
+            cpp.write(handleMessageCase % substs)
         if not classVariant:
-            generated_hpp.write(messageStructTemplate % substs)
-        cpp.write(handleMessageCase % substs)
-    if not classVariant:
-        elemList = []
-        for mitem in declList:
-            substs, t = gatherMethodInfo(mitem['dname'], mitem['dparams'], className, className, classVariant)
-            elemList.append('%(channelName)sData %(methodName)s;' % substs)
-        generated_hpp.write(portalStructTemplate % {'className': classCName, 'messageStructDeclarations': '\n    '.join(elemList)})
-    cpp.write(handleMessageTemplate2 % subs)
-    generated_hpp.write((handleMessageTemplateDecl % subs)+ ';\n')
-    if not classVariant:
+            elemList = []
+            for mitem in declList:
+                substs, t = gatherMethodInfo(mitem['dname'], mitem['dparams'], className, className, classVariant)
+                elemList.append('%(channelName)sData %(methodName)s;' % substs)
+            generated_hpp.write(portalStructTemplate % {'className': classCName, 'messageStructDeclarations': '\n    '.join(elemList)})
+        cpp.write(handleMessageTemplate2 % subs)
+        generated_hpp.write((handleMessageTemplateDecl % subs)+ ';\n')
+    if (not classVariant) and generateWrapper:
         hpp.write(wrapperClassPrefixTemplate % subs)
         for mitem in declList:
             emitMethodDeclaration(mitem['dname'], mitem['dparams'], hpp, '')
         hpp.write('};\n')
-        cCNSubst = { 'classCName': classCName}
+    cCNSubst = { 'classCName': classCName}
+    if not classVariant:
         generated_hpp.write('typedef struct {\n    PORTAL_DISCONNECT disconnect;\n')
         for mitem in declList:
             if verbose:
@@ -705,19 +719,23 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
             formalParamStr = formalParameters(mitem['dparams'], True)
             methodName = cName(mitem['dname'])
             generated_hpp.write(('    int (*%s) ( ' % methodName) + formalParamStr + ' );\n')
-            generated_cpp.write(('int %s%s_cb ( ' % (classCName, methodName)) + formalParamStr + ' ) {\n')
-            indent(generated_cpp, 4)
-            generated_cpp.write(('(static_cast<%sWrapper *>(p->parent))->%s ( ' % (classCName, methodName)) + paramValues + ');\n')
-            indent(generated_cpp, 4)
-            generated_cpp.write('return 0;\n};\n')
+            if generateWrapper:
+                generated_cpp.write(('int %s%s_cb ( ' % (classCName, methodName)) + formalParamStr + ' ) {\n')
+                indent(generated_cpp, 4)
+                generated_cpp.write(('(static_cast<%sWrapper *>(p->parent))->%s ( ' % (classCName, methodName)) + paramValues + ');\n')
+                indent(generated_cpp, 4)
+                generated_cpp.write('return 0;\n};\n')
         generated_hpp.write('} %(classCName)sCb;\n' % cCNSubst)
+    if (not classVariant) and generateWrapper:
         generated_cpp.write('%(classCName)sCb %(classCName)s_cbTable = {\n    %(classCName)sdisconnect_cb,\n' % cCNSubst)
         for mitem in declList:
             generated_cpp.write('    %s%s_cb,\n' % (classCName, mitem['dname']))
         generated_cpp.write('};\n')
+    if not classVariant:
         hpp.write('#endif // _%(name)s_H_\n' % {'name': className.upper()})
         hpp.close()
-    generated_hpp.write('extern %(classNameOrig)sCb %(className)sProxyReq;\n' % subs)
+    if generateProxy:
+        generated_hpp.write('extern %(classNameOrig)sCb %(className)sProxyReq;\n' % subs)
     if classVariant:
         cpp.write('#endif /* PORTAL_JSON */\n')
     cpp.close()
@@ -810,7 +828,7 @@ def emitCD(item, generated_hpp, indentation):
 def generate_cpp(project_dir, noisyFlag, jsondata):
     global globalv_globalvars, verbose, bsvdefines
     def create_cpp_file(name):
-        fname = os.path.join(project_dir, 'jni', name)
+        fname = os.path.join(project_dir, generatedSubdirectory, name)
         f = util.createDirAndOpen(fname, 'w')
         if verbose:
             print "Writing file ",fname
@@ -828,7 +846,7 @@ def generate_cpp(project_dir, noisyFlag, jsondata):
             bsvdefines[binding] = binding
     generatedCFiles = []
     globalv_globalvars = {}
-    hname = os.path.join(project_dir, 'jni', 'GeneratedTypes.h')
+    hname = os.path.join(project_dir, generatedSubdirectory, 'GeneratedTypes.h')
     generated_hpp = util.createDirAndOpen(hname, 'w')
     generated_hpp.write('#ifndef __GENERATED_TYPES__\n')
     generated_hpp.write('#define __GENERATED_TYPES__\n')
@@ -857,9 +875,9 @@ def generate_cpp(project_dir, noisyFlag, jsondata):
     for item in jsondata['interfaces']:
         if verbose:
             print 'generateclass', item
-        generate_class(item['cname'],     '', item['cdecls'], generatedCFiles, create_cpp_file, generated_hpp, generated_cpp)
+        generate_class(item['cname'],     '', item['cdecls'], generatedCFiles, create_cpp_file, generated_hpp, generated_cpp, item.get('direction'))
         if generateJson:
-            generate_class(item['cname'], 'Json', item['cdecls'], generatedCFiles, create_cpp_file, generated_hpp, generated_cpp)
+            generate_class(item['cname'], 'Json', item['cdecls'], generatedCFiles, create_cpp_file, generated_hpp, generated_cpp, item['dir'])
     generated_cpp.write('#endif //NO_CPP_PORTAL_CODE\n')
     generated_cpp.close()
     generated_hpp.write('#ifdef __cplusplus\n')
@@ -867,7 +885,7 @@ def generate_cpp(project_dir, noisyFlag, jsondata):
     generated_hpp.write('#endif\n')
     generated_hpp.write('#endif //__GENERATED_TYPES__\n')
     generated_hpp.close()
-    gen_makefile = util.createDirAndOpen(os.path.join(project_dir, 'jni', 'Makefile.generated_files'), 'w')
+    gen_makefile = util.createDirAndOpen(os.path.join(project_dir, generatedSubdirectory, 'Makefile.generated_files'), 'w')
     gen_makefile.write('\nGENERATED_CPP=' + ' '.join(generatedCFiles)+'\n')
     gen_makefile.close()
     return generatedCFiles
