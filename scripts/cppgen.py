@@ -27,6 +27,7 @@ import functools, json, math, os, re, sys, util
 generatedSubdirectory = 'jni'
 verbose = False
 generateJson = True
+generatePacketOnly = False
 sizeofUint32_t = 4
 generatedVectors = []
 itypeNames = ['int', 'int8_t', 'uint8_t', 'int16_t', 'uint16_t', 'int32_t', 'uint32_t', 'uint64_t', 'SpecialTypeForSendingFd', 'ChannelType', 'DmaDbgRec']
@@ -77,10 +78,12 @@ typedef union {
     %(messageStructDeclarations)s
 } %(className)sData;'''
 
+handleMessageTemplateTmpDecl='''
+    int   tmp __attribute__ ((unused));'''
+
 handleMessageTemplate1='''
 {
-    static int runaway = 0;
-    int   tmp __attribute__ ((unused));
+    static int runaway = 0;%(tmpDecl)s
     int tmpfd __attribute__ ((unused));
     %(classNameOrig)sData tempdata __attribute__ ((unused));
     memset(&tempdata, 0, sizeof(tempdata));
@@ -92,8 +95,7 @@ handleMessagePrep='''
         %(paramStructDemarshall)s'''
 
 handleMessageCase='''
-    case %(channelNumber)s: {
-        %(responseCase)s
+    case %(channelNumber)s: {%(responseCase)s
       } break;'''
 
 handleMessageTemplate2='''
@@ -121,13 +123,18 @@ proxyMethodTableDecl='''
 proxyMethodTemplateDecl='''
 int %(className)s_%(methodName)s (%(paramProxyDeclarations)s )'''
 
-proxyMethodTemplate='''
-{
+proxyMethodTemplateProlog='''
     volatile unsigned int* temp_working_addr_start = p->transport->mapchannelReq(p, %(channelNumber)s, %(wordLenP1)s);
     volatile unsigned int* temp_working_addr = temp_working_addr_start;
-    if (p->transport->busywait(p, %(channelNumber)s, "%(className)s_%(methodName)s")) return 1;
+    if (p->transport->busywait(p, %(channelNumber)s, "%(className)s_%(methodName)s")) return 1;'''
+
+proxyMethodTemplatePrologPacket='''
+    unsigned int temp_working_addr_start[%(wordLenP1)s + 1] = {0, (%(channelNumber)s << 16) | %(wordLenP1)s,'''
+
+proxyMethodTemplate='''
+{%(prolog)s
     %(paramStructMarshall)s
-    p->transport->send(p, temp_working_addr_start, (%(channelNumber)s << 16) | %(wordLenP1)s, %(fdName)s);
+    p->transport->send(p, %(temp)s, (%(channelNumber)s << 16) | %(wordLenP1)s, %(fdName)s);
     return 0;
 };
 '''
@@ -399,59 +406,76 @@ def accumWords(s, pro, memberList):
         #print '%s (2)'% (name)
         return [s]+accumWords([],pro+(32-w), memberList)
 
-def generate_marshall(pfmt, w):
+def generate_marshall(pfmt, argWords):
     global fdName
-    off = 0
-    fields = []
-    fmt = pfmt
-    outstr = ''
-    for e in w:
-        field = e.name
-        if typeCName(e.datatype) == 'float':
-            return pfmt % ('*(int*)&' + e.name)
-        mask = signCName(e.datatype)
-        if mask:
-            field = '(%s & %s)' % (field, mask)
-        if e.shifted:
-            field = '(%s>>%s)' % (field, e.shifted)
-        if off:
-            field = '(((unsigned long)%s)<<%s)' % (field, off)
-        if typeBitWidth(e.datatype) > 64:
-            field = '(const %s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, typeBitWidth(e.datatype))
-        fields.append(field)
-        off = off+e.width-e.shifted
-        if typeCName(e.datatype) == 'SpecialTypeForSendingFd':
-            fdName = field
-            fmt = 'p->transport->writefd(p, &temp_working_addr, %s);'
-    return fmt % (''.join(util.intersperse('|', fields)))
+    retList = []
+    for w in argWords:
+        off = 0
+        fields = []
+        fmt = pfmt
+        outstr = ''
+        for e in w:
+            field = e.name
+            if typeCName(e.datatype) == 'float':
+                return pfmt % ('*(int*)&' + e.name)
+            mask = signCName(e.datatype)
+            if mask:
+                field = '(%s & %s)' % (field, mask)
+            if e.shifted:
+                field = '(%s>>%s)' % (field, e.shifted)
+            if off:
+                field = '(((unsigned long)%s)<<%s)' % (field, off)
+            if typeBitWidth(e.datatype) > 64:
+                field = '(const %s & std::bitset<%d>(0xFFFFFFFF)).to_ulong()' % (field, typeBitWidth(e.datatype))
+            fields.append(field)
+            off = off+e.width-e.shifted
+            if typeCName(e.datatype) == 'SpecialTypeForSendingFd':
+                fdName = field
+                fmt = 'p->transport->writefd(p, &temp_working_addr, %s);'
+                if generatePacketOnly:
+                    print 'generate_marshall: when using "generatePacketOnly", fd items cannot be sent'
+                    sys.exit(-1)
+        retList.append(fmt % (''.join(util.intersperse('|', fields))))
+    return retList
 
-def generate_demarshall(argStruct, w):
-    fmt, methodName = argStruct
-    off = 0
-    statements = []
-    statements.append(fmt)
-    for e in w:
-        # print e.name+' (d)'
-        field = 'tmp'
-        if typeCName(e.datatype) == 'float':
-            statements.append('tempdata.%s.%s %s *(float *)&(%s);'%(methodName, e.name, e.assignOp, field))
-            continue
-        if off:
-            field = '%s>>%s' % (field, off)
-        #print 'JJJ', e.name, '{{'+field+'}}', typeBitWidth(e.datatype), e.shifted, e.assignOp, off
-        fieldWidth = 32 - off     # number of valid data bits in source
-        fieldWidth += e.shifted   # number of valid data bits after shifting
-        if fieldWidth > typeBitWidth(e.datatype): # if num bits in type < num of valid bits
-            fieldWidth = typeBitWidth(e.datatype)
-        field = '((%s)&0x%xul)' % (field, ((1 << (fieldWidth - e.shifted))-1))
-        if e.shifted:
-            field = '((%s)(%s)<<%s)' % (typeCName(e.datatype),field, e.shifted)
-        if typeCName(e.datatype) == 'SpecialTypeForSendingFd':
-            statements.append('tempdata.%s.%s %s messageFd;'%(methodName, e.name, e.assignOp))
-        else:
-            statements.append('tempdata.%s.%s %s (%s)(%s);'%(methodName, e.name, e.assignOp, typeCName(e.datatype), field))
-        off = off+e.width-e.shifted
-    return '\n        '.join(statements)
+def generate_demarshall(fmt, methodName, argWords):
+    retList = []
+    itemIndex = 0
+    for w in argWords:
+        off = 0
+        statements = []
+        if (fmt != ''):
+            statements.append(fmt)
+        for e in w:
+            # print e.name+' (d)'
+            if generatePacketOnly:
+                field = 'temp_working_addr[%d]' % itemIndex
+            else:
+                field = 'tmp'
+            if typeCName(e.datatype) == 'float':
+                statements.append('tempdata.%s.%s %s *(float *)&(%s);'%(methodName, e.name, e.assignOp, field))
+                continue
+            if off:
+                field = '%s>>%s' % (field, off)
+            #print 'JJJ', e.name, '{{'+field+'}}', typeBitWidth(e.datatype), e.shifted, e.assignOp, off
+            fieldWidth = 32 - off     # number of valid data bits in source
+            fieldWidth += e.shifted   # number of valid data bits after shifting
+            if fieldWidth > typeBitWidth(e.datatype): # if num bits in type < num of valid bits
+                fieldWidth = typeBitWidth(e.datatype)
+            field = '((%s)&0x%xul)' % (field, ((1 << (fieldWidth - e.shifted))-1))
+            if e.shifted:
+                field = '((%s)(%s)<<%s)' % (typeCName(e.datatype),field, e.shifted)
+            if typeCName(e.datatype) == 'SpecialTypeForSendingFd':
+                if generatePacketOnly:
+                    print 'generate_demarshall: when using "generatePacketOnly", fd items cannot be sent'
+                    sys.exit(-1)
+                statements.append('tempdata.%s.%s %s messageFd;'%(methodName, e.name, e.assignOp))
+            else:
+                statements.append('tempdata.%s.%s %s (%s)(%s);'%(methodName, e.name, e.assignOp, typeCName(e.datatype), field))
+            off = off+e.width-e.shifted
+        retList.append('\n        '.join(statements))
+        itemIndex += 1
+    return retList
 
 def formalParameters(params, insertPortal):
     rc = [ 'const %s %s' % (typeCName(pitem['ptype']), pitem['pname']) for pitem in params]
@@ -522,19 +546,25 @@ def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
     argAtoms = sum(map(functools.partial(collectMembers, ''), params), [])
     argAtoms.reverse()
     argWords  = accumWords([], 0, argAtoms)
+    argWords.reverse()
     fdName = '-1'
 
-    paramStructMarshallStr = 'p->transport->write(p, &temp_working_addr, %s);'
-    paramStructDemarshallStr = 'tmp = p->transport->read(p, &temp_working_addr);'
+    if generatePacketOnly:
+        paramStructMarshallStr = '        %s,'
+        paramStructDemarshallStr = ''
+    else:
+        paramStructMarshallStr = 'p->transport->write(p, &temp_working_addr, %s);'
+        paramStructDemarshallStr = 'tmp = p->transport->read(p, &temp_working_addr);'
 
     if argWords == []:
-        paramStructMarshall = [paramStructMarshallStr % '0']
+        if generatePacketOnly:
+            paramStructMarshall = []
+        else:
+            paramStructMarshall = [paramStructMarshallStr % '0']
         paramStructDemarshall = [paramStructDemarshallStr]
     else:
-        paramStructMarshall = map(functools.partial(generate_marshall, paramStructMarshallStr), argWords)
-        paramStructMarshall.reverse()
-        paramStructDemarshall = map(functools.partial(generate_demarshall, [paramStructDemarshallStr, methodName]), argWords)
-        paramStructDemarshall.reverse()
+        paramStructMarshall = generate_marshall(paramStructMarshallStr, argWords)
+        paramStructDemarshall = generate_demarshall(paramStructDemarshallStr, methodName, argWords)
 
     chname = '%s_%s' % (classNameOrig, methodName)
     if verbose:
@@ -655,6 +685,13 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
     if generateProxy:
         for mitem in declList:
             substs, t = gatherMethodInfo(mitem['dname'], mitem['dparams'], className, classNameOrig, classVariant)
+            if generatePacketOnly:
+                substs['temp'] = 'temp_working_addr_start + 2'
+                substs['prolog'] = proxyMethodTemplatePrologPacket % substs
+                substs['paramStructMarshall'] = substs['paramStructMarshall'][0: len(substs['paramStructMarshall']) - 1] + "};"
+            else:
+                substs['temp'] = 'temp_working_addr_start'
+                substs['prolog'] = proxyMethodTemplateProlog % substs
             if classVariant:
                 cpp.write((proxyMethodTemplateDecl + proxyJMethodTemplate) % substs)
             else:
@@ -670,11 +707,15 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         cpp.write(proxyMethodTableDecl % {'className': className, 'classNameOrig': classNameOrig, 'methodTable': '\n    '.join(['portal_disconnect,'] + methodTable)})
     subs = {'className': classCName, 'maxSize': (maxSize+1) * sizeofUint32_t,
         'reqInfo': '0x%x' % ((len(declList) << 16) + (maxSize+1) * sizeofUint32_t),
-        'classNameOrig': classNameOrig }
+        'classNameOrig': classNameOrig, 'tmpDecl': handleMessageTemplateTmpDecl}
     if classVariant:
         subs['handleStartup'] = 'Json::Value msg = Json::Value(connectalJsonReceive(p));' % subs
     else:
-        subs['handleStartup'] = 'volatile unsigned int* temp_working_addr = p->transport->mapchannelInd(p, channel);'
+        if generatePacketOnly:
+            subs['handleStartup'] = 'unsigned int temp_working_addr[REQINFO_SIZE(%(className)s_reqinfo)];' % subs
+            subs['tmpDecl'] = ''
+        else:
+            subs['handleStartup'] = 'volatile unsigned int* temp_working_addr = p->transport->mapchannelInd(p, channel);'
         generated_hpp.write('\nenum { ' + ','.join(reqChanNums) + '};\n' % subs)
         generated_hpp.write('extern const uint32_t %(className)s_reqinfo;\n' % subs)
         cpp.write('\nconst uint32_t %(className)s_reqinfo = %(reqInfo)s;\n' % subs)
