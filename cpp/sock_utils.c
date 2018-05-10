@@ -51,12 +51,17 @@ int init_listening(const char *arg_name, PortalSocketParam *param)
     sa.sun_family = AF_UNIX;
     strcpy(sa.sun_path, arg_name);
     struct addrinfo addrinfo = { 0, AF_UNIX, SOCK_STREAM, 0};
-    addrinfo.ai_addrlen = sizeof(sa.sun_family) + strlen(sa.sun_path);
+    addrinfo.ai_addrlen =
+#ifdef __APPLE__
+        SUN_LEN(&sa);
+#else
+        sizeof(sa.sun_family) + strlen(sa.sun_path);
+#endif
     addrinfo.ai_addr = (struct sockaddr *)&sa;
     struct addrinfo *addr = &addrinfo;
 
     if (trace_socket)
-        fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);
+        fprintf(stderr, "[%s:%d] listenName %s\n", __FUNCTION__, __LINE__, arg_name);
     if (param && param->addr) {
         fprintf(stderr, "[%s:%d] TCP\n", __FUNCTION__, __LINE__);
         addr = param->addr;
@@ -108,7 +113,12 @@ int init_connecting(const char *arg_name, PortalSocketParam *param)
 
     sa.sun_family = AF_UNIX;
     strcpy(sa.sun_path, arg_name);
-    addrinfo.ai_addrlen = sizeof(sa.sun_family) + strlen(sa.sun_path);
+    addrinfo.ai_addrlen = 
+#ifdef __APPLE__
+        SUN_LEN(&sa);
+#else
+        sizeof(sa.sun_family) + strlen(sa.sun_path);
+#endif
     addrinfo.ai_addr = (struct sockaddr *)&sa;
 
     if (param && param->addr) {
@@ -165,7 +175,11 @@ ssize_t sock_fd_write(int sockfd, void *ptr, size_t nbytes, int sendfd)
     iov[0].iov_len = nbytes;
     msg.msg_iov = iov;
     msg.msg_iovlen = 1;
+#ifdef __APPLE__
+    ssize_t bytesSent = send(sockfd, ptr, nbytes, 0);
+#else
     ssize_t bytesSent = sendmsg(sockfd, &msg, 0);
+#endif
     if (bytesSent != (ssize_t)nbytes) {
         fprintf(stderr, "[%s:%d] error in sendmsg %ld %d\n", __FUNCTION__, __LINE__, (long)bytesSent, errno);
         exit(1);
