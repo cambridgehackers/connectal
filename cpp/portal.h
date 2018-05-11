@@ -318,6 +318,9 @@ int portal_printf(const char *format, ...); // outputs to stderr
 extern int global_sockfd, global_pa_fd;
 extern PortalInternal *utility_portal;
 
+#define CONNECTAL_PRINTF_PORT       0x7fff
+extern void (*connectalPrintfHandler)(struct PortalInternal *p, unsigned int header);
+
 // Portal transport variants
 extern PortalTransportFunctions transportBsim, // Transport for bsim
   transportHardware,    // Memory-mapped register transport for hardware

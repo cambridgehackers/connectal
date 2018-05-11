@@ -65,6 +65,7 @@ static int trace_portal;//= 1;
 
 int global_pa_fd = -1;
 PortalInternal *utility_portal = 0x0;
+void (*connectalPrintfHandler)(struct PortalInternal *p, unsigned int header);
 
 #ifdef __KERNEL__
 static tBoard* tboard;
