@@ -550,7 +550,7 @@ def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
     fdName = '-1'
 
     if generatePacketOnly:
-        paramStructMarshallStr = '        %s,'
+        paramStructMarshallStr = '        (unsigned int)(%s),'
         paramStructDemarshallStr = ''
     else:
         paramStructMarshallStr = 'p->transport->write(p, &temp_working_addr, %s);'
