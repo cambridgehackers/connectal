@@ -64,6 +64,7 @@ int global_sockfd = -1;
 
 static int init_socketResp(struct PortalInternal *pint, void *aparam)
 {
+    initPortalHardware();
     PortalSocketParam *param = (PortalSocketParam *)aparam;
     char buff[128];
     int on = 1;
@@ -80,6 +81,7 @@ static int init_socketResp(struct PortalInternal *pint, void *aparam)
 }
 static int init_socketInit(struct PortalInternal *pint, void *aparam)
 {
+    initPortalHardware();
     PortalSocketParam *param = (PortalSocketParam *)aparam;
     char buff[128];
     const char *name = getenv("SOFTWARE_SOCKET_NAME");
@@ -180,6 +182,7 @@ PortalTransportFunctions transportSocketInit = {
 
 static int init_mux(struct PortalInternal *pint, void *aparam)
 {
+    initPortalHardware();
     PortalMuxParam *param = (PortalMuxParam *)aparam;
     if(trace_socket)
         fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);
