@@ -189,6 +189,7 @@ NEED_XILINX_PCIE_zcu102=3u
 NEED_XILINX_PCIE_nfsume=3
 NEED_XILINX_PCIE_vc709=3
 NEED_XILINX_PCIE_v2000t=1
+NEED_XILINX_PCIE_vcu118=3u_plus
 
 NEED_ALTERA_PCIE_de5=1
 NEED_ALTERA_PCIE_htg4=1
@@ -215,6 +216,10 @@ ifeq ($(NEED_XILINX_PCIE_$(BOARD)),3)
 endif
 ifeq ($(NEED_XILINX_PCIE_$(BOARD)),3u)
     CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/pcie3_ultrascale_0/pcie3_ultrascale_0.xci
+    CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS"
+endif
+ifeq ($(NEED_XILINX_PCIE_$(BOARD)),3u_plus)
+    CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/pcie_uscale_plus_0/pcie_uscale_plus_0.xci
     CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS"
 endif
 
