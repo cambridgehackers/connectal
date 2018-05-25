@@ -175,11 +175,41 @@ module vMkClockIBUFDS_GTE3#(IBUFDS_GTE2Params params, Bool enable, Clock clk_p, 
    same_family(clk_p, gen_clk2);
 endmodule: vMkClockIBUFDS_GTE3
 
+
+import "BVI" IBUFDS_GTE4 =
+module vMkClockIBUFDS_GTE4#(IBUFDS_GTE2Params params, Bool enable, Clock clk_p, Clock clk_n)(GTE2ClockGenIfc);
+   default_clock no_clock;
+   default_reset no_reset;
+
+   parameter REFCLK_HROW_CK_SEL = 0; // choose ODIV2 output same as O
+
+   input_clock clk_p(I)  = clk_p;
+   input_clock clk_n(IB) = clk_n;
+
+   port CEB = pack(!enable);
+
+   output_clock gen_clk(O);
+   output_clock gen_clk2(ODIV2);
+
+   path(I,  O);
+   path(IB, O);
+   path(I,  ODIV2);
+   path(IB, ODIV2);
+
+   same_family(clk_p, gen_clk);
+   same_family(clk_p, gen_clk2);
+endmodule: vMkClockIBUFDS_GTE4
+
 module mkClockIBUFDS_GTE#(IBUFDS_GTE2Params params, Bool enable, Clock clk_p, Clock clk_n)(GTE2ClockGenIfc);
-`ifdef XilinxUltrascale
-   let _m <- vMkClockIBUFDS_GTE3(params, enable, clk_p, clk_n);
+`ifdef XilinxUltrascalePlus
+   let _m <- vMkClockIBUFDS_GTE4(params, enable, clk_p, clk_n);
 `else
+  `ifdef XilinxUltrascale
+error
+   let _m <- vMkClockIBUFDS_GTE3(params, enable, clk_p, clk_n);
+  `else
    let _m <- vMkClockIBUFDS_GTE2(params, enable, clk_p, clk_n);
+  `endif
 `endif
    return _m;
 endmodule: mkClockIBUFDS_GTE
