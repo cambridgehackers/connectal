@@ -81,7 +81,7 @@ static int init_socketResp(struct PortalInternal *pint, void *aparam)
 }
 static int init_socketInit(struct PortalInternal *pint, void *aparam)
 {
-    //initPortalHardware();
+    initPortalHardware();
     PortalSocketParam *param = (PortalSocketParam *)aparam;
     char buff[128];
     const char *name = getenv("SOFTWARE_SOCKET_NAME");
