@@ -1,3 +1,9 @@
+connectal (18.05.1-1precise1) precise; urgency=medium
+
+  * Packaged 18.05.1, including initial support for VCU118
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 29 May 2018 12:15:43 -0400
+
 connectal (18.04.1-1precise1) precise; urgency=medium
 
   * Fixed interrupts on PCIE3 and awsf1
