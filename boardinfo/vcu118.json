@@ -1,0 +1,972 @@
+{
+    "options": {
+        "bsvdefines" : ["XILINX=1", "VirtexUltrascalePlus", "VirtexUltrascale", "XilinxUltrascalePlus", "XilinxUltrascale", "PCIE", "PCIE3", "PcieHostInterface", "PhysAddrWidth=40", "NUMBER_OF_LEDS=2", "PcieLanes=8",
+		       	"CONNECTAL_BITS_DEPENDENCES=hw/mkTop.bit", "CONNECTAL_RUN_SCRIPT=$(CONNECTALDIR)/scripts/run.pcietest"],
+        "os" : "ubuntu",
+        "partname" : "xcvu9p-flga2104-2L-e",
+        "need_pcie" : "xuplus_gen3x8",
+        "TOP" : "PcieTop",
+        "constraints": ["constraints/xilinx/vcu118.xdc"],
+        "implconstraints": ["constraints/xilinx/vcu118.xdc", "constraints/xilinx/pcie-clocks.xdc"],
+        "runscript" : "run.pcietest",
+        "CONNECTALFLAGS" : ["--mainclockperiod=4", "--derivedclockperiod=4", "--pcieclockperiod=4"],
+        "rewireclockstring" : ""
+    },
+    "BTN": {
+        "BTN[0]": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "BTN[1]": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "CLK": {
+        "FPGA_SYSCLK_N": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FPGA_SYSCLK_P": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "CPLD": {
+        "CPLD_IMGSEL[0]": {
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        },
+        "CPLD_IMGSEL[1]": {
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        },
+        "CPLD_IMGSEL[2]": {
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        },
+        "CPLD_RECONFIG": {
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "DDR": {
+        "DDR3_SYSCLK_N": {
+            "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
+            "PACKAGE_PIN": "TBD"
+        },
+        "DDR3_SYSCLK_P": {
+            "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "FMC": {
+	"FMC_GBTCLK_P[00]": {
+	    "DIFF_TERM": "TRUE",
+            "PACKAGE_PIN": "TBD"
+	},
+	"FMC_GBTCLK_N[00]": {
+	    "DIFF_TERM": "TRUE",
+            "PACKAGE_PIN": "TBD"
+	},
+        "FMC_CLK0_M2C_N": {
+            "IOSTANDARD": "LVDS",
+	    "DIFF_TERM": "TRUE",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_CLK0_M2C_P": {
+            "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_CLK1_M2C_N": {
+            "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_CLK1_M2C_P": {
+            "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[00]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[01]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[02]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[03]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[04]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[05]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[06]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[07]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[08]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[09]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[10]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[11]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[12]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[13]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[14]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[15]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[16]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[17]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[18]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[19]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[20]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[21]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[22]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[23]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[24]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[25]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[26]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[27]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[28]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[29]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[30]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[31]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[32]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_N[33]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[00]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[01]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[02]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[03]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[04]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[05]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[06]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[07]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[08]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[09]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[10]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[11]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[12]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[13]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[14]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[15]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[16]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[17]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[18]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[19]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[20]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[21]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[22]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[23]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[24]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[25]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[26]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[27]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[28]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[29]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[30]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[31]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[32]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_LA_P[33]": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FMC_PRSNT_LS": {
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "Fan": {
+        "FAN_PWM": {
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        },
+        "FAN_TACH": {
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "I2C": {
+        "I2C_FPGA_SCL": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        },
+        "I2C_FPGA_SDA": {
+            "PIO_DIRECTION": "BIDIR",
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        },
+        "I2C_MUX_RESET": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "sdio": {
+        "cmd": {
+            "PIO_DIRECTION": "BIDIR",
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        },
+        "clk": {
+            "PIO_DIRECTION": "BIDIR",
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        },
+        "cd": {
+            "PIO_DIRECTION": "BIDIR",
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        },
+        "d0": {
+            "PIO_DIRECTION": "BIDIR",
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        },
+        "d1": {
+            "PIO_DIRECTION": "BIDIR",
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        },
+        "d2": {
+            "PIO_DIRECTION": "BIDIR",
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        },
+        "d3": {
+            "PIO_DIRECTION": "BIDIR",
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "LED": {
+        "LED[0]": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "LED[1]": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "PCIE": {
+        "RST_N_pci_sys_reset_n": {
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "AM17"
+        },
+        "PCIE_PRSNT_B_LS": {
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "NOTCONNECTED"
+        },
+        "PCIE_WAKE": {
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "AY17"
+        },
+        "CLK_pci_sys_clk_n": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "AL8"
+        },
+        "CLK_pci_sys_clk_p": {
+            "IOSTANDARD": "LVDS",
+            "PACKAGE_PIN": "AL9"
+        }
+    },
+    "PMODCTRL": {
+        "DIR_JA[0]": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "DIR_JA[1]": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "DIR_JA[2]": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "DIR_JA[3]": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "DIR_JA[4]": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "DIR_JA[5]": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "DIR_JA[6]": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "DIR_JA[7]": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "PMOD_OE_B": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "PMODData": {
+        "JA_FPGA[0]": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "JA_FPGA[1]": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "JA_FPGA[2]": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "JA_FPGA[3]": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "JA_FPGA[4]": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "JA_FPGA[5]": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "JA_FPGA[6]": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "JA_FPGA[7]": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "POWER": {
+        "PCON_ALERT_B": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "PCON_AUXFAULT_B": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "PCON_FAULT": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "PWR_SNS": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "QDRIIA": {
+        "QDRII_SYSCLK_N": {
+            "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
+            "PACKAGE_PIN": "TBD"
+        },
+        "QDRII_SYSCLK_P": {
+            "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "QDRIIC": {
+        "QDRIIC_SYSCLK_N": {
+            "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
+            "PACKAGE_PIN": "TBD"
+        },
+        "QDRIIC_SYSCLK_P": {
+            "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "MICRO_SD": {
+        "SD_CCLK": {
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        },
+        "SD_CD": {
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        },
+        "SD_CMD": {
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        },
+        "SD_D[0]": {
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        },
+        "SD_D[1]": {
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        },
+        "SD_D[2]": {
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        },
+        "SD_D[3]": {
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "SFPCLK": {
+        "SFP_CLK_ALARM_B": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        },
+        "SFP_CLK_RST": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVCMOS18",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "SFP": {
+        "SFP_REFCLK_N": {
+            "PIO_DIRECTION": "INPUT",
+            "PACKAGE_PIN": "TBD"
+        },
+        "SFP_REFCLK_P": {
+            "PIO_DIRECTION": "INPUT",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "SFPA": {
+        "ETH1_LED[0]": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH1_LED[1]": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH1_MOD_DETECT": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH1_RS[0]": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH1_RS[1]": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH1_RX_LOS": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH1_TX_DISABLE": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH1_TX_FAULT": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH1_RX_p": {
+            "PIO_DIRECTION": "INPUT",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH1_RX_n": {
+            "PIO_DIRECTION": "INPUT",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH1_TX_p": {
+            "PIO_DIRECTION": "OUTPUT",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH1_TX_n": {
+            "PIO_DIRECTION": "OUTPUT",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "SFPB": {
+        "ETH2_LED[0]": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH2_LED[1]": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH2_MOD_DETECT": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH2_RS[0]": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH2_RS[1]": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH2_RX_LOS": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH2_TX_DISABLE": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH2_TX_FAULT": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH2_RX_p": {
+            "PIO_DIRECTION": "INPUT",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH2_RX_n": {
+            "PIO_DIRECTION": "INPUT",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH2_TX_p": {
+            "PIO_DIRECTION": "OUTPUT",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH2_TX_n": {
+            "PIO_DIRECTION": "OUTPUT",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "SFPC": {
+        "ETH3_LED[0]": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH3_LED[1]": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH3_MOD_DETECT": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH3_RS[0]": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH3_RS[1]": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH3_RX_LOS": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH3_TX_DISABLE": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH3_TX_FAULT": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH3_RX_p": {
+            "PIO_DIRECTION": "INPUT",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH3_RX_n": {
+            "PIO_DIRECTION": "INPUT",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH3_TX_p": {
+            "PIO_DIRECTION": "OUTPUT",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH3_TX_n": {
+            "PIO_DIRECTION": "OUTPUT",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "SFPD": {
+        "ETH4_LED[0]": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH4_LED[1]": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH4_MOD_DETECT": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH4_RS[0]": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH4_RS[1]": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH4_RX_LOS": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH4_TX_DISABLE": {
+            "PIO_DIRECTION": "OUTPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH4_TX_FAULT": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH4_RX_p": {
+            "PIO_DIRECTION": "INPUT",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH4_RX_n": {
+            "PIO_DIRECTION": "INPUT",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH4_TX_p": {
+            "PIO_DIRECTION": "OUTPUT",
+            "PACKAGE_PIN": "TBD"
+        },
+        "ETH4_TX_n": {
+            "PIO_DIRECTION": "OUTPUT",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "SI570": {
+        "USERCLK_N": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
+            "PACKAGE_PIN": "TBD"
+        },
+        "USERCLK_P": {
+            "PIO_DIRECTION": "INPUT",
+            "IOSTANDARD": "LVDS",
+			"DIFF_TERM": "TRUE",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "UART": {
+        "UART_CTS": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "UART_RTS": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "UART_RXD_OUT": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        },
+        "UART_TXD_IN": {
+            "IOSTANDARD": "LVCMOS15",
+            "PACKAGE_PIN": "TBD"
+        }
+    },
+    "pins": {
+        "userClk_p": {
+            "PACKAGE_PIN": "TBD",
+            "IOSTANDARD": "LVDS_25",
+            "DIFF_TERM": "TRUE",
+            "PIO_DIRECTION": "INPUT"
+        },
+        "userClk_n": {
+            "PACKAGE_PIN": "TBD",
+            "IOSTANDARD": "LVDS_25",
+            "DIFF_TERM": "TRUE",
+            "PIO_DIRECTION": "INPUT"
+        },
+        "smaUserClk_p": {
+            "PACKAGE_PIN": "TBD",
+            "IOSTANDARD": "LVDS_25",
+            "DIFF_TERM": "TRUE",
+            "PIO_DIRECTION": "OUTPUT"
+        },
+        "smaUserClk_n": {
+            "PACKAGE_PIN": "TBD",
+            "IOSTANDARD": "LVDS_25",
+            "DIFF_TERM": "TRUE",
+            "PIO_DIRECTION": "OUTPUT"
+        },
+        "mgtRefClk_p": {
+            "PACKAGE_PIN": "TBD",
+            "IOSTANDARD": "LVDS_25",
+            "DIFF_TERM": "TRUE",
+            "PIO_DIRECTION": "INPUT"
+        },
+        "mgtRefClk_n": {
+            "PACKAGE_PIN": "TBD",
+            "IOSTANDARD": "LVDS_25",
+            "DIFF_TERM": "TRUE",
+            "PIO_DIRECTION": "INPUT"
+        },
+        "mgtRx_p": {
+            "PACKAGE_PIN": "TBD",
+            "DIFF_TERM": "TRUE",
+            "PIO_DIRECTION": "INPUT"
+        },
+        "mgtRx_n": {
+            "PACKAGE_PIN": "TBD",
+            "DIFF_TERM": "TRUE",
+            "PIO_DIRECTION": "INPUT"
+        },
+        "mgtTx_p": {
+            "PACKAGE_PIN": "TBD",
+            "DIFF_TERM": "TRUE",
+            "PIO_DIRECTION": "OUTPUT"
+        },
+        "mgtTx_n": {
+            "PACKAGE_PIN": "TBD",
+            "DIFF_TERM": "TRUE",
+            "PIO_DIRECTION": "OUTPUT"
+        },
+        "uart_d_in": {
+            "PACKAGE_PIN": "TBD",
+            "IOSTANDARD": "LVCMOS25",
+            "PIO_DIRECTION": "INPUT"
+        },
+        "uart_d_out": {
+            "PACKAGE_PIN": "TBD",
+            "IOSTANDARD": "LVCMOS25",
+            "PIO_DIRECTION": "OUTPUT"
+        }
+    }
+}
+
+

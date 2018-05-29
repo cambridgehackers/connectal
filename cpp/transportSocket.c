@@ -64,6 +64,7 @@ int global_sockfd = -1;
 
 static int init_socketResp(struct PortalInternal *pint, void *aparam)
 {
+    //initPortalHardware();
     PortalSocketParam *param = (PortalSocketParam *)aparam;
     char buff[128];
     int on = 1;
@@ -80,6 +81,7 @@ static int init_socketResp(struct PortalInternal *pint, void *aparam)
 }
 static int init_socketInit(struct PortalInternal *pint, void *aparam)
 {
+    initPortalHardware();
     PortalSocketParam *param = (PortalSocketParam *)aparam;
     char buff[128];
     const char *name = getenv("SOFTWARE_SOCKET_NAME");
@@ -180,6 +182,7 @@ PortalTransportFunctions transportSocketInit = {
 
 static int init_mux(struct PortalInternal *pint, void *aparam)
 {
+    //initPortalHardware();
     PortalMuxParam *param = (PortalMuxParam *)aparam;
     if(trace_socket)
         fprintf(stderr, "[%s:%d]\n", __FUNCTION__, __LINE__);
@@ -212,7 +215,10 @@ int portal_mux_handler(struct PortalInternal *pint, unsigned int channel, int me
         PortalInternal *p = pint->mux_ports[i].pint;
         if (channel == p->fpga_number && p->handler) {
             p->transport->recv(p, p->map_base, 1, &dummy);
-            p->handler(p, *p->map_base >> 16, messageFd);
+            if (connectalPrintfHandler && (*p->map_base >> 16) == CONNECTAL_PRINTF_PORT)
+                connectalPrintfHandler(p, *p->map_base);
+            else
+                p->handler(p, *p->map_base >> 16, messageFd);
         }
     }
     return -1;

@@ -50,10 +50,14 @@ import ConnectalClocks   ::*;
 import ConnectalXilinxCells   ::*;
 import XilinxCells       ::*;
 import PCIE              ::*;
-`ifdef XilinxUltrascale
-import PCIEWRAPPER3u     ::*;
+`ifdef VirtexUltrascalePlus
+import PCIEWRAPPER3uplus ::*;
 `else
+  `ifdef XilinxUltrascale
+import PCIEWRAPPER3u     ::*;
+  `else
 import PCIEWRAPPER3      ::*;
+  `endif
 `endif
 import Bufgctrl           ::*;
 import PcieGearbox       :: *;
@@ -535,7 +539,15 @@ module mkPcieEndpointX7#(Clock pcie_sys_clk_gt)(PcieEndpointX7#(PcieLanes));
       pcie_ep.cfg.interrupt_msix_int(pack(msix_int_enable));
    endrule
 
-   rule rl_intr_sent if (pcie_ep.cfg.interrupt_msix_sent() == 1|| pcie_ep.cfg.interrupt_msix_fail() == 1);
+
+   rule rl_intr_sent if (
+`ifdef VirtexUltrascalePlus
+      // both MSI and MSI-X use these ports on Ultrascale Plus
+      pcie_ep.cfg.interrupt_msi_sent() == 1|| pcie_ep.cfg.interrupt_msi_fail() == 1
+`else
+      pcie_ep.cfg.interrupt_msix_sent() == 1|| pcie_ep.cfg.interrupt_msix_fail() == 1
+`endif
+      );
       intrMutex.deq();
    endrule
 
@@ -610,10 +622,12 @@ module mkPcieEndpointX7#(Clock pcie_sys_clk_gt)(PcieEndpointX7#(PcieLanes));
       pcie_ep.cfg.flr_done(0);
       pcie_ep.cfg.hot_reset_in(0);
       pcie_ep.cfg.link_training_enable(1);
+`ifndef VirtexUltrascalePlus
       pcie_ep.cfg.per_function_number(0);
       pcie_ep.cfg.per_function_output_request(0);
-      pcie_ep.cfg.power_state_change_ack(1);
       pcie_ep.cfg.subsys_vend_id(16'h1be8);
+`endif
+      pcie_ep.cfg.power_state_change_ack(1);
       pcie_ep.cfg.vf_flr_done(0);
 
       pcie_ep.pcie.cq_np_req(1);
