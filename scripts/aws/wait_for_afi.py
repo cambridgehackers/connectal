@@ -21,6 +21,7 @@ import boto3
 import datetime
 from datetime import datetime, timedelta
 import logging
+import json
 import os
 import re
 import sys
@@ -60,9 +61,9 @@ if __name__ == '__main__':
         logger.setLevel(logging.DEBUG)
 
     if args.afi.endswith('.json'):
-        with open(args.afi) as json:
-            data = json.loads(json.read())
-            print(data)
+        with open(args.afi) as f:
+            ids = json.loads(f.read())
+            args.afi = ids.get('FpgaImageId').decode('utf8')
 
     start_time = datetime.utcnow()
 
