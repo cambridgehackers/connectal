@@ -28,12 +28,13 @@ import time
 import traceback
 try:
     import aws_fpga_utils
+    logger = aws_fpga_utils.get_logger(__file__)
 except ImportError as e:
     traceback.print_tb(sys.exc_info()[2])
-    print("error: {}\nMake sure to source hdk_setup.sh".format(sys.exc_info()[1]))
-    sys.exit(1)
-
-logger = aws_fpga_utils.get_logger(__file__)
+    print("warning: {}\nMake sure to source hdk_setup.sh".format(sys.exc_info()[1]))
+    logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+    logger = logging.getLogger('aws-fpga')
+    aws_fpga_utils = None
 
 SLEEP_SECONDS = 60
 DEFAULT_MAX_DURATION_HOURS = 6
@@ -58,6 +59,11 @@ if __name__ == '__main__':
     if args.debug:
         logger.setLevel(logging.DEBUG)
 
+    if args.afi.endswith('.json'):
+        with open(args.afi) as json:
+            data = json.loads(json.read())
+            print(data)
+
     start_time = datetime.utcnow()
 
     max_duration = timedelta(minutes=args.max_minutes)
@@ -72,7 +78,8 @@ if __name__ == '__main__':
         topic_name = args.sns_topic
         logger.info("Will subscribe {} to SNS topic {} and notify the topic when complete".format(email, topic_name))
 
-        topic_arn = aws_fpga_utils.create_sns_subscription(topic_name, email)
+        if aws_fpga_utils:
+            topic_arn = aws_fpga_utils.create_sns_subscription(topic_name, email)
 
     # Wait for create-fpga-image to complete
     ec2_client = boto3.client('ec2')
