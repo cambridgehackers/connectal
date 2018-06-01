@@ -1,0 +1,64 @@
+#!/bin/bash
+#set -x
+set -e
+export SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
+echo "run.pcie parameters are:" $*
+SSHPARAM=" -o StrictHostKeyChecking=no"
+
+if [ "$1" == "" ]; then
+    echo "usage: $0 ubuntu.exe" >&2
+    exit -1
+fi
+
+if [ "$SERIALNO" != "" ]; then
+    BOARD_SERIAL="SERIALNO=$SERIALNO"
+else
+    BOARD_SERIAL=""
+fi
+if [ "$RUNTIMELIMIT" != "" ]; then
+    TIMELIMIT=$RUNTIMELIMIT
+else
+    TIMELIMIT=3m
+fi
+
+ENV=""
+if [ "$RUNENV" != "" ]; then
+    for e in `env | grep $RUNENV | grep -v RUNENV | sed 's/=(.*)/=\"$1\"/'`; do
+	ENV="$ENV $e"
+    done
+fi
+
+if [ "$RUNPARAM" != "" ]; then
+    if [ "$ENV" != "" ]; then
+	echo "sending environment variables $ENV"
+    fi
+    RUNPARAMTEMP=$RUNPARAM:22
+    array=(${RUNPARAMTEMP//:/ })
+    RUNIP=${array[0]}
+    RUNPORT=${array[1]}
+    TEMPDIR=/tmp/`uname -n`-$PPID-pcie
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "rm -rf $TEMPDIR; mkdir -p $TEMPDIR" || exit 1
+    scp -P $RUNPORT $* $RUNIP:$TEMPDIR || exit 2
+    EXE=$1
+    EXENAME=`basename $1`
+    ARGS=""
+    shift
+    echo "ARGS=$*"
+    for arg in $*; do arg_basename=`basename $arg`; ARGS="$ARGS $TEMPDIR/$arg_basename"; done
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "$BOARD_SERIAL $ENV timeout $TIMELIMIT sudo fpga-load-local-image -S 0 -I $AGFI"; status=$?
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "$BOARD_SERIAL $ENV timeout $TIMELIMIT pciescanportal"; status=$?
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "$BOARD_SERIAL $ENV timeout $TIMELIMIT sudo modprobe portalmem"; status=$?
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "$BOARD_SERIAL $ENV timeout $TIMELIMIT sudo insmod ssith-riscv/connectal/drivers/pcieportal/pcieportal.ko"; status=$?
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "$BOARD_SERIAL $ENV timeout $TIMELIMIT dmesg | tail -40"; status=$?
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "$BOARD_SERIAL $ENV timeout $TIMELIMIT catchsegv $TEMPDIR/$EXENAME $ARGS"; status=$?
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "rm -rf $TEMPDIR"
+    exit $status
+else
+    timeout 3m catchsegv $1; status=$?
+    if [ "$PORTAL_DUMP_MAP" != "" ]; then
+        pcieflat -j $PORTAL_DUMP_MAP generatedDesignInterfaceFile.json > bin/pcieflat.txt
+    else
+        pcieflat > bin/pcieflat.txt
+    fi
+    exit $status
+fi
