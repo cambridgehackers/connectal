@@ -90,8 +90,9 @@ handleMessageTemplate1='''
     %(handleStartup)s
     switch (channel) {'''
 
+handleMessagePrepRecv='''
+        p->transport->recv(p, temp_working_addr, %(wordLen)s, &tmpfd);'''
 handleMessagePrep='''
-        p->transport->recv(p, temp_working_addr, %(wordLen)s, &tmpfd);
         %(paramStructDemarshall)s'''
 
 handleMessageCase='''
@@ -611,6 +612,8 @@ def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
     respCase = '\n        ((%(classNameOrig)sCb *)p->cb)->%(name)s(%(params)s);'
     if not classVariant:
         respCase = handleMessagePrep + respCase
+        if not generatePacketOnly:
+            respCase = handleMessagePrepRecv + respCase
     substs['responseCase'] = respCase % substs
     return substs, len(argWords)
 
@@ -712,7 +715,7 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         subs['handleStartup'] = 'Json::Value msg = Json::Value(connectalJsonReceive(p));' % subs
     else:
         if generatePacketOnly:
-            subs['handleStartup'] = 'unsigned int temp_working_addr[REQINFO_SIZE(%(className)s_reqinfo)];' % subs
+            subs['handleStartup'] = 'volatile unsigned int* temp_working_addr = &p->map_base[1];'
             subs['tmpDecl'] = ''
         else:
             subs['handleStartup'] = 'volatile unsigned int* temp_working_addr = p->transport->mapchannelInd(p, channel);'
