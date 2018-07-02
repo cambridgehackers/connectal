@@ -81,7 +81,7 @@ static int init_socketResp(struct PortalInternal *pint, void *aparam)
 }
 static int init_socketInit(struct PortalInternal *pint, void *aparam)
 {
-#ifndef __ATOMICC__
+#if defined(SIMULATION) || !defined(__ATOMICC__)
     initPortalHardware();
 #endif
     PortalSocketParam *param = (PortalSocketParam *)aparam;
