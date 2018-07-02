@@ -28,6 +28,7 @@ generatedSubdirectory = 'jni'
 verbose = False
 generateJson = True
 generatePacketOnly = False
+suppressGeneratedMakefile = False
 sizeofUint32_t = 4
 generatedVectors = []
 itypeNames = ['int', 'int8_t', 'uint8_t', 'int16_t', 'uint16_t', 'int32_t', 'uint32_t', 'uint64_t', 'SpecialTypeForSendingFd', 'ChannelType', 'DmaDbgRec']
@@ -929,7 +930,8 @@ def generate_cpp(project_dir, noisyFlag, jsondata):
     generated_hpp.write('#endif\n')
     generated_hpp.write('#endif //__GENERATED_TYPES__\n')
     generated_hpp.close()
-    gen_makefile = util.createDirAndOpen(os.path.join(project_dir, generatedSubdirectory, 'Makefile.generated_files'), 'w')
-    gen_makefile.write('\nGENERATED_CPP=' + ' '.join(generatedCFiles)+'\n')
-    gen_makefile.close()
+    if not suppressGeneratedMakefile:
+        gen_makefile = util.createDirAndOpen(os.path.join(project_dir, generatedSubdirectory, 'Makefile.generated_files'), 'w')
+        gen_makefile.write('\nGENERATED_CPP=' + ' '.join(generatedCFiles)+'\n')
+        gen_makefile.close()
     return generatedCFiles
