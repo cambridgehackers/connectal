@@ -194,7 +194,7 @@ static void checkSignature(const char *filename, int ioctlnum)
 char *getExecutionFilename(char *buf, int buflen)
 {
 #ifdef __APPLE__ // hack for debugging
-    return (char *)"bin/ubuntu.exe";
+    return (char *)"verilator/bin/ubuntu.exe";
 #endif
     int rc, fd;
     char *filename = 0;
