@@ -20,8 +20,8 @@
 # Clock constraints                                                        #
 ############################################################################
 ## get the period from the clock generator cell
-create_clock -name clk_fpga_0 -period [get_property CLKIN1_PERIOD [get_cells ps7_clockGen_pll]] [get_pins "*ps7_foo/FCLKCLK[0]"]
-set_input_jitter clk_fpga_0 [expr 0.3 * [get_property CLKIN1_PERIOD [get_cells ps7_clockGen_pll]]]
+create_clock -name clk_fpga_0 -period [get_property CLKIN1_PERIOD [get_cells -hierarchical ps7_clockGen_pll]] [get_pins "*ps7_foo/FCLKCLK[0]"]
+set_input_jitter clk_fpga_0 [expr 0.3 * [get_property CLKIN1_PERIOD [get_cells -hierarchical ps7_clockGen_pll]]]
 set_clock_groups -asynchronous -group {clk_fpga_0}
 create_clock -name clk_fpga_1 -period "6" [get_pins "*ps7_foo/FCLKCLK[1]"]
 set_input_jitter clk_fpga_1 0.6
