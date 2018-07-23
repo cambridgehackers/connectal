@@ -121,23 +121,26 @@ module mkDualClockBramFIFOF#(Clock srcClock, Reset srcReset, Clock dstClock, Res
       endrule
    end
 
-   method t first() if (fifos[0].empty == 0);
+   function Bool fifoNotEmpty(X7FifoSyncMacro#(36) f); return f.empty == 0; endfunction
+   function Bool fifoNotFull(X7FifoSyncMacro#(36) f); return f.full == 0; endfunction
+
+   method t first() if (all(fifoNotEmpty, fifos));
       function Bit#(36) fifoFirst(Integer i); return fifos[i].dout(); endfunction
       Vector#(TDiv#(sizet,36), Bit#(36)) v = genWith(fifoFirst);
       return unpack(truncateNP(pack(v)));
    endmethod
-   method Action deq() if (fifos[0].empty == 0);
+   method Action deq() if (all(fifoNotEmpty, fifos));
       rdenWire <= 1;
    endmethod
-   method notEmpty = (fifos[0].empty == 0);
-   method Action enq(t v) if (fifos[0].full == 0);
+   method notEmpty = all(fifoNotEmpty, fifos);
+   method Action enq(t v) if (all(fifoNotFull, fifos));
       Vector#(TDiv#(sizet,36), Bit#(36)) vs = unpack(extendNP(pack(v)));
       Vector#(TDiv#(sizet,36), Integer) indices = genVector();
       function Action fifoEnq(Integer i); action dinWires[i] <= vs[i]; endaction endfunction
       mapM_(fifoEnq, indices);
       wrenWire <= 1;
    endmethod
-   method notFull = (fifos[0].full == 0);
+   method notFull = all(fifoNotEmpty, fifos);
 endmodule
 
 module mkDualClockBramFIFO#(Clock srcClock, Reset srcReset, Clock dstClock, Reset dstReset)(FIFO#(t))
