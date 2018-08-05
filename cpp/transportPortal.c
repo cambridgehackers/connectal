@@ -35,12 +35,12 @@ static void enableint_portal(struct PortalInternal *pint, int val)
 static int event_portal(struct PortalInternal *pint)
 {
     // handle all messasges from this portal instance
-    volatile unsigned int *map_base = pint->map_base;
-    while (map_base[PORTAL_CTRL_IND_QUEUE_STATUS]) {
+    volatile unsigned int *map_base = pint->map_base, len;
+    while ((len = map_base[PORTAL_CTRL_IND_QUEUE_STATUS])) {
         if(trace_portal)
             PORTAL_PRINTF( "%s: (fpga%d) about to receive messages int=%08x en=%08x qs=%08x handler %p parent %p\n", __FUNCTION__, pint->fpga_number, 0, 0, 0, pint->handler, pint->parent);
         if (pint->handler)
-            pint->handler(pint, 5/*portal number */, 0);
+            pint->handler(pint, 5/*portal number */, len /*HACK FOR ATOMICC*/);
         else {
             PORTAL_PRINTF( "%s: (fpga%d) no handler receive int=%08x en=%08x qs=%08x handler %p parent %p\n", __FUNCTION__, pint->fpga_number, 0, 0, 0, pint->handler, pint->parent);
             exit(-1);
