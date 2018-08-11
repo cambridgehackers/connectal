@@ -147,6 +147,13 @@ Hardware Options
 
    Specifies implementation (place and route) constraint file.
 
+.. option:: --unmanaged-implconstraint=file.xdc
+
+   Specifies unmanaged implementation (place and route) constraint file.
+   This causes the xdc file to be read in using the `-unmanaged` flag of `read_xdc`.
+   This allows the xdc files to use more tcl commands than a normal xdc file (including `if` and
+   `foreach`).
+
 .. option:: -P modulename, --partition=modulename
 
    Directs `fpgamake` to build a separate netlist for
