@@ -61,6 +61,7 @@ argparser.add_argument(      '--qsf', help='Altera Quartus settings', action='ap
 argparser.add_argument(      '--chipscope', help='Onchip scope settings', action='append', default=[])
 argparser.add_argument('-C', '--constraint', help='Additional constraint files', action='append', default=[])
 argparser.add_argument(      '--implconstraint', help='Physical constraint files', action='append', default=[])
+argparser.add_argument(      '--unmanaged-implconstraint', help='Unmanaged physical constraint files', action='append', default=[])
 argparser.add_argument('-M', '--make', help='Run make on the specified targets', action='append', default=[])
 argparser.add_argument('-D', '--bsvdefine', help='BSV define', action='append', default=[])
 argparser.add_argument('-D2', '--bsvdefine2', help='BSV define2', action='append', default=[])
@@ -349,6 +350,10 @@ if __name__=='__main__':
     if cstr:
         ## preserve the order of items
         options.implconstraint = [os.path.join(connectaldir, item) for item in cstr] + options.implconstraint
+    cstr = option_info.get('unmanaged-implconstraints')
+    if cstr:
+        ## preserve the order of items
+        options.unmanaged_implconstraint= [os.path.join(connectaldir, item) for item in cstr] + options.unmanaged_implconstraint
 
     bsvdefines += ['BOARD_'+boardname]
 
@@ -476,7 +481,8 @@ if __name__=='__main__':
                                          'genxdc_dep' : genxdc_dep,
 					 'floorplan': os.path.abspath(options.floorplan) if options.floorplan else '',
 					 'xdc': ' '.join(['--constraint=%s' % os.path.abspath(xdc) for xdc in options.constraint]
-                                                         + ['--implconstraint=%s' % os.path.abspath(xdc) for xdc in options.implconstraint]),
+                                                         + ['--implconstraint=%s' % os.path.abspath(xdc) for xdc in options.implconstraint]
+                                                         + ['--unmanaged-implconstraint=%s' % os.path.abspath(xdc) for xdc in options.unmanaged_implconstraint]),
 					 'xci': ' '.join(['--xci=%s' % os.path.abspath(xci) for xci in options.xci]),
 					 'qsf': ' '.join(['--qsf=%s' % os.path.abspath(qsf) for qsf in options.qsf]),
 					 'chipscope': ' '.join(['--chipscope=%s' % os.path.abspath(chipscope) for chipscope in options.chipscope]),
