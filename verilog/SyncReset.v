@@ -64,12 +64,18 @@ module SyncReset (
         if (IN_RST == `BSV_RESET_VALUE)
            begin
               reset_meta <= `BSV_ASSIGNMENT_DELAY `BSV_RESET_VALUE ;
-              reset_hold <= `BSV_ASSIGNMENT_DELAY {(RSTDELAY) {`BSV_RESET_VALUE}} ;
            end
         else
+           begin
+              reset_meta <= `BSV_ASSIGNMENT_DELAY ~ `BSV_RESET_VALUE ;
+           end
+        if (reset_meta == `BSV_RESET_VALUE)
           begin
-	     reset_meta <= `BSV_ASSIGNMENT_DELAY next_reset[0];	     
-             reset_hold <= `BSV_ASSIGNMENT_DELAY next_reset[RSTDELAY:1];
+            reset_hold <= `BSV_ASSIGNMENT_DELAY {(RSTDELAY) {`BSV_RESET_VALUE}} ;
+          end
+        else
+          begin
+            reset_hold <= `BSV_ASSIGNMENT_DELAY next_reset[RSTDELAY:1];
           end
      end // always @ ( posedge CLK )
 

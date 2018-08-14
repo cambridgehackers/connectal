@@ -63,14 +63,20 @@ module PositiveReset (
      begin
         if (IN_RST == `BSV_RESET_VALUE)
            begin
-
               reset_meta <= 1;
-              reset_hold <= `BSV_ASSIGNMENT_DELAY -1 ;
            end
         else
           begin
-	     reset_meta <= next_reset[0];
-             reset_hold <= `BSV_ASSIGNMENT_DELAY next_reset[RSTDELAY:1];
+              reset_meta <= 0;
+          end
+
+        if (reset_meta == 1)
+          begin
+              reset_hold <= `BSV_ASSIGNMENT_DELAY -1 ;
+          end
+        else
+          begin
+              reset_hold <= `BSV_ASSIGNMENT_DELAY next_reset[RSTDELAY:1];
           end
      end // always @ ( posedge CLK )
 

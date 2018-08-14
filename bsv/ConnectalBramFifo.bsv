@@ -60,6 +60,7 @@ module  vmkBramFifo#(String fifo_size, Clock wrClock, Reset wrReset, Clock rdClo
    let rdReset1 <- mkSyncReset(10, rdReset, wrClock);
    let eitherReset <- mkResetEither(wrReset, rdReset1, clocked_by wrClock);
    let positiveReset <- mkPositiveReset(10, eitherReset, wrClock);
+   // rst must be asserted for 5 read and write clock cycles
    let fifoReset = positiveReset.positiveReset;
 `else
    let fifoReset = wrReset;
@@ -78,7 +79,8 @@ module  vmkBramFifo#(String fifo_size, Clock wrClock, Reset wrReset, Clock rdClo
 `endif
    default_clock wrClock(WRCLK) = wrClock;
    no_reset;
-   input_reset wrReset(RST) = fifoReset;
+   // RST is asynchronous
+   input_reset wrReset(RST) clocked_by(no_clock) = fifoReset;
    input_clock rdClock(RDCLK) = rdClock;
    method EMPTY empty() clocked_by (rdClock) reset_by (wrReset);
    method FULL full() clocked_by (wrClock) reset_by (wrReset);
