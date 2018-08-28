@@ -113,7 +113,7 @@ import "BVI" PositiveReset =
 module mkPositiveReset#(Integer resetDelay, Reset reset, Clock clock)(PositiveReset);
    parameter RSTDELAY = resetDelay;
    default_clock clock(CLK) = clock;
-   default_reset reset(IN_RST) = reset;
+   default_reset reset(IN_RST) clocked_by (no_clock) = reset;
    output_reset positiveReset(OUT_RST);
 endmodule
 

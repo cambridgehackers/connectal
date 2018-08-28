@@ -60,7 +60,11 @@ extern int noprogram;
 // Other constants
 #define MAX_TIMERS    50
 #define MAX_CLIENT_FD 10
+#ifdef __ATOMICC__
+#define DEFAULT_TILE  0
+#else
 #define DEFAULT_TILE  1
+#endif
 
 /*
  * Function vector for portal transport primitives used in generated C code
@@ -334,7 +338,8 @@ extern PortalTransportFunctions transportBsim, // Transport for bsim
   transportTrace,       // Trace transport tee
   transportXsim,        // Xilinx xsim transport
   transportWebSocketInit, // Websocket transport; Initiator side
-  transportWebSocketResp; // Websocket transport; Responder side
+  transportWebSocketResp, // Websocket transport; Responder side
+  transportPortal;
 #ifdef __cplusplus
 }
 #endif

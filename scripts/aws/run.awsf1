@@ -1,0 +1,82 @@
+#!/bin/bash
+#set -x
+set -e
+export SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
+echo "run.awsf1 parameters are:" $*
+SSHPARAM=" -o StrictHostKeyChecking=no"
+
+if [ "$1" == "" ]; then
+    echo "usage: $0 ubuntu.exe" >&2
+    exit -1
+fi
+
+if [ "$RUNTIMELIMIT" != "" ]; then
+    TIMELIMIT=$RUNTIMELIMIT
+else
+    TIMELIMIT=3m
+fi
+
+ENV=""
+if [ "$RUNENV" != "" ]; then
+    for e in `env | grep $RUNENV | grep -v RUNENV | sed 's/=(.*)/=\"$1\"/'`; do
+	ENV="$ENV $e"
+    done
+fi
+
+if [ "$RUNPARAM" != "" ]; then
+    if [ "$ENV" != "" ]; then
+	echo "sending environment variables $ENV"
+    fi
+    RUNPARAMTEMP=$RUNPARAM:22
+    array=(${RUNPARAMTEMP//:/ })
+    RUNIP=${array[0]}
+    RUNPORT=${array[1]}
+    TEMPDIR=/tmp/`uname -n`-$PPID-pcie
+
+    if [ "$INSTANCE_ID" != "" ]; then
+	aws ec2 start-instances --instance-ids $INSTANCE_ID
+	while true; do
+	    ssh -o ConnectTimeout=10 -p $RUNPORT $RUNIP uptime && break
+	done
+    fi
+
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "rm -rf $TEMPDIR; mkdir -p $TEMPDIR" || exit 1
+    EXE=$1
+    EXENAME=`basename $1`
+    ARGS=""
+    shift
+
+    scp -P $RUNPORT $EXE $RUNIP:$TEMPDIR || exit 2
+    for arg in $*; do
+	if [ -f "$arg" ]; then
+	    scp -P $RUNPORT $arg $RUNIP:$TEMPDIR || exit 2
+	    arg_basename=`basename "$arg"`
+	    ARGS="$ARGS $TEMPDIR/$arg_basename"
+	else
+	    ARGS="$ARGS $arg"
+	fi
+    done
+    for f in $RUNFILES; do
+	scp -P $RUNPORT $f $RUNIP:$TEMPDIR || exit 2
+    done
+    echo "ARGS=$*"
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "$ENV timeout $TIMELIMIT sudo fpga-load-local-image -S 0 -I $AGFI"; status=$?
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "$ENV timeout $TIMELIMIT pciescanportal"; status=$?
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "$ENV timeout $TIMELIMIT sudo modprobe portalmem"; status=$?
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "$ENV timeout $TIMELIMIT sudo modprobe pcieportal"; status=$?
+    #ssh $SSHPARAM -p $RUNPORT $RUNIP "$ENV timeout $TIMELIMIT dmesg | tail -40"; status=$?
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "cd $TEMPDIR; LD_LIBRARY_PATH=$TEMPDIR $ENV timeout $TIMELIMIT catchsegv $TEMPDIR/$EXENAME $ARGS"; status=$?
+    ssh $SSHPARAM -p $RUNPORT $RUNIP "rm -rf $TEMPDIR"
+
+    if [ "$INSTANCE_ID" != "" ]; then
+	echo ""
+	echo "Stopping instance $INSTANCE_ID"
+	aws ec2 stop-instances --instance-ids $INSTANCE_ID
+    fi
+
+    exit $status
+else
+    ## FIXME
+    timeout 3m catchsegv $1; status=$?
+    exit $status
+fi

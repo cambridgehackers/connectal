@@ -44,7 +44,9 @@
 #include <pthread.h>
 #endif
 
-#ifndef __APPLE__
+#ifdef __APPLE__ // hack for debugging
+#include <libproc.h>
+#else
 #include "drivers/portalmem/portalmem.h" // PA_MALLOC
 #if defined(ZYNQ) || defined(__riscv__)
 #include "drivers/zynqportal/zynqportal.h"
@@ -193,10 +195,12 @@ static void checkSignature(const char *filename, int ioctlnum)
 
 char *getExecutionFilename(char *buf, int buflen)
 {
-#ifdef __APPLE__ // hack for debugging
-    return (char *)"bin/ubuntu.exe";
-#endif
     int rc, fd;
+#ifdef __APPLE__ // hack for debugging
+    static char pathbuf[PROC_PIDPATHINFO_MAXSIZE];
+    rc = proc_pidpath (getpid(), pathbuf, sizeof(pathbuf));
+    return pathbuf;
+#endif
     char *filename = 0;
     buf[0] = 0;
     fd = open("/proc/self/maps", O_RDONLY);

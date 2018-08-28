@@ -28,6 +28,7 @@ generatedSubdirectory = 'jni'
 verbose = False
 generateJson = True
 generatePacketOnly = False
+suppressGeneratedMakefile = False
 sizeofUint32_t = 4
 generatedVectors = []
 itypeNames = ['int', 'int8_t', 'uint8_t', 'int16_t', 'uint16_t', 'int32_t', 'uint32_t', 'uint64_t', 'SpecialTypeForSendingFd', 'ChannelType', 'DmaDbgRec']
@@ -90,8 +91,9 @@ handleMessageTemplate1='''
     %(handleStartup)s
     switch (channel) {'''
 
+handleMessagePrepRecv='''
+        p->transport->recv(p, temp_working_addr, %(wordLen)s, &tmpfd);'''
 handleMessagePrep='''
-        p->transport->recv(p, temp_working_addr, %(wordLen)s, &tmpfd);
         %(paramStructDemarshall)s'''
 
 handleMessageCase='''
@@ -611,6 +613,8 @@ def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
     respCase = '\n        ((%(classNameOrig)sCb *)p->cb)->%(name)s(%(params)s);'
     if not classVariant:
         respCase = handleMessagePrep + respCase
+        if not generatePacketOnly:
+            respCase = handleMessagePrepRecv + respCase
     substs['responseCase'] = respCase % substs
     return substs, len(argWords)
 
@@ -712,7 +716,7 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         subs['handleStartup'] = 'Json::Value msg = Json::Value(connectalJsonReceive(p));' % subs
     else:
         if generatePacketOnly:
-            subs['handleStartup'] = 'unsigned int temp_working_addr[REQINFO_SIZE(%(className)s_reqinfo)];' % subs
+            subs['handleStartup'] = 'volatile unsigned int* temp_working_addr = &p->map_base[1];'
             subs['tmpDecl'] = ''
         else:
             subs['handleStartup'] = 'volatile unsigned int* temp_working_addr = p->transport->mapchannelInd(p, channel);'
@@ -926,7 +930,8 @@ def generate_cpp(project_dir, noisyFlag, jsondata):
     generated_hpp.write('#endif\n')
     generated_hpp.write('#endif //__GENERATED_TYPES__\n')
     generated_hpp.close()
-    gen_makefile = util.createDirAndOpen(os.path.join(project_dir, generatedSubdirectory, 'Makefile.generated_files'), 'w')
-    gen_makefile.write('\nGENERATED_CPP=' + ' '.join(generatedCFiles)+'\n')
-    gen_makefile.close()
+    if not suppressGeneratedMakefile:
+        gen_makefile = util.createDirAndOpen(os.path.join(project_dir, generatedSubdirectory, 'Makefile.generated_files'), 'w')
+        gen_makefile.write('\nGENERATED_CPP=' + ' '.join(generatedCFiles)+'\n')
+        gen_makefile.close()
     return generatedCFiles
