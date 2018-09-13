@@ -84,6 +84,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 	     Add#(0,16,TlpDataBytes)
 	     );
 
+    let verbose = False;
     let beat_shift = fromInteger(valueOf(beatShift));
 
     FIFOF#(TLPData#(TlpDataBytes)) tlpOutFifo <- mkFIFOF;
@@ -305,7 +306,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 	    handled = True;
       end
       wordCountReg <= wordCount;
-      $display("tlpIn handled=%d tlp=%h\n", handled, tlp);
+      if (verbose) $display("tlpIn handled=%d tlp=%h", handled, tlp);
       if (handled) begin
 	 tlpDecodeFifo.deq();
       end
@@ -380,7 +381,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 	    tlp.hit = 7'h00;
 	    tlp.be = 'hffff;
 
-	    $display("slave.writeAddr tlplen=%d burstLen=%d", tlplen, burstLen);
+	    if (verbose) $display("slave.writeAddr tlplen=%d burstLen=%d", tlplen, burstLen);
 	    if ((addr >> 32) != 0 || !use3dw) begin
 	       TLPMemory4DWHeader hdr_4dw = defaultValue;
 	       hdr_4dw.format = MEM_WRITE_4DW_DATA;
