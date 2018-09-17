@@ -90,6 +90,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
     FIFOF#(TLPData#(TlpDataBytes)) tlpOutFifo <- mkFIFOF;
     FIFOF#(TLPData#(TlpDataBytes)) tlpInFifo <- mkFIFOF;
     FIFOF#(TlpWriteHeaderInfo) tlpWriteHeaderFifo <- mkFIFOF;
+   FIFOF#(Bool) writeReadyFifo <- mkFIFOF();
 
     Reg#(Bit#(7)) hitReg <- mkReg(0);
     Reg#(Bool) use4dwReg <- mkReg(True);
@@ -118,21 +119,14 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
    Wire#(Bool) writeHeaderTlpWire <- mkDWire(False);
    Wire#(Bool) writeDataMimoEnqWire <- mkDWire(False);
 
-   Reg#(Bool) writeDataCntAboveThreshold <- mkReg(False);
    Reg#(Bool) writeDataMimoHasRoom <- mkReg(False);
    rule updateWriteDataMimoHasRoom;
       writeDataMimoHasRoom <= (writeDataCnt.read <= fromInteger(valueOf(WriteDataMimoSize) - valueOf(busWidthWords)));
    endrule
-   rule noheader if (!tlpWriteHeaderFifo.notEmpty());
-      writeDataCntAboveThreshold <= False;
-   endrule
-   rule updateWriteDataCntAboveThreshold if (writeInProgress || !writeDataCntAboveThreshold);
-      writeDataCntAboveThreshold <= (writeDataCnt.read >= truncate(unpack(tlpWriteHeaderFifo.first.dwCount)));
-   endrule
-   (* descending_urgency = "writeHeaderTlp,updateWriteDataCntAboveThreshold" *)
-   rule writeHeaderTlp if (!writeInProgress && writeDataCntAboveThreshold);
+   // guard: (writeDataCnt.read >= truncate(unpack(tlpWriteHeaderFifo.first.dwCount)))
+   rule writeHeaderTlp if (!writeInProgress);
       // update for next cycle
-      writeDataCntAboveThreshold <= (writeDataCnt.read >= truncate(unpack(tlpWriteHeaderFifo.first.dwCount)));
+      let ready <- toGet(writeReadyFifo).get();
 
       writeHeaderTlpWire <= True;
       let info <- toGet(tlpWriteHeaderFifo).get();
@@ -153,6 +147,7 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
          v = writeDataMimo.first();
 	 writeDataMimo.deq(1);
 	 hdr_3dw.data = byteSwap(v[0]);
+	 //FIXME: assert deqReadyN here
          tlp.eof = (dwCount == 1) ? True : False;
          dwCount = dwCount - 1;
          writeDataCnt.decrement(1);
@@ -182,7 +177,6 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
       end
 
       tlpOutFifo.enq(tlp);
-      $display("writeHeaderTlp dwCount=%d", dwCount);
       writeDwCount <= dwCount;
       tlpDwCount <= truncate(min(fromInteger(valueOf(TlpDataWords)),unpack(dwCount)));
       lastTlp <= (dwCount <= fromInteger(valueOf(TlpDataWords)));
@@ -426,9 +420,13 @@ module mkMemToPcie#(PciId my_id)(MemToPcie#(buswidth))
 	    if (burstLen == 0) begin
 	       burstLen <- toGet(writeBurstCountFifo).get();
 	    end
+	    if (burstLen == 1) begin
+	       writeReadyFifo.enq(True);
+	    end
 	    writeBurstCount <= extend(burstLen-1);
 
 	    Vector#(busWidthWords, Bit#(32)) v = unpack(wdata.data);
+	    $display("writeData.put %h tag %h v %h writeDataCnt", wdata.data, wdata.tag, v, writeDataCnt.read);
 	    writeDataMimo.enq(fromInteger(valueOf(busWidthWords)), v);
             writeDataCnt.increment(fromInteger(valueOf(busWidthWords)));
 	    writeDataMimoEnqWire <= True;
