@@ -11,6 +11,7 @@ import Vector       :: *;
 import BlueCheck         :: *;
 import ConnectalMemTypes :: *;
 import PcieToMem         :: *;
+import PcieTracer        :: *;
 import PhysMemSlaveFromBram :: *;
 import MemToPcie         :: *;
 
@@ -32,9 +33,37 @@ module mkMemToPcieToMem(PhysMemSlave#(40, 32));
    BRAM1Port#(Bit#(32), Bit#(32)) bramPort <- mkBRAM1Server(cfg);
    BRAMServer#(Bit#(32), Bit#(32)) br = bramPort.portA;
    PhysMemSlave#(32, 32) bramPhysMem <- mkPhysMemSlaveFromBram(br);
-   mkConnection(memToPcie.tlp.request, pcieToMem.tlp.response);
-   mkConnection(memToPcie.tlp.response, pcieToMem.tlp.request);
+   //mkConnection(memToPcie.tlp.request, pcieToMem.tlp.response);
+   //mkConnection(memToPcie.tlp.response, pcieToMem.tlp.request);
    //mkConnection(pcieToMem.master, bramPhysMem);
+
+   let fhandle <- mkReg(InvalidFile);
+   let didOnce <- mkReg(False);
+   rule once if (!didOnce);
+      //let mcd <- $fopen("pcielog.txt", "w");
+      //fhandle <= mcd;
+      didOnce <= True;
+   endrule
+
+   Reg#(Bit#(32)) cycles <- mkReg(0);
+   rule rl_cycles;
+      cycles <= cycles + 1;
+   endrule
+   rule rl_to_bram;
+      let tlp <- memToPcie.tlp.request.get();
+      pcieToMem.tlp.response.put(tlp);
+      TimestampedTlpData ttd = TimestampedTlpData { tlp: tlp, source: 4, timestamp: cycles };
+      //$fwriteh(fhandle, ttd);
+      $display("tracetb %h", ttd);
+   endrule
+   rule rl_from_bram;
+      let tlp <- pcieToMem.tlp.request.get();
+      memToPcie.tlp.response.put(tlp);
+      TimestampedTlpData ttd = TimestampedTlpData { tlp: tlp, source: 8, timestamp: cycles };
+      //$fwriteh(fhandle, ttd);
+      $display("tracefb %h", ttd);
+   endrule
+
    rule rl_rd_addr;
       let req <- pcieToMem.master.read_client.readReq.get();
       bramPhysMem.read_server.readReq.put(req);
