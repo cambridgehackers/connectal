@@ -225,7 +225,7 @@ def pktClassification(tlpsof, tlpeof, tlpbe, pktformat, pkttype, portnum, addres
             else:
                 return 'DmaRReq'
     else:
-        return 'Misc'
+        return '   Misc'
 
 classCounts = {}
 last_seqno = mpz(-1)
@@ -406,6 +406,7 @@ if __name__ == '__main__':
     print 'pcieflat: devices are', devfilenames
     if argcount == 2:
         tlplog = open(sys.argv[argindex]).read().split('\n')
+        base = 0
     elif False:
         tlplog = subprocess.check_output(['connectalutil', devfilenames[0]]).split('\n')
         tlpfirst = tlplog.pop(0)
