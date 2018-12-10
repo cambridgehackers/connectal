@@ -29,6 +29,8 @@ env:
     - CONNECTAL_TEST=examples/memcpy CONNECTAL_ARCH=verilator
     - CONNECTAL_TEST=examples/memcpy CONNECTAL_ARCH=cvc
     - CONNECTAL_TEST=examples/strstr CONNECTAL_ARCH=bluesim
+    - CONNECTAL_TEST=tests/memserver_write128 CONNECTAL_ARCH=verilator
+    - CONNECTAL_TEST=tests/memserver_copy128 CONNECTAL_ARCH=verilator
 script:
 - export PYTHONPATH=$PWD/scripts; make scripts/syntax/parsetab.py; cd $CONNECTAL_TEST; make build.$CONNECTAL_ARCH run.$CONNECTAL_ARCH
 sudo: no
