@@ -51,6 +51,9 @@ PortalPoller::PortalPoller(int autostart)
 #if defined(SIMULATION)
     timeout = 100;
 #endif
+    if (getenv("PORTAL_TIMEOUT") != 0) {
+        timeout = strtoul(getenv("PORTAL_TIMEOUT"), 0, 0);
+    }
 }
 
 int PortalPoller::unregisterInstance(Portal *portal)
