@@ -112,10 +112,13 @@ static irqreturn_t intr_handler(int irq, void *p)
         tBoard *this_board = this_tile->board;
 	int i;
         //printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_tile->device_tile-1);
-	for (i = 0; i < MAX_NUM_PORTALS; i++)
-            if (this_tile->device_tile-1 == this_board->portal[i].device_tile
-              && this_board->portal[i].extra)
-                wake_up_interruptible(&(this_board->portal[i].extra->wait_queue)); 
+        for (i = 0; i < MAX_NUM_PORTALS; i++) {
+                if ((this_tile->device_tile-1 == this_board->portal[i].device_tile)
+                    || this_tile->board->info.aws_shell) {
+                        if (this_board->portal[i].extra)
+                                wake_up_interruptible(&(this_board->portal[i].extra->wait_queue));
+                }
+        }
         return IRQ_HANDLED;
 }
 
@@ -341,7 +344,7 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
         if (vma->vm_pgoff > (~0UL >> PAGE_SHIFT))
                 return -EINVAL;
         if (vma->vm_pgoff < 16) {
-		if (this_portal->board->bar4io) {
+		if (this_portal->board->info.aws_shell) {
 			off = pci_dev->resource[0].start + this_portal->offset;
 		} else {
 			off = pci_dev->resource[2].start + this_portal->offset;
@@ -514,6 +517,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                         goto BARS_ALLOCATED_label;
                 }
 		if (!this_board->bar4io) {
+			this_board->info.aws_shell = 0;
 			// this replaces 'connectal/pcie/connectalutil/connectalutil trace /dev/fpga0'
 			// but why is it needed?...
 			iowrite32(0, this_board->bar0io + CSR_TLPPCIEWRADDRREG);
@@ -530,6 +534,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 			}
 			// check for xdma on bar2
 		} else {
+			this_board->info.aws_shell = 1;
 			printk("  xdma block ID %x\n", ioread32(this_board->bar2io + 0x0000));
 			printk("   irq block ID %x\n", ioread32(this_board->bar2io + 0x2000));
 			printk("config block ID %x\n", ioread32(this_board->bar2io + 0x3000));
@@ -566,7 +571,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		iowrite32(0, this_board->bar0io + CSR_MSIX_MASKED);
                 pci_set_master(dev); /* enable PCI bus master */
 		
-		if (this_board->bar4io) {
+		if (this_board->info.aws_shell) {
 			portal_base = this_board->bar0io;
 			ptile = this_board->bar0io;
 			printk("bar0io[0]=%08x\n", *(int *)this_board->bar0io);

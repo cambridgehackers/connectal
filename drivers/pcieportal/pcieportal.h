@@ -104,15 +104,16 @@ typedef struct tBoard {
         void __iomem     *bar0io, *bar1io, *bar2io, *bar4io; /* bars */
         struct pci_dev   *pci_dev; /* pci device pointer */
         tPortal           portal[MAX_NUM_PORTALS];
-        struct {
-          unsigned int board_number;
-          unsigned int portal_number;
-          unsigned int num_portals;
-        }                 info; /* board identification fields */
         unsigned int      irq_num;
         unsigned int      open_count;
         tTile             tile[MAX_NUM_PORTALS];
         struct extra_info *extra;
+        struct {
+          unsigned int board_number;
+          unsigned int portal_number;
+          unsigned int num_portals;
+	  unsigned int aws_shell;
+        }                 info; /* board identification fields */
 } tBoard;
 
 extern tBoard* get_pcie_portal_descriptor(void);
