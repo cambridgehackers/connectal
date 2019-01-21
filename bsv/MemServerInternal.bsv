@@ -364,25 +364,20 @@ module mkMemWriteInternal#(MemServerIndication ind,
       let physAddr = addrTransResponse.physAddr;
       let rename_tag <- tag_gen.getTag;
       serverRequest.enq(RRec{req:req, pa:physAddr, client:client, rename_tag:extend(rename_tag)});
-      if (verbose) $display("mkMemWriteInternal::checkMmuResp: client=%d, rename_tag=%d", client,rename_tag);
+      //if (verbose) $display("mkMemWriteInternal::checkMmuResp: client=%d, rename_tag=%d", client,rename_tag);
       if (verbose) $display("mkMemWriteInternal::mmuResp %d %d", client, cycle_cnt-last_mmuResp);
       last_mmuResp <= cycle_cnt;
    endrule
    
    rule writeDoneComp0;
       let tag <- tag_gen.complete;
-     respFifos.portB.request.put(BRAMRequest{write:False, address:tag, datain: ?, responseOnWrite: ?});
-      $display("mkMemWriteInternal::CompletionBuff Drain, rename_tag = %d", tag);
+      respFifos.portB.request.put(BRAMRequest{write:False, address:tag, datain: ?, responseOnWrite: ?});
    endrule
       
-   FIFOF#(MemData#(busWidth)) memDataFifo <- mkFIFOF();
-   Vector#(numServers, FIFOF#(MemData#(busWidth))) clientWriteData <- replicateM(mkFIFOF);
+   FIFO#(MemData#(busWidth)) memDataFifo <- mkFIFO();
+   Vector#(numServers, FIFO#(MemData#(busWidth))) clientWriteData <- replicateM(mkFIFO);
    
    if(valueOf(numServers) > 0)
-/*      
-      rule warning (clientWriteData[serverProcessing.first.client].notEmpty && !memDataFifo.notFull);
-         $display("mkMemWriteInternal:: backpressure! ClientWriteData[%d] not Empty, memDataFifo is Full", serverProcessing.first.client);
-      endrule*/
       rule memdata;
 	 let drq = serverProcessing.first;
 	 let req_tag = drq.req_tag;
@@ -408,7 +403,7 @@ module mkMemWriteInternal#(MemServerIndication ind,
 	 beatCount <= beatCount+1;
 	 if (last)
 	    serverProcessing.deq();
-         if (verbose) $display("mkMemWriteInternal::writeData: client=%d, rename_tag=%d, burstLen = %d, first=%d, last=%d", client, rename_tag, burstLen, first, last);
+	 //$display("mkMemWriteInternal::writeData: client=%d, rename_tag=%d", client, rename_tag);
 	 memDataFifo.enq(MemData { data: tagdata.data,
 `ifdef BYTE_ENABLES_MEM_DATA
 	 			   byte_enables: tagdata.byte_enables,
@@ -459,7 +454,7 @@ module mkMemWriteInternal#(MemServerIndication ind,
 	    let client = request.client;
 	    let rename_tag = request.rename_tag;
 	    serverProcessing.enq(DRec{req_tag:req.tag, req_burstLen: req.burstLen, client:client, rename_tag:rename_tag, last: (req.burstLen == fromInteger(valueOf(busWidthBytes))) });
-	    if (verbose) $display("mkMemWriteInternal::writeReq: client=%d, rename_tag=%d", client,rename_tag);
+	    //$display("mkMemWriteInternal::writeReq: client=%d, rename_tag=%d", client,rename_tag);
 	    return PhysMemRequest{addr:physAddr, burstLen:req.burstLen, tag:extend(rename_tag)
 `ifdef BYTE_ENABLES
 				  , firstbe: truncate(req.firstbe), lastbe: truncate(req.lastbe)
