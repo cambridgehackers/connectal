@@ -26,8 +26,12 @@
 `define DataBusWidth 64
 `endif
 
-typedef TDiv#(TMax#(128,DataBusWidth),8) TlpDataBytes;
-typedef TDiv#(TMax#(128,DataBusWidth),32) TlpDataWords;
+// typedef TDiv#(TMax#(128,DataBusWidth),8) TlpDataBytes;
+// typedef TDiv#(TMax#(128,DataBusWidth),32) TlpDataWords;
+
+typedef TDiv#(128,8) TlpDataBytes;
+typedef TDiv#(128,32) TlpDataWords;
+
 
 typedef `PhysAddrWidth PhysAddrWidth;
 typedef `SlaveDataBusWidth SlaveDataBusWidth;

@@ -64,7 +64,8 @@ endinterface: MemToPcie
 `ifdef PCIE3
 typedef 1024 WriteDataBurstLen; // max payload size is 1024 bytes
 `else
-typedef 256 WriteDataBurstLen; // max payload size is 256 bytes for Xilinx gen2 core
+// typedef 256 WriteDataBurstLen; // max payload size is 256 bytes for Xilinx gen2 core
+typedef 512 WriteDataBurstLen; // max payload size is 256 bytes for Xilinx gen2 core
 `endif
 typedef TDiv#(WriteDataBurstLen,4) WriteDataMimoSize; // number of words to hold in the MIMO
 typedef BurstLenSize WriteDataBurstLenSize;

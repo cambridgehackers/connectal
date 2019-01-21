@@ -83,8 +83,15 @@ import HostInterface     :: *;
 `define SYS_CLK_ARG
 `endif
 
+
+`ifdef PCIE3
+typedef TMin#(DataBusWidth, 256) PcieDataBusWidth;
+`else
+typedef TMin#(DataBusWidth, 128) PcieDataBusWidth;
+`endif
+
 (* synthesize *)
-module mkMemToPcieSynth#(PciId my_id)(MemToPcie#(DataBusWidth));
+module mkMemToPcieSynth#(PciId my_id)(MemToPcie#(PcieDataBusWidth));
    let memSlaveEngine <- mkMemToPcie(my_id);
    return memSlaveEngine;
 endmodule
@@ -94,10 +101,10 @@ endmodule
 //
 `ifdef PCIE3
 (* synthesize *)
-module mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
+module mkPcieHost#(PciId my_pciId)(PcieHost#(PcieDataBusWidth, NumberOfMasters));
    TLPDispatcher dispatcher <- mkTLPDispatcher;
    TLPArbiter arbiter <- mkTLPArbiter;
-   MemToPcie#(DataBusWidth) sEngine <- mkMemToPcieSynth(my_pciId);
+   MemToPcie#(PcieDataBusWidth) sEngine <- mkMemToPcieSynth(my_pciId);
 `ifdef PCIE3
    MemInterrupt intr <- mkMemInterrupt(my_pciId);
 `endif
@@ -148,11 +155,11 @@ endmodule: mkPcieHost
 // ======================================================
 // PCIE GEN1 and GEN2 PcieHost
 //(* synthesize *) commented out so that the guards in MemServer aren't destroyed (mdk)
-module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
+module  mkPcieHost#(PciId my_pciId)(PcieHost#(PcieDataBusWidth, NumberOfMasters));
    let dispatcher <- mkTLPDispatcher;
    let arbiter    <- mkTLPArbiter;
-   Vector#(NumberOfMasters,MemToPcie#(DataBusWidth)) sEngine <- replicateM(mkMemToPcieSynth(my_pciId));
-   Vector#(NumberOfMasters,PhysMemSlave#(PciePhysAddrWidth,DataBusWidth)) slavearr;
+   Vector#(NumberOfMasters,MemToPcie#(PcieDataBusWidth)) sEngine <- replicateM(mkMemToPcieSynth(my_pciId));
+   Vector#(NumberOfMasters,PhysMemSlave#(PciePhysAddrWidth,PcieDataBusWidth)) slavearr;
    MemInterrupt intr <- mkMemInterrupt(my_pciId);
 `ifdef PCIE_BSCAN
    BscanTop bscan <- mkBscanTop(3); // Use USER3  (JTAG IDCODE address 0x22)
@@ -231,7 +238,7 @@ endinterface
 module mkBsimPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_PARAM Reset pci_sys_reset_n)(PcieHostTop);
    let dc <- exposeCurrentClock;
    let dr <- exposeCurrentReset;
-   PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(PciId{ bus:0, dev:0, func:0});
+   PcieHost#(PcieDataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(PciId{ bus:0, dev:0, func:0});
    // connect pciehost.pci to bdip functions here
    rule from_bdpi if (can_get_tlp);
       TLPData#(16) foo <- get_tlp;
@@ -299,7 +306,7 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_
 
    Clock pcieClock_ = ep7.epPcieClock;
    Reset pcieReset_ = ep7.epPcieReset;
-   PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(
+   PcieHost#(PcieDataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(
 `ifdef PCIE3
          PciId{bus: 0, dev: 0, func:0},
 `else
@@ -372,7 +379,7 @@ module mkAlteraPcieHostTop #(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(P
    Clock portalClock_ = epPcieClock;
    Reset portalReset_ = epPcieReset;
 
-   PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(ep7.device, clocked_by portalClock_, reset_by portalReset_);
+   PcieHost#(PcieDataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(ep7.device, clocked_by portalClock_, reset_by portalReset_);
    mkConnection(ep7.tlp, pciehost.pci, clocked_by portalClock_, reset_by portalReset_);
 
    interface PcieEndpointS5 tep7 = ep7;

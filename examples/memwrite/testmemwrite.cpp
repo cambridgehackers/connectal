@@ -43,8 +43,8 @@ static int burstLenMin = 4;
 static int burstLenMax = 64; // 256byte = 16beats of 128bit
 #else
 static int burstLen = 16;
-static int burstLenMin = 4;
-static int burstLenMax = 32;
+static int burstLenMin = 16;
+static int burstLenMax = 16;
 #endif
 
 #ifdef NumEngineServers

@@ -77,6 +77,13 @@ typedef XsimHost HostInterface;
 
 `ifdef PcieHostIF
 
+`ifdef PCIE3
+typedef TMin#(DataBusWidth, 256) PcieDataBusWidth;
+`else
+typedef TMin#(DataBusWidth, 128) PcieDataBusWidth;
+`endif
+
+
 import Vector            :: *;
 import GetPut            :: *;
 import ClientServer      :: *;
@@ -135,7 +142,7 @@ interface PcieHost#(numeric type dsz, numeric type nSlaves);
 endinterface
 
 interface PcieHostTop;
-   interface PcieHost#(DataBusWidth, NumberOfMasters) tpciehost;
+   interface PcieHost#(PcieDataBusWidth, NumberOfMasters) tpciehost;
 `ifdef PCIE_CHANGES_HOSTIF
    interface PipeOut#(Bit#(64)) tchanges;
 `endif

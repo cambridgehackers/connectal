@@ -152,6 +152,7 @@ module mkSimDma(SimDma#(dataWidth) ifc)
       endfunction
       Vector#(TDiv#(dataWidth,32),Integer) indices = genVector();
       mapM_(write32, indices);
+      $display("mkSimDMA:: write at address = %d @ %t", addr, $time);
    endmethod
    method Action readrequest(Bit#(32) handle, Bit#(32) addr);
       function Action doreadrequest(Integer i);
@@ -262,6 +263,15 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
 	 readLenReg <= readLen - 1;
 	 readOffsetReg <= readOffset + fromInteger(valueOf(serverBusWidth)/8);
    endrule
+   /*
+   rule displayWriteDelayFifoWarning (!writeDelayFifo.notFull);
+      $display("mkSimDmaDmaMaster:: WARNING !! writeDelayFifo is full");
+   endrule
+   
+   rule displaybFifoWarning (!bFifo.notFull);
+      $display("mkSimDmaDmaMaster:: WARNING !! bFifo is full");
+   endrule
+*/
 
    interface PhysMemReadServer read_server;
       interface Put readReq;
@@ -283,7 +293,7 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
    interface PhysMemWriteServer write_server;
       interface Put writeReq;
 	 method Action put(PhysMemRequest#(serverAddrWidth,serverBusWidth) req);
-	 //$display("mkSimDmaDmaMaster::req_aw id=%d", req.tag);
+	 $display("mkSimDmaDmaMaster::req_aw id=%d @ cycles = %d", req.tag, cycles);
 	 writeDelayFifo.enq(tuple2(cycles,req));
 	 endmethod
       endinterface
@@ -312,6 +322,8 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
 	       bFifo.enq(tuple2(cycles,tag));
 	       writeDelayFifo.deq;
 	    end
+   
+      	//$display("mkSimDmaDmaMaster::put write request tag = %d, req.burstLen = %d, beat_shift = %d, writeLen = %d, reqAddr = %d, writeOffset = %d, @ cycles = %d", tag, req.burstLen, beat_shift, writeLen, req.addr[31:0], writeOffset, cycles);
 	 endmethod
       endinterface
       interface Get writeDone;
