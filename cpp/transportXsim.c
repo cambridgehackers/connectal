@@ -22,7 +22,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-static int trace_xsim; // = 1;
+static int trace_xsim = 1;
 
 static uint32_t indicationIndex[16];
 static uint32_t indicationHdr[16];

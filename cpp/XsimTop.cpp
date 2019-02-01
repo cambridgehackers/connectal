@@ -24,7 +24,7 @@
 #include <XsimMsgIndication.h>
 #include <pthread.h>
 
-static int trace_xsimtop; // = 1;
+static int trace_xsimtop = 1;
 
 class XsimMsgRequest : public XsimMsgRequestWrapper {
   pthread_mutex_t mutex;
@@ -94,6 +94,8 @@ double sc_time_stamp()
   return (double)cycleCount;
 }
 
+static Portal *portals[16];
+
 extern "C" void dpi_init()
 {
     if (trace_xsimtop)
@@ -101,11 +103,13 @@ extern "C" void dpi_init()
 #ifdef POLL_IN_DPI_POLL
     defaultPoller->stop();
 #endif
+#if 0
     mcommon = new Portal(0, 0, sizeof(uint32_t), portal_mux_handler, &xsim_handler, &transportSocketResp, NULL, NULL);
     PortalMuxParam param = {};
     param.pint = &mcommon->pint;
     xsimIndicationProxy = new XsimMsgIndicationProxy(XsimIfcNames_XsimMsgIndication, &transportMux, &param);
     xsimRequest = new XsimMsgRequest(XsimIfcNames_XsimMsgRequest, &transportMux, &param);
+#endif
     if (trace_xsimtop) fprintf(stderr, "%s: end\n", __FUNCTION__);
 }
 
@@ -119,22 +123,55 @@ extern "C" void dpi_poll()
 }
 #endif
 
+int portal_dpi_handler(struct PortalInternal *pint, unsigned int channel, int messageFd)
+{
+    int i, dummy;
+    for (i = 0; i < pint->mux_ports_number; i++) {
+        PortalInternal *p = pint->mux_ports[i].pint;
+        if (channel == p->fpga_number && p->handler) {
+            p->transport->recv(p, p->map_base, 1, &dummy);
+	    p->handler(p, *p->map_base >> 16, messageFd);
+        }
+    }
+    return -1;
+}
+
 extern "C" long long dpi_msgSink_beat(int portal)
 {
   long long result = 0xbadad7a;
   //if (trace_xsimtop) fprintf(stderr, "%s: portal %d rdy %d\n", __FUNCTION__, portal, (int)xsimRequest->sinkbeats[portal].size());
+  if (!portals[portal]) {
+    portals[portal] = new Portal(portal, 0, sizeof(uint32_t), portal_dpi_handler, &xsim_handler, &transportSocketResp, NULL, NULL);
+  }
+
+#if 0
   if (xsimRequest->notEmpty(portal)) {
       uint32_t beat = xsimRequest->get(portal);
       if (trace_xsimtop)
           fprintf(stderr, "%s: portal %d beat %08x\n", __FUNCTION__, portal, beat);
       result = (1ll << 32) | beat;
   }
+#endif
   return result;
+}
+
+extern "C" void dpi_msgSource_init(int portal)
+{
+    if (!portals[portal]) {
+	if (trace_xsimtop)
+	    fprintf(stderr, "%s: portal %d\n", __FUNCTION__, portal);
+	portals[portal] = new Portal(portal, 0, sizeof(uint32_t), portal_dpi_handler, &xsim_handler, &transportSocketResp, NULL, NULL);
+    }
 }
 
 extern "C" void dpi_msgSource_beat(int portal, int beat)
 {
     if (trace_xsimtop)
         fprintf(stderr, "dpi_msgSource_beat: portal %d beat=%08x\n", portal, beat);
+    if (!portals[portal]) {
+      portals[portal] = new Portal(portal, 0, sizeof(uint32_t), portal_dpi_handler, &xsim_handler, &transportSocketResp, NULL, NULL);
+    }
+#if 0
     xsimIndicationProxy->msgSource(portal, beat);
+#endif
 }

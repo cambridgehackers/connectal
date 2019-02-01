@@ -101,7 +101,7 @@ void init_portal_internal(PortalInternal *pint, int id, int tile,
     if (!transport) {
         // Use defaults for transport handling methods
 #if defined(SIMULATION) && !defined(__ATOMICC__)
-        transport = &transportXsim;
+        transport = &transportSocketInit;
 #else
         transport = &transportHardware;
 #endif

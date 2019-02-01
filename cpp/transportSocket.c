@@ -25,7 +25,7 @@
 #include "sock_utils.h"
 #include <assert.h>
 
-static int trace_socket; // = 1;
+static int trace_socket = 0;
 
 #ifndef __KERNEL__
 #include <stdio.h>
@@ -59,6 +59,7 @@ int i;
     fprintf(stderr, "\n");
 }
 
+static pthread_mutex_t sending_mutex;
 static pthread_mutex_t socket_mutex;
 int global_sockfd = -1;
 
@@ -202,9 +203,11 @@ static void send_mux(struct PortalInternal *pint, volatile unsigned int *data, u
     volatile unsigned int *buffer = data-1;
     if(trace_socket)
         fprintf(stderr, "[%s:%d] hdr %x fpga %x\n", __FUNCTION__, __LINE__, hdr, pint->fpga_number);
+    pthread_mutex_lock(&sending_mutex);
     buffer[0] = hdr;
     pint->mux->request_index = pint->request_index;
     pint->mux->transport->send(pint->mux, buffer, (pint->fpga_number << 16) | ((hdr + 1) & 0xffff), sendFd);
+    pthread_mutex_unlock(&sending_mutex);
 }
 static int recv_mux(struct PortalInternal *pint, volatile unsigned int *buffer, int len, int *recvfd)
 {

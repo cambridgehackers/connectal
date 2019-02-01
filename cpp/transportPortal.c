@@ -27,7 +27,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-static int trace_portal=0;
+static int trace_portal=1;
 static void enableint_portal(struct PortalInternal *pint, int val)
 {
    pint->map_base[PORTAL_CTRL_INTERRUPT_ENABLE] = val;

@@ -31,9 +31,11 @@
 
 module XsimSource( input CLK, input CLK_GATE, input RST, input [31:0] portal, input en_beat, input [31:0] beat);
 
+   import "DPI-C" function void dpi_msgSource_init(input int portal);
    import "DPI-C" function void dpi_msgSource_beat(input int portal, input int beat);
 
    always @(posedge CLK) begin
+      dpi_msgSource_init(portal);
       if (en_beat)
           dpi_msgSource_beat(portal, beat);
    end
