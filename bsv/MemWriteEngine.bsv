@@ -503,7 +503,7 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
    FunnelPipe#(1,numServers,MemRequest,2) reqFunnel <- mkFunnelPipesPipelined(genWith(writeChannelDmaWriteReq));
 //   FunnelPipe#(1,numServers,MemData#(userWidth),2) dataFunnel <- mkFunnelPipesPipelined(genWith(writeChannelDmaWriteData));
    
-   FIFO#(Bit#(TLog#(numServers))) channelQ <- mkSizedFIFO(valueOf(cmdQDepth));
+   FIFO#(Bit#(TLog#(numServers))) channelQ <- mkSizedFIFO(valueOf(cmdQDepth)*valueOf(numServers));
 
    rule rl_arbitration;// if (!reqInFlight );// && !reqNotDone);
       let req <- toGet(reqFunnel[0]).get();
@@ -538,3 +538,4 @@ module mkMemWriteEngineBuff#(Integer bufferSizeBytes)(MemWriteEngine#(busWidth, 
    endinterface: dmaClient
 
 endmodule
+ 
