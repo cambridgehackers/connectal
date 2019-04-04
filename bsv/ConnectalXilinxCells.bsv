@@ -205,7 +205,6 @@ module mkClockIBUFDS_GTE#(IBUFDS_GTE2Params params, Bool enable, Clock clk_p, Cl
    let _m <- vMkClockIBUFDS_GTE4(params, enable, clk_p, clk_n);
 `else
   `ifdef XilinxUltrascale
-error
    let _m <- vMkClockIBUFDS_GTE3(params, enable, clk_p, clk_n);
   `else
    let _m <- vMkClockIBUFDS_GTE2(params, enable, clk_p, clk_n);
