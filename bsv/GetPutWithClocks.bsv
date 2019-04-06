@@ -186,7 +186,7 @@ instance ConnectableWithClocks#(Client#(a,b), Server#(a,b))
 		Bits#(a, awidth),
 		Bits#(b, bwidth));
       let reqCnx <- mkConnectionWithClocks(inClock, inReset, outClock, outReset, client.request, server.request);
-      let respCnx <- mkConnectionWithClocks(inClock, inReset, outClock, outReset, server.response, client.response);
+      let respCnx <- mkConnectionWithClocks(outClock, outReset, inClock, inReset, server.response, client.response);
    endmodule
    module mkConnectionWithClocks2#(Client#(a,b) client, Server#(a,b) server)(Empty)
       provisos (ConnectableWithClocks#(Get#(a), Put#(a)),
