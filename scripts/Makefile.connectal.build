@@ -63,6 +63,12 @@ endif
 ifeq ($(BSCMAJOR), 2015)
     BSCFLAGS_COMMON += -D ClockDefaultParam
 endif
+ifeq ($(BSCMAJOR), 2017)
+    BSCFLAGS_COMMON += -D ClockDefaultParam
+endif
+ifeq ($(BSCMAJOR), 2018)
+    BSCFLAGS_COMMON += -D ClockDefaultParam
+endif
 
 BSCOPTFLAGS= -show-schedule -aggressive-conditions -show-method-bvi
 BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj
