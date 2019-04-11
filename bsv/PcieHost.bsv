@@ -85,7 +85,7 @@ import HostInterface     :: *;
 
 
 `ifdef PCIE3
-typedef TMin#(DataBusWidth, 256) PcieDataBusWidth;
+typedef TMin#(DataBusWidth, 128) PcieDataBusWidth;
 `else
 typedef TMin#(DataBusWidth, 128) PcieDataBusWidth;
 `endif

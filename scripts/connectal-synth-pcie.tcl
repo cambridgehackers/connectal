@@ -125,7 +125,8 @@ if {$need_pcie == "xu_gen3x8"} {
 									     CONFIG.pf0_msix_enabled {true} \
 									     CONFIG.plltype {QPLL1} \
 									     CONFIG.vendor_id {1be7} \
-									     CONFIG.xlnx_ref_board {VCU108} \
+                                         CONFIG.xlnx_ref_board {VCU108} \
+                                         CONFIG.AXISTEN_IF_RC_STRADDLE {false}
 									    ]
 # add the following to enable PF1:
 # CONFIG.TL_PF_ENABLE_REG {true} CONFIG.PF1_DEVICE_ID {c100} \
