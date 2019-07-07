@@ -29,6 +29,7 @@ verbose = False
 generateJson = True
 generatePacketOnly = False
 suppressGeneratedMakefile = False
+synchronousInvoke = False
 sizeofUint32_t = 4
 generatedVectors = []
 itypeNames = ['int', 'int8_t', 'uint8_t', 'int16_t', 'uint16_t', 'int32_t', 'uint32_t', 'uint64_t', 'SpecialTypeForSendingFd', 'ChannelType', 'DmaDbgRec']
@@ -618,18 +619,29 @@ def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
     substs['responseCase'] = respCase % substs
     return substs, len(argWords)
 
-def emitMethodDeclaration(mname, params, f, className):
+def emitMethodDeclaration(mname, params, f, className, methodIndex, returnType):
     paramValues = [pitem['pname'] for pitem in params]
     paramValues.insert(0, '&pint')
     methodName = cName(mname)
     indent(f, 4)
     if className == '':
         f.write('virtual void')
+    elif synchronousInvoke:
+        if returnType is not None:
+            f.write(typeCName(returnType))
+        else:
+            f.write('void')
     else:
         f.write('int')
     f.write((' %s ( ' % methodName) + formalParameters(params, False) + ' ) ')
     if className == '':
         f.write('= 0;\n')
+    elif synchronousInvoke:
+        f.write('{ cb->%s (' % methodName)
+        f.write(', '.join(paramValues) + ');')
+        if returnType is not None:
+            f.write(' return waitReturn(%d, %d);' % (methodIndex, typeBitWidth(returnType)))
+        f.write(' };\n')
     else:
         f.write('{ return cb->%s (' % methodName)
         f.write(', '.join(paramValues) + '); };\n')
@@ -725,8 +737,12 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         cpp.write('\nconst uint32_t %(className)s_reqinfo = %(reqInfo)s;\n' % subs)
         if generateProxy:
             hpp.write(proxyClassPrefixTemplate % subs)
+            dindex = 0
             for mitem in declList:
-                emitMethodDeclaration(mitem['dname'], mitem['dparams'], hpp, classCName)
+                emitMethodDeclaration(mitem['dname'], mitem['dparams'], hpp, classCName, dindex, mitem.get('rtype'))
+                dindex = dindex + 1
+            #if synchronousInvoke:
+            #    hpp.write('uint64_t waitReturn(int method, int size);\n')
             hpp.write('};\n')
     if generateWrapper:
         cpp.write('const char * %(className)s_methodSignatures()\n{\n' % subs)
@@ -749,8 +765,10 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         generated_hpp.write((handleMessageTemplateDecl % subs)+ ';\n')
     if (not classVariant) and generateWrapper:
         hpp.write(wrapperClassPrefixTemplate % subs)
+        dindex = 0
         for mitem in declList:
-            emitMethodDeclaration(mitem['dname'], mitem['dparams'], hpp, '')
+            emitMethodDeclaration(mitem['dname'], mitem['dparams'], hpp, '', dindex, mitem.get('rtype'))
+            dindex = dindex + 1
         hpp.write('};\n')
     cCNSubst = { 'classCName': classCName}
     if not classVariant:
