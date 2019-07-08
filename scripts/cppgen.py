@@ -39,11 +39,42 @@ class %(className)sProxy : public Portal {
     %(classNameOrig)sCb *cb;
 public:
     %(className)sProxy(int id, int tile = DEFAULT_TILE, %(classNameOrig)sCb *cbarg = &%(className)sProxyReq, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
-        Portal(id, tile, bufsize, NULL, NULL, this, poller), cb(cbarg) {};
+        Portal(id, tile, bufsize, %(handlerName)s, NULL, this, poller), cb(cbarg) {%(initName)s};
     %(className)sProxy(int id, PortalTransportFunctions *transport, void *param, %(classNameOrig)sCb *cbarg = &%(className)sProxyReq, int bufsize = %(classNameOrig)s_reqinfo, PortalPoller *poller = 0) :
-        Portal(id, DEFAULT_TILE, bufsize, NULL, NULL, transport, param, this, poller), cb(cbarg) {};
+        Portal(id, DEFAULT_TILE, bufsize, %(handlerName)s, NULL, transport, param, this, poller), cb(cbarg) {%(initName)s};
     %(className)sProxy(int id, PortalPoller *poller) :
-        Portal(id, DEFAULT_TILE, %(classNameOrig)s_reqinfo, NULL, NULL, NULL, NULL, this, poller), cb(&%(className)sProxyReq) {};
+        Portal(id, DEFAULT_TILE, %(classNameOrig)s_reqinfo, %(handlerName)s, NULL, NULL, NULL, this, poller), cb(&%(className)sProxyReq) {%(initName)s};
+'''
+
+syncProxyTemplate='''
+private:
+    static int __internalHandleMessage(struct PortalInternal *p, unsigned int channel, int messageFd) {
+        return ((%(className)sProxy *)p->parent)->__internalResponse(channel);
+    }
+    sem_t *__internalWaitSemaphore;
+    uint64_t __internalWaitResult;
+    int __internalWaitMethod, __internalWaitSize;
+    void __internalInit() {
+        if ((__internalWaitSemaphore = sem_open("/semaphore", O_CREAT, 0644, 0)) == SEM_FAILED) {
+            perror("sem_open failed");
+            exit(-1);
+        }
+    }
+    int __internalResponse(unsigned int channel) {
+        volatile uint16_t *datap = (volatile uint16_t *)&pint.map_base[1];
+        int messageSize = *datap++;
+        if (channel != __internalWaitMethod || __internalWaitSize != messageSize)
+             printf("%(className)sProxy: channel %%d/%%d waitSize %%d messageSize %%d\\n", channel, __internalWaitMethod, __internalWaitSize, messageSize);
+        memcpy((void *)&__internalWaitResult, (void *)datap, sizeof(__internalWaitResult));
+        sem_post(__internalWaitSemaphore);
+        return 0;
+    }
+    uint64_t __internalWaitReturn(int method, int size) {
+        __internalWaitMethod = method;
+        __internalWaitSize = size;
+        sem_wait(__internalWaitSemaphore);
+        return __internalWaitResult;
+    }
 '''
 
 wrapperClassPrefixTemplate='''
@@ -640,7 +671,7 @@ def emitMethodDeclaration(mname, params, f, className, methodIndex, returnType):
         f.write('{ cb->%s (' % methodName)
         f.write(', '.join(paramValues) + ');')
         if returnType is not None:
-            f.write(' return waitReturn(%d, %d);' % (methodIndex, typeBitWidth(returnType)))
+            f.write(' return __internalWaitReturn(%d, %d);' % (methodIndex, typeBitWidth(returnType)))
         f.write(' };\n')
     else:
         f.write('{ return cb->%s (' % methodName)
@@ -736,13 +767,24 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         generated_hpp.write('extern const uint32_t %(className)s_reqinfo;\n' % subs)
         cpp.write('\nconst uint32_t %(className)s_reqinfo = %(reqInfo)s;\n' % subs)
         if generateProxy:
+            generateHandler = False
+            for mitem in declList:
+                if mitem.get('rtype') is not None:
+                    generateHandler = True
+            if generateHandler:
+                hpp.write('#include <semaphore.h>\n')
+                subs['handlerName'] = '__internalHandleMessage'
+                subs['initName'] = '__internalInit();'
+            else:
+                subs['handlerName'] = 'NULL'
+                subs['initName'] = ''
             hpp.write(proxyClassPrefixTemplate % subs)
             dindex = 0
             for mitem in declList:
                 emitMethodDeclaration(mitem['dname'], mitem['dparams'], hpp, classCName, dindex, mitem.get('rtype'))
                 dindex = dindex + 1
-            #if synchronousInvoke:
-            #    hpp.write('uint64_t waitReturn(int method, int size);\n')
+            if generateHandler:
+                hpp.write(syncProxyTemplate % subs)
             hpp.write('};\n')
     if generateWrapper:
         cpp.write('const char * %(className)s_methodSignatures()\n{\n' % subs)
