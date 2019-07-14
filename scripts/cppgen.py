@@ -49,7 +49,7 @@ public:
 syncProxyTemplate='''
 private:
     static int __internalHandleMessage(struct PortalInternal *p, unsigned int channel, int messageFd) {
-        return ((%(className)sProxy *)p->parent)->__internalResponse(channel);
+        return ((%(className)sProxy *)p->parent)->__internalResponse(p, channel);
     }
     sem_t *__internalWaitSemaphore;
     uint64_t __internalWaitResult;
@@ -60,12 +60,29 @@ private:
             exit(-1);
         }
     }
-    int __internalResponse(unsigned int channel) {
-        volatile uint16_t *datap = (volatile uint16_t *)&pint.map_base[1];
-        int messageSize = *datap++;
+    int __internalResponse(struct PortalInternal *p, unsigned int channel) {
+        int tmpfd __attribute__ ((unused));
+        volatile unsigned int* temp_working_addr = &p->map_base[1];
+        int offset = 0, remain = 1;
+        uint32_t temp = (uint32_t)(((temp_working_addr[offset])&0xfffffffful));
+        offset++;
+        int messageSize = temp & 0xffff;
+        temp = temp >> 16;
         if (channel != __internalWaitMethod || __internalWaitSize != messageSize)
              printf("%(className)sProxy: channel %%d/%%d waitSize %%d messageSize %%d\\n", channel, __internalWaitMethod, __internalWaitSize, messageSize);
-        memcpy((void *)&__internalWaitResult, (void *)datap, sizeof(__internalWaitResult));
+        __internalWaitResult = 0;
+        uint16_t *dest = (uint16_t *)&__internalWaitResult;
+        while (messageSize > 0) {
+            if (remain == 0) {
+                temp = (uint32_t)(((temp_working_addr[offset])&0xfffffffful));
+                offset++;
+                remain = 2;
+            }
+            *dest++ = temp & 0xffff;
+            temp = temp >> 16;
+            messageSize -= 16;
+            --remain;
+        }
         sem_post(__internalWaitSemaphore);
         return 0;
     }
