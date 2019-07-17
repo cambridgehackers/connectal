@@ -789,6 +789,7 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
                 if mitem.get('rtype') is not None:
                     generateHandler = True
             if generateHandler:
+                hpp.write('#include <fcntl.h>\n')
                 hpp.write('#include <semaphore.h>\n')
                 subs['handlerName'] = '__internalHandleMessage'
                 subs['initName'] = '__internalInit();'
