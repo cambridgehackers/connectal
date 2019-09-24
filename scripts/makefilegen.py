@@ -73,6 +73,7 @@ argparser.add_argument('-S', '--clibfiles', help='C++ libary file', action='appe
 argparser.add_argument('-L', '--clibdir', help='C++ libary', action='append', default=[])
 argparser.add_argument('-T', '--tcl', help='Vivado tcl script', action='append', default=[])
 argparser.add_argument('-m', '--bsimsource', help='Bsim C++ source files', action='append', default=[])
+argparser.add_argument(      '--verilatorflags', help='Options to verilator project flags', action='append', default=[])
 argparser.add_argument('-b', '--bscflags', help='Options to pass to the BSV compiler', action='append', default=[])
 argparser.add_argument('--xelabflags', help='Options to pass to the xelab compiler', action='append', default=[])
 argparser.add_argument('--xsimflags', help='Options to pass to the xsim simulator', action='append', default=[])
@@ -174,6 +175,7 @@ XCIFILES = %(xcifiles)s
 
 BSCFLAGS_PROJECT = %(bscflags)s
 SIM_CXX_PROJECT = %(bsimsource)s
+VERILATOR_PROJECT_ARGS = %(verilatorflags)s
 CFLAGS_PROJECT = %(cflags)s
 CXXFLAGS_PROJECT = %(cxxflags)s
 XELABFLAGS = %(xelabflags)s
@@ -541,6 +543,7 @@ if __name__=='__main__':
                                    'xelabflags': ' '.join(options.xelabflags),
                                    'xsimflags': ' '.join(options.xsimflags),
                                    'awsflags': ' '.join(options.awsflags),
+                                   'verilatorflags': ' ' .join(options.verilatorflags),
                                    'cflags': ' ' .join(options.cflags),
                                    'cxxflags': ' ' .join(options.cxxflags),
                                    'bsvdefines_list': ' '.join(bsvdefines),
