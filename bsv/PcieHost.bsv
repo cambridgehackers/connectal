@@ -297,12 +297,14 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_
 `else
    Clock pci_clk_100mhz_buf = clockGen.gen_clk;
 `endif
+   
+   let pci_sys_reset_n_c <- mkResetIBUF(defaultValue, reset_by pci_sys_reset_n);
    // Instantiate the PCIE endpoint
    PcieEndpointX7#(PcieLanes) ep7 <- mkPcieEndpointX7(
 `ifdef PCIE3
       clockGen.gen_clk,
 `endif
-      clocked_by pci_clk_100mhz_buf, reset_by pci_sys_reset_n);
+      clocked_by pci_clk_100mhz_buf, reset_by pci_sys_reset_n_c);
 
    Clock pcieClock_ = ep7.epPcieClock;
    Reset pcieReset_ = ep7.epPcieReset;

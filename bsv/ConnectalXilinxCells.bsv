@@ -28,6 +28,31 @@ import Vector       :: *;
 
 `include "ConnectalProjectConfig.bsv"
 
+// interface ResetIBUF;
+//    interface Reset reset;
+// endinterface
+
+import "BVI" IBUF =
+module mkResetIBUF#(Reset inReset)(ResetGenIfc);// provisos(Bits#(one_bit,1));
+   // default_clock clk();
+   // default_reset rstn();
+   default_clock no_clock;
+   // default_reset no_reset;
+   input_reset inReset(I) = inReset;
+   output_reset gen_rst(O) clocked_by(no_clock);
+
+   // port I = i;
+   // method O    _read;
+
+   // path(I, O);
+   // // path(IB, O);
+
+   // schedule _read  CF _read;
+
+endmodule: mkResetIBUF
+
+
+
 import "BVI" IBUFDS =
 module mkIBUFDS#(Wire#(one_bit) i, Wire#(one_bit) ib)(ReadOnly#(one_bit)) provisos(Bits#(one_bit,1));
    default_clock clk();

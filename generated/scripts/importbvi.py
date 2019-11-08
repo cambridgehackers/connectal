@@ -389,6 +389,8 @@ def fixname(arg):
     titem = titem.replace('ev128', 'ZZE')
     titem = titem.replace('ev1', 'ZZF')
     titem = titem.replace('l2', 'ZZG')
+    titem = titem.replace('l0', 'ZZH')
+    titem = titem.replace('l1', 'ZZI')
     return titem
 
 def goback(arg):
@@ -399,6 +401,8 @@ def goback(arg):
     titem = titem.replace('ZZE', 'ev128')
     titem = titem.replace('ZZF', 'ev1')
     titem = titem.replace('ZZG', 'l2')
+    titem = titem.replace( 'ZZH','l0')
+    titem = titem.replace( 'ZZI','l1')
     return titem
 
 def regroup_items(masterlist):

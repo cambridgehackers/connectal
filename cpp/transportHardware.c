@@ -102,7 +102,7 @@ int busy_hardware(struct PortalInternal *pint, unsigned int v, const char *str)
 #endif
             }
         else {
-            PORTAL_PRINTF("putFailed: %s\n", str);
+          /* PORTAL_PRINTF("putFailed: %s\n", str); */
 #ifndef __KERNEL__
             if (pint->busyType == BUSY_EXIT)
                 exit(1);

@@ -5,8 +5,10 @@
 ######################################################################################################
 # PIN ASSIGNMENTS
 ######################################################################################################
-set_property LOC AL9  [get_ports { CLK_pci_sys_clk_p }]
-set_property LOC AL8  [get_ports { CLK_pci_sys_clk_n }]
+#set_property LOC AL9  [get_ports { CLK_pci_sys_clk_p }]
+#set_property LOC AL8  [get_ports { CLK_pci_sys_clk_n }]
+set_property LOC AC9  [get_ports { CLK_pci_sys_clk_p }]
+set_property LOC AC8  [get_ports { CLK_pci_sys_clk_n }]
 set_property LOC AM17 [get_ports { RST_N_pci_sys_reset_n }]
 set_property LOC G31  [get_ports { CLK_sys_clk1_300_p }]
 set_property LOC F31  [get_ports { CLK_sys_clk1_300_n }]
