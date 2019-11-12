@@ -71,16 +71,21 @@ import PcieEndpointS5    :: *;
 import HostInterface     :: *;
 
 `ifdef XILINX_SYS_CLK
-`ifdef VirtexUltrascale
-`define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n, Clock sys_clk1_300_p, Clock sys_clk1_300_n, Clock sys_clk2_300_p, Clock sys_clk2_300_n, 
-`define SYS_CLK_ARG sys_clk_p, sys_clk_n, sys_clk1_300_p, sys_clk1_300_n, sys_clk2_300_p, sys_clk2_300_n, 
+ `ifdef VirtexUltrascalePlus
+   `define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n, Clock sys_clk_300_p, Clock sys_clk_300_n, Clock sys_clk1_250_p, Clock sys_clk1_250_n, Clock sys_clk2_250_p, Clock sys_clk2_250_n, 
+   `define SYS_CLK_ARG sys_clk_p, sys_clk_n, sys_clk_300_p, sys_clk_300_n, sys_clk1_250_p, sys_clk1_250_n, sys_clk2_250_p, sys_clk2_250_n, 
+ `else
+   `ifdef VirtexUltrascale
+     `define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n, Clock sys_clk1_300_p, Clock sys_clk1_300_n, Clock sys_clk2_300_p, Clock sys_clk2_300_n, 
+     `define SYS_CLK_ARG sys_clk_p, sys_clk_n, sys_clk1_300_p, sys_clk1_300_n, sys_clk2_300_p, sys_clk2_300_n, 
+   `else
+     `define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n,
+     `define SYS_CLK_ARG sys_clk_p, sys_clk_n,
+   `endif
+  `endif
 `else
-`define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n,
-`define SYS_CLK_ARG sys_clk_p, sys_clk_n,
-`endif
-`else
-`define SYS_CLK_PARAM
-`define SYS_CLK_ARG
+  `define SYS_CLK_PARAM
+  `define SYS_CLK_ARG
 `endif
 
 
@@ -268,23 +273,44 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_
 `endif
        sys_clk_p, sys_clk_n);
    Clock sys_clk_200mhz_buf <- mkClockBUFG(clocked_by sys_clk_200mhz);
+
+`ifdef VirtexUltrascalePlus   
+   Clock sys_clk_300mhz <- mkClockIBUFDS(
+                                         `ifdef ClockDefaultParam
+                                         defaultValue,
+                                         `endif
+                                         sys_clk_300_p, sys_clk_300_n);
+   Clock sys_clk_300mhz_buf <- mkClockBUFG(clocked_by sys_clk_300mhz);
    
-`ifdef VirtexUltrascale 
+   Clock sys_clk1_250mhz <- mkClockIBUFDS(
+                                          `ifdef ClockDefaultParam
+                                          defaultValue,
+                                          `endif
+                                          sys_clk1_250_p, sys_clk1_250_n);
+   Clock sys_clk1_250mhz_buf <- mkClockBUFG(clocked_by sys_clk1_250mhz);
+   Clock sys_clk2_250mhz <- mkClockIBUFDS(
+                                          `ifdef ClockDefaultParam
+                                          defaultValue,
+                                          `endif
+                                          sys_clk2_250_p, sys_clk2_250_n);
+   Clock sys_clk2_250mhz_buf <- mkClockBUFG(clocked_by sys_clk2_250mhz);
+`else
+ `ifdef VirtexUltrascale 
    Clock sys_clk1_300mhz <- mkClockIBUFDS(
-`ifdef ClockDefaultParam
-       defaultValue,
-`endif
-       sys_clk1_300_p, sys_clk1_300_n);
+                                          `ifdef ClockDefaultParam
+                                          defaultValue,
+                                          `endif
+                                          sys_clk1_300_p, sys_clk1_300_n);
    Clock sys_clk1_300mhz_buf <- mkClockBUFG(clocked_by sys_clk1_300mhz);
    
    Clock sys_clk2_300mhz <- mkClockIBUFDS(
-`ifdef ClockDefaultParam
-       defaultValue,
-`endif
-       sys_clk2_300_p, sys_clk2_300_n);
+                                          `ifdef ClockDefaultParam
+                                          defaultValue,
+                                          `endif
+                                          sys_clk2_300_p, sys_clk2_300_n);
    Clock sys_clk2_300mhz_buf <- mkClockBUFG(clocked_by sys_clk2_300mhz);
-`endif // VirtexUltrascale
-   
+  `endif // VirtexUltrascale
+`endif // VirtexUltrascalePlus
 `endif // XILINX_SYS_CLK
    
    GTE2ClockGenIfc clockGen <- mkClockIBUFDS_GTE(
@@ -341,13 +367,22 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_
 `ifdef XILINX_SYS_CLK
    interface Clock tsys_clk_200mhz = sys_clk_200mhz;
    interface Clock tsys_clk_200mhz_buf = sys_clk_200mhz_buf;
-`ifdef VirtexUltrascale
+ `ifdef VirtexUltrascalePlus
+   interface Clock tsys_clk_300mhz      = sys_clk_300mhz;
+   interface Clock tsys_clk_300mhz_buf  = sys_clk_300mhz_buf;
+   interface Clock tsys_clk1_250mhz     = sys_clk1_250mhz;
+   interface Clock tsys_clk1_250mhz_buf = sys_clk1_250mhz_buf;
+   interface Clock tsys_clk2_250mhz     = sys_clk2_250mhz;
+   interface Clock tsys_clk2_250mhz_buf = sys_clk2_250mhz_buf;
+ `else
+  `ifdef VirtexUltrascale
    interface Clock tsys_clk1_300mhz = sys_clk1_300mhz;
    interface Clock tsys_clk1_300mhz_buf = sys_clk1_300mhz_buf;
    interface Clock tsys_clk2_300mhz = sys_clk2_300mhz;
    interface Clock tsys_clk2_300mhz_buf = sys_clk2_300mhz_buf;
-`endif
-`endif
+  `endif // VirtexUltrascale
+ `endif // VirtexUltrascalePlus
+`endif // XILINX_SYS_CLK
    interface Clock tpci_clk_100mhz_buf = pci_clk_100mhz_buf;
 
    interface PcieEndpointX7 tep7 = ep7;
