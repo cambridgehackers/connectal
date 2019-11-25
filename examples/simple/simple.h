@@ -28,7 +28,7 @@
 #define TEST_ASSERT(A) {}
 #endif
 
-#define NUMBER_OF_TESTS 12
+#define NUMBER_OF_TESTS 13
 
 uint32_t v1a = 42;
 uint32_t v2a = 2;
@@ -44,6 +44,10 @@ uint32_t v6c = 0xCCCCCCCC;
 uint32_t v7a = 0xDADADADA;
 E1 v7b = E1Choice2;
 S3 s3 = { a: v7a, e1: v7b };
+
+bsvvector_Luint32_t_L2 xs = { 0xa1, 0xa2 };
+bsvvector_Luint32_t_L2 ys = { 0xb1, 0xb2 };
+bsvvector_Luint32_t_L2 zs = { 0xc1, 0xc2 };
 
 class Simple : public SimpleRequestWrapper
 {  
@@ -121,6 +125,14 @@ public:
     for (int i = 0; i < 16; i++)
         fprintf(stderr, "    [%d] = 0x%x\n", i, v[i] & 0xffff);
     incr_cnt();
+  }
+  void saypixels ( const bsvvector_Luint32_t_L2 indxs, const bsvvector_Luint32_t_L2 indys, const bsvvector_Luint32_t_L2 indzs ) {
+      fprintf(stderr, "saypixels\n");
+      for (int i = 0; i < 2; i++) {
+          fprintf(stderr, "xs[%d] = %08x ys[%d] = %08x zs[%d] = %08x\n",
+                  i, indxs[i], i, indys[i], i, indzs[i]);
+      }
+      incr_cnt();
   }
   void reftest1 ( const Address dst, const Intptr dst_stride, const Address src1, const Intptr i_src_stride1, const Address src2, const Intptr i_src_stride2, const Byte i_width, const Byte i_height, const int qpelInt, const int hasWeight, const Byte i_offset, const Byte i_scale, const Byte i_denom ) {
     fprintf(stderr, "reftest1: %x, %x, %x, %x, %x, %x, %x, %x, %x, %x, %x, %x, %x\n",

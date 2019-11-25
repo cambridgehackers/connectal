@@ -63,6 +63,7 @@ int main(int argc, const char **argv)
   }
   device->sayv2(v2v);
   device->sayv3(v2v, 44);
+  device->saypixels(xs, ys, zs);
   device->reftest1 ( 0xaabbcc, 0x11223344, 0xddeeff, 0x44332211, 0x123456, 0x87654321, 0x12, 0x34, 0x123456, 0x7654321, 0x34, 0x56, 0x77);
   fprintf(stderr, "Main::about to go to sleep\n");
   while(1)

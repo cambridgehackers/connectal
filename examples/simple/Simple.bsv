@@ -62,6 +62,7 @@ interface SimpleRequest;
     method Action sayv1 (Vector#(4, Int#(32)) arg1, Vector#(4, Int#(32)) arg2);
     method Action sayv2 (Vector#(16, Int#(16)) v);
     method Action sayv3 (Vector#(16, Int#(16)) v, Int#(16) count);
+    method Action saypixels(Vector#(2, Bit#(32)) xs, Vector#(2, Bit#(32)) ys, Vector#(2, Bit#(32)) zs);
     method Action reftest1(Address dst, Intptr dst_stride,
               Address src1, Intptr i_src_stride1,
               Address src2, Intptr i_src_stride2,
@@ -133,6 +134,10 @@ module mkSimple#(SimpleRequest indication)(Simple);
    method Action sayv3 (Vector#(16, Int#(16)) v, Int#(16) count);
       if (verbose) $display("mkSimple::sayv3");
       indication.sayv3(v, count);
+   endmethod
+    method Action saypixels(Vector#(2, Bit#(32)) xs, Vector#(2, Bit#(32)) ys, Vector#(2, Bit#(32)) zs);
+      if (verbose) $display("mkSimple::saypixels");
+      indication.saypixels(xs, ys, zs);
    endmethod
    method Action reftest1(Address dst, Intptr dst_stride,
             Address src1, Intptr i_src_stride1,
