@@ -79,19 +79,7 @@ ifneq ($(BSCMAJOR), 2013)
 else
     #BSCFLAGS_COMMON += -D ExportUnusedClocksAndResets
 endif
-ifeq ($(BSCVERSION), 2014.07.A)
-    BSCFLAGS_COMMON += -D ClockDefaultParam
-endif
-ifeq ($(BSCMAJOR), 2015)
-    BSCFLAGS_COMMON += -D ClockDefaultParam
-endif
-ifeq ($(BSCMAJOR), 2016)
-    BSCFLAGS_COMMON += -D ClockDefaultParam
-endif
-ifeq ($(BSCMAJOR), 2017)
-    BSCFLAGS_COMMON += -D ClockDefaultParam
-endif
-ifeq ($(BSCMAJOR), 2018)
+ifneq ($(BSCMAJOR), 2013)
     BSCFLAGS_COMMON += -D ClockDefaultParam
 endif
 ifeq ($(BOARD),bluesim)
@@ -143,10 +131,12 @@ BUILDCACHE_CACHEDIR=$(shell cd $(CONNECTALDIR)/..; /bin/pwd)/fpgamake-cache
 endif
 endif
 
+EXTRABSVPATH = $(shell test -d $(BLUESPECDIR)/Libraries/FPGA && echo -p +:$(BLUESPECDIR)/Libraries/FPGA/Xilinx:$(BLUESPECDIR)/Libraries/FPGA/Altera:$(BLUESPECDIR)/Libraries/FPGA/Misc)
+
 ifneq ($(BSC_LM_LICENSE_FILE),)
 RUN_BSC_LM_LICENSE_FILE=LM_LICENSE_FILE=$(BSC_LM_LICENSE_FILE)
 endif
-RUN_BSC = $(RUN_BSC_LM_LICENSE_FILE) BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) bsc $(BSC_QUIET) $(BSCFLAGS_COMMON) $(BSCFLAGS_PROJECT) $(BSCFLAGS_EXTRA) -p +:$(BSVPATH)
+RUN_BSC = $(RUN_BSC_LM_LICENSE_FILE) BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) bsc $(BSC_QUIET) $(BSCFLAGS_COMMON) $(BSCFLAGS_PROJECT) $(BSCFLAGS_EXTRA) -p +:$(BSVPATH) $(EXTRABSVPATH)
 VFILE=verilog/$(MKTOP).v
 
 all: exe bits extratarget
