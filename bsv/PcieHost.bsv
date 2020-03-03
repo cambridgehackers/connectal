@@ -30,6 +30,7 @@ import ClientServer      :: *;
 import BRAM              :: *;
 import DefaultValue      :: *;
 import ConnectalConfig   :: *;
+import PCIE              :: *;
 import PcieSplitter      :: *;
 import PcieTracer        :: *;
 import Xilinx            :: *;
