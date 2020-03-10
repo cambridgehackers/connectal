@@ -186,7 +186,7 @@ def preprocess(sourcefilename, source, defs, bsvpath):
         else:
             sys.stderr.write('syntax.preprocess %s: unhandled preprocessor token %s\n' % (sourcefilename, tok))
             sys.stderr.write('line: %s\n' % line)
-            assert(tok in ['ifdef', 'ifndef', 'else', 'endif', 'define'])
+            assert(tok in ['ifdef', 'ifndef', 'else', 'endif', 'define', ''])
         outlines.append('//PREPROCESSED: %s' % line)
 
     return '%s\n' % '\n'.join(outlines)
