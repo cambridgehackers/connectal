@@ -126,9 +126,19 @@ typedef struct {
    Bit#(dsz) data;
    Bit#(MemTagSize) tag;
    Bool last;
+`ifdef BYTE_ENABLES_MEM_DATA
+   Bit#(TDiv#(dsz, 8)) byte_enables; // maybe we only need lastbe
+`endif
    } MemData#(numeric type dsz) deriving (Bits, Eq, FShow);
 
 function Bit#(dsz) memDataData(MemData#(dsz) md); return md.data; endfunction
+function Bit#(TDiv#(dsz,8)) memDataByteEnable(MemData#(dsz) md);
+`ifdef BYTE_ENABLES_MEM_DATA
+   return md.byte_enables;
+`else
+   return maxBound;
+`endif
+endfunction
 
 typeclass ReqByteEnables#(type t, numeric type besz);
    function Bit#(besz) reqFirstByteEnable(t req);
