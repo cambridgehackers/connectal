@@ -304,7 +304,6 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
 	    end
 `ifdef BYTE_ENABLES_MEM_DATA
             byteEnable = resp.byte_enables;
-	    $display("writeData addr=%h offset=%d data=%h wstrb=%h", req.addr[31:0], writeOffset, resp.data, byteEnable);
 `endif
 	    rw.write(extend(handle), req.addr[31:0] + writeOffset, resp.data, extend(byteEnable));
 	    writeLenReg <= writeLen - 1;
