@@ -21,6 +21,7 @@ else
   echo BUILD_DIR=$BUILD_DIR
 fi
 
+## copy the scripts into the build directory so we don't have to worry about paths
 rsync -v $CONNECTALDIR/scripts/aws/* $BUILD_DIR
 
 if [ ! -f $CONNECTALDIR/out/awsf1/ila_connectal_1/ila_connectal_1.xci ]; then
@@ -47,4 +48,26 @@ popd
 echo '#placeholder' > ../constraints/cl_pnr_user.xdc
 echo '#placeholder' > ../constraints/cl_synth_user.xdc
 
+## run Vivado to build the FPGA image
 ~/aws-fpga/hdk/common/shell_stable/build/scripts/aws_build_dcp_from_cl.sh -ignore_memory_requirement -notify -foreground
+
+PROJECT_DIR=`dirname $BUILD_DIR`
+
+## return to $BUILD_DIR
+cd $BUILD_DIR
+## and now should be in awsf1 subdirectory of $PROJECT_DIR
+pwd
+
+last_log=`realpath build/scripts/last_log`
+echo last_log=${last_log}
+build_timestamp=`basename ${last_log} .vivado.log`
+echo build_timestamp=${build_timestamp}
+
+## request AWS to create an AWS FPGA image
+$CONNECTALDIR/scripts/aws/create-fpga-image.sh $PROJECT_DIR $build_timestamp
+sleep 1
+## query AWS to make sure the FPGA image is building
+$CONNECTALDIR/scripts/aws/describe-latest-fpga-image.sh
+
+echo "Connectal AWS FPGA: - Calling notification script to send e-mail to $EMAIL";
+${CONNECTALDIR}/scripts/aws/notify_via_sns.py --build-project ${PROJECT_DIR} --filename ${filename} --timestamp ${build_timestamp} --fpga-image-ids `cat latest-fpga-image.json`
