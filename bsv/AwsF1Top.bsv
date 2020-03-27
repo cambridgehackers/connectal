@@ -129,10 +129,10 @@ interface AwsF1Top;
    interface AwsF1ShCl sh_cl;
    interface AwsF1ClSh cl_sh;
    interface AwsF1Interrupt interrupt;
-   interface Axi4SlaveBits#(64,512,6,Empty) dmasink;
+   //interface Axi4SlaveBits#(64,512,6,Empty) dmasink;
    interface Axi4SlaveLiteBits#(32,32) ocl;
-   interface Axi4SlaveLiteBits#(32,32) sda;
-   interface Axi4SlaveLiteBits#(32,32) bar1;
+   //interface Axi4SlaveLiteBits#(32,32) sda;
+   //interface Axi4SlaveLiteBits#(32,32) bar1;
    interface Axi4MasterBits#(PhysAddrWidth,512,16,AwsF1Extra) pcim;
 endinterface
 
