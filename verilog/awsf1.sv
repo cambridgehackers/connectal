@@ -34,7 +34,7 @@ module awsf1(
 //`include "unused_apppf_irq_template.inc"
 //`include "unused_sh_ocl_template.inc"
 
-   
+
 `ifdef AWSF1_DDR_A
    localparam DDR_A_PRESENT=1;
    // DDR B and D are not used, disable them
@@ -176,6 +176,7 @@ module awsf1(
    logic [63:0] cl_sh_ddr_awaddr_2d[2:0];
    logic [7:0] 	cl_sh_ddr_awlen_2d[2:0];
    logic [2:0] 	cl_sh_ddr_awsize_2d[2:0];
+   logic [1:0] 	cl_sh_ddr_awburst_2d[2:0];
    logic 	cl_sh_ddr_awvalid_2d [2:0];
    logic [2:0] 	sh_cl_ddr_awready_2d;
 
@@ -195,6 +196,7 @@ module awsf1(
    logic [63:0]  cl_sh_ddr_araddr_2d[2:0];
    logic [7:0] 	 cl_sh_ddr_arlen_2d[2:0];
    logic [2:0] 	 cl_sh_ddr_arsize_2d[2:0];
+   logic [1:0] 	 cl_sh_ddr_arburst_2d[2:0];
    logic [2:0] 	 cl_sh_ddr_arvalid_2d;
    logic [2:0] 	 sh_cl_ddr_arready_2d;
 
@@ -324,6 +326,7 @@ module awsf1(
       .cl_sh_ddr_awaddr(cl_sh_ddr_awaddr_2d),
       .cl_sh_ddr_awlen(cl_sh_ddr_awlen_2d),
       .cl_sh_ddr_awsize(cl_sh_ddr_awsize_2d),
+      .cl_sh_ddr_awburst(cl_sh_ddr_awburst_2d),
       .cl_sh_ddr_awvalid(cl_sh_ddr_awvalid_2d),
       .sh_cl_ddr_awready(sh_cl_ddr_awready_2d),
 
@@ -343,6 +346,7 @@ module awsf1(
       .cl_sh_ddr_araddr(cl_sh_ddr_araddr_2d),
       .cl_sh_ddr_arlen(cl_sh_ddr_arlen_2d),
       .cl_sh_ddr_arsize(cl_sh_ddr_arsize_2d),
+      .cl_sh_ddr_arburst(cl_sh_ddr_arburst_2d),
       .cl_sh_ddr_arvalid(cl_sh_ddr_arvalid_2d),
       .sh_cl_ddr_arready(sh_cl_ddr_arready_2d),
 
@@ -435,6 +439,37 @@ module awsf1(
                    .probe23 (cl_sh_pcim_bready),
                    .probe24 (sh_cl_pcim_bvalid)
                    );
+`ifdef AWSF1_DDR_A
+   ila_connectal_2 cl_ila_mem  (
+                   .clk    (clk_main_a0),
+                   .probe0 (cl_sh_ddr_awvalid_2d[0]),
+                   .probe1 (cl_sh_ddr_awaddr_2d[0]), // 64
+                   .probe2 (sh_cl_ddr_awready_2d[0]),
+                   .probe3 (cl_sh_ddr_arvalid_2d[0]),
+                   .probe4 (cl_sh_ddr_araddr_2d[0]), // 64
+                   .probe5 (sh_cl_ddr_arready_2d[0]),
+
+                   .probe6 (cl_sh_ddr_wvalid_2d[0]),
+                   .probe7 (cl_sh_ddr_wdata_2d[0]), // 512
+                   .probe8 (sh_cl_ddr_wready_2d[0]),
+                   .probe9 (sh_cl_ddr_rvalid_2d[0]),
+                   .probe10 (sh_cl_ddr_rdata_2d[0]), // 512
+                   .probe11 (cl_sh_ddr_rready_2d[0]),
+                   .probe12 (cl_sh_ddr_wstrb_2d[0]), // 64
+                   .probe13 (cl_sh_pcim_aruser), // 19
+                   .probe14 (cl_sh_pcim_awuser), // 19
+                   .probe15 (cl_sh_ddr_arlen_2d[0]),  // 8
+                   .probe16 (cl_sh_ddr_awlen_2d[0]), // 8
+                   .probe17 (cl_sh_ddr_arsize_2d[0]), // 3
+                   .probe18 (cl_sh_ddr_awsize_2d[0]), // 3
+                   .probe19 (cl_sh_ddr_awid_2d[0]), // 16
+                   .probe20 (cl_sh_ddr_arid_2d[0]), // 16
+                   .probe21 (sh_cl_ddr_bid_2d[0]), // 16
+                   .probe22 (sh_cl_ddr_bresp_2d[0]), // 2
+                   .probe23 (cl_sh_ddr_bready_2d[0]),
+                   .probe24 (sh_cl_ddr_bvalid_2d[0])
+                   );
+`endif
 
 // Debug Bridge 
  cl_debug_bridge CL_DEBUG_BRIDGE (
@@ -530,33 +565,36 @@ module awsf1(
               .pins_araddr(cl_sh_ddr_araddr_2d[0]),
 	      .pins_arid(cl_sh_ddr_arid_2d[0]),
 	      .pins_arlen(cl_sh_ddr_arlen_2d[0]),
-	      .pins_arready_v(sh_cl_ddr_arready_2d[0]),
+	      .pins_arready(sh_cl_ddr_arready_2d[0]),
 	      .pins_arsize(cl_sh_ddr_arsize_2d[0]),
+	      .pins_arburst(cl_sh_ddr_arburst_2d[0]),
 	      .pins_arvalid(cl_sh_ddr_arvalid_2d[0]),
 
 	      .pins_awaddr(cl_sh_ddr_awaddr_2d[0]),
 	      .pins_awid(cl_sh_ddr_awid_2d[0]),
 	      .pins_awlen(cl_sh_ddr_awlen_2d[0]),
-	      .pins_awready_v(sh_cl_ddr_awready_2d[0]),
+	      .pins_awready(sh_cl_ddr_awready_2d[0]),
 	      .pins_awsize(cl_sh_ddr_awsize_2d[0]),
+	      .pins_awburst(cl_sh_ddr_awburst_2d[0]),
 	      .pins_awvalid(cl_sh_ddr_awvalid_2d[0]),
+	      //.pins_awlock(),
 
-	      .pins_bid_v(sh_cl_ddr_bid_2d[0]),
+	      .pins_bid(sh_cl_ddr_bid_2d[0]),
 	      .pins_bready(cl_sh_ddr_bready_2d[0]),
-	      .pins_bresp_v(sh_cl_ddr_bresp_2d[0]),
-	      .pins_bvalid_v(sh_cl_ddr_bvalid_2d[0]),
+	      .pins_bresp(sh_cl_ddr_bresp_2d[0]),
+	      .pins_bvalid(sh_cl_ddr_bvalid_2d[0]),
 
-	      .pins_rdata_v(sh_cl_ddr_rdata_2d[0]),
-	      .pins_rid_v(sh_cl_ddr_rid_2d[0]),
-	      .pins_rlast_v(sh_cl_ddr_rlast_2d[0]),
+	      .pins_rdata(sh_cl_ddr_rdata_2d[0]),
+	      .pins_rid(sh_cl_ddr_rid_2d[0]),
+	      .pins_rlast(sh_cl_ddr_rlast_2d[0]),
 	      .pins_rready(cl_sh_ddr_rready_2d[0]),
-	      .pins_rresp_v(sh_cl_ddr_rresp_2d[0]),
-	      .pins_rvalid_v(sh_cl_ddr_rvalid_2d[0]),
+	      .pins_rresp(sh_cl_ddr_rresp_2d[0]),
+	      .pins_rvalid(sh_cl_ddr_rvalid_2d[0]),
 
 	      .pins_wdata(cl_sh_ddr_wdata_2d[0]),
-	      .pins_wid(cl_sh_ddr_wid_2d[0]),
+	      //.pins_wid(cl_sh_ddr_wid_2d[0]),
 	      .pins_wlast(cl_sh_ddr_wlast_2d[0]),
-	      .pins_wready_v(sh_cl_ddr_wready_2d[0]),
+	      .pins_wready(sh_cl_ddr_wready_2d[0]),
 	      .pins_wstrb(cl_sh_ddr_wstrb_2d[0]),
 	      .pins_wvalid(cl_sh_ddr_wvalid_2d[0]),
 
