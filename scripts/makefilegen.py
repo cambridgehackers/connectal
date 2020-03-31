@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 ## Copyright (c) 2013-2014 Quanta Research Cambridge, Inc.
 
 ## Permission is hereby granted, free of charge, to any person
