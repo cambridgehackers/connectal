@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Copyright (c) 2014-2015 Quanta Research Cambridge, Inc
 # Copyright (c) 2015 Connectal Project
 #

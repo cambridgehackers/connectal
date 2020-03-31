@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Copyright (c) 2016 Connectal Project
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
