@@ -327,11 +327,11 @@ def parseParam(pitem, proxy):
     return pmap
 
 if __name__=='__main__':
-    print 'topgen', sys.argv
+    print('topgen', sys.argv)
     options = argparser.parse_args()
 
     if not options.project_dir:
-        print "topgen: --project-dir option missing"
+        print("topgen: --project-dir option missing")
         sys.exit(1)
     project_dir = os.path.abspath(os.path.expanduser(options.project_dir))
     clientCount = 0
@@ -360,7 +360,7 @@ if __name__=='__main__':
 
     modcount = {}
     for pitem in options.proxy:
-        print 'options.proxy: %s' % options.proxy
+        print('options.proxy: %s' % options.proxy)
         pmap = parseParam(pitem, True)
         ptemp = pmap['name'].split(',')
         for pmap['name'] in ptemp:
@@ -383,7 +383,7 @@ if __name__=='__main__':
     modcount = {}
     for pitem in options.wrapper:
         pmap = parseParam(pitem, False)
-        print 'options.wrapper: %s %s' % (pitem, pmap)
+        print('options.wrapper: %s %s' % (pitem, pmap))
         pmap['userIf'] = pmap['name']
         pmap['name'] = pmap['usermod']
         pmap['number'] = ''
@@ -452,7 +452,7 @@ if __name__=='__main__':
                  'topname': options.topname
                  }
     topFilename = project_dir + '/' + options.filename
-    print 'Writing:', topFilename
+    print('Writing:', topFilename)
     top = util.createDirAndOpen(topFilename, 'w')
     if options.cnoc:
         top.write(topNocTemplate % topsubsts)
@@ -460,12 +460,12 @@ if __name__=='__main__':
         top.write(topTemplate % topsubsts)
     top.close()
     topFilename = project_dir + '/' + options.ifcnames + '.bsv'
-    print 'Writing:', topFilename
+    print('Writing:', topFilename)
     top = util.createDirAndOpen(topFilename, 'w')
     top.write(ifcnamesTemplate % topsubsts)
     top.close()
     topFilename = project_dir + '/../jni/topEnum.h'
-    print 'Writing:', topFilename
+    print('Writing:', topFilename)
     top = util.createDirAndOpen(topFilename, 'w')
     top.write(topEnumTemplate % topsubsts)
     top.close()
