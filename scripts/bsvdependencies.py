@@ -57,11 +57,14 @@ def bsvDependencies(bsvfile, allBsv=False, bluespecdir=None, argbsvpath=[], bsvd
         ps = p.split(':')
         bsvpath.extend(ps)
     bsvpackages = getBsvPackages(bluespecdir)
+    project_packages = {}
     if allBsv:
         for d in bsvpath:
             for bsvfilename in glob.glob('%s/*.bsv' % d):
-                if bsvfilename not in bsvfile:
+                package_name = os.path.basename(bsvfilename)
+                if bsvfilename not in bsvfile and package_name not in project_packages:
                     bsvfile.append(bsvfilename)
+                    project_packages[package_name] = bsvfilename
     abspaths = {}
     for f in bsvfile:
         abspaths[os.path.basename(f)] = f
