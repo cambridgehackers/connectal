@@ -28,7 +28,9 @@ module awsf1(
 `endif //  AWSF1_DDR_A
 `include "unused_ddr_c_template.inc"
 //`include "unused_pcim_template.inc"
-`include "unused_dma_pcis_template.inc"
+`ifndef AWSF1_DMA_PCIS
+//`include "unused_dma_pcis_template.inc"
+`endif
 `include "unused_cl_sda_template.inc"
 `include "unused_sh_bar1_template.inc"
 //`include "unused_apppf_irq_template.inc"
@@ -409,7 +411,7 @@ module awsf1(
                    .probe12 (cl_sh_apppf_irq_req),
                    .probe13 (sh_cl_apppf_irq_ack)
                    );
-
+`ifndef AWSF1_DMA_PCIS
    ila_connectal_2 cl_ila_master  (
                    .clk    (clk_main_a0),
                    .probe0 (cl_sh_pcim_awvalid),
@@ -439,6 +441,37 @@ module awsf1(
                    .probe23 (cl_sh_pcim_bready),
                    .probe24 (sh_cl_pcim_bvalid)
                    );
+`else
+      ila_connectal_2 cl_ila_pcis  (
+                   .clk    (clk_main_a0),
+                   .probe0 (sh_cl_dma_pcis_awvalid),
+                   .probe1 (sh_cl_dma_pcis_awaddr),
+                   .probe2 (cl_sh_dma_pcis_awready),
+                   .probe3 (sh_cl_dma_pcis_arvalid),
+                   .probe4 (sh_cl_dma_pcis_araddr),
+                   .probe5 (cl_sh_dma_pcis_arready),
+
+                   .probe6 (sh_cl_dma_pcis_wvalid),
+                   .probe7 (sh_cl_dma_pcis_wdata),
+                   .probe8 (cl_sh_dma_pcis_wready),
+                   .probe9 (cl_sh_dma_pcis_rvalid),
+                   .probe10 (cl_sh_dma_pcis_rdata),
+                   .probe11 (sh_cl_dma_pcis_rready),
+                   .probe12(sh_cl_dma_pcis_wstrb),
+                   .probe13 (sh_cl_dma_pcis_aruser),
+                   .probe14 (sh_cl_dma_pcis_awuser),
+                   .probe15 (sh_cl_dma_pcis_arlen),
+                   .probe16 (sh_cl_dma_pcis_awlen),
+                   .probe17 (sh_cl_dma_pcis_arid),
+                   .probe18 (sh_cl_dma_pcis_awid),
+                   .probe19 (sh_cl_dma_pcis_arsize),
+                   .probe20 (sh_cl_dma_pcis_awsize),
+                   .probe21 (cl_sh_dma_pcis_bid),
+                   .probe22 (cl_sh_dma_pcis_bresp),
+                   .probe23 (sh_cl_dma_pcis_bready),
+                   .probe24 (cl_sh_dma_pcis_bvalid)
+                   );
+`endif
 `ifdef AWSF1_DDR_A
    ila_connectal_2 cl_ila_mem  (
                    .clk    (clk_main_a0),
@@ -602,6 +635,49 @@ module awsf1(
 
 // DDR3 END
 
+`ifdef AWSF1_DMA_PCIS
+	      .pins_pcis_araddr(sh_cl_dma_pcis_araddr[39:0]),
+	      .pins_pcis_arburst(1),
+	      .pins_pcis_arcache(0),
+	      .pins_pcis_arid(sh_cl_dma_pcis_arid),
+	      .pins_pcis_arlen(sh_cl_dma_pcis_arlen),
+	      .pins_pcis_arlock(0),
+	      .pins_pcis_arprot(0),
+	      .pins_pcis_arqos(0),
+	      .pins_pcis_arready(cl_sh_dma_pcis_arready),
+	      .pins_pcis_arsize(sh_cl_dma_pcis_arsize),
+	      .pins_pcis_arvalid(sh_cl_dma_pcis_arvalid),
+
+	      .pins_pcis_awaddr(sh_cl_dma_pcis_awaddr[39:0]),
+	      .pins_pcis_awburst(1),
+	      .pins_pcis_awcache(0),
+	      .pins_pcis_awid(sh_cl_dma_pcis_awid),
+	      .pins_pcis_awlen(sh_cl_dma_pcis_awlen),
+	      .pins_pcis_awlock(0),
+	      .pins_pcis_awprot(0),
+	      .pins_pcis_awqos(0),
+	      .pins_pcis_awready(cl_sh_dma_pcis_awready),
+	      .pins_pcis_awsize(sh_cl_dma_pcis_awsize),
+	      .pins_pcis_awvalid(sh_cl_dma_pcis_awvalid),
+
+	      .pins_pcis_bid(cl_sh_dma_pcis_bid),
+	      .pins_pcis_bready(sh_cl_dma_pcis_bready),
+	      .pins_pcis_bresp(cl_sh_dma_pcis_bresp),
+	      .pins_pcis_bvalid(cl_sh_dma_pcis_bvalid),
+
+	      .pins_pcis_rdata(cl_sh_dma_pcis_rdata),
+	      .pins_pcis_rid(cl_sh_dma_pcis_rid),
+	      .pins_pcis_rlast(cl_sh_dma_pcis_rlast),
+	      .pins_pcis_rready(sh_cl_dma_pcis_rready),
+	      .pins_pcis_rresp(cl_sh_dma_pcis_rresp),
+	      .pins_pcis_rvalid(cl_sh_dma_pcis_rvalid),
+
+	      .pins_pcis_wdata(sh_cl_dma_pcis_wdata),
+	      .pins_pcis_wlast(sh_cl_dma_pcis_wlast),
+	      .pins_pcis_wready(cl_sh_dma_pcis_wready),
+	      .pins_pcis_wstrb(sh_cl_dma_pcis_wstrb),
+	      .pins_pcis_wvalid(sh_cl_dma_pcis_wvalid),
+`endif
 	      .pcim_araddr(cl_sh_pcim_araddr[39:0]),
 	      //.pcim_arburst(pcim_arburst),
 	      //.pcim_arcache(pcim_arcache),
