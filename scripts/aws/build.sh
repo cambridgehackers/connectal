@@ -6,6 +6,19 @@ scriptdir=`dirname $scriptdir`
 export CONNECTALDIR=`dirname $scriptdir`
 echo "CONNECTALDIR=$CONNECTALDIR"
 
+if [ "$AWS_FPGA_REPO_DIR" == "" ]; then
+    if [ -d `dirname $CONNECTALDIR`/aws-fpga ]; then
+	pushd `dirname $CONNECTALDIR`/aws-fpga
+	. hdk_setup.sh
+	popd
+    fi
+    if [ -d ~/aws-fpga ]; then
+	pushd ~/aws-fpga
+	. hdk_setup.sh
+	popd
+    fi
+fi
+
 BUILD_DIR=`pwd`
 echo BUILD_DIR=$BUILD_DIR
 if [ `basename $BUILD_DIR` = 'scripts' ]; then
@@ -41,15 +54,11 @@ echo BUILD_DIR=$BUILD_DIR
 
 cp -fv $CONNECTALDIR/verilog/cl_id_defines.vh $BUILD_DIR/../../design
 
-pushd ~/aws-fpga
-source ./hdk_setup.sh
-popd
-
 echo '#placeholder' > ../constraints/cl_pnr_user.xdc
 echo '#placeholder' > ../constraints/cl_synth_user.xdc
 
 ## run Vivado to build the FPGA image
-~/aws-fpga/hdk/common/shell_stable/build/scripts/aws_build_dcp_from_cl.sh -ignore_memory_requirement -notify -foreground
+$AWS_FPGA_REPO_DIR/hdk/common/shell_stable/build/scripts/aws_build_dcp_from_cl.sh -ignore_memory_requirement -notify -foreground
 
 PROJECT_DIR=`dirname $CL_DIR`
 PROJECT_NAME=`basename $PROJECT_DIR`
@@ -65,11 +74,16 @@ echo last_log=${last_log}
 build_timestamp=`basename ${last_log} .vivado.log`
 echo build_timestamp=${build_timestamp}
 
-## request AWS to create an AWS FPGA image
-$CONNECTALDIR/scripts/aws/create-fpga-image.sh $PROJECT_NAME $build_timestamp
-sleep 1
-## query AWS to make sure the FPGA image is building
-$CONNECTALDIR/scripts/aws/describe-latest-fpga-image.sh
+##
+## if build completed successfully, request AWS to create an FPGA image
+##
+if [ -f build/checkpoints/to_aws/${build_timestamp}.Developer_CL.tar ]; then
+    ## request AWS to create an AWS FPGA image
+    $CONNECTALDIR/scripts/aws/create-fpga-image.sh $PROJECT_NAME $build_timestamp \
+	&& ( sleep 1; 
+	     ## query AWS to make sure the FPGA image is building
+	     $CONNECTALDIR/scripts/aws/describe-latest-fpga-image.sh )
+fi
 
 if [ "$EMAIL" != "" ]; then
     echo "Connectal AWS FPGA: - Calling notification script to send e-mail to $EMAIL";
