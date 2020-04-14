@@ -51,10 +51,12 @@ echo '#placeholder' > ../constraints/cl_synth_user.xdc
 ## run Vivado to build the FPGA image
 ~/aws-fpga/hdk/common/shell_stable/build/scripts/aws_build_dcp_from_cl.sh -ignore_memory_requirement -notify -foreground
 
-PROJECT_DIR=`dirname $BUILD_DIR`
+PROJECT_DIR=`dirname $CL_DIR`
+PROJECT_NAME=`basename $PROJECT_DIR`
+echo PROJECT_NAME=${PROJECT_NAME}
 
-## return to $BUILD_DIR
-cd $BUILD_DIR
+## return to $CL_DIR
+cd $CL_DIR
 ## and now should be in awsf1 subdirectory of $PROJECT_DIR
 pwd
 
@@ -64,10 +66,13 @@ build_timestamp=`basename ${last_log} .vivado.log`
 echo build_timestamp=${build_timestamp}
 
 ## request AWS to create an AWS FPGA image
-$CONNECTALDIR/scripts/aws/create-fpga-image.sh $PROJECT_DIR $build_timestamp
+$CONNECTALDIR/scripts/aws/create-fpga-image.sh $PROJECT_NAME $build_timestamp
 sleep 1
 ## query AWS to make sure the FPGA image is building
 $CONNECTALDIR/scripts/aws/describe-latest-fpga-image.sh
 
-echo "Connectal AWS FPGA: - Calling notification script to send e-mail to $EMAIL";
-${CONNECTALDIR}/scripts/aws/notify_via_sns.py --build-project ${PROJECT_DIR} --filename ${filename} --timestamp ${build_timestamp} --fpga-image-ids `cat latest-fpga-image.json`
+if [ "$EMAIL" != "" ]; then
+    echo "Connectal AWS FPGA: - Calling notification script to send e-mail to $EMAIL";
+    ${CONNECTALDIR}/scripts/aws/notify_via_sns.py --build-project ${PROJECT_NAME} --filename ${filename} --timestamp ${build_timestamp} --fpga-image-ids `cat latest-fpga-image.json`
+fi
+
