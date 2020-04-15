@@ -204,16 +204,12 @@ else
 endif # AWSF1
 endif #xsim
 endif #android
-else #!xilinx
-ifneq ($(ALTERA),)
-	gzip -c $(MKTOP).sof > bin/$(MKTOP).sof.gz
-endif #
-endif #!xilinx
 	$(Q)if [ -f bin/$(EXENAME) -a -f "$(BINFILE)" ]; then $(OBJCOPY) --remove-section fpgadata bin/$(EXENAME); fi
 	$(Q)if [ -f bin/$(EXENAME) -a -f "$(BINFILE)" ]; then $(OBJCOPY) --add-section fpgadata=$(BINFILE) bin/$(EXENAME); fi
 	$(Q)if [ -f Impl/TopDown/top-post-route.dcp ]; then cp -f Impl/TopDown/top-post-route.dcp bin; fi
 	$(Q)if [ -f Impl/TopDown/top-post-route-timing-summary.rpt ]; then $(CONNECTALDIR)/scripts/check-timing.py Impl/TopDown/top-post-route-timing-summary.rpt; fi
 	$(Q)if [ -f Impl/TopDown/top-post-route-timing-summary.txt ]; then $(CONNECTALDIR)/scripts/check-timing.py Impl/TopDown/top-post-route-timing-summary.txt; fi
+endif #!xilinx
 
 android.exe: prepare_bin_target
 	+ndk-build $(CONNECTAL_NDK_PARAM)

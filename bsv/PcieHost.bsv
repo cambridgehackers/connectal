@@ -65,15 +65,15 @@ import Pcie2EndpointX7 :: *;
 import Pcie3EndpointX7   :: *;
 `endif // pcie3
 `elsif ALTERA
-import PcieEndpointS5    :: *;
+import PcieEndpointS10    :: *;
 `endif
 `endif
 import HostInterface     :: *;
 
 `ifdef XILINX_SYS_CLK
 `ifdef VirtexUltrascale
-`define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n, Clock sys_clk1_300_p, Clock sys_clk1_300_n, Clock sys_clk2_300_p, Clock sys_clk2_300_n, 
-`define SYS_CLK_ARG sys_clk_p, sys_clk_n, sys_clk1_300_p, sys_clk1_300_n, sys_clk2_300_p, sys_clk2_300_n, 
+`define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n, Clock sys_clk1_300_p, Clock sys_clk1_300_n, Clock sys_clk2_300_p, Clock sys_clk2_300_n,
+`define SYS_CLK_ARG sys_clk_p, sys_clk_n, sys_clk1_300_p, sys_clk1_300_n, sys_clk2_300_p, sys_clk2_300_n,
 `else
 `define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n,
 `define SYS_CLK_ARG sys_clk_p, sys_clk_n,
@@ -261,15 +261,15 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_
 `endif
        sys_clk_p, sys_clk_n);
    Clock sys_clk_200mhz_buf <- mkClockBUFG(clocked_by sys_clk_200mhz);
-   
-`ifdef VirtexUltrascale 
+
+`ifdef VirtexUltrascale
    Clock sys_clk1_300mhz <- mkClockIBUFDS(
 `ifdef ClockDefaultParam
        defaultValue,
 `endif
        sys_clk1_300_p, sys_clk1_300_n);
    Clock sys_clk1_300mhz_buf <- mkClockBUFG(clocked_by sys_clk1_300mhz);
-   
+
    Clock sys_clk2_300mhz <- mkClockIBUFDS(
 `ifdef ClockDefaultParam
        defaultValue,
@@ -277,9 +277,9 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_
        sys_clk2_300_p, sys_clk2_300_n);
    Clock sys_clk2_300mhz_buf <- mkClockBUFG(clocked_by sys_clk2_300mhz);
 `endif // VirtexUltrascale
-   
+
 `endif // XILINX_SYS_CLK
-   
+
    GTE2ClockGenIfc clockGen <- mkClockIBUFDS_GTE(
 `ifdef ClockDefaultParam
        defaultValue,
@@ -357,14 +357,10 @@ endmodule
 `endif
 
 `ifdef ALTERA
-`define ALTERA_TOP
-`endif
-
-`ifdef ALTERA_TOP
 (* no_default_clock, no_default_reset *)
 module mkAlteraPcieHostTop #(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieHostTop);
 
-   PcieEndpointS5#(PcieLanes) ep7 <- mkPcieEndpointS5(clk_100MHz, clk_50MHz, perst_n, clocked_by clk_100MHz, reset_by perst_n);
+   PcieEndpointS10#(PcieLanes) ep7 <- mkPcieEndpointS10(clk_100MHz, clk_50MHz, perst_n, clocked_by clk_100MHz, reset_by perst_n);
 
    Clock epPcieClock = ep7.epPcieClock;
    Reset epPcieReset = ep7.epPcieReset;
@@ -375,7 +371,7 @@ module mkAlteraPcieHostTop #(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(P
    PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(ep7.device, clocked_by portalClock_, reset_by portalReset_);
    mkConnection(ep7.tlp, pciehost.pci, clocked_by portalClock_, reset_by portalReset_);
 
-   interface PcieEndpointS5 tep7 = ep7;
+   interface PcieEndpointS10 tep7 = ep7;
    interface PcieHost tpciehost = pciehost;
 
    interface Clock pcieClock = epPcieClock;
@@ -402,7 +398,7 @@ module mkPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_PARAM 
    PcieHostTop pcieHostTop <- mkXilinxPcieHostTop(pci_sys_clk_p, pci_sys_clk_n, `SYS_CLK_ARG pci_sys_reset_n);
    return pcieHostTop;
 endmodule
-`elsif ALTERA_TOP
+`elsif ALTERA
 //(* synthesize, no_default_clock, no_default_reset *)
 (* no_default_clock, no_default_reset *)
 module mkPcieHostTop #(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieHostTop);

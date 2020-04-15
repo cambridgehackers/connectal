@@ -46,12 +46,12 @@ endif
 ifeq ($(PROJECTDIR),)
 	$(eval PROJECTDIR := $*)
 endif
-	+BOARD=$(BOARD) PROJECTDIR=$(PROJECTDIR) $(MAKE) --no-print-directory gentarget prebuild $(VARIANT_PROJECTS)
+	+BOARD=$(BOARD) PROJECTDIR=$(PROJECTDIR) $(MAKE) --no-print-directory gentarget #prebuild $(VARIANT_PROJECTS)
 
 variantgen.%:
 	BOARD=$(BOARD) PROJECTDIR=variant$* \
-	    VARIANT=$* PRTOP_FILE=../$(BOARD)/Impl/TopDown/top-post-route.dcp \
-	    $(MAKE) --no-print-directory gentarget prebuild
+		VARIANT=$* PRTOP_FILE=../$(BOARD)/Impl/TopDown/top-post-route.dcp \
+		$(MAKE) --no-print-directory gentarget #prebuild
 
 build.%: gen.%
 	$(MAKE) -C $(PROJECTDIR) --no-print-directory all
@@ -223,7 +223,7 @@ ifeq ($(NEED_XILINX_PCIE_$(BOARD)),3u_plus)
     CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS"
 endif
 
-ifeq ($(NEED_ALTERA_PCIE_$(BOARD)),1)
+ifeq ($(NEED_ALTERA_PCIE_$(BOARD)), de5)
 	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/altera_pcie_reconfig_driver_wrapper/altera_pcie_reconfig_driver_wrapper.qip
 	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/altera_pcie_sv_hip_ast_wrapper/altera_pcie_sv_hip_ast_wrapper.qip
 	FPGAMAKE_CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/synthesis/alt_xcvr_reconfig_wrapper/alt_xcvr_reconfig_wrapper.qip
@@ -232,6 +232,7 @@ ifeq ($(NEED_ALTERA_PCIE_$(BOARD)),1)
 	FPGAMAKE_CONNECTALFLAGS += --tcl=$(CONNECTALDIR)/constraints/altera/$(BOARD).sdc
 	CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS -demote-errors G0066:G0045 -suppress-warnings G0046:G0020:S0015:S0080:S0039"
 endif
+
 ifeq ($(BOARD),zcu102)
     CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/zynq_ultra_ps_e_0/zynq_ultra_ps_e_0.xci
 endif
@@ -275,7 +276,7 @@ endif
 	$(foreach f, $(S2H_INTERFACES), -interfaces $(word 1, $(subst /,, $(subst :, , $f)))) \
 	$(foreach f, $(H2S_INTERFACES), $(foreach g, $(subst $(comma), , $(word 2, $(subst :, , $f))), -interfaces $g)) \
 	$(foreach f, $(PORTAL_DUMP_MAP), --dump_map $f) \
-        $(CONNECTALFLAGS) $(BSVFILES) $(GENTOP) $(PRINTF_EXTRA) $(VERBOSE_SWITCH)
+    $(CONNECTALFLAGS) $(BSVFILES) $(GENTOP) $(PRINTF_EXTRA) $(VERBOSE_SWITCH)
 
 process_autotop::
 	$(Q)[ -e $(PROJECTDIR) ] || mkdir -p $(PROJECTDIR)
@@ -283,15 +284,15 @@ process_autotop::
 ifneq ($(USE_AUTOTOP),)
 	$(Q)[ -e $(GPROJ) ] || mkdir -p $(GPROJ)
 	$(Q)$(CONNECTALDIR)/scripts/topgen.py --project-dir $(GPROJ) $(AUTOTOP) $(CNOC) \
-	    $(foreach f, $(S2H_INTERFACES), --wrapper $f) \
-	    $(foreach f, $(H2S_INTERFACES), --proxy $f)   \
-	    $(foreach f, $(MEM_READ_INTERFACES), --memread $f)   \
-	    $(foreach f, $(MEM_WRITE_INTERFACES), --memwrite $f)
+		$(foreach f, $(S2H_INTERFACES), --wrapper $f) \
+		$(foreach f, $(H2S_INTERFACES), --proxy $f)   \
+		$(foreach f, $(MEM_READ_INTERFACES), --memread $f)   \
+		$(foreach f, $(MEM_WRITE_INTERFACES), --memwrite $f)
 endif
 
 generate_altera_custom::
 ifneq ($(PIN_BINDINGS), )
-ifneq ($(filter $(BOARD), de5 htg4), )
+ifneq ($(filter $(BOARD), de5 htg4 map200), )
 	$(Q)[ -e $(PROJECTDIR)/generatedbsv ] || mkdir -p $(PROJECTDIR)/generatedbsv
 	$(CONNECTALDIR)/scripts/generate-constraints.py -f altera \
 		$(foreach f, $(PIN_BINDINGS), -b $f) \

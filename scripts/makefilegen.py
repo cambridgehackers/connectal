@@ -43,6 +43,7 @@ argparser.add_argument('-O', '--OS', choices=supported_os, help='Target operatin
 argparser.add_argument('-interfaces', '--interfaces', help='BSV interface', action='append', default=[])
 argparser.add_argument(      '--project-dir', help='xps project directory', default='./xpsproj')
 argparser.add_argument(      '--pinfo', help='Project description file (json)', default=None)
+argparser.add_argument(      '--binfo', help='Board description file (json)', default=None)
 argparser.add_argument(      '--protobuf', help='Interface description in protobuf', action='append', default=[])
 argparser.add_argument('-s', '--source', help='C++ source files', action='append', default=[])
 argparser.add_argument(      '--source2', help='C++ second program source files', action='append', default=[])
@@ -129,19 +130,19 @@ export VERILOG_PATH=verilog %(verilog)s $(BLUESPEC_VERILOG)
 MODELSIM_FILES= %(modelsim)s
 FPGAMAKE=$(CONNECTALDIR)/../fpgamake/fpgamake
 fpgamake.mk: $(VFILE) Makefile prepare_bin_target
+ifneq ($(XILINX),)
 	$(Q)if [ -f ../synth-ip.tcl ]; then vivado -mode batch -source ../synth-ip.tcl; fi
 	$(Q)$(FPGAMAKE) $(FPGAMAKE_VERBOSE) -o fpgamake.mk --board=%(boardname)s --part=%(partname)s %(partitions)s --floorplan=%(floorplan)s %(xdc)s %(xci)s %(sourceTcl)s %(qsf)s %(chipscope)s -t $(MKTOP) %(FPGAMAKE_DEFINE)s %(cachedir)s -b hw/mkTop.bit %(prtop)s %(reconfig)s $(VERILOG_PATH)
+endif
 
 synth.%%:fpgamake.mk
 	$(MAKE) -f fpgamake.mk Synth/$*/$*-synth.dcp
 
 hw/mkTop.bit: prepare_bin_target %(genxdc_dep)s fpgamake.mk
+ifneq ($(XILINX),)
 	$(Q)mkdir -p hw
 	$(Q)$(MAKE) -f fpgamake.mk
-ifneq ($(XILINX),)
 	$(Q)rsync -rav --include="*/" --include="*.rpt" --exclude="*" Impl/ bin
-else ifneq ($(ALTERA),)
-	$(Q)cp -f $(MKTOP).sof bin
 endif
 
 %(genxdc)s
@@ -276,7 +277,12 @@ if __name__=='__main__':
     options = argparser.parse_args()
 
     boardname = options.board.lower()
-    option_info = boardinfo.attribute(boardname, 'options')
+
+    filename = connectaldir + '/../boardinfo/' + boardname + '.json'
+    # if binfo is provided, override default boardinfo json path
+    if options.binfo:
+        filename = options.binfo
+    option_info = boardinfo.attribute(filename, 'options')
 
     if options.pinfo:
         pinstr = open(options.pinfo).read()

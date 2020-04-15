@@ -32,8 +32,8 @@ import Vector            :: *;
 import AxiMasterSlave    :: *;
 import ConnectalMemTypes          :: *;
 
-// this interface should allow for different master and slave bus paraters;		 
-interface BsimHost#(numeric type clientAddrWidth, numeric type clientBusWidth, numeric type clientIdWidth,  
+// this interface should allow for different master and slave bus paraters;
+interface BsimHost#(numeric type clientAddrWidth, numeric type clientBusWidth, numeric type clientIdWidth,
 		    numeric type serverAddrWidth, numeric type serverBusWidth, numeric type serverIdWidth,
 		    numeric type nSlaves);
    interface PhysMemMaster#(clientAddrWidth, clientBusWidth)  mem_client;
@@ -107,7 +107,7 @@ import Pcie3EndpointX7   :: *;
 `endif
 `endif
 `ifdef ALTERA
-import PcieEndpointS5    :: *;
+import PcieEndpointS10    :: *;
 `endif
 `endif
 typedef 40 PciePhysAddrWidth;
@@ -154,7 +154,7 @@ interface PcieHostTop;
    interface PcieEndpointX7#(PcieLanes) tep7;
 `endif
 `ifdef ALTERA
-   interface PcieEndpointS5#(PcieLanes) tep7;
+   interface PcieEndpointS10#(PcieLanes) tep7;
 `endif
    interface Clock pcieClock;
    interface Reset pcieReset;
