@@ -201,7 +201,7 @@ def preprocess(sourcefilename, source, defs, bsvpath):
 
 if __name__=='__main__':
     options = argparser.parse_args()
-    for f in options.bsvfile:
-        preprocessed = preprocess(f, open(f).read(), options.bsvdefine, options.include + options.bsvpath)
-        print preprocessed
-        
+    for bsvfile in options.bsvfile:
+        preprocessed = preprocess(bsvfile, open(bsvfile).read(), options.bsvdefine, options.include + options.bsvpath)
+        print(preprocessed)
+

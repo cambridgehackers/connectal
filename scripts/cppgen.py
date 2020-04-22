@@ -208,7 +208,7 @@ proxyJMethodTemplate='''
 '''
 
 def indent(f, indentation):
-    for i in xrange(indentation):
+    for i in range(indentation):
         f.write(' ')
 
 def cName(x):
@@ -230,7 +230,7 @@ class paramInfo:
 # resurse interface types and flattening all structs into a list of types
 def collectMembers(scope, pitem):
     if verbose:
-        print 'collectM', pitem
+        print('collectM', pitem)
     membtype = pitem['ptype']
     while 1:
         if membtype['name'] == 'Bit' or membtype['name'] == 'Int' or membtype['name'] == 'UInt' \
@@ -248,9 +248,9 @@ def collectMembers(scope, pitem):
             return sum(retitem, [])
         else:
             td = globalv_globalvars[membtype['name']]
-            #print 'instantiate', membtype['params']
+            #print('instantiate', membtype['params'])
             tdtype = td['tdtype']
-            #print '           ', membtype
+            #print('           ', membtype)
             if tdtype.get('type') == 'Struct':
                 ns = '%s%s.' % (scope,pitem['pname'])
                 rv = map(functools.partial(collectMembers, ns), tdtype['elements'])
@@ -258,12 +258,12 @@ def collectMembers(scope, pitem):
             membtype = tdtype
             if tdtype.get('type') == 'Enum':
                 return [('%s%s'%(scope,pitem['pname']),membtype)]
-            #print 'resolved to type', membtype.get('type'), membtype['name'], membtype
+            #print('resolved to type', membtype.get('type'), membtype['name'], membtype)
 
 def typeNumeric(item):
     global bsvdefines
     tstr = item.get('name')
-    if globalv_globalvars.has_key(tstr):
+    if tstr in globalv_globalvars:
         decl = globalv_globalvars[tstr]
         if decl.get('dtype') == 'TypeDef':
             return typeNumeric(decl['tdtype'])
@@ -372,7 +372,7 @@ def signCName(item):
 def typeJson(item):
     tname = typeCName(item)
     if tname not in itypeNames:
-        #print 'typeJson.other', tname, tname in itypeNames
+        #print('typeJson.other', tname, tname in itypeNames)
         return 'other'
     return tname
 
@@ -421,11 +421,11 @@ def typeBitWidth(item):
         return int(math.ceil(math.log(len(item['elements']), 2)))
     if hasBitWidth(item):
         width = item['params'][0]['name']
-        while globalv_globalvars.has_key(width):
+        while width in globalv_globalvars:
             decl = globalv_globalvars[width]
             if decl.get('type') != 'TypeDef':
                 break
-            print 'Resolving width', width, decl['tdtype']
+            print('Resolving width', width, decl['tdtype'])
             width = decl['tdtype']['name']
         if re.match('[0-9]+', width):
             return int(width)
@@ -448,18 +448,18 @@ def accumWords(s, pro, memberList):
     name = mitem[0]
     thisType = mitem[1]
     aw = typeBitWidth(thisType)
-    #print '%d %d %d' %(aw, pro, w)
+    #print('%d %d %d' %(aw, pro, w))
     if (aw-pro+w == 32):
         s.append(paramInfo(name,aw,pro,thisType,'='))
-        #print '%s (0)'% (name)
+        #print('%s (0)'% (name))
         return [s]+accumWords([],0,memberList[1:])
     if (aw-pro+w < 32):
         s.append(paramInfo(name,aw,pro,thisType,'='))
-        #print '%s (1)'% (name)
+        #print('%s (1)'% (name))
         return accumWords(s,0,memberList[1:])
     else:
         s.append(paramInfo(name,pro+(32-w),pro,thisType,'|='))
-        #print '%s (2)'% (name)
+        #print('%s (2)'% (name))
         return [s]+accumWords([],pro+(32-w), memberList)
 
 def generate_marshall(pfmt, argWords):
@@ -489,7 +489,7 @@ def generate_marshall(pfmt, argWords):
                 fdName = field
                 fmt = 'p->transport->writefd(p, &temp_working_addr, %s);'
                 if generatePacketOnly:
-                    print 'generate_marshall: when using "generatePacketOnly", fd items cannot be sent'
+                    print('generate_marshall: when using "generatePacketOnly", fd items cannot be sent')
                     sys.exit(-1)
         retList.append(fmt % (''.join(util.intersperse('|', fields))))
     return retList
@@ -503,7 +503,7 @@ def generate_demarshall(fmt, methodName, argWords):
         if (fmt != ''):
             statements.append(fmt)
         for e in w:
-            # print e.name+' (d)'
+            # print(e.name+' (d)')
             if generatePacketOnly:
                 field = 'temp_working_addr[%d]' % itemIndex
             else:
@@ -513,7 +513,7 @@ def generate_demarshall(fmt, methodName, argWords):
                 continue
             if off:
                 field = '%s>>%s' % (field, off)
-            #print 'JJJ', e.name, '{{'+field+'}}', typeBitWidth(e.datatype), e.shifted, e.assignOp, off
+            #print('JJJ', e.name, '{{'+field+'}}', typeBitWidth(e.datatype), e.shifted, e.assignOp, off)
             fieldWidth = 32 - off     # number of valid data bits in source
             fieldWidth += e.shifted   # number of valid data bits after shifting
             if fieldWidth > typeBitWidth(e.datatype): # if num bits in type < num of valid bits
@@ -523,7 +523,7 @@ def generate_demarshall(fmt, methodName, argWords):
                 field = '((%s)(%s)<<%s)' % (typeCName(e.datatype),field, e.shifted)
             if typeCName(e.datatype) == 'SpecialTypeForSendingFd':
                 if generatePacketOnly:
-                    print 'generate_demarshall: when using "generatePacketOnly", fd items cannot be sent'
+                    print('generate_demarshall: when using "generatePacketOnly", fd items cannot be sent')
                     sys.exit(-1)
                 statements.append('tempdata.%s.%s %s messageFd;'%(methodName, e.name, e.assignOp))
             else:
@@ -542,7 +542,7 @@ def formalParameters(params, insertPortal):
 toJsonVerbose = False
 def genToJson(var, name, prefix, ptype, appendto=False):
     typename = ptype['name']
-    if toJsonVerbose: print 'genToJson', name, typename, ptype, appendto
+    if toJsonVerbose: print('genToJson', name, typename, ptype, appendto)
     if typename in ['Bit', 'Int', 'UInt', 'Bool']:
         if typename == 'Int':
             cast = 'Json::Int64'
@@ -555,7 +555,7 @@ def genToJson(var, name, prefix, ptype, appendto=False):
 
     if 'type' not in ptype and typename != 'Vector':
         typedef = globalv_globalvars[typename]
-        if toJsonVerbose: print '    dereferencing typedef', typedef
+        if toJsonVerbose: print('    dereferencing typedef', typedef)
         if typedef['dtype'] == 'TypeDef':
             tdtype = typedef['tdtype']
             return genToJson(var, name, prefix, tdtype, appendto)
@@ -567,7 +567,7 @@ def genToJson(var, name, prefix, ptype, appendto=False):
         ptype_type = ptype['type']
 
     if ptype_type == 'Struct':
-        if toJsonVerbose: print 'elements', ptype['elements']
+        if toJsonVerbose: print('elements', ptype['elements'])
         structvar = '_%sValue' % name
         result.append('Json::Value %s;' % structvar)
         result.append('%s["__type__"]="%s";' % (structvar, typename))
@@ -585,13 +585,13 @@ def genToJson(var, name, prefix, ptype, appendto=False):
             result.extend(genToJson(vectorName,None,('%s[%d]' % (prefix,i)),vectorType,True))
         expr = vectorName
     else:
-        print 'genToJson cannot handle', name, prefix, ptype
+        print('genToJson cannot handle', name, prefix, ptype)
         expr = prefix
     if appendto:
         result.append('%s.append(%s);' % (var, expr))
     else:
         result.append('%s["%s"] = %s;' % (var, name, expr))
-    if toJsonVerbose: print 'result', result
+    if toJsonVerbose: print('result', result)
     return result
 
 def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
@@ -625,7 +625,7 @@ def gatherMethodInfo(mname, params, itemname, classNameOrig, classVariant):
     chname = '%s_%s' % (classNameOrig, methodName)
     if verbose:
         for pitem in params:
-            print 'gatherMI', pitem
+            print('gatherMI', pitem)
             break
     if classVariant:
         paramStructMarshall = []
@@ -716,10 +716,10 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
     generateWrapper = True
     if direction == '0':
         generateWrapper = False
-        print 'JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ Proxy ', className
+        print('JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ Proxy ', className)
     if direction == '1':
         generateProxy = False
-        print 'JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ Wrapper ', className
+        print('JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ Wrapper ', className)
     if classVariant == 'Json':
         cppname = '%s.cpp' % className
     else:
@@ -744,7 +744,7 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         generated_cpp.write(wrapperStartTemplate % cnSubst)
     for mitem in declList:
         if verbose:
-            print'gcl/mitem', mitem
+            print('gcl/mitem', mitem)
         substs, t = gatherMethodInfo(mitem['dname'], mitem['dparams'], className, classNameOrig, classVariant)
         if t > maxSize:
             maxSize = t
@@ -841,7 +841,7 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
         for mitem in declList:
             if verbose:
                 for pitem in mitem['dparams']:
-                    print 'generatecl/dparam', pitem
+                    print('generatecl/dparam', pitem)
                     break
             paramValues = ', '.join([pitem['pname'] for pitem in mitem['dparams']])
             formalParamStr = formalParameters(mitem['dparams'], True)
@@ -870,7 +870,7 @@ def generate_class(classNameOrig, classVariant, declList, generatedCFiles, creat
 
 def emitStructMember(item, f, indentation):
     if verbose:
-        print 'emitSM', item
+        print('emitSM', item)
     indent(f, indentation)
     f.write('%s %s' % (typeCName(item['ptype']), item['pname']))
     if hasBitWidth(item['ptype']):
@@ -895,11 +895,11 @@ def emitType(item, name, f, indentation):
     tmp = typeCName(item)
     if re.match('[0-9]+', tmp):
         if True or verbose:
-            print 'cppgen/emitType: INFO ignore numeric typedef for', tmp
+            print('cppgen/emitType: INFO ignore numeric typedef for', tmp)
         return
     if not tmp or tmp[0] == '`' or tmp == 'Empty' or tmp[-2:] == '_P':
         if True or verbose:
-            print 'cppgen/emitType: INFO ignore typedef for', tmp
+            print('cppgen/emitType: INFO ignore typedef for', tmp)
         return
     if (indentation == 0):
         f.write('typedef ')
@@ -940,7 +940,7 @@ def emitEnum(item, name, f, indentation):
 
 def emitCD(item, generated_hpp, indentation):
     if verbose:
-        print 'cppgen/emitCD:', item
+        print('cppgen/emitCD:', item)
     n = item['tname']
     td = item['tdtype']
     t = td.get('type')
@@ -951,7 +951,7 @@ def emitCD(item, generated_hpp, indentation):
     elif t == 'Type' or t == None:
         emitType(td, n, generated_hpp, indentation)
     else:
-        print 'EMITCD', n, t, td
+        print('EMITCD', n, t, td)
 
 def generate_cpp(project_dir, noisyFlag, jsondata):
     global globalv_globalvars, verbose, bsvdefines
@@ -959,7 +959,7 @@ def generate_cpp(project_dir, noisyFlag, jsondata):
         fname = os.path.join(project_dir, generatedSubdirectory, name)
         f = util.createDirAndOpen(fname, 'w')
         if verbose:
-            print "Writing file ",fname
+            print("Writing file ",fname)
         f.write('#include "GeneratedTypes.h"\n')
         return f
 
@@ -967,7 +967,7 @@ def generate_cpp(project_dir, noisyFlag, jsondata):
     bsvdefines = {}
     for binding in jsondata['bsvdefines']:
         if '=' in binding:
-            print 'split', binding.split('=')
+            print('split', binding.split('='))
             var,val = binding.split('=')
             bsvdefines[var] = val
         else:
@@ -987,7 +987,7 @@ def generate_cpp(project_dir, noisyFlag, jsondata):
         if v['dtype'] == 'TypeDef':
             globalv_globalvars[v['tname']] = v
             if v.get('tparams'):
-                print 'Skipping C++ declaration for parameterized type', v['tname']
+                print('Skipping C++ declaration for parameterized type', v['tname'])
                 continue
             emitCD(v, generated_hpp, 0)
     generated_hpp.write('\n')
@@ -1002,7 +1002,7 @@ def generate_cpp(project_dir, noisyFlag, jsondata):
                 generated_cpp.write('extern const uint32_t %s = %s;\n' % (util.decapitalize(ifcname), ifcname))
     for item in jsondata['interfaces']:
         if verbose:
-            print 'generateclass', item
+            print('generateclass', item)
         generate_class(item['cname'],     '', item['cdecls'], generatedCFiles, create_cpp_file, generated_hpp, generated_cpp, item.get('direction'))
         if generateJson:
             generate_class(item['cname'], 'Json', item['cdecls'], generatedCFiles, create_cpp_file, generated_hpp, generated_cpp, item.get('direction'))

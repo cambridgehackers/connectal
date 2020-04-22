@@ -32,14 +32,14 @@ def createDirAndOpen(f, m):
 
 def replaceIfChanged(name, replacement):
     if not os.path.isfile(name):
-        print 'os.rename(%s, %s)' % (replacement, name)
+        print('os.rename(%s, %s)' % (replacement, name))
         os.rename(replacement, name)
         return
     if filecmp.cmp(name, replacement):
-        print 'os.unlink(%s)' % replacement
+        print('os.unlink(%s)' % replacement)
         os.unlink(replacement)
     else:
-        print 'os.rename(%s, %s)' % (replacement, name)
+        print('os.rename(%s, %s)' % (replacement, name))
         os.rename(replacement, name)
 
 ## for camelcase preservation
@@ -63,5 +63,5 @@ def splitBinding(s):
         return (s,'')
 
 def escapequotes(s):
-    s = string.replace(s, '\"', '\\\"')
+    s = s.replace('\"', '\\\"')
     return s
