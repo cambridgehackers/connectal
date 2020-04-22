@@ -29,7 +29,7 @@ module awsf1(
 `include "unused_ddr_c_template.inc"
 //`include "unused_pcim_template.inc"
 `ifndef AWSF1_DMA_PCIS
-//`include "unused_dma_pcis_template.inc"
+`include "unused_dma_pcis_template.inc"
 `endif
 `include "unused_cl_sda_template.inc"
 `include "unused_sh_bar1_template.inc"
