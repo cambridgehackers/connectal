@@ -129,7 +129,11 @@ def preprocess(sourcefilename, source, defs, bsvpath):
             stack.append((new_cond,new_valid))
         elif tok == 'else':
             stack.pop()
-            valid = stack[-1][1]
+            try:
+                valid = stack[-1][1]
+            except:
+                sys.stderr.write('Failed to preprocess %s\n' % sourcefilename)
+                sys.exit(1)
             new_cond = not cond
             new_valid = new_cond and valid
             #sys.stderr.write('else %s new_cond=%d new_valid=%d cond=%d valid=%d\n' % (sym, new_cond, new_valid, cond, valid))
@@ -143,7 +147,11 @@ def preprocess(sourcefilename, source, defs, bsvpath):
             stack.append((new_cond,new_valid))
         elif tok == 'endif':
             stack.pop()
-            valid = stack[-1][1]
+            try:
+                valid = stack[-1][1]
+            except:
+                sys.stderr.write('Failed to preprocess %s\n' % sourcefilename)
+                sys.exit(1)
         elif tok == 'define':
             (sym, s) = nexttok(s)
             if s:
