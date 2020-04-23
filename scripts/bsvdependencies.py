@@ -25,6 +25,7 @@ import glob
 import argparse
 import re
 import bsvpreprocess
+import subprocess
 
 def getBsvPackages(bluespecdir):
     """BLUESPECDIR is expected to be the path to the bluespec distribution.
@@ -77,12 +78,19 @@ def bsvDependencies(bsvfile, allBsv=False, bluespecdir=None, argbsvpath=[], bsvd
         basename = os.path.basename(bsvfilename)
         (name, ext) = os.path.splitext(basename)
         source = vf.read()
-        preprocess = bsvpreprocess.preprocess(bsvfilename, source, bsvdefine, bsvpath)
+        ##preprocessed = bsvpreprocess.preprocess(bsvfilename, source, bsvdefine, bsvpath)
+        bsc_search_path = '+:' + ':'.join(bsvpath)
+        bsc_define_args = []
+        for var in bsvdefine:
+            bsc_define_args.append('-D')
+            bsc_define_args.append(var)
+        cp = subprocess.check_output(['bsc', '-E', '-p', bsc_search_path] + bsc_define_args + [bsvfilename])
+        preprocessed = cp.decode('utf8')
         packages = []
         includes = []
         synthesizedModules = []
         synthesize = False
-        for line in preprocess.split('\n'):
+        for line in preprocessed.split('\n'):
             m = re.match('//`include "([^\"]+)"', line)
             m1 = re.match('//`include(.*)', line)
             if m:
