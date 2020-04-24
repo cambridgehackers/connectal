@@ -182,7 +182,7 @@ static int pa_dma_buf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
         /* Fill in vma_ops::access(), so that gdb print command works correctly */
         vma->vm_ops = &custom_vm_ops;
         vma->vm_private_data = buffer;
-        printk("pa_dma_buf_mmap %p %zd\n", (dmabuf->file), dmabuf->file->f_count.counter);
+        printk("pa_dma_buf_mmap %p %ld\n", (dmabuf->file), (unsigned long)dmabuf->file->f_count.counter);
         if (!buffer->cached) {
                 // pgprot_writecombine must be disabled so that ld/strex work correctly on arm (in C: __gnu_cxx::__exchange_and_add )
                 // however, that currently breaks connectal examples. Jamey 10/2014
@@ -235,7 +235,7 @@ static int pa_dma_buf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 static void pa_dma_buf_release(struct dma_buf *dmabuf)
 {
         struct pa_buffer *buffer = dmabuf->priv;
-        printk("PortalAlloc::pa_dma_buf_release %p %zd\n", (dmabuf->file), dmabuf->file->f_count.counter);
+        printk("PortalAlloc::pa_dma_buf_release %p %ld\n", (dmabuf->file), (unsigned long)dmabuf->file->f_count.counter);
         pa_buffer_free(buffer);
 }
 
@@ -252,10 +252,10 @@ static void pa_dma_buf_kunmap(struct dma_buf *dmabuf, unsigned long offset,
 
 static int pa_dma_buf_begin_cpu_access(struct dma_buf *dmabuf,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
-				       size_t start,
+                                       size_t start,
                                        size_t len,
 #endif
-				       enum dma_data_direction direction)
+                                       enum dma_data_direction direction)
 {
         struct pa_buffer *buffer = dmabuf->priv;
         void *vaddr = NULL;
@@ -302,10 +302,10 @@ void
 #endif
 pa_dma_buf_end_cpu_access(struct dma_buf *dmabuf,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
-				      size_t start,
+                                      size_t start,
                                       size_t len,
 #endif
-				      enum dma_data_direction direction)
+                                      enum dma_data_direction direction)
 {
         struct pa_buffer *buffer = dmabuf->priv;
 
@@ -316,7 +316,7 @@ pa_dma_buf_end_cpu_access(struct dma_buf *dmabuf,
         }
         mutex_unlock(&buffer->lock);
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0))
-	return 0;
+        return 0;
 #endif
 }
 
@@ -325,9 +325,9 @@ static void *pa_dma_buf_vmap(struct dma_buf *dmabuf)
         struct pa_buffer *buffer = dmabuf->priv;
         pa_dma_buf_begin_cpu_access(dmabuf,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
-				    0, 0,
+                                    0, 0,
 #endif
-				    0);
+                                    0);
         return buffer->vaddr;
 }
 
@@ -350,8 +350,10 @@ static struct dma_buf_ops dma_buf_ops = {
         .kmap             = pa_dma_buf_kmap,
         .kunmap           = pa_dma_buf_kunmap,
 #else
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,0,0))
         .map_atomic       = pa_dma_buf_kmap,
         .unmap_atomic     = pa_dma_buf_kunmap,
+#endif
         .map              = pa_dma_buf_kmap,
         .unmap            = pa_dma_buf_kunmap,
 #endif
@@ -387,13 +389,13 @@ int portalmem_dmabuffer_create(PortalAlloc portalAlloc)
         size_t align = 4096;
         size_t len = portalAlloc.len;
         int return_fd;
-	unsigned int high_order_gfp_flags = (GFP_HIGHUSER | __GFP_ZERO | __GFP_NOWARN | __GFP_NORETRY );
-	unsigned int low_order_gfp_flags  = (GFP_HIGHUSER | __GFP_ZERO | __GFP_NOWARN);
+        unsigned int high_order_gfp_flags = (GFP_HIGHUSER | __GFP_ZERO | __GFP_NOWARN | __GFP_NORETRY );
+        unsigned int low_order_gfp_flags  = (GFP_HIGHUSER | __GFP_ZERO | __GFP_NOWARN);
 #ifdef __GFP_NO_KSWAPD
-	high_order_gfp_flags |= __GFP_NO_KSWAPD;
+        high_order_gfp_flags |= __GFP_NO_KSWAPD;
 #endif
 #ifdef __GFP_WAIT
-	high_order_gfp_flags &= ~__GFP_WAIT;
+        high_order_gfp_flags &= ~__GFP_WAIT;
 #endif
 
         printk("%s, size=%ld cached=%d\n", __FUNCTION__, (long)portalAlloc.len, portalAlloc.cached);
@@ -447,9 +449,9 @@ int portalmem_dmabuffer_create(PortalAlloc portalAlloc)
                 if (!ret) {
                         struct dma_buf *dmabuf;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0) || LINUX_VERSION_CODE == KERNEL_VERSION(3,10,0))
-			struct dma_buf_export_info export_info = {
-				.exp_name = "portalmem",
-			};
+                        struct dma_buf_export_info export_info = {
+                                .exp_name = "portalmem",
+                        };
 #endif
                         sg = table->sgl;
                         list_for_each_entry_safe(info, tmp_info, &pages, list) {
@@ -485,11 +487,11 @@ int portalmem_dmabuffer_create(PortalAlloc portalAlloc)
                                 sg_dma_address(sg) = sg_phys(sg);
                         }
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0) || LINUX_VERSION_CODE == KERNEL_VERSION(3,10,0))
-			export_info.ops = &dma_buf_ops;
-			export_info.size = len;
-			export_info.flags = O_RDWR;
-			export_info.priv = buffer;
-			dmabuf = dma_buf_export(&export_info);
+                        export_info.ops = &dma_buf_ops;
+                        export_info.size = len;
+                        export_info.flags = O_RDWR;
+                        export_info.priv = buffer;
+                        dmabuf = dma_buf_export(&export_info);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0))
                         dmabuf = dma_buf_export(buffer, &dma_buf_ops, len, O_RDWR , NULL);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0))
@@ -499,7 +501,7 @@ int portalmem_dmabuffer_create(PortalAlloc portalAlloc)
 #endif
                         if (IS_ERR(dmabuf))
                                 pa_buffer_free(buffer);
-                        printk("pa_get_dma_buf fmem=%p count=%zd\n", dmabuf->file, dmabuf->file->f_count.counter);
+                        printk("pa_get_dma_buf fmem=%p count=%ld\n", dmabuf->file, (unsigned long)dmabuf->file->f_count.counter);
                         return_fd = dma_buf_fd(dmabuf, O_CLOEXEC);
                         if (return_fd < 0)
                                 dma_buf_put(dmabuf);
