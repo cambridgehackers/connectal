@@ -278,7 +278,7 @@ if __name__=='__main__':
 
     boardname = options.board.lower()
 
-    filename = connectaldir + '/../boardinfo/' + boardname + '.json'
+    filename = connectaldir + '/boardinfo/' + boardname + '.json'
     # if binfo is provided, override default boardinfo json path
     if options.binfo:
         filename = options.binfo
@@ -330,8 +330,10 @@ if __name__=='__main__':
     if not os.path.isfile(topbsv):
         topbsv = project_dir + "/../" + option_info['TOP'] + '.bsv'
         if not os.path.isfile(topbsv):
-            print "ERROR: File %s not found" % (option_info['TOP'] + '.bsv')
-            sys.exit(1)
+            topbsv = connectaldir + "/../bsv/" + option_info['TOP'] + '.bsv'
+            if not os.path.isfile(topbsv):
+                print "ERROR: File %s not found" % (option_info['TOP'] + '.bsv')
+                sys.exit(1)
 
     need_pcie = None
     if 'need_pcie' in option_info:
