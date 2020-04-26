@@ -92,6 +92,7 @@ endmodule
 // ==================================================
 // PCIE Gen3  PcieHost
 //
+`ifdef XILINX
 `ifdef PCIE3
 (* synthesize *)
 module mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
@@ -148,6 +149,7 @@ endmodule: mkPcieHost
 // ======================================================
 // PCIE GEN1 and GEN2 PcieHost
 //(* synthesize *) commented out so that the guards in MemServer aren't destroyed (mdk)
+(* synthesize *)
 module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
    let dispatcher <- mkTLPDispatcher;
    let arbiter    <- mkTLPArbiter;
@@ -214,6 +216,7 @@ module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
 `endif
 endmodule: mkPcieHost
 `endif //PCIE3
+`endif //XILINX
 
 interface PcieTop#(type ipins);
 `ifndef SIMULATION
@@ -357,6 +360,24 @@ endmodule
 `endif
 
 `ifdef ALTERA
+module mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
+    // let dispatcher <- mkAVMMDispatcher;
+    // let arbiter <- mkAVMMArbiter;
+
+    Vector#(NumberOfMasters,PhysMemSlave#(PciePhysAddrWidth,DataBusWidth)) slavearr;
+
+    $display("PortMax ", PortMax);
+    for (Integer i = 0; i < valueOf(PortMax) - 1 + valueOf(NumberOfMasters); i=i+1) begin
+
+        // mkConnection((interface Server;
+        //                  interface response = dispatcher.out[i];
+        //                  interface request = arbiter.in[i];
+        //               endinterface), avmm);
+    end
+
+
+    // interface slave = slavearr;
+endmodule: mkPcieHost
 (* no_default_clock, no_default_reset *)
 module mkAlteraPcieHostTop #(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(PcieHostTop);
 
