@@ -6,6 +6,10 @@ scriptdir=`dirname $scriptdir`
 export CONNECTALDIR=`dirname $scriptdir`
 echo "CONNECTALDIR=$CONNECTALDIR"
 
+if [ "$AWS_FPGA_BUCKET" == "" ]; then
+    AWS_FPGA_BUCKET=aws-fpga
+fi
+
 if [ "$AWS_FPGA_REPO_DIR" == "" ]; then
     if [ -d `dirname $CONNECTALDIR`/aws-fpga ]; then
 	pushd `dirname $CONNECTALDIR`/aws-fpga
@@ -79,7 +83,7 @@ echo build_timestamp=${build_timestamp}
 ##
 if [ -f build/checkpoints/to_aws/${build_timestamp}.Developer_CL.tar ]; then
     ## request AWS to create an AWS FPGA image
-    $CONNECTALDIR/scripts/aws/create-fpga-image.sh $PROJECT_NAME $build_timestamp \
+    $CONNECTALDIR/scripts/aws/create-fpga-image.sh $PROJECT_NAME $build_timestamp $AWS_FPGA_BUCKET \
 	&& ( sleep 1; 
 	     ## query AWS to make sure the FPGA image is building
 	     $CONNECTALDIR/scripts/aws/describe-latest-fpga-image.sh )
