@@ -245,6 +245,8 @@ if {$implement} {
 
       puts "\nAWS FPGA: ([clock format [clock seconds] -format %T]) - Running link_design";
       link_design -top $TOP -part [DEVICE_TYPE] -reconfig_partitions {WRAPPER_INST/SH WRAPPER_INST/CL}
+      report_timing -cell WRAPPER_INST/CL -delay_type max -max_paths 10 -sort_by group -input_pins -file  $rptDir/${timestamp}.postlinkdesign_timing_max.rpt
+      report_timing -cell WRAPPER_INST/CL -delay_type min -max_paths 10 -sort_by group -input_pins -file  $rptDir/${timestamp}.postlinkdesign_timing_min.rpt
 
       puts "\nAWS FPGA: ([clock format [clock seconds] -format %T]) - PLATFORM.IMPL==[get_property PLATFORM.IMPL [current_design]]";
       ##################################################
