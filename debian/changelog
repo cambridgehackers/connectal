@@ -1,136 +1,148 @@
-connectal (18.08.1-1precise1) precise; urgency=medium
+connectal (20.05.1-1xenial1ubuntu1) xenial; urgency=medium
+
+    * Update drivers for kernel 5.0
+    * Use bsc -E as preprocessor for bsvdepend.py
+    * awsf1 FPGA improvements
+    * Fix but in bsvdepend.py when there is more than a space after "import"
+    * Fix documentation build due to changes in sphinx API
+    * Atomicc support
+    * Update to work with open source bsc
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 01 May 2020 09:03:31 -0400
+
+connectal (18.08.1-1xenial1) xenial; urgency=medium
 
     * Improved sync FIFO and resets
     * Some Atomic C support
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 28 Aug 2018 11:37:51 -0400
 
-connectal (18.05.1-1precise1) precise; urgency=medium
+connectal (18.05.1-1xenial1) xenial; urgency=medium
 
   * Packaged 18.05.1, including initial support for VCU118
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 29 May 2018 12:15:43 -0400
 
-connectal (18.04.1-1precise1) precise; urgency=medium
+connectal (18.04.1-1xenial1) xenial; urgency=medium
 
   * Fixed interrupts on PCIE3 and awsf1
   * Fixed DMA on awsf1
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 12 Apr 2018 08:28:56 -0400
 
-connectal (18.01.4-1precise1) precise; urgency=medium
+connectal (18.01.4-1xenial1) xenial; urgency=medium
 
   * Fix portalmem DKMS build
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 26 Jan 2018 15:39:21 -0500
 
-connectal (18.01.3-1precise1) precise; urgency=medium
+connectal (18.01.3-1xenial1) xenial; urgency=medium
 
   * Update pcieportal and portalmem for kernel 4.13.x
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 26 Jan 2018 11:01:43 -0500
 
-connectal (18.01.2-1precise1) precise; urgency=medium
+connectal (18.01.2-1xenial1) xenial; urgency=medium
 
   * Attemt to fix DKMS build
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 26 Jan 2018 09:10:40 -0500
 
-connectal (18.01.1-1precise1) precise; urgency=medium
+connectal (18.01.1-1xenial1) xenial; urgency=medium
 
   * Updated pcie drivers for lack of KBUILD_STR
   * Some AWS F1 support
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 10 Jan 2018 13:03:58 -0500
 
-connectal (17.09.2-1precise1) precise; urgency=medium
+connectal (17.09.2-1xenial1) xenial; urgency=medium
 
   * Removed KBUILD_STR from Makefile.dkms
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 12 Sep 2017 12:46:55 -
 
-connectal (17.09.1-1precise1) precise; urgency=medium
+connectal (17.09.1-1xenial1) xenial; urgency=medium
 
   * Updated pcie drivers to build with kernel 4.6.0+
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 12 Sep 2017 12:27:16 -0400
 
-connectal (17.01.2-1precise1) precise; urgency=medium
+connectal (17.01.2-1xenial1) xenial; urgency=medium
 
   * Some driver fixes
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 05 Jan 2017 20:36:15 -0500
 
-connectal (17.01.1-1precise1) precise; urgency=medium
+connectal (17.01.1-1xenial1) xenial; urgency=medium
 
   * First step towards supporting multiple FPGAs on pcie
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 03 Jan 2017 20:33:47 -0500
 
-connectal (16.05.2-1precise1) precise; urgency=medium
+connectal (16.05.2-1xenial1) xenial; urgency=medium
 
   * Updated portalmem driver for Ubuntu 16.04 / Linux Kernel 4.1.x
   * Added support for python applications
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 12 May 2016 08:08:25 -0400
 
-connectal (16.05.1-4precise4) precise; urgency=medium
+connectal (16.05.1-4xenial4) xenial; urgency=medium
 
   * remove dependence on python-support which does not install in xenial
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 09 May 2016 20:51:04 -0400
 
-connectal (16.05.1-3precise3) precise; urgency=medium
+connectal (16.05.1-3xenial3) xenial; urgency=medium
 
   * rebuild to check signature
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 09 May 2016 15:32:38 -0400
 
-connectal (16.05.1-2precise2) precise; urgency=medium
+connectal (16.05.1-2xenial2) xenial; urgency=medium
 
   * remove dependence on python-support
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 09 May 2016 15:01:38 -0400
 
-connectal (16.05.1-1precise1) precise; urgency=medium
+connectal (16.05.1-1xenial1) xenial; urgency=medium
 
   * portal interfaces connected via UART
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 09 May 2016 14:26:50 -0400
 
-connectal (16.04.3-1precise1) precise; urgency=medium
+connectal (16.04.3-1xenial1) xenial; urgency=medium
 
   * Really fixed portalmem.ko build
   * Use mmap of temporary files instead of portalmem.ko for simulation
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 25 Apr 2016 13:52:10 -0400
 
-connectal (16.04.2-1precise1) precise; urgency=medium
+connectal (16.04.2-1xenial1) xenial; urgency=medium
 
   * Fixed portalmem.ko build
   * Updated pcie core generation for Vivado 2016.1
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 22 Apr 2016 11:09:44 -0400
 
-connectal (16.04.1-1precise1) precise; urgency=medium
+connectal (16.04.1-1xenial1) xenial; urgency=medium
 
   * version 16.04.1
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 21 Apr 2016 11:57:50 -0400
 
-connectal (16.02.1-1precise1) precise; urgency=medium
+connectal (16.02.1-1xenial1) xenial; urgency=medium
 
   * Releasing version 16.02.1
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 01 Feb 2016 14:56:45 -0500
 
-connectal (15.12.2-1precise1) precise; urgency=medium
+connectal (15.12.2-1xenial1) xenial; urgency=medium
 
   * Version 15.12.2
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 28 Dec 2015 09:59:59 -0500
 
-connectal (15.12.1-1precise1) precise; urgency=medium
+connectal (15.12.1-1xenial1) xenial; urgency=medium
 
   * Rewrote BSV preprocessor
   * Added scripts/bsvdepend.py to generate Makefile from BSV import dependences
@@ -140,496 +152,496 @@ connectal (15.12.1-1precise1) precise; urgency=medium
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 04 Dec 2015 12:42:19 -0500
 
-connectal (15.11.1-1precise1) precise; urgency=medium
+connectal (15.11.1-1xenial1) xenial; urgency=medium
 
   * Release 15.11.1: stopped leak in pcieportal/zynqportal. dependence build of .bo files, ...
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 19 Nov 2015 15:58:37 -0500
 
-connectal (15.10.5-1precise1) precise; urgency=medium
+connectal (15.10.5-1xenial1) xenial; urgency=medium
 
   * Released 15.10.5: Added verilator support, stopped leak in portalmem.
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 21 Oct 2015 11:47:35 -0400
 
-connectal (15.10.4-1precise1) precise; urgency=medium
+connectal (15.10.4-1xenial1) xenial; urgency=medium
 
   * Relased 15.10.4: Capture BSV defines in generated file ConnectalProjectConfig.bsv
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 14 Oct 2015 11:40:08 -0400
 
-connectal (15.10.3-1precise1) precise; urgency=medium
+connectal (15.10.3-1xenial1) xenial; urgency=medium
 
   * Released 15.10.3: fixed reorder buffer if memory responses are split and reordered 
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 09 Oct 2015 09:43:57 -0400
 
-connectal (15.10.2-1precise1) precise; urgency=medium
+connectal (15.10.2-1xenial1) xenial; urgency=medium
 
   * Released 15.10.2: basic DMA working on vc709 / 690T
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 08 Oct 2015 13:16:25 -0400
 
-connectal (15.10.1-1precise1) precise; urgency=medium
+connectal (15.10.1-1xenial1) xenial; urgency=medium
 
   * Released 15.10.1: working on 690T pcie support.
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 07 Oct 2015 17:19:20 -0400
 
-connectal (15.09.8-1precise1) precise; urgency=medium
+connectal (15.09.8-1xenial1) xenial; urgency=medium
 
   * Released 15.09.8; updated DMA example, changed default BUILDCACHE_CACHEDIR
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 28 Sep 2015 14:29:40 -0400
 
-connectal (15.09.7-1precise1) precise; urgency=medium
+connectal (15.09.7-1xenial1) xenial; urgency=medium
 
   * Released 15.09.7: performance measurement for DMA
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 28 Sep 2015 12:09:49 -0400
 
-connectal (15.09.6-1precise1) precise; urgency=medium
+connectal (15.09.6-1xenial1) xenial; urgency=medium
 
   * Released 15.09.6
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 23 Sep 2015 07:53:00 -0400
 
-connectal (15.09.5-1precise1) precise; urgency=medium
+connectal (15.09.5-1xenial1) xenial; urgency=medium
 
   * Released 15.09.5
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 22 Sep 2015 19:57:14 -0400
 
-connectal (15.09.4-1precise1) precise; urgency=medium
+connectal (15.09.4-1xenial1) xenial; urgency=medium
 
   * Released 15.09.4 
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 21 Sep 2015 13:12:18 -0400
 
-connectal (15.09.3-1precise1) precise; urgency=medium
+connectal (15.09.3-1xenial1) xenial; urgency=medium
 
   * Released 15.09.3
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 21 Sep 2015 12:03:37 -0400
 
-connectal (15.09.2-1precise1) precise; urgency=medium
+connectal (15.09.2-1xenial1) xenial; urgency=medium
 
   * Released 15.09.2
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 15 Sep 2015 12:26:27 -0400
 
-connectal (15.09.1-1precise1) precise; urgency=medium
+connectal (15.09.1-1xenial1) xenial; urgency=medium
 
   * Released 15.09.1, includes tiled interface
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 08 Sep 2015 12:20:10 -0400
 
-connectal (15.08.5-1precise1) precise; urgency=medium
+connectal (15.08.5-1xenial1) xenial; urgency=medium
 
   * Releasing 15.08.5
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 20 Aug 2015 16:33:38 -0400
 
-connectal (15.08.4-1precise1) precise; urgency=medium
+connectal (15.08.4-1xenial1) xenial; urgency=medium
 
   * Fixed DMA write path through MemSlaveEngine post Altera merge
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 07 Aug 2015 14:42:17 -0400
 
-connectal (15.08.3-1precise1) precise; urgency=medium
+connectal (15.08.3-1xenial1) xenial; urgency=medium
 
   * Fixed python location
   * 15.08.3
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 04 Aug 2015 15:46:36 -0400
 
-connectal (15.08.2-1precise1) precise; urgency=medium
+connectal (15.08.2-1xenial1) xenial; urgency=medium
 
   * Another hugetlb page size change.
   * 15.08.2
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 04 Aug 2015 15:31:41 -0400
 
-connectal (15.08.1-1precise1) precise; urgency=medium
+connectal (15.08.1-1xenial1) xenial; urgency=medium
 
   * Added hugetlb page size.
   * Version 15.08.1
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 03 Aug 2015 08:11:10 -0400
 
-connectal (15.07.4-1precise1) precise; urgency=medium
+connectal (15.07.4-1xenial1) xenial; urgency=medium
 
   * Driver fixes.
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 10 Jul 2015 09:48:19 -0400
 
-connectal (15.07.3-1precise1) precise; urgency=medium
+connectal (15.07.3-1xenial1) xenial; urgency=medium
 
   * One more PCIE3 fix.
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 06 Jul 2015 10:02:28 -0400
 
-connectal (15.07.2-1precise1) precise; urgency=medium
+connectal (15.07.2-1xenial1) xenial; urgency=medium
 
   * 15.07.2, fixed PCIE3 conditionalization
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 06 Jul 2015 09:31:16 -0400
 
-connectal (15.07.1-1precise1) precise; urgency=medium
+connectal (15.07.1-1xenial1) xenial; urgency=medium
 
   * v15.07.1
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 06 Jul 2015 09:04:37 -0400
 
-connectal (15.06.3-1precise1) precise; urgency=medium
+connectal (15.06.3-1xenial1) xenial; urgency=medium
 
   * v15.06.3
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 09 Jun 2015 14:47:44 -0400
 
-connectal (15.06.2-1precise1) precise; urgency=medium
+connectal (15.06.2-1xenial1) xenial; urgency=medium
 
   * 15.06.2
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 04 Jun 2015 09:21:24 -0400
 
-connectal (15.06.1-3precise3) precise; urgency=medium
+connectal (15.06.1-3xenial3) xenial; urgency=medium
 
   * updated dkms build
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 01 Jun 2015 12:47:00 -0400
 
-connectal (15.06.1-2precise2) precise; urgency=medium
+connectal (15.06.1-2xenial2) xenial; urgency=medium
 
   * fixing dkms
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 01 Jun 2015 11:09:43 -0400
 
-connectal (15.06.1-1precise1) precise; urgency=medium
+connectal (15.06.1-1xenial1) xenial; urgency=medium
 
   * 15.06.1
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 01 Jun 2015 10:34:18 -0400
 
-connectal (15.05.2-1precise1) precise; urgency=medium
+connectal (15.05.2-1xenial1) xenial; urgency=medium
 
   * 15.05.2
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 26 May 2015 09:24:41 -0400
 
-connectal (15.05.1-1precise1) precise; urgency=medium
+connectal (15.05.1-1xenial1) xenial; urgency=medium
 
   * Updated to 15.05.1
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 20 May 2015 15:30:20 -0400
 
-connectal (15.04.4-2precise2) precise; urgency=medium
+connectal (15.04.4-2xenial2) xenial; urgency=medium
 
   * Fixed sed DRIVER_VERSION and DEV_VERSION for DKMS
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 29 Apr 2015 12:34:38 -0400
 
-connectal (15.04.4-1precise1) precise; urgency=medium
+connectal (15.04.4-1xenial1) xenial; urgency=medium
 
   * 15.04.4: fixes rmmod pcieportal, etc.
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 28 Apr 2015 16:07:16 -0400
 
-connectal (15.04.3-1precise1) precise; urgency=medium
+connectal (15.04.3-1xenial1) xenial; urgency=medium
 
   * 15.04.3: fixed make pciedrivers
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 27 Apr 2015 11:52:46 -0400
 
-connectal (15.04.2-1precise1) precise; urgency=medium
+connectal (15.04.2-1xenial1) xenial; urgency=medium
 
   * Fixing DKMS sources
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 27 Apr 2015 11:06:34 -0400
 
-connectal (15.04.1-1precise1) precise; urgency=medium
+connectal (15.04.1-1xenial1) xenial; urgency=medium
 
   * 15.04.1
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 24 Apr 2015 09:41:52 -0400
 
-connectal (15.03.12-1precise1) precise; urgency=medium
+connectal (15.03.12-1xenial1) xenial; urgency=medium
 
   * 15.03.12
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 01 Apr 2015 16:58:40 -0400
 
-connectal (15.03.11-1precise1) precise; urgency=medium
+connectal (15.03.11-1xenial1) xenial; urgency=medium
 
   * 15.03.11
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 30 Mar 2015 12:59:29 -0400
 
-connectal (15.03.10-1precise1) precise; urgency=medium
+connectal (15.03.10-1xenial1) xenial; urgency=medium
 
   * 15.03.10
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 25 Mar 2015 15:20:34 -0400
 
-connectal (15.03.9-1precise1ubuntu1) precise; urgency=medium
+connectal (15.03.9-1xenial1ubuntu1) xenial; urgency=medium
 
   * 15.03.9
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 24 Mar 2015 13:21:43 -0400
 
-connectal (15.03.8-1precise1) precise; urgency=medium
+connectal (15.03.8-1xenial1) xenial; urgency=medium
 
   * 15.03.8
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 23 Mar 2015 09:12:55 -0400
 
-connectal (15.03.7-1precise1) precise; urgency=medium
+connectal (15.03.7-1xenial1) xenial; urgency=medium
 
   * 15.03.7: reverts interface to mkMemServer, plus other fixes
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 20 Mar 2015 11:47:05 -0400
 
-connectal (15.03.6-1precise1) precise; urgency=medium
+connectal (15.03.6-1xenial1) xenial; urgency=medium
 
   * 15.03.6: a couple of driver fixes
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 19 Mar 2015 17:04:55 -0400
 
-connectal (15.03.5-1precise1) precise; urgency=medium
+connectal (15.03.5-1xenial1) xenial; urgency=medium
 
   * 15.03.5
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 19 Mar 2015 16:32:38 -0400
 
-connectal (15.03.4-1precise1) precise; urgency=medium
+connectal (15.03.4-1xenial1) xenial; urgency=medium
 
   * Updated to 15.03.4
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 18 Mar 2015 12:51:41 -0400
 
-connectal (15.03.2-1precise1) precise; urgency=medium
+connectal (15.03.2-1xenial1) xenial; urgency=medium
 
   * Updated to 15.03.2
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 09 Mar 2015 15:21:08 -0400
 
-connectal (15.03.1-1precise1) precise; urgency=medium
+connectal (15.03.1-1xenial1) xenial; urgency=medium
 
   * Updated to 15.03.1
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 04 Mar 2015 15:30:27 -0500
 
-connectal (15.02.5-1precise1) precise; urgency=medium
+connectal (15.02.5-1xenial1) xenial; urgency=medium
 
   * Updated to 15.02.5
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 16 Feb 2015 20:37:45 -0500
 
-connectal (15.02.4-1precise1) precise; urgency=medium
+connectal (15.02.4-1xenial1) xenial; urgency=medium
 
   * Updated to 15.02.4
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Sun, 15 Feb 2015 20:37:45 -0500
 
-connectal (15.02.3-1precise1) precise; urgency=medium
+connectal (15.02.3-1xenial1) xenial; urgency=medium
 
   * Updated to 15.02.3
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 11 Feb 2015 11:48:40 -0500
 
-connectal (15.02.2-2precise2) precise; urgency=medium
+connectal (15.02.2-2xenial2) xenial; urgency=medium
 
   * For Trusty
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 10 Feb 2015 10:33:22 -0500
 
-connectal (15.02.2-1precise1) precise; urgency=medium
+connectal (15.02.2-1xenial1) xenial; urgency=medium
 
   * Fixed include string.h for zynqdrivers
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 10 Feb 2015 10:09:21 -0500
 
-connectal (15.02.1-1precise3) precise; urgency=medium
+connectal (15.02.1-1xenial3) xenial; urgency=medium
 
   * Updated to 15.02.1
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 10 Feb 2015 09:53:44 -0500
 
-connectal (14.12.3-4precise1) precise; urgency=medium
+connectal (14.12.3-4xenial1) xenial; urgency=medium
 
   * Second try to add pciescan
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 10 Dec 2014 08:22:10 -0500
 
-connectal (14.12.3-3precise1) precise; urgency=medium
+connectal (14.12.3-3xenial1) xenial; urgency=medium
 
   * Added dependence on pciescan
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 10 Dec 2014 08:03:00 -0500
 
-connectal (14.12.3-2precise1) precise; urgency=medium
+connectal (14.12.3-2xenial1) xenial; urgency=medium
 
   * Added support for setting derivedClock frequency
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 05 Dec 2014 16:24:47 -0500
 
-connectal (14.12.2-4precise1) precise; urgency=medium
+connectal (14.12.2-4xenial1) xenial; urgency=medium
 
   * Fix include paths for dkms
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 04 Dec 2014 13:16:48 -0500
 
-connectal (14.12.2-2precise1) precise; urgency=medium
+connectal (14.12.2-2xenial1) xenial; urgency=medium
 
   * Bump kernel version to fix DKMS error
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 04 Dec 2014 12:59:07 -0500
 
-connectal (14.12.2-1precise1) precise; urgency=medium
+connectal (14.12.2-1xenial1) xenial; urgency=medium
 
-  * Removed zynqdrivers build and install until I find the cross arm toolchain for precise
+  * Removed zynqdrivers build and install until I find the cross arm toolchain for xenial
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 04 Dec 2014 12:37:57 -0500
 
-connectal (14.12.2-1precise1) precise; urgency=medium
+connectal (14.12.2-1xenial1) xenial; urgency=medium
 
   * Fixed Vector compilation in C
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 02 Dec 2014 09:40:36 -0500
 
-connectal (14.12.1-1precise1) precise; urgency=medium
+connectal (14.12.1-1xenial1) xenial; urgency=medium
 
   * Added support for Vector in portal interfaces.
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 01 Dec 2014 11:48:25 -0500
 
-connectal (14.11.6-2precise3) precise; urgency=low
+connectal (14.11.6-2xenial3) xenial; urgency=low
 
   * Tweak install of pcieflat
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 24 Nov 2014 16:55:21 -0500
 
-connectal (14.11.6-1precise1) precise; urgency=low
+connectal (14.11.6-1xenial1) xenial; urgency=low
 
   * Updated to 14.11.6
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 24 Nov 2014 15:54:34 -0500
 
-connectal (14.11.5-1precise1) precise; urgency=low
+connectal (14.11.5-1xenial1) xenial; urgency=low
 
   * Updated to 14.11.5
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 18 Nov 2014 08:43:29 -0500
 
-connectal (14.11.4-1precise1) precise; urgency=low
+connectal (14.11.4-1xenial1) xenial; urgency=low
 
   * Updated to 14.11.4
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 17 Nov 2014 12:00:21 -0500
 
-connectal (14.11.3-2precise2) precise; urgency=low
+connectal (14.11.3-2xenial2) xenial; urgency=low
 
   * Updated to 14.11.3
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 14 Nov 2014 11:38:22 -0500
 
-connectal (14.11.2-1precise1) precise; urgency=low
+connectal (14.11.2-1xenial1) xenial; urgency=low
 
   * Update to 14.11.2
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 07 Nov 2014 09:07:26 -0500
 
-connectal (14.11.1-2precise1) precise; urgency=low
+connectal (14.11.1-2xenial1) xenial; urgency=low
 
   * Update install-dkms
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 06 Nov 2014 13:03:40 -0500
 
-connectal (14.11.1-1precise1) precise; urgency=low
+connectal (14.11.1-1xenial1) xenial; urgency=low
 
   * Updated to connectal 14.11.1
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 06 Nov 2014 11:35:05 -0500
 
-connectal (14.10.2-7precise4) precise; urgency=medium
+connectal (14.10.2-7xenial4) xenial; urgency=medium
 
   * Specify CROSS_COMPILE and add to arm-linux-gnueabi-gcc to Build-Depends
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Mon, 27 Oct 2014 08:27:24 -0400
 
-connectal (14.10.2-7precise2) precise; urgency=medium
+connectal (14.10.2-7xenial2) xenial; urgency=medium
 
   * Specify driver version
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Sat, 25 Oct 2014 14:34:22 -0400
 
-connectal (14.10.2-6precise1) precise; urgency=medium
+connectal (14.10.2-6xenial1) xenial; urgency=medium
 
   * Added the build depdences on zynqdrivers and zynqdrivers-install
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 24 Oct 2014 16:19:17 -0400
 
-connectal (14.10.2-5precise1) precise; urgency=medium
+connectal (14.10.2-5xenial1) xenial; urgency=medium
 
   * Build zynqdrivers and package in connectal-zynqdrivers
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Fri, 24 Oct 2014 13:23:21 -0400
 
-connectal (14.10.2-4precise1) precise; urgency=medium
+connectal (14.10.2-4xenial1) xenial; urgency=medium
 
   * Depend on fpgamake, buildcache, and fpgajtag
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 23 Oct 2014 14:09:00 -0400
 
-connectal (14.10.2-3precise1) precise; urgency=medium
+connectal (14.10.2-3xenial1) xenial; urgency=medium
 
   * Fix DKMS install
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 23 Oct 2014 12:26:54 -0400
 
-connectal (14.10.2-2precise1) precise; urgency=high
+connectal (14.10.2-2xenial1) xenial; urgency=high
 
   * Depends on vim for xxd
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 23 Oct 2014 11:18:06 -0400
 
-connectal (14.10.2-1precise1) precise; urgency=high
+connectal (14.10.2-1xenial1) xenial; urgency=high
 
   * Updated to 14.10.2
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 23 Oct 2014 11:15:16 -0400
 
-connectal (14.10.01-5precise1) precise; urgency=low
+connectal (14.10.01-5xenial1) xenial; urgency=low
 
   * DKMS
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Thu, 23 Oct 2014 09:09:02 -0400
 
-connectal (14.10.01-4precise2) precise; urgency=low
+connectal (14.10.01-4xenial2) xenial; urgency=low
 
   * Do not build kernel modules
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 22 Oct 2014 17:43:44 -0400
 
-connectal (14.10.01-3precise1) precise; urgency=low
+connectal (14.10.01-3xenial1) xenial; urgency=low
 
   * Depends on python-ply
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 22 Oct 2014 17:29:22 -0400
 
-connectal (14.10.01-2precise2) precise; urgency=low
+connectal (14.10.01-2xenial2) xenial; urgency=low
 
   * Include the source tarball
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Wed, 22 Oct 2014 08:11:22 -0400
 
-connectal (14.10.01-2precise1) precise; urgency=low
+connectal (14.10.01-2xenial1) xenial; urgency=low
 
   * Missed some files
 
  -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 21 Oct 2014 16:44:23 -0400
 
-connectal (14.10.01-1precise1) precise; urgency=low
+connectal (14.10.01-1xenial1) xenial; urgency=low
 
   * Initial release
 
