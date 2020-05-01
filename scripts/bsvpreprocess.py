@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Copyright (c) 2014-2015 Quanta Research Cambridge, Inc
 # Copyright (c) 2015 Connectal Project
 #
@@ -129,7 +129,11 @@ def preprocess(sourcefilename, source, defs, bsvpath):
             stack.append((new_cond,new_valid))
         elif tok == 'else':
             stack.pop()
-            valid = stack[-1][1]
+            try:
+                valid = stack[-1][1]
+            except:
+                sys.stderr.write('Failed to preprocess %s\n' % sourcefilename)
+                sys.exit(1)
             new_cond = not cond
             new_valid = new_cond and valid
             #sys.stderr.write('else %s new_cond=%d new_valid=%d cond=%d valid=%d\n' % (sym, new_cond, new_valid, cond, valid))
@@ -143,7 +147,11 @@ def preprocess(sourcefilename, source, defs, bsvpath):
             stack.append((new_cond,new_valid))
         elif tok == 'endif':
             stack.pop()
-            valid = stack[-1][1]
+            try:
+                valid = stack[-1][1]
+            except:
+                sys.stderr.write('Failed to preprocess %s\n' % sourcefilename)
+                sys.exit(1)
         elif tok == 'define':
             (sym, s) = nexttok(s)
             if s:
@@ -186,14 +194,14 @@ def preprocess(sourcefilename, source, defs, bsvpath):
         else:
             sys.stderr.write('syntax.preprocess %s: unhandled preprocessor token %s\n' % (sourcefilename, tok))
             sys.stderr.write('line: %s\n' % line)
-            assert(tok in ['ifdef', 'ifndef', 'else', 'endif', 'define'])
+            assert(tok in ['ifdef', 'ifndef', 'else', 'endif', 'define', ''])
         outlines.append('//PREPROCESSED: %s' % line)
 
     return '%s\n' % '\n'.join(outlines)
 
 if __name__=='__main__':
     options = argparser.parse_args()
-    for f in options.bsvfile:
-        preprocessed = preprocess(f, open(f).read(), options.bsvdefine, options.include + options.bsvpath)
-        print preprocessed
-        
+    for bsvfile in options.bsvfile:
+        preprocessed = preprocess(bsvfile, open(bsvfile).read(), options.bsvdefine, options.include + options.bsvpath)
+        print(preprocessed)
+

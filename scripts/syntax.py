@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Copyright (c) 2014 Quanta Research Cambridge, Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
@@ -216,7 +216,7 @@ t_TILDECARET = r'~^'
 t_ignore = ' \t\f'
 
 def t_error(t):
-    print "Illegal character '%s' in file '%s'" % (t.value[0], globalfilename)
+    print("Illegal character '%s' in file '%s'" % (t.value[0], globalfilename))
     t.lexer.skip(1)
 
 def p_error(errtoken):
@@ -243,7 +243,7 @@ def t_COMMENT(t):
 
 def t_MCOMMENT(t):
     r'/\*(.|\n)*?\*/'
-    #print t.value, t.value.count('\n'), t.lineno
+    #print(t.value, t.value.count('\n'), t.lineno)
     t.lineno += t.value.count('\n')
 
 import ply.yacc as yacc
@@ -636,7 +636,7 @@ def p_expressionStmt(p):
                       | TOKACTION fsmStmts TOKENDACTION
                       '''
     if parseTrace:
-        print 'ENDSTATEMENT', [pitem for pitem in p]
+        print('ENDSTATEMENT', [pitem for pitem in p])
 
 def p_expressionStmts(p):
     '''expressionStmts : expressionStmts expressionStmt
@@ -824,7 +824,7 @@ def p_interfaceDef(p):
                     | TOKINTERFACE type VAR EQUAL expression SEMICOLON
                     | TOKINTERFACE VAR EQUAL expression SEMICOLON'''
     if parseTrace:
-        print 'ENDINTERFACE', [pitem for pitem in p]
+        print('ENDINTERFACE', [pitem for pitem in p])
 
 def p_formalParam(p):
     '''formalParam : type VAR'''
@@ -891,7 +891,7 @@ def p_moduleDefHeader(p):
 def p_moduleDef(p):
     '''moduleDef : moduleDefHeader expressionStmts TOKENDMODULE colonVar'''
     if parseTrace:
-        print 'ENDMODULE', [pitem for pitem in p]
+        print('ENDMODULE', [pitem for pitem in p])
     p[0] = AST.Module(p[1][0], p[1][1], p[1][2], p[1][3], p[1][4], p[2])
 
 def p_importBviDef(p):
@@ -1035,7 +1035,7 @@ def syntax_parse(argdata, inputfilename, bsvdefines, bsvpath):
         sys.path.append(parserdir)
     parser = yacc.yacc(optimize=1,errorlog=yacc.NullLogger(),outputdir=parserdir,debugfile=parserdir+'/parser.out')
     if noisyFlag:
-        print 'Parsing:', inputfilename
+        print('Parsing:', inputfilename)
     if parseDebugFlag:
         return parser.parse(data,debug=1)
     return  parser.parse(data)
@@ -1048,9 +1048,9 @@ def generate_bsvcpp(filelist, project_dir, bsvdefines, interfaces, bsvpath):
     for i in interfaces:
         ifc = globalv.globalvars.get(i)
         if not ifc:
-            print 'Connectal: Unable to locate the interface:', i
+            print('Connectal: Unable to locate the interface:', i)
             for keys in globalv.globalvars:
-                print '    ', keys
+                print('    ', keys)
             sys.exit(1)
         ifc = ifc.instantiate(dict(zip(ifc.params, ifc.params)))
         ilist.append(ifc)
@@ -1097,7 +1097,7 @@ if __name__=='__main__':
     project_dir =  os.environ.get('DTOP')
     tmp = os.environ.get('PROTODEBUG')
     if tmp:
-        print 'JSONNN', tmp
+        print('JSONNN', tmp)
         j2file = open(tmp).read()
         jsondata = json.loads(j2file)
         cppgen.generate_cpp(project_dir, noisyFlag, jsondata)

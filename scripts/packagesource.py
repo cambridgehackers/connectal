@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import os, sys
 import glob
@@ -33,7 +33,7 @@ def getBsvPackages(bluespecdir):
     the packages in the prelude library of this distribution.
     """
     pkgs = []
-    for f in glob.glob('%s/Prelude/*.bo' % bluespecdir):
+    for f in glob.glob('%s/Prelude/*.bo' % bluespecdir) + glob.glob('%s/Libraries/*.bo' % bluespecdir):
         pkgs.append(os.path.splitext(os.path.basename(f))[0])
     return pkgs
 

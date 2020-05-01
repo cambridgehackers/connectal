@@ -28,13 +28,15 @@ module awsf1(
 `endif //  AWSF1_DDR_A
 `include "unused_ddr_c_template.inc"
 //`include "unused_pcim_template.inc"
+`ifndef AWSF1_DMA_PCIS
 `include "unused_dma_pcis_template.inc"
+`endif
 `include "unused_cl_sda_template.inc"
 `include "unused_sh_bar1_template.inc"
 //`include "unused_apppf_irq_template.inc"
 //`include "unused_sh_ocl_template.inc"
 
-   
+
 `ifdef AWSF1_DDR_A
    localparam DDR_A_PRESENT=1;
    // DDR B and D are not used, disable them
@@ -176,6 +178,7 @@ module awsf1(
    logic [63:0] cl_sh_ddr_awaddr_2d[2:0];
    logic [7:0] 	cl_sh_ddr_awlen_2d[2:0];
    logic [2:0] 	cl_sh_ddr_awsize_2d[2:0];
+   logic [1:0] 	cl_sh_ddr_awburst_2d[2:0];
    logic 	cl_sh_ddr_awvalid_2d [2:0];
    logic [2:0] 	sh_cl_ddr_awready_2d;
 
@@ -195,6 +198,7 @@ module awsf1(
    logic [63:0]  cl_sh_ddr_araddr_2d[2:0];
    logic [7:0] 	 cl_sh_ddr_arlen_2d[2:0];
    logic [2:0] 	 cl_sh_ddr_arsize_2d[2:0];
+   logic [1:0] 	 cl_sh_ddr_arburst_2d[2:0];
    logic [2:0] 	 cl_sh_ddr_arvalid_2d;
    logic [2:0] 	 sh_cl_ddr_arready_2d;
 
@@ -324,6 +328,7 @@ module awsf1(
       .cl_sh_ddr_awaddr(cl_sh_ddr_awaddr_2d),
       .cl_sh_ddr_awlen(cl_sh_ddr_awlen_2d),
       .cl_sh_ddr_awsize(cl_sh_ddr_awsize_2d),
+      .cl_sh_ddr_awburst(cl_sh_ddr_awburst_2d),
       .cl_sh_ddr_awvalid(cl_sh_ddr_awvalid_2d),
       .sh_cl_ddr_awready(sh_cl_ddr_awready_2d),
 
@@ -343,6 +348,7 @@ module awsf1(
       .cl_sh_ddr_araddr(cl_sh_ddr_araddr_2d),
       .cl_sh_ddr_arlen(cl_sh_ddr_arlen_2d),
       .cl_sh_ddr_arsize(cl_sh_ddr_arsize_2d),
+      .cl_sh_ddr_arburst(cl_sh_ddr_arburst_2d),
       .cl_sh_ddr_arvalid(cl_sh_ddr_arvalid_2d),
       .sh_cl_ddr_arready(sh_cl_ddr_arready_2d),
 
@@ -405,7 +411,7 @@ module awsf1(
                    .probe12 (cl_sh_apppf_irq_req),
                    .probe13 (sh_cl_apppf_irq_ack)
                    );
-
+`ifndef AWSF1_DMA_PCIS
    ila_connectal_2 cl_ila_master  (
                    .clk    (clk_main_a0),
                    .probe0 (cl_sh_pcim_awvalid),
@@ -435,6 +441,68 @@ module awsf1(
                    .probe23 (cl_sh_pcim_bready),
                    .probe24 (sh_cl_pcim_bvalid)
                    );
+`else
+      ila_connectal_2 cl_ila_pcis  (
+                   .clk    (clk_main_a0),
+                   .probe0 (sh_cl_dma_pcis_awvalid),
+                   .probe1 (sh_cl_dma_pcis_awaddr),
+                   .probe2 (cl_sh_dma_pcis_awready),
+                   .probe3 (sh_cl_dma_pcis_arvalid),
+                   .probe4 (sh_cl_dma_pcis_araddr),
+                   .probe5 (cl_sh_dma_pcis_arready),
+
+                   .probe6 (sh_cl_dma_pcis_wvalid),
+                   .probe7 (sh_cl_dma_pcis_wdata),
+                   .probe8 (cl_sh_dma_pcis_wready),
+                   .probe9 (cl_sh_dma_pcis_rvalid),
+                   .probe10 (cl_sh_dma_pcis_rdata),
+                   .probe11 (sh_cl_dma_pcis_rready),
+                   .probe12(sh_cl_dma_pcis_wstrb),
+                   .probe13 (sh_cl_dma_pcis_aruser),
+                   .probe14 (sh_cl_dma_pcis_awuser),
+                   .probe15 (sh_cl_dma_pcis_arlen),
+                   .probe16 (sh_cl_dma_pcis_awlen),
+                   .probe17 (sh_cl_dma_pcis_arid),
+                   .probe18 (sh_cl_dma_pcis_awid),
+                   .probe19 (sh_cl_dma_pcis_arsize),
+                   .probe20 (sh_cl_dma_pcis_awsize),
+                   .probe21 (cl_sh_dma_pcis_bid),
+                   .probe22 (cl_sh_dma_pcis_bresp),
+                   .probe23 (sh_cl_dma_pcis_bready),
+                   .probe24 (cl_sh_dma_pcis_bvalid)
+                   );
+`endif
+`ifdef AWSF1_DDR_A
+   ila_connectal_2 cl_ila_mem  (
+                   .clk    (clk_main_a0),
+                   .probe0 (cl_sh_ddr_awvalid_2d[0]),
+                   .probe1 (cl_sh_ddr_awaddr_2d[0]), // 64
+                   .probe2 (sh_cl_ddr_awready_2d[0]),
+                   .probe3 (cl_sh_ddr_arvalid_2d[0]),
+                   .probe4 (cl_sh_ddr_araddr_2d[0]), // 64
+                   .probe5 (sh_cl_ddr_arready_2d[0]),
+
+                   .probe6 (cl_sh_ddr_wvalid_2d[0]),
+                   .probe7 (cl_sh_ddr_wdata_2d[0]), // 512
+                   .probe8 (sh_cl_ddr_wready_2d[0]),
+                   .probe9 (sh_cl_ddr_rvalid_2d[0]),
+                   .probe10 (sh_cl_ddr_rdata_2d[0]), // 512
+                   .probe11 (cl_sh_ddr_rready_2d[0]),
+                   .probe12 (cl_sh_ddr_wstrb_2d[0]), // 64
+                   .probe13 (cl_sh_pcim_aruser), // 19
+                   .probe14 (cl_sh_pcim_awuser), // 19
+                   .probe15 (cl_sh_ddr_arlen_2d[0]),  // 8
+                   .probe16 (cl_sh_ddr_awlen_2d[0]), // 8
+                   .probe17 (cl_sh_ddr_arsize_2d[0]), // 3
+                   .probe18 (cl_sh_ddr_awsize_2d[0]), // 3
+                   .probe19 (cl_sh_ddr_awid_2d[0]), // 16
+                   .probe20 (cl_sh_ddr_arid_2d[0]), // 16
+                   .probe21 (sh_cl_ddr_bid_2d[0]), // 16
+                   .probe22 (sh_cl_ddr_bresp_2d[0]), // 2
+                   .probe23 (cl_sh_ddr_bready_2d[0]),
+                   .probe24 (sh_cl_ddr_bvalid_2d[0])
+                   );
+`endif
 
 // Debug Bridge 
  cl_debug_bridge CL_DEBUG_BRIDGE (
@@ -530,33 +598,36 @@ module awsf1(
               .pins_araddr(cl_sh_ddr_araddr_2d[0]),
 	      .pins_arid(cl_sh_ddr_arid_2d[0]),
 	      .pins_arlen(cl_sh_ddr_arlen_2d[0]),
-	      .pins_arready_v(sh_cl_ddr_arready_2d[0]),
+	      .pins_arready(sh_cl_ddr_arready_2d[0]),
 	      .pins_arsize(cl_sh_ddr_arsize_2d[0]),
+	      .pins_arburst(cl_sh_ddr_arburst_2d[0]),
 	      .pins_arvalid(cl_sh_ddr_arvalid_2d[0]),
 
 	      .pins_awaddr(cl_sh_ddr_awaddr_2d[0]),
 	      .pins_awid(cl_sh_ddr_awid_2d[0]),
 	      .pins_awlen(cl_sh_ddr_awlen_2d[0]),
-	      .pins_awready_v(sh_cl_ddr_awready_2d[0]),
+	      .pins_awready(sh_cl_ddr_awready_2d[0]),
 	      .pins_awsize(cl_sh_ddr_awsize_2d[0]),
+	      .pins_awburst(cl_sh_ddr_awburst_2d[0]),
 	      .pins_awvalid(cl_sh_ddr_awvalid_2d[0]),
+	      //.pins_awlock(),
 
-	      .pins_bid_v(sh_cl_ddr_bid_2d[0]),
+	      .pins_bid(sh_cl_ddr_bid_2d[0]),
 	      .pins_bready(cl_sh_ddr_bready_2d[0]),
-	      .pins_bresp_v(sh_cl_ddr_bresp_2d[0]),
-	      .pins_bvalid_v(sh_cl_ddr_bvalid_2d[0]),
+	      .pins_bresp(sh_cl_ddr_bresp_2d[0]),
+	      .pins_bvalid(sh_cl_ddr_bvalid_2d[0]),
 
-	      .pins_rdata_v(sh_cl_ddr_rdata_2d[0]),
-	      .pins_rid_v(sh_cl_ddr_rid_2d[0]),
-	      .pins_rlast_v(sh_cl_ddr_rlast_2d[0]),
+	      .pins_rdata(sh_cl_ddr_rdata_2d[0]),
+	      .pins_rid(sh_cl_ddr_rid_2d[0]),
+	      .pins_rlast(sh_cl_ddr_rlast_2d[0]),
 	      .pins_rready(cl_sh_ddr_rready_2d[0]),
-	      .pins_rresp_v(sh_cl_ddr_rresp_2d[0]),
-	      .pins_rvalid_v(sh_cl_ddr_rvalid_2d[0]),
+	      .pins_rresp(sh_cl_ddr_rresp_2d[0]),
+	      .pins_rvalid(sh_cl_ddr_rvalid_2d[0]),
 
 	      .pins_wdata(cl_sh_ddr_wdata_2d[0]),
-	      .pins_wid(cl_sh_ddr_wid_2d[0]),
+	      //.pins_wid(cl_sh_ddr_wid_2d[0]),
 	      .pins_wlast(cl_sh_ddr_wlast_2d[0]),
-	      .pins_wready_v(sh_cl_ddr_wready_2d[0]),
+	      .pins_wready(sh_cl_ddr_wready_2d[0]),
 	      .pins_wstrb(cl_sh_ddr_wstrb_2d[0]),
 	      .pins_wvalid(cl_sh_ddr_wvalid_2d[0]),
 
@@ -564,6 +635,49 @@ module awsf1(
 
 // DDR3 END
 
+`ifdef AWSF1_DMA_PCIS
+	      .pins_pcis_araddr(sh_cl_dma_pcis_araddr[39:0]),
+	      .pins_pcis_arburst(1),
+	      .pins_pcis_arcache(0),
+	      .pins_pcis_arid(sh_cl_dma_pcis_arid),
+	      .pins_pcis_arlen(sh_cl_dma_pcis_arlen),
+	      .pins_pcis_arlock(0),
+	      .pins_pcis_arprot(0),
+	      .pins_pcis_arqos(0),
+	      .pins_pcis_arready(cl_sh_dma_pcis_arready),
+	      .pins_pcis_arsize(sh_cl_dma_pcis_arsize),
+	      .pins_pcis_arvalid(sh_cl_dma_pcis_arvalid),
+
+	      .pins_pcis_awaddr(sh_cl_dma_pcis_awaddr[39:0]),
+	      .pins_pcis_awburst(1),
+	      .pins_pcis_awcache(0),
+	      .pins_pcis_awid(sh_cl_dma_pcis_awid),
+	      .pins_pcis_awlen(sh_cl_dma_pcis_awlen),
+	      .pins_pcis_awlock(0),
+	      .pins_pcis_awprot(0),
+	      .pins_pcis_awqos(0),
+	      .pins_pcis_awready(cl_sh_dma_pcis_awready),
+	      .pins_pcis_awsize(sh_cl_dma_pcis_awsize),
+	      .pins_pcis_awvalid(sh_cl_dma_pcis_awvalid),
+
+	      .pins_pcis_bid(cl_sh_dma_pcis_bid),
+	      .pins_pcis_bready(sh_cl_dma_pcis_bready),
+	      .pins_pcis_bresp(cl_sh_dma_pcis_bresp),
+	      .pins_pcis_bvalid(cl_sh_dma_pcis_bvalid),
+
+	      .pins_pcis_rdata(cl_sh_dma_pcis_rdata),
+	      .pins_pcis_rid(cl_sh_dma_pcis_rid),
+	      .pins_pcis_rlast(cl_sh_dma_pcis_rlast),
+	      .pins_pcis_rready(sh_cl_dma_pcis_rready),
+	      .pins_pcis_rresp(cl_sh_dma_pcis_rresp),
+	      .pins_pcis_rvalid(cl_sh_dma_pcis_rvalid),
+
+	      .pins_pcis_wdata(sh_cl_dma_pcis_wdata),
+	      .pins_pcis_wlast(sh_cl_dma_pcis_wlast),
+	      .pins_pcis_wready(cl_sh_dma_pcis_wready),
+	      .pins_pcis_wstrb(sh_cl_dma_pcis_wstrb),
+	      .pins_pcis_wvalid(sh_cl_dma_pcis_wvalid),
+`endif
 	      .pcim_araddr(cl_sh_pcim_araddr[39:0]),
 	      //.pcim_arburst(pcim_arburst),
 	      //.pcim_arcache(pcim_arcache),

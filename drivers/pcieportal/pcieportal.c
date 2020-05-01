@@ -112,10 +112,13 @@ static irqreturn_t intr_handler(int irq, void *p)
         tBoard *this_board = this_tile->board;
 	int i;
         //printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_tile->device_tile-1);
-	for (i = 0; i < MAX_NUM_PORTALS; i++)
-            if (this_tile->device_tile-1 == this_board->portal[i].device_tile
-              && this_board->portal[i].extra)
-                wake_up_interruptible(&(this_board->portal[i].extra->wait_queue)); 
+        for (i = 0; i < MAX_NUM_PORTALS; i++) {
+                if ((this_tile->device_tile-1 == this_board->portal[i].device_tile)
+                    || this_tile->board->info.aws_shell) {
+                        if (this_board->portal[i].extra)
+                                wake_up_interruptible(&(this_board->portal[i].extra->wait_queue));
+                }
+        }
         return IRQ_HANDLED;
 }
 
@@ -205,10 +208,19 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
         if (this_portal)
             this_board = this_portal->board;
         /* basic sanity checks */
-        if (_IOC_DIR(cmd) & _IOC_READ)
+        if (_IOC_DIR(cmd) & _IOC_READ) {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,0,0))
                 err = !access_ok(VERIFY_WRITE, (void __user *) arg, _IOC_SIZE(cmd));
-        else if (_IOC_DIR(cmd) & _IOC_WRITE)
-                err = !access_ok(VERIFY_READ, (void __user *) arg, _IOC_SIZE(cmd));
+#else
+                err = !access_ok((void __user *) arg, _IOC_SIZE(cmd));
+#endif
+        } else if (_IOC_DIR(cmd) & _IOC_WRITE) {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,0,0))
+                err = !access_ok(VERIFY_WRITE, (void __user *) arg, _IOC_SIZE(cmd));
+#else
+                err = !access_ok((void __user *) arg, _IOC_SIZE(cmd));
+#endif
+        }
         if (!err)
         switch (cmd) {
         case BNOC_GET_TLP:
@@ -238,8 +250,8 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 iowrite32(0, this_board->bar0io + CSR_TLPPCIEWRADDRREG);
                 traceInfo.trace = ioread32(this_board->bar0io + CSR_TLPTRACINGREG);
                 traceInfo.traceLength = ioread32(this_board->bar0io + CSR_TLPTRACELENGTHREG);
-		if (traceInfo.traceLength == 0xbad0add0) // unimplemented
-			 traceInfo.traceLength = 2048; // default value
+                if (traceInfo.traceLength == 0xbad0add0) // unimplemented
+                         traceInfo.traceLength = 2048; // default value
                 iowrite32(0, this_board->bar0io + CSR_TLPTRACINGREG);  // disable tracing
                 printk("disable tracing old trace=%d\n", traceInfo.trace);
                 err = copy_to_user((void __user *) arg, &traceInfo, sizeof(tTraceInfo));
@@ -253,19 +265,19 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
         case PCIE_SEND_FD:
                 {
                 /* pushd down allocated fd */
-		tSendFd sendFd;
-		struct pmentry *pmentry;
+                tSendFd sendFd;
+                struct pmentry *pmentry;
                 PortalInternal devptr = {.map_base = this_portal->regs, .transport = &kernelfunc};
 
                 err = copy_from_user(&sendFd, (void __user *) arg, sizeof(sendFd));
                 if (err)
                     break;
-		pmentry = (struct pmentry *)kzalloc(sizeof(struct pmentry), GFP_KERNEL);
-		INIT_LIST_HEAD(&pmentry->pmlist);
-		pmentry->fmem = fget(sendFd.fd);
-		pmentry->id   = sendFd.id;
+                pmentry = (struct pmentry *)kzalloc(sizeof(struct pmentry), GFP_KERNEL);
+                INIT_LIST_HEAD(&pmentry->pmlist);
+                pmentry->fmem = fget(sendFd.fd);
+                pmentry->id   = sendFd.id;
                 printk("[%s:%d] PCIE_SEND_FD fd=%x id=%x fmem=%p  **\n", __FUNCTION__, __LINE__, sendFd.fd, sendFd.id, pmentry->fmem);
-		list_add(&pmentry->pmlist, &this_portal->pmlist);
+                list_add(&pmentry->pmlist, &this_portal->pmlist);
                 err = send_fd_to_portal(&devptr, sendFd.fd, sendFd.id, 0);
                 if (err < 0)
                     break;
@@ -273,23 +285,23 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 }
                 break;
         case PCIE_DEREFERENCE: {
-		int id = arg;
-		struct list_head *pmlist, *n;
-		PortalInternal devptr = {.map_base = this_portal->regs, .transport = &kernelfunc};
-		err = -ENOENT;
-		MMURequest_idReturn(&devptr, id);
-		list_for_each_safe(pmlist, n, &this_portal->pmlist) {
-			struct pmentry *pmentry = list_entry(pmlist, struct pmentry, pmlist);
-			if (pmentry->id == id) {
-				printk("%s:%d releasing portalmem id=%d fmem=%p count=%zd\n", __FUNCTION__, __LINE__, id, pmentry->fmem, pmentry->fmem->f_count.counter);
-				fput(pmentry->fmem);
-				list_del(&pmentry->pmlist);
-				kfree(pmentry);
-				err = 0;
-				break;
-			}
-		}
-	} break;
+                int id = arg;
+                struct list_head *pmlist, *n;
+                PortalInternal devptr = {.map_base = this_portal->regs, .transport = &kernelfunc};
+                err = -ENOENT;
+                MMURequest_idReturn(&devptr, id);
+                list_for_each_safe(pmlist, n, &this_portal->pmlist) {
+                        struct pmentry *pmentry = list_entry(pmlist, struct pmentry, pmlist);
+                        if (pmentry->id == id) {
+                                printk("%s:%d releasing portalmem id=%d fmem=%p count=%ld\n", __FUNCTION__, __LINE__, id, pmentry->fmem, (unsigned long)pmentry->fmem->f_count.counter);
+                                fput(pmentry->fmem);
+                                list_del(&pmentry->pmlist);
+                                kfree(pmentry);
+                                err = 0;
+                                break;
+                        }
+                }
+        } break;
         case PCIE_SIGNATURE: {
                 PortalSignaturePcie signature;
                 static struct {
@@ -313,17 +325,17 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                 return 0;
                 }
         case PCIE_CHANGE_ENTRY: {
-		tChangeEntry entry;
-		uint32_t vlo;
-		vlo = ioread32(this_board->bar0io + CSR_CHANGELO);
-		entry.timestamp = ioread32(this_board->bar0io + CSR_CHANGEHI);
-		entry.src = (vlo >> 24);
-		entry.value = vlo;
-		printk("%s: timestamp=%08x src=%02x value=%96x\n", "portal", entry.timestamp, entry.src, entry.value);
-		if (copy_to_user((void __user *)arg, &entry, sizeof(entry)))
-			return -EFAULT;
-		return 0;
-	} break;
+                tChangeEntry entry;
+                uint32_t vlo;
+                vlo = ioread32(this_board->bar0io + CSR_CHANGELO);
+                entry.timestamp = ioread32(this_board->bar0io + CSR_CHANGEHI);
+                entry.src = (vlo >> 24);
+                entry.value = vlo;
+                printk("%s: timestamp=%08x src=%02x value=%96x\n", "portal", entry.timestamp, entry.src, entry.value);
+                if (copy_to_user((void __user *)arg, &entry, sizeof(entry)))
+                        return -EFAULT;
+                return 0;
+        } break;
         default:
                 return -ENOTTY;
         }
@@ -341,7 +353,7 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
         if (vma->vm_pgoff > (~0UL >> PAGE_SHIFT))
                 return -EINVAL;
         if (vma->vm_pgoff < 16) {
-		if (this_portal->board->bar4io) {
+		if (this_portal->board->info.aws_shell) {
 			off = pci_dev->resource[0].start + this_portal->offset;
 		} else {
 			off = pci_dev->resource[2].start + this_portal->offset;
@@ -514,6 +526,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                         goto BARS_ALLOCATED_label;
                 }
 		if (!this_board->bar4io) {
+			this_board->info.aws_shell = 0;
 			// this replaces 'connectal/pcie/connectalutil/connectalutil trace /dev/fpga0'
 			// but why is it needed?...
 			iowrite32(0, this_board->bar0io + CSR_TLPPCIEWRADDRREG);
@@ -530,6 +543,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 			}
 			// check for xdma on bar2
 		} else {
+			this_board->info.aws_shell = 1;
 			printk("  xdma block ID %x\n", ioread32(this_board->bar2io + 0x0000));
 			printk("   irq block ID %x\n", ioread32(this_board->bar2io + 0x2000));
 			printk("config block ID %x\n", ioread32(this_board->bar2io + 0x3000));
@@ -566,7 +580,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		iowrite32(0, this_board->bar0io + CSR_MSIX_MASKED);
                 pci_set_master(dev); /* enable PCI bus master */
 		
-		if (this_board->bar4io) {
+		if (this_board->info.aws_shell) {
 			portal_base = this_board->bar0io;
 			ptile = this_board->bar0io;
 			printk("bar0io[0]=%08x\n", *(int *)this_board->bar0io);

@@ -48,33 +48,36 @@ variable is set appropriately:
 
 3. Install Connectal
 
-    sudo add-apt-repository -y ppa:jamey-hicks/connectal
-    sudo apt-get update
-    sudo apt-get -y install connectal
+       sudo add-apt-repository -y ppa:jamey-hicks/connectal
+       sudo apt-get update
+       sudo apt-get -y install connectal
 
 Building from Source
 --------------------
 
 1. Checkout out the following from github:
-    git clone git://github.com/cambridgehackers/connectal
 
-If you are generating code for an FPGA, check out fpgamake:
-    git clone git://github.com/cambridgehackers/fpgamake
+       git clone git://github.com/cambridgehackers/connectal
 
-It appears that this requires buildcache to be checked out also:
-    git clone git://github.com/cambridgehackers/buildcache
+   If you are generating code for an FPGA, check out fpgamake:
 
-Add USE_BUILDCACHE=1 to your calls to make to enable it to cache, otherwise it will rerun all compilation steps.
+       git clone git://github.com/cambridgehackers/fpgamake
+
+   It appears that this requires buildcache to be checked out also:
+
+       git clone git://github.com/cambridgehackers/buildcache
+
+   Add `USE_BUILDCACHE=1` to your calls to make to enable it to cache, otherwise it will rerun all compilation steps.
 
 2. Install connectal dependences. This installs ubuntu packages used by connectal or during compilation:
 
-    cd connectal;
-    sudo make install-dependences
+       cd connectal;
+       sudo make install-dependences
 
 3. If you are using an FPGA attached to your machine, install the drivers:
 
-    make all
-    sudo make install
+       make all
+       sudo make install
 
 
 Preparation for Zynq
@@ -138,15 +141,16 @@ Preparation for Kintex and Virtex boards
 0. Get [http://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2013-2.html](Vivado 2013.2)
 
 1. Install the drivers
-    make
-    sudo make install
-    sudo modprobe portalmem
+
+       make
+       sudo make install
+       sudo modprobe portalmem
 
 2. Get fpgajtag
 
-    git clone git://github.com/cambridgehackers/fpgajtag
-    cd fpgajtag
-    make all && sudo make install
+       git clone git://github.com/cambridgehackers/fpgajtag
+       cd fpgajtag
+       make all && sudo make install
 
 Examples
 --------
@@ -176,6 +180,7 @@ add V=1 to command line, as
 
     make examples/examplename.<something> V=1
 or
+
     V=1 make examples/examplename.<something>
 
 To run the example on a machine different than the build machine, use RUNPARAM=hostname-or-addr:
@@ -183,8 +188,8 @@ To run the example on a machine different than the build machine, use RUNPARAM=h
     make RUNPARAM=zedtest run.zedboard
     make RUNPARAM=192.168.1.123 run.vc707
 
-Bitstream Packaging
-~~~~~~~~~~~~~~~~~~~
+### Bitstream Packaging
+
 
 The FPGA bitstream is included in the application executable, and the
 FPGA is automatically programmed when the application is run:
@@ -196,25 +201,28 @@ FPGA is automatically programmed when the application is run:
 We are running Android on the Zynq devices and so the application
 executable is called android.exe.
 
-Echo Example
-~~~~~~~~~~~~~
+### Echo Example
+
 
     ## this has only been tested with the Vivado 2013.2 release
     . Xilinx/Vivado/2013.2/settings64.sh
 
     make -C examples/echo build..zedboard
 or
+
     make -C examples/echo build.zc702
 or
+
     make -C examples/echo build.kc705
 or
+
     make -C examples/echo build.vc707
 
 To run on a zedboard with IP address aa.bb.cc.dd:
+
     RUNPARAM=aa.bb.cc.dd make -C examples/echo run.zedboard
 
-Memcpy Example
-~~~~~~~~~~~~~
+### Memcpy Example
 
     make -C examples/memcpy build.vc707
 

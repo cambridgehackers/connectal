@@ -361,9 +361,9 @@ def collectElements(mlist, workerfn, name):
     mindex = 0
     for item in mlist:
         if verbose:
-            print 'collectEl', item
+            print('collectEl', item)
             for p in item['dparams']:
-                print 'collectEl/param', p
+                print('collectEl/param', p)
                 break
         sub = { 'dut': util.decapitalize(name),
           'Dut': util.capitalize(name),
@@ -390,7 +390,7 @@ def fixupSubsts(item, suffix):
     outputPipes = []
     for m in dlist:
         if verbose:
-            print 'fixupSubsts', m
+            print('fixupSubsts', m)
         paramsForCall = ['request.%s' % p['pname'] for p in m['dparams']]
         msubs = {'methodName': m['dname'],
                  'paramsForCall': ', '.join(paramsForCall)}
@@ -434,7 +434,7 @@ def indent(f, indentation):
 
 def bemitStructMember(item, f, indentation):
     if verbose:
-        print 'emitSM', item
+        print('emitSM', item)
     indent(f, indentation)
     f.write('%s %s' % (toBsvType(item['ptype'], item.get('oldtype')), item['pname']))
     #if hasBitWidth(item['ptype']):
@@ -459,11 +459,11 @@ def bemitType(item, name, f, indentation):
     tmp = toBsvType(item, None)
     if re.match('[0-9]+', tmp):
         if True or verbose:
-            print 'bsvgen/bemitType: INFO ignore numeric typedef for', tmp
+            print('bsvgen/bemitType: INFO ignore numeric typedef for', tmp)
         return
     if not tmp or tmp[0] == '`' or tmp == 'Empty' or tmp[-2:] == '_P':
         if True or verbose:
-            print 'bsvgen/bemitType: INFO ignore typedef for', tmp
+            print('bsvgen/bemitType: INFO ignore typedef for', tmp)
         return
     if (indentation == 0):
         f.write('typedef ')
@@ -487,7 +487,7 @@ def bemitEnum(item, name, f, indentation):
 
 def emitBDef(item, generated_hpp, indentation):
     if verbose:
-        print 'bsvgen/emitBDef:', item
+        print('bsvgen/emitBDef:', item)
     n = item['tname']
     td = item['tdtype']
     t = td.get('type')
@@ -498,7 +498,7 @@ def emitBDef(item, generated_hpp, indentation):
     elif t == 'Type' or t == None:
         bemitType(td, n, generated_hpp, indentation)
     else:
-        print 'EMITCD', n, t, td
+        print('EMITCD', n, t, td)
 
 def generate_bsv(project_dir, noisyFlag, aGenDef, jsondata):
     global generateInterfaceDefs,verbose
@@ -511,13 +511,13 @@ def generate_bsv(project_dir, noisyFlag, aGenDef, jsondata):
         for v in jsondata['globaldecls']:
             if v['dtype'] == 'TypeDef':
                 if v.get('tparams'):
-                    print 'Skipping BSV declaration for parameterized type', v['tname']
+                    print('Skipping BSV declaration for parameterized type', v['tname'])
                     continue
                 emitBDef(v, if_file, 0)
         if_file.write('\n')
     for item in jsondata['interfaces']:
         if verbose:
-            print 'genbsv', item
+            print('genbsv', item)
         pname = item['cname']
         if pname in generatedPackageNames:
             continue
@@ -532,7 +532,7 @@ def generate_bsv(project_dir, noisyFlag, aGenDef, jsondata):
             extraImports += [i for i in jsondata['globalimports'] if not i in generatedPackageNames]
         bsv_file.write(preambleTemplate % {'extraImports' : ''.join(['import %s::*;\n' % pn for pn in extraImports])})
         if verbose:
-            print 'Writing file ', fname
+            print('Writing file ', fname)
         if generateInterfaceDefs:
             if_file.write(interfaceDefTemplate % fixupSubsts(item, ''))
         

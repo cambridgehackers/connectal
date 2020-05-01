@@ -404,7 +404,12 @@ module mkMemWriteInternal#(MemServerIndication ind,
 	 if (last)
 	    serverProcessing.deq();
 	 //$display("mkMemWriteInternal::writeData: client=%d, rename_tag=%d", client, rename_tag);
-	 memDataFifo.enq(MemData { data: tagdata.data,  tag:extend(rename_tag), last: last });
+	 memDataFifo.enq(MemData { data: tagdata.data,
+`ifdef BYTE_ENABLES_MEM_DATA
+	 			   byte_enables: tagdata.byte_enables,
+`endif
+				   tag:extend(rename_tag),
+				   last: last });
       endrule
    
    rule fill_clientResponse;

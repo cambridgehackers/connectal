@@ -109,7 +109,9 @@ PortalPoller
 
       The timeout value, in milliseconds, passed to :c:function:`poll()`
 
+:envvar:`PORTAL_TIMEOUT`.
 
+    Overrides the default value for :cpp:member:`PortalPoller::timeout`.
 
 Deprecated Functions
 --------------------

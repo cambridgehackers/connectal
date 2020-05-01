@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 ## Copyright (c) 2013-2014 Quanta Research Cambridge, Inc.
 
 ## Permission is hereby granted, free of charge, to any person
@@ -119,7 +119,7 @@ tclzynqrewireclock = '''
 foreach {pat} {CLK_GATE_hdmi_clock_if CLK_*deleteme_unused_clock* CLK_GATE_*deleteme_unused_clock* RST_N_*deleteme_unused_reset*} {
     foreach {net} [get_nets -quiet $pat] {
         puts "disconnecting net $net"
-	disconnect_net -net $net -objects [get_pins -quiet -of_objects $net]
+        disconnect_net -net $net -objects [get_pins -quiet -of_objects $net]
     }
 }
 '''
@@ -308,12 +308,12 @@ if __name__=='__main__':
 
     bsvdefines = options.bsvdefine
     bsvdefines.append('project_dir=$(DTOP)')
-    print bsvdefines
+    print(bsvdefines)
     bsvdefines.append('MainClockPeriod=%d' % options.mainclockperiod)
     bsvdefines.append('DerivedClockPeriod=%f' % options.derivedclockperiod)
     if options.pcieclockperiod:
         bsvdefines.append('PcieClockPeriod=%d' % options.pcieclockperiod)
-    print bsvdefines
+    print(bsvdefines)
 
     rewireclockstring = tclzynqrewireclock
     if 'rewireclockstring' in option_info and option_info['rewireclockstring'] != '':
@@ -324,7 +324,7 @@ if __name__=='__main__':
     if not os.path.isfile(topbsv):
         topbsv = project_dir + "/../" + option_info['TOP'] + '.bsv'
         if not os.path.isfile(topbsv):
-            print "ERROR: File %s not found" % (option_info['TOP'] + '.bsv')
+            print("ERROR: File %s not found" % (option_info['TOP'] + '.bsv'))
             sys.exit(1)
 
     need_pcie = None
@@ -333,7 +333,7 @@ if __name__=='__main__':
 
     partname = option_info['partname']
     if noisyFlag:
-        print 'makefilegen: partname', partname
+        print('makefilegen: partname', partname)
     if not 'os' in options:
         options.os = option_info['os']
 
@@ -370,7 +370,7 @@ if __name__=='__main__':
         fpga_vendor = None
         suffix = None
 
-    print 'fpga_vendor', fpga_vendor
+    print('fpga_vendor', fpga_vendor)
     if fpga_vendor:
         options.verilog.append(os.path.join(connectaldir, 'verilog', fpga_vendor))
     options.verilog.append(os.path.join(connectaldir, 'verilog'))
@@ -386,7 +386,7 @@ if __name__=='__main__':
     linuxmkname = os.path.join(project_dir, 'jni', 'Ubuntu.mk')
 
     if noisyFlag:
-        print 'Writing Android.mk', androidmkname
+        print('Writing Android.mk', androidmkname)
     substs = {
         #android
         'project_dir': project_dir,
@@ -422,14 +422,14 @@ if __name__=='__main__':
     f.write(linuxmakefile_template % substs)
     f.close()
     if options.stl or options.android_platform or options.android_toolchain:
-	    f = util.createDirAndOpen(os.path.join(project_dir, 'jni', 'Application.mk'), 'w')
+            f = util.createDirAndOpen(os.path.join(project_dir, 'jni', 'Application.mk'), 'w')
             if options.stl:
                 f.write('APP_STL                 := %s\n' % options.stl)
             if options.android_platform:
                 f.write('APP_PLATFORM             := android-%s\n' % options.android_platform)
             if options.android_toolchain:
                 f.write('NDK_TOOLCHAIN_VERSION    := %s\n' % options.android_toolchain)
-	    f.close()
+            f.close()
 
     tclsubsts = {'dut': dutname.lower(),
                  'Dut': dutname,
@@ -452,7 +452,7 @@ if __name__=='__main__':
     tcl.close()
 
     if noisyFlag:
-        print 'Writing Makefile', makename
+        print('Writing Makefile', makename)
     make = util.createDirAndOpen(makename + '.new', 'w')
 
     genxdc_dep = ''
@@ -472,28 +472,28 @@ if __name__=='__main__':
     else:
         cachearg = '--cachedir=%s' % os.path.abspath(options.cachedir) if options.cachedir else ''
     substs = {'partitions': ' '.join(['-s %s' % p for p in options.partition_module]),
-					 'boardname': boardname,
-					 'partname': partname,
+                                         'boardname': boardname,
+                                         'partname': partname,
                      'fpga_vendor': fpga_vendor,
                                          'project_dir' : project_dir,
                                          'pinout_file' : ' '.join([('--pinoutfile ' + os.path.abspath(p)) for p in options.pinout]),
                                          'pinout_dep_file' : ' '.join([os.path.abspath(p) for p in options.pinout]),
                                          'genxdc_dep' : genxdc_dep,
-					 'floorplan': os.path.abspath(options.floorplan) if options.floorplan else '',
-					 'xdc': ' '.join(['--constraint=%s' % os.path.abspath(xdc) for xdc in options.constraint]
+                                         'floorplan': os.path.abspath(options.floorplan) if options.floorplan else '',
+                                         'xdc': ' '.join(['--constraint=%s' % os.path.abspath(xdc) for xdc in options.constraint]
                                                          + ['--implconstraint=%s' % os.path.abspath(xdc) for xdc in options.implconstraint]
                                                          + ['--unmanaged-implconstraint=%s' % os.path.abspath(xdc) for xdc in options.unmanaged_implconstraint]),
-					 'xci': ' '.join(['--xci=%s' % os.path.abspath(xci) for xci in options.xci]),
-					 'qsf': ' '.join(['--qsf=%s' % os.path.abspath(qsf) for qsf in options.qsf]),
-					 'chipscope': ' '.join(['--chipscope=%s' % os.path.abspath(chipscope) for chipscope in options.chipscope]),
-					 'sourceTcl': ' '.join(['--tcl=%s' % os.path.abspath(tcl) for tcl in options.tcl]),
+                                         'xci': ' '.join(['--xci=%s' % os.path.abspath(xci) for xci in options.xci]),
+                                         'qsf': ' '.join(['--qsf=%s' % os.path.abspath(qsf) for qsf in options.qsf]),
+                                         'chipscope': ' '.join(['--chipscope=%s' % os.path.abspath(chipscope) for chipscope in options.chipscope]),
+                                         'sourceTcl': ' '.join(['--tcl=%s' % os.path.abspath(tcl) for tcl in options.tcl]),
                                          'verilog': ' '.join([os.path.abspath(f) for f in options.verilog]),
                                          'modelsim': ' '.join([os.path.abspath(f) for f in options.modelsim]),
-					 'cachedir': cachearg,
+                                         'cachedir': cachearg,
                                          'pin_binding' : ' '.join(['-b %s' % s for s in options.pin_binding]),
                                          'reconfig' : ' '.join(['--reconfig=%s' % rname for rname in options.reconfig]),
                                          'prtop' : ('--prtop=%s' % options.prtop) if options.prtop else ''
-					 }
+                                         }
     substs['genxdc'] = (genxdc_template % substs) if options.pinout else ''
     substs['FPGAMAKE_DEFINE'] = '-D BSV_POSITIVE_RESET' if 'BSV_POSITIVE_RESET' in options.bsvdefine else ''
     bitsmake=fpgamakeRuleTemplate % substs

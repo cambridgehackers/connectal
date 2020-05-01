@@ -18,7 +18,7 @@ from sphinx.locale import l_, _
 from sphinx.domains import Domain, ObjType, Index
 from sphinx.directives import ObjectDescription
 from sphinx.util.nodes import make_refnode
-from sphinx.util.compat import Directive
+from sphinx.util.docutils import SphinxDirective
 from sphinx.util.docfields import Field, GroupedField, TypedField
 
 
@@ -128,7 +128,7 @@ class BsvObject(ObjectDescription):
         * it is stripped from the displayed name if present
         * it is added to the full name (return value) if not present
         """
-        print 'BsvObject.handle_signature', sig
+        print('BsvObject.handle_signature', sig)
         name_prefix = ''
         name = sig
         arglist = ''
@@ -142,7 +142,7 @@ class BsvObject(ObjectDescription):
                 if m: arglist = m.group(1)
         elif self.objtype in ['subinterface', 'field']:
             split = sig.rsplit(' ', 1)
-            print 'rsplit', split
+            print('rsplit', split)
             name = split[-1]
             if len(split) > 1:
                 retann = split[0]
@@ -160,20 +160,20 @@ class BsvObject(ObjectDescription):
             if len(split) > 1:
                 depth = 0
                 paramreturn = split[1]
-                #print 'module', paramreturn, len(paramreturn)
+                #print('module', paramreturn, len(paramreturn))
                 for i in range(0,len(paramreturn)):
                     c = paramreturn[i]
                     if c == '(': depth = depth+1
                     elif c == ')': depth = depth-1
                     
-                    #print i, c, depth
+                    #print(i, c, depth)
                     if depth==0:
                         endofparam=i
                         break
                 arglist = paramreturn[1:endofparam]
                 retann = paramreturn[endofparam+1:-1]
-                #print arglist
-                #print endofparam, retann
+                #print(arglist)
+                #print(endofparam, retann)
 
         # determine package and interface name (if applicable), as well as full name
         modname = self.options.get(
@@ -223,7 +223,7 @@ class BsvObject(ObjectDescription):
         anno = self.options.get('annotation')
 
         signode += addnodes.desc_name(name, name)
-        #print 'arglist', arglist
+        #print('arglist', arglist)
         if not arglist:
             if self.needs_arglist():
                 # for callables, add an empty parameter list
@@ -237,7 +237,7 @@ class BsvObject(ObjectDescription):
                 signode += addnodes.desc_returns(text=self.options.get('returntype'))
             if anno:
                 signode += addnodes.desc_annotation(' ' + anno, ' ' + anno)
-            #print 'signode', signode
+            #print('signode', signode)
             return fullname, name_prefix
 
         _pseudo_parse_arglist(signode, arglist)
@@ -350,7 +350,7 @@ class BsvInterfacemember(BsvObject):
     def get_index_text(self, modname, name_cls):
         name, cls = name_cls
         add_packages = self.env.config.add_package_names
-        print 'BsvInterfacemember.get_index_text', name, cls, modname
+        print('BsvInterfacemember.get_index_text', name, cls, modname)
         if self.objtype == 'method':
             try:
                 clsname, methname = name.rsplit('.', 1)
@@ -417,7 +417,7 @@ class BsvDecoratorMixin(object):
     Mixin for decorator directives.
     """
     def handle_signature(self, sig, signode):
-        print 'BsvDecoratorMixin.handle_signature', sig
+        print('BsvDecoratorMixin.handle_signature', sig)
         ret = super(BsvDecoratorMixin, self).handle_signature(sig, signode)
         signode.insert(0, addnodes.desc_addname('@', '@'))
         return ret
@@ -445,7 +445,7 @@ class BsvDecoratorMethod(BsvDecoratorMixin, BsvInterfacemember):
         return BsvInterfacemember.run(self)
 
 
-class BsvPackage(Directive):
+class BsvPackage(SphinxDirective):
     """
     Directive to mark description of a new package.
     """
@@ -487,7 +487,7 @@ class BsvPackage(Directive):
         return ret
 
 
-class BsvCurrentPackage(Directive):
+class BsvCurrentPackage(SphinxDirective):
     """
     This directive is just to tell Sphinx that we're documenting
     stuff in package foo, but links to package foo won't lead here.
@@ -546,7 +546,7 @@ class BsvPackageIndex(Index):
         ignores = self.domain.env.config['pkgindex_common_prefix']
         ignores = sorted(ignores, key=len, reverse=True)
         # list of all packages, sorted by package name
-        packages = sorted(self.domain.data['packages'].iteritems(),
+        packages = sorted(self.domain.data['packages'].items(),
                          key=lambda x: x[0].lower())
         # sort out collapsable packages
         prev_modname = ''
@@ -596,7 +596,7 @@ class BsvPackageIndex(Index):
         collapse = len(packages) - num_toplevels < num_toplevels
 
         # sort by first letter
-        content = sorted(content.iteritems())
+        content = sorted(content.items())
 
         return content, collapse
 
@@ -615,7 +615,7 @@ class BsvModuleIndex(Index):
         ignores = self.domain.env.config['pkgindex_common_prefix']
         ignores = sorted(ignores, key=len, reverse=True)
         # list of all packages, sorted by package name
-        modules = sorted(self.domain.data['modules'].iteritems(),
+        modules = sorted(self.domain.data['modules'].items(),
                          key=lambda x: x[0].lower())
         # sort out collapsable modules
         prev_modname = ''
@@ -665,7 +665,7 @@ class BsvModuleIndex(Index):
         collapse = len(modules) - num_toplevels < num_toplevels
 
         # sort by first letter
-        content = sorted(content.iteritems())
+        content = sorted(content.items())
 
         return content, collapse
 
@@ -841,14 +841,14 @@ class BsvDomain(Domain):
                                 contnode, name)
 
     def get_objects(self):
-        for modname, info in self.data['packages'].iteritems():
+        for modname, info in self.data['packages'].items():
             yield (modname, modname, 'package', info[0], 'package-' + modname, 0)
-        for refname, (docname, type) in self.data['objects'].iteritems():
+        for refname, (docname, type) in self.data['objects'].items():
             if type != 'package':  # packages are already handled
                 yield (refname, refname, type, docname, refname, 1)
 
 def setup(app):
-    print 'sphinxbsv setup'
+    print('sphinxbsv setup')
     app.add_config_value('bsv_include_bsvs', False, False)
     app.add_config_value('add_package_names', True, True)
     app.add_config_value('pkgindex_common_prefix', [], 'html')

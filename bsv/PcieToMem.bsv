@@ -55,6 +55,9 @@ endinterface
 
 (* synthesize *)
 module mkPcieToMem#(PciId my_id)(PcieToMem);
+
+    let verbose = False;
+
     Reg#(Bit#(7)) hitReg <- mkReg(0);
     FIFOF#(TLPMemoryIO3DWHeader) readHeaderFifo <- mkSizedFIFOF(8);
     FIFOF#(TLPMemoryIO3DWHeader) readDataFifo <- mkSizedFIFOF(8);
@@ -87,7 +90,7 @@ module mkPcieToMem#(PciId my_id)(PcieToMem);
          completionMimo.deq(1);
       end
 `endif
-      $display("completionHeader length=%d rbc=%d addr=%x", hdr.length, rbc, hdr.addr);
+      if (verbose) $display("completionHeader length=%d rbc=%d addr=%x", hdr.length, rbc, hdr.addr);
       TLPCompletionHeader completion = defaultValue;
       completion.format = MEM_WRITE_3DW_DATA;
       completion.pkttype = COMPLETION;
@@ -167,7 +170,7 @@ module mkPcieToMem#(PciId my_id)(PcieToMem);
       end
       else begin
 	 tlp.be = tlpBe(rbc);
-	 $display("tlp.data=%h tlp.be=%h", tlp.data, tlp.be);
+	 if (verbose) $display("tlp.data=%h tlp.be=%h", tlp.data, tlp.be);
 	 tlp.eof = True;
 	 rbc = 0;
       end
@@ -192,7 +195,7 @@ module mkPcieToMem#(PciId my_id)(PcieToMem);
     interface Client        tlp;
     interface Put response;
         method Action put(TLPData#(16) tlp);
-	    $display("PcieToMem.put tlp=%h", tlp);
+	    if (verbose) $display("PcieToMem.put tlp=%h", tlp);
 	    TLPMemoryIO3DWHeader h = unpack(tlp.data);
 	    hitReg <= tlp.hit;
 	    TLPMemoryIO3DWHeader hdr_3dw = unpack(tlp.data);
@@ -225,7 +228,7 @@ module mkPcieToMem#(PciId my_id)(PcieToMem);
 	     writeHeaderFifo.deq;
 	     writeDataFifo.enq(hdr);
 	     let burstLen = extend(hdr.length << 2);
-             $display("burstLen = %h", hdr.length << 2);
+             if (verbose) $display("burstLen = %h", hdr.length << 2);
 	     return PhysMemRequest { addr: extend(writeHeaderFifo.first.addr) << 2, burstLen: burstLen, tag: truncate(writeHeaderFifo.first.tag)
 `ifdef BYTE_ENABLES
 				    , firstbe: maxBound, lastbe: maxBound
@@ -254,7 +257,7 @@ module mkPcieToMem#(PciId my_id)(PcieToMem);
 	  method ActionValue#(PhysMemRequest#(32,32)) get();
 	     let hdr = readHeaderFifo.first;
 	     readHeaderFifo.deq;
-	     //$display("req_ar hdr.length=%d hdr.addr=%h", hdr.length, hdr.addr);
+	     //if (verbose) $display("req_ar hdr.length=%d hdr.addr=%h", hdr.length, hdr.addr);
 	     readDataFifo.enq(hdr);
 	     let burstLen = extend(hdr.length << 2);
 	     return PhysMemRequest { addr: extend(readHeaderFifo.first.addr) << 2, burstLen: burstLen, tag: truncate(readHeaderFifo.first.tag)

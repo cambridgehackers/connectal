@@ -79,16 +79,7 @@ ifneq ($(BSCMAJOR), 2013)
 else
     #BSCFLAGS_COMMON += -D ExportUnusedClocksAndResets
 endif
-ifeq ($(BSCVERSION), 2014.07.A)
-    BSCFLAGS_COMMON += -D ClockDefaultParam
-endif
-ifeq ($(BSCMAJOR), 2015)
-    BSCFLAGS_COMMON += -D ClockDefaultParam
-endif
-ifeq ($(BSCMAJOR), 2016)
-    BSCFLAGS_COMMON += -D ClockDefaultParam
-endif
-ifeq ($(BSCMAJOR), 2017)
+ifneq ($(BSCMAJOR), 2013)
     BSCFLAGS_COMMON += -D ClockDefaultParam
 endif
 ifeq ($(BOARD),bluesim)
@@ -97,9 +88,12 @@ else
     BSCFLAGS_COMMON += -verilog -remove-dollar
 endif
 
+# Add -wait-for-license if bsc supports it
+BSCFLAGS_COMMON += $(shell bsc -help | grep -q wait-for-license && echo -wait-for-license)
+
 BSCOPTFLAGS= -show-schedule -aggressive-conditions -show-method-bvi
 BSCPATHFLAGS=  -bdir $(DTOP)/obj -vdir $(DTOP)/verilog -simdir $(DTOP)/obj -info-dir $(DTOP)/obj
-BSCFLAGS_COMMON += $(BSCWARNFLAGS) $(BSCOPTFLAGS) $(BSCPATHFLAGS) --wait-for-license
+BSCFLAGS_COMMON += $(BSCWARNFLAGS) $(BSCOPTFLAGS) $(BSCPATHFLAGS)
 PROF_FLAGS= #-pg
 export SIM_CFLAGS= $(CFLAGS_PROJECT) -fPIC -Ijni -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -I $(CONNECTALDIR)/lib/json -O $(PROF_FLAGS)
 export SIM_CXXFLAGS= $(CXXFLAGS_PROJECT) -fPIC -Ijni -I $(CONNECTALDIR)/cpp -I $(CONNECTALDIR) -O $(PROF_FLAGS)
@@ -137,10 +131,12 @@ BUILDCACHE_CACHEDIR=buildcache-cache
 endif
 endif
 
+EXTRABSVPATH = $(shell test -d $(BLUESPECDIR)/Libraries/FPGA && echo -p +:$(BLUESPECDIR)/Libraries/FPGA/Xilinx:$(BLUESPECDIR)/Libraries/FPGA/Altera:$(BLUESPECDIR)/Libraries/FPGA/Misc)
+
 ifneq ($(BSC_LM_LICENSE_FILE),)
 RUN_BSC_LM_LICENSE_FILE=LM_LICENSE_FILE=$(BSC_LM_LICENSE_FILE)
 endif
-RUN_BSC = $(RUN_BSC_LM_LICENSE_FILE) BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) bsc $(BSC_QUIET) $(BSCFLAGS_COMMON) $(BSCFLAGS_PROJECT) $(BSCFLAGS_EXTRA) -p +:$(BSVPATH)
+RUN_BSC = $(RUN_BSC_LM_LICENSE_FILE) BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) bsc $(BSC_QUIET) $(BSVDEFINES) $(BSCFLAGS_COMMON) $(BSCFLAGS_PROJECT) $(BSCFLAGS_EXTRA) -p +:$(BSVPATH) $(EXTRABSVPATH)
 VFILE=verilog/$(MKTOP).v
 
 all: exe bits extratarget

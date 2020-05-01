@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Copyright (c) 2015 Connectal Project
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
@@ -37,7 +37,7 @@ argparser.add_argument('-D', '--bsvdefine', default=[], help='BSV define', actio
 argparser.add_argument('--bsvpath', default=[], help='directories to add to bsc search path', action='append')
 argparser.add_argument('--bluespecdir', default=default_bluespecdir, help='BSC bluespec dir')
 argparser.add_argument('-o', '--output', help='Output Makefile', default='Makefile.bsv')
-argparser.add_argument('--all', help='Generate entries for all BSV files on path.', default=False)
+argparser.add_argument('--all', help='Generate entries for all BSV files on path.', default=False, action='store_true')
 
 makefiletemplate='''
 %(name)s_BO  = obj/%(name)s.bo

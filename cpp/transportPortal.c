@@ -106,6 +106,7 @@ static int recv_portal(struct PortalInternal *pint, volatile unsigned int *buffe
         buffer[i] = portalPtr[0];
 printf("[RECV] data[%d] = %x\n", i, buffer[i]);
     }
+    return 0;
 }
 
 PortalTransportFunctions transportPortal = {

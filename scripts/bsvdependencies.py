@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Copyright (c) 2015 Connectal Project
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
@@ -25,6 +25,7 @@ import glob
 import argparse
 import re
 import bsvpreprocess
+import subprocess
 
 def getBsvPackages(bluespecdir):
     """BLUESPECDIR is expected to be the path to the bluespec distribution.
@@ -32,7 +33,7 @@ def getBsvPackages(bluespecdir):
     the packages in the prelude library of this distribution.
     """
     pkgs = []
-    for f in glob.glob('%s/Prelude/*.bo' % bluespecdir):
+    for f in glob.glob('%s/Prelude/*.bo' % bluespecdir) + glob.glob('%s/Libraries/*.bo' % bluespecdir) + glob.glob('%s/Libraries/*/*.bo' % bluespecdir) + glob.glob('%s/Libraries/*/*/*.bo' % bluespecdir):
         pkgs.append(os.path.splitext(os.path.basename(f))[0])
     return pkgs
 
@@ -57,11 +58,14 @@ def bsvDependencies(bsvfile, allBsv=False, bluespecdir=None, argbsvpath=[], bsvd
         ps = p.split(':')
         bsvpath.extend(ps)
     bsvpackages = getBsvPackages(bluespecdir)
+    project_packages = {}
     if allBsv:
         for d in bsvpath:
             for bsvfilename in glob.glob('%s/*.bsv' % d):
-                if bsvfilename not in bsvfile:
+                package_name = os.path.basename(bsvfilename)
+                if bsvfilename not in bsvfile and package_name not in project_packages:
                     bsvfile.append(bsvfilename)
+                    project_packages[package_name] = bsvfilename
     abspaths = {}
     for f in bsvfile:
         abspaths[os.path.basename(f)] = f
@@ -74,12 +78,19 @@ def bsvDependencies(bsvfile, allBsv=False, bluespecdir=None, argbsvpath=[], bsvd
         basename = os.path.basename(bsvfilename)
         (name, ext) = os.path.splitext(basename)
         source = vf.read()
-        preprocess = bsvpreprocess.preprocess(bsvfilename, source, bsvdefine, bsvpath)
+        ##preprocessed = bsvpreprocess.preprocess(bsvfilename, source, bsvdefine, bsvpath)
+        bsc_search_path = '+:' + ':'.join(bsvpath)
+        bsc_define_args = []
+        for var in bsvdefine:
+            bsc_define_args.append('-D')
+            bsc_define_args.append(var)
+        cp = subprocess.check_output(['bsc', '-E', '-p', bsc_search_path] + bsc_define_args + [bsvfilename])
+        preprocessed = cp.decode('utf8')
         packages = []
         includes = []
         synthesizedModules = []
         synthesize = False
-        for line in preprocess.split('\n'):
+        for line in preprocessed.split('\n'):
             m = re.match('//`include "([^\"]+)"', line)
             m1 = re.match('//`include(.*)', line)
             if m:
@@ -94,7 +105,7 @@ def bsvDependencies(bsvfile, allBsv=False, bluespecdir=None, argbsvpath=[], bsvd
 
             if re.match('^//', line):
                 continue
-            m = re.match('import ([A-Za-z0-9_]+)\w*', line)
+            m = re.match('import\s+([A-Za-z0-9_]+)\w*', line)
             if m:
                 pkg = m.group(1)
                 if pkg not in packages and pkg not in bsvpackages:

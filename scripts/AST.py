@@ -41,7 +41,7 @@ class InterfaceMixin:
         if not globalv.globalvars.has_key(subinterfaceName):
             return None
         subinterface = globalv.globalvars[subinterfaceName]
-        #print 'subinterface', subinterface, subinterface
+        #print('subinterface', subinterface, subinterface)
         return subinterface
     def parentClass(self, default):
         rv = default if (len(self.typeClassInstances)==0) else (self.typeClassInstances[0])
@@ -110,10 +110,10 @@ def serialize_json(interfaces, globalimports, bsvdefines):
             if item.params:
                  newitem['tparams'] = item.params
             if verbose:
-                print 'TYPEDEF globaldecl:', item, newitem
+                print('TYPEDEF globaldecl:', item, newitem)
             gdlist.append(newitem)
         elif verbose:
-            print 'Unprocessed globaldecl:', item
+            print('Unprocessed globaldecl:', item)
     toplevel['globaldecls'] = gdlist
     toplevel['globalimports'] = globalimports
     toplevel['bsvdefines'] = bsvdefines
@@ -124,8 +124,8 @@ def serialize_json(interfaces, globalimports, bsvdefines):
             j2file = open(tempFilename).read()
             toplevelnew = json.loads(j2file)
         except:
-            print 'Unable to encode json file', tempFilename
-            #print 'WWWW', toplevel
+            print('Unable to encode json file', tempFilename)
+            #print('WWWW', toplevel)
             sys.exit(-1)
     return toplevel
 
@@ -139,7 +139,7 @@ class Method:
         sparams = [p.__repr__() for p in self.params]
         return '<method: %s %s %s>' % (self.name, self.return_type, sparams)
     def instantiate(self, paramBindings):
-        #print 'instantiate method', self.name, self.params
+        #print('instantiate method', self.name, self.params)
         return Method(self.name,
                       self.return_type.instantiate(paramBindings),
                       [ p.instantiate(paramBindings) for p in self.params])
@@ -285,8 +285,8 @@ class Type:
         sparams = map(str, self.params)
         return '{type: %s %s}' % (self.name, sparams)
     def instantiate(self, paramBindings):
-        #print 'Type.instantiate', self.name, paramBindings
-        if paramBindings.has_key(self.name):
+        #print('Type.instantiate', self.name, paramBindings)
+        if self.name in paramBindings:
             return paramBindings[self.name]
         else:
             return Type(self.name, [p.instantiate(paramBindings) for p in self.params])

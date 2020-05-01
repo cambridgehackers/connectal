@@ -79,11 +79,12 @@ module mkSimDma(SimDma#(dataWidth) ifc)
 	 //return v;
       endmethod
       method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v, Bit#(TDiv#(dataWidth,8)) byteEnable);
+          let aligned_addr = addr & ~7;
 	  Vector#(TDiv#(dataWidth, 32), Bit#(32)) vs = unpack(v);
 	  Vector#(TDiv#(dataWidth, 32), Bit#(4)) byteEnables = unpack(byteEnable);
 	  function Action write32(Integer i);
 	     action
-		write_simDma32(handle, addr+4*fromInteger(i), vs[i], byteEnables[i]);
+		write_simDma32(handle, aligned_addr+4*fromInteger(i), vs[i], byteEnables[i]);
 	     endaction
 	  endfunction
 	 Vector#(TDiv#(dataWidth,32),Integer) indices = genVector();
@@ -143,9 +144,10 @@ module mkSimDma(SimDma#(dataWidth) ifc)
    method Action write(Bit#(32) handle, Bit#(32) addr, Bit#(dataWidth) v, Bit#(TDiv#(dataWidth,8)) byteEnable);
       Vector#(TDiv#(dataWidth, 32), Bit#(32)) vs = unpack(v);
       Vector#(TDiv#(dataWidth, 32), Bit#(4)) byteEnables = unpack(byteEnable);
+      let aligned_addr = addr & ~7;
       function Action write32(Integer i);
 	 action
-	    rws[i].write32(handle, addr+4*fromInteger(i), vs[i], byteEnables[i]);
+	    rws[i].write32(handle, aligned_addr+4*fromInteger(i), vs[i], byteEnables[i]);
 	 endaction
       endfunction
       Vector#(TDiv#(dataWidth,32),Integer) indices = genVector();
@@ -300,6 +302,9 @@ module mkSimDmaDmaMaster(PhysMemSlave#(serverAddrWidth,serverBusWidth))
 	       writeOffset = 0;
 	       byteEnable = reqFirstByteEnable(req);
 	    end
+`ifdef BYTE_ENABLES_MEM_DATA
+            byteEnable = resp.byte_enables;
+`endif
 	    rw.write(extend(handle), req.addr[31:0] + writeOffset, resp.data, extend(byteEnable));
 	    writeLenReg <= writeLen - 1;
 	    writeOffsetReg <= writeOffset + fromInteger(valueOf(serverBusWidth)/8);

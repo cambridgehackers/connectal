@@ -68,7 +68,12 @@ module renameReads#(Integer tile, MemReadClient#(DataBusWidth) reader, MemServer
    endinterface
    interface Put readData;
       method Action put(MemData#(DataBusWidth) v);
-	 reader.readData.put(MemData{data:v.data, tag:{0,tagLsb(v.tag)}, last:v.last});
+	 reader.readData.put(MemData{data:v.data,
+                                     tag:{0,tagLsb(v.tag)},
+`ifdef BYTE_ENABLES_MEM_DATA
+				     byte_enables: v.byte_enables,
+`endif
+                                     last:v.last});
       endmethod
    endinterface
 endmodule
@@ -90,7 +95,12 @@ module renameWrites#(Integer tile, MemWriteClient#(DataBusWidth) writer, MemServ
    interface Get writeData;
       method ActionValue#(MemData#(DataBusWidth)) get;
 	 let rv <- writer.writeData.get;
-   	 return MemData{data:rv.data, tag:{0,tagLsb(rv.tag)}, last:rv.last};
+   	 return MemData{data:rv.data,
+                        tag:{0,tagLsb(rv.tag)},
+`ifdef BYTE_ENABLES_MEM_DATA
+                             byte_enables: rv.byte_enables,
+`endif
+                             last:rv.last};
       endmethod
    endinterface
    interface Put writeDone;

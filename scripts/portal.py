@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Copyright (c) 2016 Connectal Project
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
@@ -64,10 +64,10 @@ class NativeProxy:
         respinfo = ctypes.c_int.in_dll(connectal, '%s_reqinfo' % responseInterface)
         resphandlemessage = getattr(connectal, '%s_handleMessage' % responseInterface)
         respproxyreq = ctypes.c_long.in_dll(connectal, 'p%sJsonProxyReq' % responseInterface)
-        #print 'respproxyreq=', respproxyreq
+        #print('respproxyreq=', respproxyreq)
         self.responsePortal = newIndicationPortal(respifcname, respinfo, resphandlemessage, respproxyreq)
         connectal.set_callback(self.responsePortal, ctypes.py_object(self))
-        #print 'JJ', '%x' % self.requestPortal, '%x' % self.responsePortal
+        #print('JJ', '%x' % self.requestPortal, '%x' % self.responsePortal)
         if multithreaded:
             self.t1 = threading.Thread(target=self.worker)
             self.t1.start()
@@ -75,7 +75,7 @@ class NativeProxy:
     def callback(self, a):
         ## use json_object_hook to convert JSON dictionaries to python objects
         vec = json.loads(a.strip(), None, None, json_object_hook)
-        #print 'callback called!!!', a, vec
+        #print('callback called!!!', a, vec)
         if hasattr(self.handler, vec[0]):
             getattr(self.handler, vec[0])(*vec[1:])
             if self.rpc:
@@ -89,14 +89,14 @@ class NativeProxy:
             connectal.portal_event(ctypes.c_void_p(self.responsePortal))
 
     def __getattr__(self, name, default=None):
-        #print '__getattr__', name, default
+        #print('__getattr__', name, default)
         if name in self.methods:
             return self.methods[name]
         m = getattr(connectal, '%s_%s' % (self.interfaceName, name), None)
         if m:
             def fcn (*args):
                 requestPortal = ctypes.c_void_p(self.requestPortal)
-                #print m, args
+                #print(m, args)
                 if len(args) == 1:
                     m(requestPortal, args[0])
                 elif len(args) == 2:
