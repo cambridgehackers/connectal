@@ -88,13 +88,13 @@ docs:
 spkg:
 	git clean -fdx
 	git checkout debian
-	sed -i s/precise/xenial/g debian/changelog
+	sed -i s/xenial/xenial/g debian/changelog
 	gbp buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu --git-ignore-new -S -tc -pgpg2 '--git-upstream-tag=v%(version)s'
 	git checkout debian
-	sed -i s/precise/bionic/g debian/changelog
+	sed -i s/xenial/bionic/g debian/changelog
 	gbp buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu --git-ignore-new -S -tc -pgpg2 '--git-upstream-tag=v%(version)s'
 	git checkout debian
-	sed -i s/precise/focal/g debian/changelog
+	sed -i s/xenial/focal/g debian/changelog
 	gbp buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu --git-ignore-new -S -tc -pgpg2 '--git-upstream-tag=v%(version)s'
 	git checkout debian
 
