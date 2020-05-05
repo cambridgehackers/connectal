@@ -1,3 +1,9 @@
+connectal (20.05.5-1xenial1) xenial; urgency=medium
+
+  * Added /dev/portal_dma_pcis mmap support in pcieportal
+
+ -- Jamey Hicks <jamey.hicks@gmail.com>  Tue, 05 May 2020 10:48:23 -0400
+
 connectal (20.05.1-1xenial1ubuntu1) xenial; urgency=medium
 
     * Update drivers for kernel 5.0
