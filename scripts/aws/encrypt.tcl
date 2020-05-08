@@ -38,7 +38,7 @@ foreach {file} [glob -nocomplain -- $CL_DIR/verilog/*.v $CL_DIR/verilog/*.sv $CL
 }
 foreach {dir} "$BLUESPECDIR/Verilog $BLUESPECDIR/Verilog.Vivado $CONNECTALDIR/verilog $HDK_SHELL_DIR/design/interfaces" {
     puts "Looking in directory $dir"
-    foreach {pat} {FIFO BRAM Reg Counter cl_ unused aws} {
+    foreach {pat} {FIFO BRAM Reg Counter Reset cl_ unused aws} {
 	foreach {file} [glob -nocomplain -- $dir/*$pat*.v $dir/*$pat*.vh $dir/*$pat*.inc $dir/*$pat*.sv] {
 	    puts "Copying file $file"
 	    file copy -force $file            $TARGET_DIR
