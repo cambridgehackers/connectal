@@ -40,7 +40,11 @@ module awsf1(
 `ifdef AWSF1_DDR_A
    localparam DDR_A_PRESENT=1;
    // DDR B and D are not used, disable them
+`ifdef AWSF1_DDR_B
+   localparam DDR_B_PRESENT=1;
+`else
    localparam DDR_B_PRESENT=0;
+`endif
    localparam DDR_D_PRESENT=0;
 
 //   localparam DDR_SCRB_MAX_ADDR = 64'h3FFFFFFFF; //16GB 
@@ -254,7 +258,6 @@ module awsf1(
    lib_pipe #(.WIDTH(1), .STAGES(4)) SH_DDR_SLC_RST_N (.clk(clk), .rst_n(1'b1), .in_bus(sync_rst_n), .out_bus(sh_ddr_sync_rst_n));
    sh_ddr #(
             .DDR_A_PRESENT(DDR_A_PRESENT),
-            .DDR_A_IO(1),
             .DDR_B_PRESENT(DDR_B_PRESENT),
             .DDR_D_PRESENT(DDR_D_PRESENT)
 	    ) SH_DDR
@@ -412,6 +415,7 @@ module awsf1(
                    .probe13 (sh_cl_apppf_irq_ack)
                    );
 `ifndef AWSF1_DMA_PCIS
+
    ila_connectal_2 cl_ila_master  (
                    .clk    (clk_main_a0),
                    .probe0 (cl_sh_pcim_awvalid),
@@ -442,7 +446,10 @@ module awsf1(
                    .probe24 (sh_cl_pcim_bvalid)
                    );
 `else
-      ila_connectal_2 cl_ila_pcis  (
+   wire [159:0] pc_status;
+   wire 	pc_asserted;
+
+      ila_connectal_3 cl_ila_pcis  (
                    .clk    (clk_main_a0),
                    .probe0 (sh_cl_dma_pcis_awvalid),
                    .probe1 (sh_cl_dma_pcis_awaddr),
@@ -459,7 +466,7 @@ module awsf1(
                    .probe11 (sh_cl_dma_pcis_rready),
                    .probe12(sh_cl_dma_pcis_wstrb),
                    .probe13 (sh_cl_dma_pcis_aruser),
-                   .probe14 (sh_cl_dma_pcis_awuser),
+                   .probe14 ({sh_cl_dma_pcis_wlast, cl_sh_dma_pcis_rid, cl_sh_dma_pcis_rresp, cl_sh_dma_pcis_rlast, pc_asserted}),
                    .probe15 (sh_cl_dma_pcis_arlen),
                    .probe16 (sh_cl_dma_pcis_awlen),
                    .probe17 (sh_cl_dma_pcis_arid),
@@ -469,7 +476,8 @@ module awsf1(
                    .probe21 (cl_sh_dma_pcis_bid),
                    .probe22 (cl_sh_dma_pcis_bresp),
                    .probe23 (sh_cl_dma_pcis_bready),
-                   .probe24 (cl_sh_dma_pcis_bvalid)
+                   .probe24 (cl_sh_dma_pcis_bvalid),
+                   .probe25 (pc_status)
                    );
 `endif
 `ifdef AWSF1_DDR_A
@@ -501,6 +509,37 @@ module awsf1(
                    .probe22 (sh_cl_ddr_bresp_2d[0]), // 2
                    .probe23 (cl_sh_ddr_bready_2d[0]),
                    .probe24 (sh_cl_ddr_bvalid_2d[0])
+                   );
+`endif
+`ifdef AWSF1_DDR_B
+   ila_connectal_2 cl_ila_mem  (
+                   .clk    (clk_main_a0),
+                   .probe0 (cl_sh_ddr_awvalid_2d[1]),
+                   .probe1 (cl_sh_ddr_awaddr_2d[1]), // 64
+                   .probe2 (sh_cl_ddr_awready_2d[1]),
+                   .probe3 (cl_sh_ddr_arvalid_2d[1]),
+                   .probe4 (cl_sh_ddr_araddr_2d[1]), // 64
+                   .probe5 (sh_cl_ddr_arready_2d[1]),
+
+                   .probe6 (cl_sh_ddr_wvalid_2d[1]),
+                   .probe7 (cl_sh_ddr_wdata_2d[1]), // 512
+                   .probe8 (sh_cl_ddr_wready_2d[1]),
+                   .probe9 (sh_cl_ddr_rvalid_2d[1]),
+                   .probe10 (sh_cl_ddr_rdata_2d[1]), // 512
+                   .probe11 (cl_sh_ddr_rready_2d[1]),
+                   .probe12 (cl_sh_ddr_wstrb_2d[1]), // 64
+                   .probe13 (0), // 19
+                   .probe14 (0), // 19
+                   .probe15 (cl_sh_ddr_arlen_2d[1]),  // 8
+                   .probe16 (cl_sh_ddr_awlen_2d[1]), // 8
+                   .probe17 (cl_sh_ddr_arsize_2d[1]), // 3
+                   .probe18 (cl_sh_ddr_awsize_2d[1]), // 3
+                   .probe19 (cl_sh_ddr_awid_2d[1]), // 16
+                   .probe20 (cl_sh_ddr_arid_2d[1]), // 16
+                   .probe21 (sh_cl_ddr_bid_2d[1]), // 16
+                   .probe22 (sh_cl_ddr_bresp_2d[1]), // 2
+                   .probe23 (cl_sh_ddr_bready_2d[1]),
+                   .probe24 (sh_cl_ddr_bvalid_2d[1])
                    );
 `endif
 
@@ -633,9 +672,48 @@ module awsf1(
 
 `endif // AWSF1_DDR_A
 
+`ifdef AWSF1_DDR_B
+              .pins_ddr_b_araddr(cl_sh_ddr_araddr_2d[1]),
+	      .pins_ddr_b_arid(cl_sh_ddr_arid_2d[1]),
+	      .pins_ddr_b_arlen(cl_sh_ddr_arlen_2d[1]),
+	      .pins_ddr_b_arready(sh_cl_ddr_arready_2d[1]),
+	      .pins_ddr_b_arsize(cl_sh_ddr_arsize_2d[1]),
+	      .pins_ddr_b_arburst(cl_sh_ddr_arburst_2d[1]),
+	      .pins_ddr_b_arvalid(cl_sh_ddr_arvalid_2d[1]),
+
+	      .pins_ddr_b_awaddr(cl_sh_ddr_awaddr_2d[1]),
+	      .pins_ddr_b_awid(cl_sh_ddr_awid_2d[1]),
+	      .pins_ddr_b_awlen(cl_sh_ddr_awlen_2d[1]),
+	      .pins_ddr_b_awready(sh_cl_ddr_awready_2d[1]),
+	      .pins_ddr_b_awsize(cl_sh_ddr_awsize_2d[1]),
+	      .pins_ddr_b_awburst(cl_sh_ddr_awburst_2d[1]),
+	      .pins_ddr_b_awvalid(cl_sh_ddr_awvalid_2d[1]),
+	      //.pins_ddr_b_awlock(),
+
+	      .pins_ddr_b_bid(sh_cl_ddr_bid_2d[1]),
+	      .pins_ddr_b_bready(cl_sh_ddr_bready_2d[1]),
+	      .pins_ddr_b_bresp(sh_cl_ddr_bresp_2d[1]),
+	      .pins_ddr_b_bvalid(sh_cl_ddr_bvalid_2d[1]),
+
+	      .pins_ddr_b_rdata(sh_cl_ddr_rdata_2d[1]),
+	      .pins_ddr_b_rid(sh_cl_ddr_rid_2d[1]),
+	      .pins_ddr_b_rlast(sh_cl_ddr_rlast_2d[1]),
+	      .pins_ddr_b_rready(cl_sh_ddr_rready_2d[1]),
+	      .pins_ddr_b_rresp(sh_cl_ddr_rresp_2d[1]),
+	      .pins_ddr_b_rvalid(sh_cl_ddr_rvalid_2d[1]),
+
+	      .pins_ddr_b_wdata(cl_sh_ddr_wdata_2d[1]),
+	      //.pins_ddr_b_wid(cl_sh_ddr_wid_2d[1]),
+	      .pins_ddr_b_wlast(cl_sh_ddr_wlast_2d[1]),
+	      .pins_ddr_b_wready(sh_cl_ddr_wready_2d[1]),
+	      .pins_ddr_b_wstrb(cl_sh_ddr_wstrb_2d[1]),
+	      .pins_ddr_b_wvalid(cl_sh_ddr_wvalid_2d[1]),
+
+`endif // AWSF1_DDR_B
+
 // DDR3 END
 
-`ifdef AWSF1_DMA_PCIS
+ `ifdef AWSF1_DMA_PCIS
 	      .pins_pcis_araddr(sh_cl_dma_pcis_araddr[39:0]),
 	      .pins_pcis_arburst(1),
 	      .pins_pcis_arcache(0),
@@ -724,4 +802,58 @@ module awsf1(
 	      .pcim_wstrb(cl_sh_pcim_wstrb),
 	      .pcim_wvalid(cl_sh_pcim_wvalid)
 );
+
+
+`ifdef AWSF1_CL_DEBUG_BRIDGE
+`ifdef AWSF1_DMA_PCIS
+`ifdef AWSF1_AXI_PROTOCOL_CHECKER
+axi_protocol_checker_0 axi_protocol_checker_i (
+  .pc_status(pc_status),              // output wire [159 : 0] pc_status
+  .pc_asserted(pc_asserted),          // output wire pc_asserted
+  .aclk(clk_main_a0),                        // input wire aclk
+  .aresetn(rst_main_n),                  // input wire aresetn
+  .pc_axi_awid(sh_cl_dma_pcis_awid),          // input wire [5 : 0] pc_axi_awid
+  .pc_axi_awaddr(sh_cl_dma_pcis_awaddr),      // input wire [63 : 0] pc_axi_awaddr
+  .pc_axi_awlen(sh_cl_dma_pcis_awlen),        // input wire [7 : 0] pc_axi_awlen
+  .pc_axi_awsize(sh_cl_dma_pcis_awsize),      // input wire [2 : 0] pc_axi_awsize
+  .pc_axi_awburst(1),    // input wire [1 : 0] pc_axi_awburst
+  .pc_axi_awlock(0),      // input wire [0 : 0] pc_axi_awlock
+  .pc_axi_awcache(0),    // input wire [3 : 0] pc_axi_awcache
+  .pc_axi_awprot(0),      // input wire [2 : 0] pc_axi_awprot
+  .pc_axi_awqos(0),        // input wire [3 : 0] pc_axi_awqos
+  .pc_axi_awregion(0),  // input wire [3 : 0] pc_axi_awregion
+  .pc_axi_awvalid(sh_cl_dma_pcis_awvalid),    // input wire pc_axi_awvalid
+  .pc_axi_awready(cl_sh_dma_pcis_awready),    // input wire pc_axi_awready
+  .pc_axi_wlast(sh_cl_dma_pcis_wlast),        // input wire pc_axi_wlast
+  .pc_axi_wdata(sh_cl_dma_pcis_wdata),        // input wire [511 : 0] pc_axi_wdata
+  .pc_axi_wstrb(sh_cl_dma_pcis_wstrb),        // input wire [63 : 0] pc_axi_wstrb
+  .pc_axi_wvalid(sh_cl_dma_pcis_wvalid),      // input wire pc_axi_wvalid
+  .pc_axi_wready(cl_sh_dma_pcis_wready),      // input wire pc_axi_wready
+  .pc_axi_bid(cl_sh_dma_pcis_bid),            // input wire [5 : 0] pc_axi_bid
+  .pc_axi_bresp(cl_sh_dma_pcis_bresp),        // input wire [1 : 0] pc_axi_bresp
+  .pc_axi_bvalid(cl_sh_dma_pcis_bvalid),      // input wire pc_axi_bvalid
+  .pc_axi_bready(sh_cl_dma_pcis_bready),      // input wire pc_axi_bready
+  .pc_axi_arid(sh_cl_dma_pcis_arid),          // input wire [5 : 0] pc_axi_arid
+  .pc_axi_araddr(sh_cl_dma_pcis_araddr),      // input wire [63 : 0] pc_axi_araddr
+  .pc_axi_arlen(sh_cl_dma_pcis_arlen),        // input wire [7 : 0] pc_axi_arlen
+  .pc_axi_arsize(sh_cl_dma_pcis_arsize),      // input wire [2 : 0] pc_axi_arsize
+  .pc_axi_arburst(1),    // input wire [1 : 0] pc_axi_arburst
+  .pc_axi_arlock(0),      // input wire [0 : 0] pc_axi_arlock
+  .pc_axi_arcache(0),    // input wire [3 : 0] pc_axi_arcache
+  .pc_axi_arprot(0),      // input wire [2 : 0] pc_axi_arprot
+  .pc_axi_arqos(0),        // input wire [3 : 0] pc_axi_arqos
+  .pc_axi_arregion(0),  // input wire [3 : 0] pc_axi_arregion
+  .pc_axi_arvalid(sh_cl_dma_pcis_arvalid),    // input wire pc_axi_arvalid
+  .pc_axi_arready(cl_sh_dma_pcis_arready),    // input wire pc_axi_arready
+  .pc_axi_rid(cl_sh_dma_pcis_rid),            // input wire [5 : 0] pc_axi_rid
+  .pc_axi_rlast(cl_sh_dma_pcis_rlast),        // input wire pc_axi_rlast
+  .pc_axi_rdata(cl_sh_dma_pcis_rdata),        // input wire [511 : 0] pc_axi_rdata
+  .pc_axi_rresp(cl_sh_dma_pcis_rresp),        // input wire [1 : 0] pc_axi_rresp
+  .pc_axi_rvalid(cl_sh_dma_pcis_rvalid),      // input wire pc_axi_rvalid
+  .pc_axi_rready(sh_cl_dma_pcis_rready)      // input wire pc_axi_rready
+);
+`endif // AWSF1_AXI_PROTOCOL_CHECKER
+`endif //  `ifdef AWSF1_DMA_PCIS
+`endif //  `ifdef AWSF1_CL_DEBUG_BRIDGE
+
    endmodule
