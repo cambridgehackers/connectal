@@ -86,7 +86,7 @@ typedef struct {
         volatile uint32_t *regs;  // Pointer to access portal from kernel
         unsigned long     offset; // Offset from base of BAR2
         struct extra_info *extra;
-        struct list_head pmlist;
+	struct list_head pmlist;
 } tPortal;
 
 typedef struct {
@@ -95,9 +95,9 @@ typedef struct {
 } tTile;
 
 struct pmentry {
-        struct file     *fmem;
-        int              id;
-        struct list_head pmlist;
+	struct file     *fmem;
+	int              id;
+	struct list_head pmlist;
 };
 
 typedef struct tBoard {
@@ -108,16 +108,20 @@ typedef struct tBoard {
         unsigned int      open_count;
         tTile             tile[MAX_NUM_PORTALS];
         struct extra_info *extra;
-        struct extra_info *pcis; // DMA PCIS on AWSF1
         struct {
           unsigned int board_number;
           unsigned int portal_number;
           unsigned int num_portals;
-          unsigned int aws_shell;
+	  unsigned int aws_shell;
         }                 info; /* board identification fields */
 } tBoard;
 
 extern tBoard* get_pcie_portal_descriptor(void);
 #endif
+
+int pcieportal_probe(struct pci_dev *dev, const struct pci_device_id *id);
+void pcieportal_remove(struct pci_dev *dev);
+struct xdma_pci_dev;
+int pcieportal_board_activate(int activate, tBoard *this_board, struct xdma_pci_dev *xpdev, struct pci_dev *dev);
 
 #endif /* __BLUENOC_H__ */

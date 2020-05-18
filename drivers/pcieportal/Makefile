@@ -11,6 +11,9 @@ CURRENTDIR := $(PWD)
 CONNECTALDIR ?= $(CURRENTDIR)/../..
 include $(CONNECTALDIR)/Makefile.version
 
+pcieportal-objs := portal.o libxdma.o xdma_cdev.o cdev_ctrl.o cdev_events.o cdev_sgdma.o cdev_xvc.o cdev_bypass.o xdma_mod.o
+
+TARGET_MODULE:=pcieportal
 obj-m += pcieportal.o
 
 PKG_NAME?=connectal
@@ -36,7 +39,7 @@ pcieportal_signature_file.h:
 driverversion.h:
 	VERSION=$(VERSION) echo "#define DRIVER_VERSION \"$$VERSION\"" > driverversion.h
 
-pcieportal.ko: pcieportal.c pcieportal.h pcieportal_signature_file.h driverversion.h
+pcieportal.ko: portal.c pcieportal.h pcieportal_signature_file.h driverversion.h
 	$(Q)$(MAKE) -C $(KROOT) M=$(PWD) modules
 
 .PHONY: modules_check
@@ -90,7 +93,7 @@ install-dkms: pcieportal_signature_file.h
 	sed "s/@VERSION@/$(VERSION)/" Makefile.dkms > Makefile.dkms.out
 	cp -fv dkms.conf.out $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/dkms.conf
 	cp -fv Makefile.dkms.out $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/Makefile
-	cp -fv pcieportal_signature_file.h pcieportal.c pcieportal.h driverversion.h $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
+	cp -fv pcieportal_signature_file.h portal.c pcieportal.h driverversion.h $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
 	cp -fv ../../cpp/*.[ch] ../portalmem/*.[ch] \
 	../../generated/cpp/*.[ch] \
 	$(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
