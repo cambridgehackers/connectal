@@ -108,6 +108,7 @@ typedef struct tBoard {
         unsigned int      open_count;
         tTile             tile[MAX_NUM_PORTALS];
         struct extra_info *extra;
+        struct extra_info *pcis; // DMA PCIS on AWSF1
         struct {
           unsigned int board_number;
           unsigned int portal_number;
