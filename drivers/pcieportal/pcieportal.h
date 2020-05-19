@@ -18,10 +18,11 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __BLUENOC_H__
-#define __BLUENOC_H__
+#ifndef __PCIEPORTAL_H__
+#define __PCIEPORTAL_H__
 
 #include <linux/ioctl.h>
+#include <linux/cdev.h>
 
 /*
  * IOCTLs
@@ -72,57 +73,4 @@ typedef struct ChangeEntry {
 #define PCIE_SIGNATURE       _IOR(BNOC_IOC_MAGIC,14,PortalSignaturePcie)
 #define PCIE_CHANGE_ENTRY    _IOR(BNOC_IOC_MAGIC,15,tChangeEntry*)
 
-#ifdef __KERNEL__
-/*
- * Per-device data
- */
-typedef struct {
-        unsigned int      device_number;
-        unsigned int      device_tile;
-        unsigned int      portal_number;
-        unsigned int      device_name;
-        struct tBoard    *board;
-        void             *virt;
-        volatile uint32_t *regs;  // Pointer to access portal from kernel
-        unsigned long     offset; // Offset from base of BAR2
-        struct extra_info *extra;
-	struct list_head pmlist;
-} tPortal;
-
-typedef struct {
-        unsigned int      device_tile;
-        struct tBoard    *board;
-} tTile;
-
-struct pmentry {
-	struct file     *fmem;
-	int              id;
-	struct list_head pmlist;
-};
-
-typedef struct tBoard {
-        void __iomem     *bar0io, *bar1io, *bar2io, *bar4io; /* bars */
-        struct pci_dev   *pci_dev; /* pci device pointer */
-        tPortal           portal[MAX_NUM_PORTALS];
-        unsigned int      irq_num;
-        unsigned int      open_count;
-        tTile             tile[MAX_NUM_PORTALS];
-        struct extra_info *extra;
-        struct extra_info *pcis; // DMA PCIS on AWSF1
-        struct {
-          unsigned int board_number;
-          unsigned int portal_number;
-          unsigned int num_portals;
-	  unsigned int aws_shell;
-        }                 info; /* board identification fields */
-} tBoard;
-
-extern tBoard* get_pcie_portal_descriptor(void);
-#endif
-
-int pcieportal_probe(struct pci_dev *dev, const struct pci_device_id *id);
-void pcieportal_remove(struct pci_dev *dev);
-struct xdma_pci_dev;
-int pcieportal_board_activate(int activate, tBoard *this_board, struct xdma_pci_dev *xpdev, struct pci_dev *dev);
-
-#endif /* __BLUENOC_H__ */
+#endif // __PCIEPORTAL_H__

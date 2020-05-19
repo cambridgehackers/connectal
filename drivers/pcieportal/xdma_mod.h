@@ -50,7 +50,7 @@
 #include <linux/uio.h>
 
 #include "libxdma.h"
-#include "pcieportal.h"
+#include "portal_internal.h"
 
 #define MAGIC_ENGINE	0xEEEEEEEEUL
 #define MAGIC_DEVICE	0xDDDDDDDDUL
