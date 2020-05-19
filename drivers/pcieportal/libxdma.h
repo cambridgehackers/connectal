@@ -39,6 +39,8 @@
 /* Switch debug printing on/off */
 #define XDMA_DEBUG 0
 
+#define XDMA_CONFIG_BAR_NUM (2) // no need to search for it. -Jamey
+
 /* SECTION: Preprocessor macros/constants */
 #define XDMA_BAR_NUM (6)
 

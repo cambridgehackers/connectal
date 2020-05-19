@@ -1632,7 +1632,7 @@ static int map_bars(struct xdma_dev *xdev, struct pci_dev *dev)
 		}
 
 		/* Try to identify BAR as XDMA control BAR */
-		if ((bar_len >= XDMA_BAR_SIZE) && (xdev->config_bar_idx < 0)) {
+		if ((bar_len >= XDMA_BAR_SIZE) && (xdev->config_bar_idx < 0) && i == XDMA_CONFIG_BAR_NUM) {
 
 			if (is_config_bar(xdev, i)) {
 				xdev->config_bar_idx = i;
@@ -1942,6 +1942,7 @@ static void irq_msix_user_teardown(struct xdma_dev *xdev)
 
 	prog_irq_msix_user(xdev, 1);
 
+	if (0)
 	for (i = 0; i < xdev->user_max; i++, j++) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0)
 		u32 vector = pci_irq_vector(xdev->pdev, j);
@@ -1959,7 +1960,9 @@ static int irq_msix_user_setup(struct xdma_dev *xdev)
 	int j = xdev->h2c_channel_max + xdev->c2h_channel_max;
 	int rv = 0;	
 
+	printk("irq_msix_user_setup min %d max %d\n", xdev->h2c_channel_max + xdev->c2h_channel_max, xdev->user_max);
 	/* vectors set in probe_scan_for_msi() */
+	if (0) {
 	for (i = 0; i < xdev->user_max; i++, j++) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0)
 		u32 vector = pci_irq_vector(xdev->pdev, j);
@@ -1976,6 +1979,7 @@ static int irq_msix_user_setup(struct xdma_dev *xdev)
 		pr_info("%d-USR-%d, IRQ#%d with 0x%p\n", xdev->idx, i, vector,
 			&xdev->user_irq[i]);
         }
+	}
 
 	/* If any errors occur, free IRQs that were successfully requested */
 	if (rv) {
