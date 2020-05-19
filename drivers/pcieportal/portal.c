@@ -102,10 +102,10 @@ static unsigned long long expected_magic = 'B' | ((unsigned long long) 'l' << 8)
  */
 static irqreturn_t intr_handler(int irq, void *p)
 {
-        tTile *this_tile = p;
+	tTile *this_tile = p;
         tBoard *this_board = this_tile->board;
         int i;
-        //printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_tile->device_tile-1);
+        printk(KERN_INFO "%s_%d: interrupt %d!\n", DEV_NAME, this_tile->device_tile-1, irq);
         for (i = 0; i < MAX_NUM_PORTALS; i++) {
                 if ((this_tile->device_tile-1 == this_board->portal[i].device_tile)
                     || this_tile->board->info.aws_shell) {
@@ -544,6 +544,15 @@ int pcieportal_board_activate(int activate, tBoard *this_board, struct xdma_pci_
                         printk("   irq block ID %x\n", ioread32(this_board->bar2io + 0x2000));
                         printk("config block ID %x\n", ioread32(this_board->bar2io + 0x3000));
                 }
+                printk("pci_dev %08lx\n", (long)this_board->pci_dev);
+                this_board->irq_num = pci_irq_vector(this_board->pci_dev, 8);
+                for (i = 8; i < 16; i++) {
+			int irq_num = pci_irq_vector(this_board->pci_dev, i);
+                        if (request_irq(irq_num, intr_handler, 0, DEV_NAME, (void *)&this_board->tile[0])) {
+                                printk(KERN_ERR "%s: Failed to get requested IRQ %d\n", DEV_NAME, irq_num);
+                                err = -EBUSY;
+                        }
+                }
 #if 0
                 /* enable MSIX */
                 for (i = 0; i < num_entries; i++)
@@ -592,6 +601,7 @@ int pcieportal_board_activate(int activate, tBoard *this_board, struct xdma_pci_
                         void __iomem *pportal = ptile;
                         int num_portals = *(volatile uint32_t *)(pportal + PCR_NUM_PORTALS_OFFSET);
                         int portal_index = 0;
+			printk("tile %d num_portals %d\n", tile_index, num_portals);
                         this_board->tile[tile_index].board = this_board;
                         this_board->tile[tile_index].device_tile = tile_index + 1;
                         do {  // loop over all portals in a tile
@@ -709,6 +719,10 @@ int pcieportal_board_activate(int activate, tBoard *this_board, struct xdma_pci_
         for (i = 0; i < num_entries; i++) 
                 free_irq(this_board->irq_num + i, (void *) &this_board->tile[i]);
 #endif
+	for (i = 8; i < 16; i++) {
+		int irq_num = pci_irq_vector(this_board->pci_dev, i);
+		free_irq(irq_num, (void *)&this_board->tile[0]);
+	}
 
         if (pcieportal_class)
                 class_destroy(pcieportal_class);
