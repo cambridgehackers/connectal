@@ -22,7 +22,6 @@
 #define __PCIEPORTAL_H__
 
 #include <linux/ioctl.h>
-#include <linux/cdev.h>
 
 /*
  * IOCTLs
