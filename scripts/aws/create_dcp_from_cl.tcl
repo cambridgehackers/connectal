@@ -195,6 +195,10 @@ switch $strategy {
         source $HDK_SHELL_DIR/build/scripts/strategy_DEFAULT.tcl
     }
 }
+if { [file exists $CL_DIR/strategy_OVERRIDES.tcl] } {
+    puts "Custom OVERRIDES for strategy."
+    source $CL_DIR/strategy_OVERRIDES.tcl
+}
 
 #Encrypt source code
 source encrypt.tcl
