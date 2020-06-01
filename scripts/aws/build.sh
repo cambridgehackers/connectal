@@ -71,7 +71,7 @@ echo '#placeholder' > ../constraints/cl_pnr_user.xdc
 echo '#placeholder' > ../constraints/cl_synth_user.xdc
 
 ## run Vivado to build the FPGA image
-$AWS_FPGA_REPO_DIR/hdk/common/shell_stable/build/scripts/aws_build_dcp_from_cl.sh -ignore_memory_requirement -strategy CONGESTION -clock_recipe_a A0 -notify -foreground
+$AWS_FPGA_REPO_DIR/hdk/common/shell_stable/build/scripts/aws_build_dcp_from_cl.sh -ignore_memory_requirement -notify -foreground "$@"
 
 PROJECT_DIR=`dirname $CL_DIR`
 PROJECT_NAME=`basename $PROJECT_DIR`
