@@ -47,6 +47,7 @@ import AxiBits::*;
 import AxiDma::*;
 import FIFOF::*;
 import ConnectalFIFO::*;
+import Clocks::*;
 
 `include "ConnectalProjectConfig.bsv"
 
@@ -261,10 +262,15 @@ module mkAwsF1Top#(Clock clk_main_a0, Clock clk_extra_a1, Clock clk_extra_a2, Cl
 
    Clock defaultClock = clk_main_a0;
    Reset defaultReset = rst_main_n;
+`ifdef AWSF1_DERIVED_CLOCK
+   Clock derivedClock = `AWSF1_DERIVED_CLOCK;
+   Reset derivedReset <- mkAsyncReset(5, rst_main_n, derivedClock);
+`else
    Clock derivedClock = clk_main_a0;
    Reset derivedReset = rst_main_n;
+`endif
 
-   XsimHost host <- mkXsimHost(clk_main_a0, rst_main_n, clk_main_a0);
+   XsimHost host <- mkXsimHost(derivedClock, derivedReset, defaultClock);
    let top <- mkConnectalTop(
 `ifdef IMPORT_HOSTIF
        host,

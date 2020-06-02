@@ -42,7 +42,11 @@
 #include <linux/dma-buf.h>
 #include "driverversion.h"
 
+#include "libxdma.h"
+#include "xdma_mod.h"
+
 #include "pcieportal.h"
+#include "portal_internal.h"
 #define CONNECTAL_DRIVER_CODE
 #include "portal.h" // PORTAL_BASE_OFFSET
 #include "dmaSendFd.h"
@@ -88,36 +92,24 @@
 static dev_t device_number;
 static char portalp[MAX_MINOR_COUNT]; // free map of minor numbers
 static struct class *pcieportal_class = NULL;
-typedef struct extra_info { /* these datatypes are not available to userspace */
-        struct cdev       cdev; /* per-portal cdev structure */
-        wait_queue_head_t wait_queue; /* used for interrupt notifications */
-        dma_addr_t        dma_handle;
-        tPortal          *portal;
-} extra_info;
-static extra_info extra_portal_info[MAX_MINOR_COUNT];
-static extra_info extra_board_info[NUM_BOARDS];
-static extra_info pcis_board_info[NUM_BOARDS];
-static tBoard board_map[NUM_BOARDS + 1];
 static unsigned long long expected_magic = 'B' | ((unsigned long long) 'l' << 8)
     | ((unsigned long long) 'u' << 16) | ((unsigned long long) 'e' << 24)
     | ((unsigned long long) 's' << 32) | ((unsigned long long) 'p' << 40)
     | ((unsigned long long) 'e' << 48) | ((unsigned long long) 'c' << 56);
-static tTraceInfo traceInfo;
 
 /*
  * interrupt handler
  */
 static irqreturn_t intr_handler(int irq, void *p)
 {
-        tTile *this_tile = p;
+	tTile *this_tile = p;
         tBoard *this_board = this_tile->board;
         int i;
-        //printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_tile->device_tile-1);
+        printk(KERN_INFO "%s_%d: interrupt %d!\n", DEV_NAME, this_tile->device_tile-1, irq);
         for (i = 0; i < MAX_NUM_PORTALS; i++) {
                 if ((this_tile->device_tile-1 == this_board->portal[i].device_tile)
                     || this_tile->board->info.aws_shell) {
-                        if (this_board->portal[i].extra)
-                                wake_up_interruptible(&(this_board->portal[i].extra->wait_queue));
+			wake_up_interruptible(&(this_board->portal[i].wait_queue));
                 }
         }
         return IRQ_HANDLED;
@@ -131,7 +123,7 @@ static irqreturn_t intr_handler(int irq, void *p)
 static int pcieportal_open(struct inode *inode, struct file *filp)
 {
         int err = 0;
-        tPortal *this_portal = ((extra_info *)inode->i_cdev)->portal;
+        tPortal *this_portal = (tPortal *)inode->i_cdev;
 
         if (!this_portal) {
                 printk("pcieportal_open: basedevice_number=%x /dev/connectal\n", device_number);
@@ -140,9 +132,9 @@ static int pcieportal_open(struct inode *inode, struct file *filp)
                 printk("pcieportal_open: basedevice_number=%x tile=%d name=%d\n",
                        device_number, this_portal->device_tile, this_portal->device_name);
 //printk("[%s:%d] inode %p filp %p portal %p priv %p privp %p extra %p\n", __FUNCTION__, __LINE__, inode, filp, this_portal, filp->private_data, privp, this_portal->extra);
-                init_waitqueue_head(&(this_portal->extra->wait_queue));
+                init_waitqueue_head(&(this_portal->wait_queue));
                 /* increment the open file count */
-                this_portal->board->open_count += 1;
+                this_portal->board->open_count += 1; 
         }
         filp->private_data = (void *) this_portal;
         // FIXME: why does the kernel think this device is RDONLY?
@@ -160,7 +152,7 @@ static int pcieportal_release(struct inode *inode, struct file *filp)
         PortalInternal devptr = {.map_base = this_portal->regs, .transport = &kernelfunc};
 
         /* decrement the open file count */
-        init_waitqueue_head(&(this_portal->extra->wait_queue));
+        init_waitqueue_head(&(this_portal->wait_queue));
         this_portal->board->open_count -= 1;
         printk("%s_%d_%d: Closed device file\n", DEV_NAME, this_portal->device_tile, this_portal->device_name);
         list_for_each(pmlist, &this_portal->pmlist) {
@@ -183,7 +175,7 @@ static unsigned int pcieportal_poll(struct file *filp, poll_table *poll_table)
         uint32_t status = 0;
 
         //printk(KERN_INFO "%s_%d_%d: poll function called\n", DEV_NAME, this_portal->device_tile, this_portal->device_name);
-        poll_wait(filp, &this_portal->extra->wait_queue, poll_table);
+        poll_wait(filp, &this_portal->wait_queue, poll_table);
         if (this_portal->regs) {
             status = *this_portal->regs;
         }
@@ -204,7 +196,6 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
         tPortal *this_portal = (tPortal *) filp->private_data;
         tBoard *this_board = NULL;
         //tBoardInfo info;
-        static int trace_index;
 
         if (this_portal)
             this_board = this_portal->board;
@@ -224,45 +215,6 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
         }
         if (!err)
         switch (cmd) {
-        case BNOC_GET_TLP:
-                {
-                /* copy board identification info to a user-space struct */
-                unsigned int tlp[6];
-                memset((char *) tlp, 0xbf, sizeof(tlp));
-                tlp[5] = ioread32(this_board->bar0io + CSR_TLPDATABRAMRESPONSESLICE5);
-                mb();
-                tlp[0] = ioread32(this_board->bar0io + CSR_TLPDATABRAMRESPONSESLICE0);
-                mb();
-                tlp[4] = ioread32(this_board->bar0io + CSR_TLPDATABRAMRESPONSESLICE4);
-                mb();
-                tlp[1] = ioread32(this_board->bar0io + CSR_TLPDATABRAMRESPONSESLICE1);
-                mb();
-                tlp[3] = ioread32(this_board->bar0io + CSR_TLPDATABRAMRESPONSESLICE3);
-                mb();
-                tlp[2] = ioread32(this_board->bar0io + CSR_TLPDATABRAMRESPONSESLICE2);
-                iowrite32(trace_index++, this_board->bar0io + CSR_TLPDATAFIFO_DEQ);
-                // now deq the tlpDataFifo
-                err = copy_to_user((void __user *) arg, tlp, sizeof(tTlpData));
-                break;
-                }
-        case BNOC_TRACE:
-                {
-                trace_index = 0;
-                iowrite32(0, this_board->bar0io + CSR_TLPPCIEWRADDRREG);
-                traceInfo.trace = ioread32(this_board->bar0io + CSR_TLPTRACINGREG);
-                traceInfo.traceLength = ioread32(this_board->bar0io + CSR_TLPTRACELENGTHREG);
-                if (traceInfo.traceLength == 0xbad0add0) // unimplemented
-                         traceInfo.traceLength = 2048; // default value
-                iowrite32(0, this_board->bar0io + CSR_TLPTRACINGREG);  // disable tracing
-                printk("disable tracing old trace=%d\n", traceInfo.trace);
-                err = copy_to_user((void __user *) arg, &traceInfo, sizeof(tTraceInfo));
-                iowrite32(trace_index++, this_board->bar0io + CSR_TLPDATAFIFO_DEQ);
-                }
-                break;
-        case BNOC_ENABLE_TRACE:
-                traceInfo.trace = ioread32(this_board->bar0io + CSR_TLPTRACINGREG);
-                iowrite32(1, this_board->bar0io + CSR_TLPTRACINGREG);  // disable tracing
-                break;
         case PCIE_SEND_FD:
                 {
                 /* pushd down allocated fd */
@@ -303,40 +255,6 @@ static long pcieportal_ioctl(struct file *filp, unsigned int cmd, unsigned long 
                         }
                 }
         } break;
-        case PCIE_SIGNATURE: {
-                PortalSignaturePcie signature;
-                static struct {
-                    const char md5[33];
-                    const char filename[33];
-                } filesignatures[] = {
-#include "pcieportal_signature_file.h"
-                    };
-                int err = copy_from_user(&signature, (void __user *) arg, sizeof(signature));
-                if (err)
-                        return -EFAULT;
-                signature.md5[0] = 0;
-                signature.filename[0] = 0;
-//printk("%s: index %d/%ld\n", __FUNCTION__, signature.index, (long)sizeof(filesignatures)/sizeof(filesignatures[0]));
-                if (signature.index < sizeof(filesignatures)/sizeof(filesignatures[0])) {
-                    memcpy(signature.md5, filesignatures[signature.index].md5, sizeof(signature.md5));
-                    memcpy(signature.filename, filesignatures[signature.index].filename, sizeof(signature.filename));
-                }
-                if (copy_to_user((void __user *)arg, &signature, sizeof(signature)))
-                        return -EFAULT;
-                return 0;
-                }
-        case PCIE_CHANGE_ENTRY: {
-                tChangeEntry entry;
-                uint32_t vlo;
-                vlo = ioread32(this_board->bar0io + CSR_CHANGELO);
-                entry.timestamp = ioread32(this_board->bar0io + CSR_CHANGEHI);
-                entry.src = (vlo >> 24);
-                entry.value = vlo;
-                printk("%s: timestamp=%08x src=%02x value=%96x\n", "portal", entry.timestamp, entry.src, entry.value);
-                if (copy_to_user((void __user *)arg, &entry, sizeof(entry)))
-                        return -EFAULT;
-                return 0;
-        } break;
         default:
                 return -ENOTTY;
         }
@@ -367,13 +285,13 @@ static int portal_mmap(struct file *filp, struct vm_area_struct *vma)
         } else {
                 if (!this_portal->virt) {
                         this_portal->virt = dma_alloc_coherent(&pci_dev->dev,
-                             vma->vm_end - vma->vm_start, &this_portal->extra->dma_handle, GFP_ATOMIC);
+                             vma->vm_end - vma->vm_start, &this_portal->dma_handle, GFP_ATOMIC);
                         //this_portal->virt =pci_alloc_consistent(pci_dev, PORTAL_BASE_OFFSET, &this_portal->extra->dma_handle);
                         printk("dma_alloc_coherent virt=%p dma_handle=%p\n",
-                             this_portal->virt, (void *) this_portal->extra->dma_handle);
+                             this_portal->virt, (void *) this_portal->dma_handle);
                 }
                 //vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
-                off = this_portal->extra->dma_handle;
+                off = this_portal->dma_handle;
         }
         vma->vm_flags |= VM_IO;
         if (io_remap_pfn_range(vma, vma->vm_start, off >> PAGE_SHIFT,
@@ -401,13 +319,37 @@ static const struct file_operations pcieportal_fops = {
         .mmap = portal_mmap
 };
 
+static int connectal_open(struct inode *inode, struct file *filp)
+{
+        int err = 0;
+        tBoard *this_board = container_of(inode->i_cdev,  tBoard, cdev);
+
+	printk("%s: basedevice_number=%x /dev/connectal\n", __FUNCTION__, device_number);
+        filp->private_data = (void *) this_board;
+
+        return err;
+}
+
+static ssize_t connectal_read(struct file *filp,
+      char *buffer, size_t length, loff_t *offset)
+{
+        return 0;
+}
+
+static const struct file_operations connectal_fops = {
+        .owner = THIS_MODULE,
+        .open = connectal_open,
+        .read   = connectal_read
+};
+
+
 static int pcieportal_dma_pcis_open(struct inode *inode, struct file *filp)
 {
-        //tBoard *this_board = &board_map[0];
+	tBoard *this_board = container_of(inode->i_cdev, tBoard, dma_pcis_cdev);
         int err = 0;
 
-        printk("pcieportal_dma_pcis_open\n");
-        filp->private_data = (void *) &board_map[0];
+        printk("pcieportal_dma_pcis_open this_board %lx\n", (long)this_board);
+        filp->private_data = (void *) this_board;
         // FIXME: why does the kernel think this device is RDONLY?
         filp->f_mode |= FMODE_WRITE;
 
@@ -424,10 +366,11 @@ static int pcieportal_dma_pcis_release(struct inode *inode, struct file *filp)
 
 static int portal_dma_pcis_mmap(struct file *filp, struct vm_area_struct *vma)
 {
-        tBoard *this_board = &board_map[0];
+        tBoard *this_board = (tBoard *) filp->private_data;
         struct pci_dev *pci_dev = this_board->pci_dev;
         off_t off = 0;
 
+        printk("%s: this_board %08lx\n", __FUNCTION__, (long)this_board);
         if (vma->vm_pgoff > (~0UL >> PAGE_SHIFT))
                 return -EINVAL;
 
@@ -458,7 +401,6 @@ static const struct file_operations pcieportal_dma_pcis_fops = {
         .release = pcieportal_dma_pcis_release,
         .mmap = portal_dma_pcis_mmap
 };
-
 
 #ifdef PCIEPORTAL_TUNE_CAPS
 static void tune_pcie_caps(struct pci_dev *dev)
@@ -513,31 +455,49 @@ static void tune_pcie_caps(struct pci_dev *dev)
 }
 #endif // PCIEPORTAL_TUNE_CAPS
 
-static int board_activate(int activate, tBoard *this_board, struct pci_dev *dev)
+int pcieportal_board_activate(int activate, tBoard *this_board, struct xdma_pci_dev *xpdev, struct pci_dev *dev)
 {
         int i;
-        int rc, err = 0;
+        int err = 0;
         unsigned long long magic_num;
+#if 0
+        int rc;
         int num_entries = MAX_MSIX_ENTRIES;
         struct msix_entry msix_entries[MAX_MSIX_ENTRIES];
+#endif
         int fpn = 0;
         int num_tiles, tile_index;
         void __iomem *ptile;
+        int board_number = this_board->info.board_number;
 
-printk("[%s:%d]\n", __FUNCTION__, __LINE__);
-        for (i = 0; i < MAX_NUM_PORTALS; i++)
-                if (!this_board->portal[i].extra) {
-                        printk(KERN_ERR "%s: extra not initialized!!! %s\n", DEV_NAME, pci_name(dev));
-                        err = -EFAULT;
-                        goto err_exit;
+        if (!device_number) {
+                pcieportal_class = class_create(THIS_MODULE, "Connectal");
+                if (IS_ERR(pcieportal_class)) {
+                        printk(KERN_ERR "%s: failed to create class Connectal\n", DEV_NAME);
+                        return PTR_ERR(pcieportal_class);
                 }
+                /* dynamically allocate a device number */
+                if (alloc_chrdev_region(&device_number, 1, MAX_MINOR_COUNT + 1, DEV_NAME) < 0) {
+                        printk(KERN_ERR "%s: failed to allocate character device region\n", DEV_NAME);
+                        class_destroy(pcieportal_class);
+                        return -1;
+                }
+        }
+        printk("this_board %08lx\n", (long)this_board);
+        if (activate && this_board->extra == 0) {
+                for (i = 0; i < MAX_NUM_PORTALS; i++) {
+                        INIT_LIST_HEAD(&this_board->portal[i].pmlist);
+                }
+        }
+
+        printk("[%s:%d]\n", __FUNCTION__, __LINE__);
         if (activate) {
                 dev_t this_device_number;
                 void *portal_base = 0;
                 for (i = 0; i < MAX_NUM_PORTALS; i++)
-                  this_board->portal[i].device_name = -1;
+                        this_board->portal[i].device_name = -1;
                 for (i = 0; i < MAX_NUM_PORTALS; i++)
-                  init_waitqueue_head(&(this_board->portal[i].extra->wait_queue));
+                        init_waitqueue_head(&(this_board->portal[i].wait_queue));
                 this_board->pci_dev = dev;
                 /* enable the PCI device */
                 if (pci_enable_device(dev)) {
@@ -548,43 +508,20 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                 /* reserve PCI memory regions */
                 for (i = 0; i < 5; i++)
                         printk("pci bar %d start=%08lx end=%08lx flags=%lx\n", i,
-                             (unsigned long) dev->resource[i].start,
-                             (unsigned long) dev->resource[i].end,
-                             dev->resource[i].flags);
-                traceInfo.base = dev->resource[2].start; /* remember physical address of bar2 */
-                if ((rc = pci_request_region(dev, 0, "bar0"))) {
-                        printk("failed to request region bar0 rc=%d\n", rc);
-                        err = -EBUSY;
-                        goto PCI_DEV_ENABLED_label;
-                }
-                rc = pci_request_region(dev, 1, "bar1");
-                printk("reserving region bar1 rc=%d\n", rc);
-                rc = pci_request_region(dev, 2, "bar2");
-                printk("reserving region bar2 rc=%d\n", rc);
-                /* map BARs */
-                this_board->bar0io = pci_iomap(dev, 0, 0);
+                               (unsigned long) dev->resource[i].start,
+                               (unsigned long) dev->resource[i].end,
+                               dev->resource[i].flags);
+
+                /* mapped BARs */
+                this_board->bar0io = xpdev->xdev->bar[0];
                 printk("bar0io=%p\n", this_board->bar0io);
-                this_board->bar1io = pci_iomap(dev, 1, 0);
+                this_board->bar1io = xpdev->xdev->bar[1];
                 printk("bar1io=%p\n", this_board->bar1io);
-                this_board->bar2io = pci_iomap(dev, 2, 0);
+                this_board->bar2io = xpdev->xdev->bar[2];
                 printk("bar2io=%p\n", this_board->bar2io);
-                this_board->bar4io = pci_iomap(dev, 4, 0);
+                this_board->bar4io = xpdev->xdev->bar[4];
                 printk("bar4io=%p\n", this_board->bar4io);
 
-                if (!this_board->bar1io) {
-                        this_board->bar1io = pci_iomap(dev, 1, 8192);
-                        printk("bar1io=%p\n", this_board->bar1io);
-                }
-                if (!this_board->bar0io) {
-                        printk("failed to map bar0\n");
-                        err = -EFAULT;
-                        goto BARS_ALLOCATED_label;
-                }
-                if (!this_board->bar2io) {
-                        printk("failed to map bar2\n");
-                        err = -EFAULT;
-                        goto BARS_ALLOCATED_label;
-                }
                 if (!this_board->bar4io) {
                         this_board->info.aws_shell = 0;
                         // this replaces 'connectal/pcie/connectalutil/connectalutil trace /dev/fpga0'
@@ -599,7 +536,6 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                                 printk(KERN_ERR "%s: magic number %llx does not match expected %llx\n",
                                        DEV_NAME, magic_num, expected_magic);
                                 err = -EINVAL;
-                                goto BARS_MAPPED_label;
                         }
                         // check for xdma on bar2
                 } else {
@@ -608,12 +544,16 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                         printk("   irq block ID %x\n", ioread32(this_board->bar2io + 0x2000));
                         printk("config block ID %x\n", ioread32(this_board->bar2io + 0x3000));
                 }
-                /* set DMA mask */
-                if (pci_set_dma_mask(dev, DMA_BIT_MASK(48))) {
-                        printk(KERN_ERR "%s: pci_set_dma_mask failed for 48-bit DMA\n", DEV_NAME);
-                        err = -EIO;
-                        goto BARS_MAPPED_label;
+                printk("pci_dev %08lx\n", (long)this_board->pci_dev);
+                this_board->irq_num = pci_irq_vector(this_board->pci_dev, 8);
+                for (i = 8; i < 16; i++) {
+			int irq_num = pci_irq_vector(this_board->pci_dev, i);
+                        if (request_irq(irq_num, intr_handler, 0, DEV_NAME, (void *)&this_board->tile[0])) {
+                                printk(KERN_ERR "%s: Failed to get requested IRQ %d\n", DEV_NAME, irq_num);
+                                err = -EBUSY;
+                        }
                 }
+#if 0
                 /* enable MSIX */
                 for (i = 0; i < num_entries; i++)
                         msix_entries[i].entry = i;
@@ -639,7 +579,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                        DEV_NAME, num_entries, this_board->irq_num);
                 iowrite32(0, this_board->bar0io + CSR_MSIX_MASKED);
                 pci_set_master(dev); /* enable PCI bus master */
-
+#endif
                 if (this_board->info.aws_shell) {
                         portal_base = this_board->bar0io;
                         ptile = this_board->bar0io;
@@ -658,69 +598,69 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
                         num_tiles = 0;
                 tile_index = 0;
                 do {  // loop over all tiles
-                  void __iomem *pportal = ptile;
-                  int num_portals = *(volatile uint32_t *)(pportal + PCR_NUM_PORTALS_OFFSET);
-                  int portal_index = 0;
-                  this_board->tile[tile_index].board = this_board;
-                  this_board->tile[tile_index].device_tile = tile_index + 1;
-                  do {  // loop over all portals in a tile
-                    int freep;
-                    uint32_t iid = *(volatile uint32_t *)(pportal + PCR_IID_OFFSET);
-                    tPortal *this_portal = &this_board->portal[fpn];
-                    unsigned long offs = ((unsigned long)pportal) - ((unsigned long)portal_base);
-                    printk("%s:%d num_tiles %x/%x num_portals %x/%x fpn %x iid=%d pportal %p offset %lx\n", __FUNCTION__, __LINE__, tile_index, num_tiles, portal_index, num_portals, fpn, iid, pportal, offs);
-                    traceInfo.intval[fpn] = ioread32(this_board->bar0io + CSR_MSIX_MSG_DATA  + 16*fpn);
-                    traceInfo.name[fpn] = iid;
-                    for (freep = 0; freep < sizeof(portalp)/sizeof(portalp[0]); freep++)
-                        if (!portalp[freep])
-                             break;
-                    if (freep == sizeof(portalp)/sizeof(portalp[0])) {
-                        printk(KERN_ERR "%s: too many portals\n", KERN_ERR);
-                        err = -EFAULT;
-                    }
-                    else
-                        portalp[freep] = 1;
-                    this_portal->device_number = freep;
-                    this_portal->device_tile = tile_index;
-                    this_portal->portal_number = fpn;
-                    this_portal->device_name = iid;
-                    this_portal->board = this_board;
-                    this_portal->regs = (volatile uint32_t *)pportal;
-                    this_portal->offset = offs;
-                    /* add the device operations */
-                    cdev_init(&this_portal->extra->cdev, &pcieportal_fops);
-                    this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + this_portal->device_number);
-                    printk("%s:%d: calling cdev_add this_device_number=%x\n", DEV_NAME, __LINE__, this_device_number);
-                    if (cdev_add(&this_portal->extra->cdev, this_device_number, 1)) {
-                      printk(KERN_ERR "%s: cdev_add %x failed\n",
-                             DEV_NAME, this_device_number);
-                      err = -EFAULT;
-                    } else {
-                      /* create a device node via udev */
-                      printk("%s:%d: calling_device_create /dev/%s_b%dt%dp%d = %x\n",
-                             DEV_NAME, __LINE__, DEV_NAME, this_portal->board->info.board_number, this_portal->device_tile, this_portal->device_name, this_device_number);
-                      device_create(pcieportal_class, &dev->dev, this_device_number,
-                                    this_portal, "%s_b%dt%dp%d", DEV_NAME, this_portal->board->info.board_number, this_portal->device_tile, this_portal->device_name);
-                      printk(KERN_INFO "%s: /dev/%s_b%dt%dp%d = %x created\n",
-                             DEV_NAME, DEV_NAME, this_portal->board->info.board_number, this_portal->device_tile, this_portal->device_name, this_device_number);
-                    }
-                    if (++fpn >= MAX_NUM_PORTALS){
-                      printk(KERN_INFO "%s: MAX_NUM_PORTALS exceeded", __func__);
-                      err = -EFAULT;
-                      break;
-                    }
-                    pportal += PORTAL_BASE_OFFSET;
-                  } while (++portal_index < num_portals);
-                  ptile += TILE_BASE_OFFSET;
+                        void __iomem *pportal = ptile;
+                        int num_portals = *(volatile uint32_t *)(pportal + PCR_NUM_PORTALS_OFFSET);
+                        int portal_index = 0;
+			printk("tile %d num_portals %d\n", tile_index, num_portals);
+                        this_board->tile[tile_index].board = this_board;
+                        this_board->tile[tile_index].device_tile = tile_index + 1;
+                        do {  // loop over all portals in a tile
+                                int freep;
+                                uint32_t iid = *(volatile uint32_t *)(pportal + PCR_IID_OFFSET);
+                                tPortal *this_portal = &this_board->portal[fpn];
+                                unsigned long offs = ((unsigned long)pportal) - ((unsigned long)portal_base);
+                                if (iid == -1)
+                                        break;
+                                printk("%s:%d num_tiles %x/%x num_portals %x/%x fpn %x iid=%d pportal %p offset %lx\n", __FUNCTION__, __LINE__, tile_index, num_tiles, portal_index, num_portals, fpn, iid, pportal, offs);
+                                for (freep = 0; freep < sizeof(portalp)/sizeof(portalp[0]); freep++)
+                                        if (!portalp[freep])
+                                                break;
+                                if (freep == sizeof(portalp)/sizeof(portalp[0])) {
+                                        printk(KERN_ERR "%s: too many portals\n", KERN_ERR);
+                                        err = -EFAULT;
+                                }
+                                else
+                                        portalp[freep] = 1;
+                                this_portal->device_number = freep;
+                                this_portal->device_tile = tile_index;
+                                this_portal->portal_number = fpn;
+                                this_portal->device_name = iid;
+                                this_portal->board = this_board;
+                                this_portal->regs = (volatile uint32_t *)pportal;
+                                this_portal->offset = offs;
+                                /* add the device operations */
+                                cdev_init(&this_portal->cdev, &pcieportal_fops);
+                                this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + this_portal->device_number);
+                                printk("%s:%d: calling cdev_add this_device_number=%x\n", DEV_NAME, __LINE__, this_device_number);
+                                if (cdev_add(&this_portal->cdev, this_device_number, 1)) {
+                                        printk(KERN_ERR "%s: cdev_add %x failed\n",
+                                               DEV_NAME, this_device_number);
+                                        err = -EFAULT;
+                                } else {
+                                        /* create a device node via udev */
+                                        printk("%s:%d: calling_device_create /dev/%s_b%dt%dp%d = %x\n",
+                                               DEV_NAME, __LINE__, DEV_NAME, this_portal->board->info.board_number, this_portal->device_tile, this_portal->device_name, this_device_number);
+                                        device_create(pcieportal_class, &dev->dev, this_device_number,
+                                                      this_portal, "%s_b%dt%dp%d", DEV_NAME, this_portal->board->info.board_number, this_portal->device_tile, this_portal->device_name);
+                                        printk(KERN_INFO "%s: /dev/%s_b%dt%dp%d = %x created\n",
+                                               DEV_NAME, DEV_NAME, this_portal->board->info.board_number, this_portal->device_tile, this_portal->device_name, this_device_number);
+                                }
+                                if (++fpn >= MAX_NUM_PORTALS){
+                                        printk(KERN_INFO "%s: MAX_NUM_PORTALS exceeded", __func__);
+                                        err = -EFAULT;
+                                        break;
+                                }
+                                pportal += PORTAL_BASE_OFFSET;
+                        } while (++portal_index < num_portals);
+                        ptile += TILE_BASE_OFFSET;
                 } while (++tile_index < num_tiles);
                 this_board->info.num_portals = fpn;
-                pci_set_drvdata(dev, this_board);
 
-                if (this_board->info.board_number == 0) {
+                if (board_number == 0) {
                         this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + MAX_MINOR_COUNT);
-                        cdev_init(&this_board->extra->cdev, &pcieportal_fops);
+                        cdev_init(&this_board->cdev, &connectal_fops);
                         printk("%s:%d: calling cdev_add this_device_number=%x\n", DEV_NAME, __LINE__, this_device_number);
-                        if (cdev_add(&this_board->extra->cdev, this_device_number, 1)) {
+                        if (cdev_add(&this_board->cdev, this_device_number, 1)) {
                                 printk(KERN_ERR "%s: cdev_add board failed\n", DEV_NAME);
                         }
                         printk("%s:%d: calling device_create this_device_number=%x\n", DEV_NAME, __LINE__, this_device_number);
@@ -728,83 +668,85 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 
                         // add the device node for portal_dma_pcis
                         this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + MAX_MINOR_COUNT + 1);
-                        cdev_init(&this_board->pcis->cdev, &pcieportal_dma_pcis_fops);
+                        cdev_init(&this_board->dma_pcis_cdev, &pcieportal_dma_pcis_fops);
                         printk("%s:%d: calling cdev_add this_device_number=%x\n", DEV_NAME, __LINE__, this_device_number);
-                        if (cdev_add(&this_board->pcis->cdev, this_device_number, 1)) {
+                        printk("%s:%d: calling cdev_add this_board=%lx\n", DEV_NAME, __LINE__, (long)this_board);
+                        if (cdev_add(&this_board->dma_pcis_cdev, this_device_number, 1)) {
                                 printk(KERN_ERR "%s: cdev_add board failed\n", DEV_NAME);
                         }
                         printk("%s:%d: calling device_create this_device_number=%x\n", DEV_NAME, __LINE__, this_device_number);
                         device_create(pcieportal_class, &dev->dev, this_device_number, NULL, "portal_dma_pcis");
-
                 }
 
-#ifdef PCIEPORTAL_TUNE_CAPS
-                tune_pcie_caps(dev);
-#endif // PCIEPORTAL_TUNE_CAPS
-
+                printk("%s:%d num_portals %d\n", DEV_NAME, __LINE__, this_board->info.num_portals);
+                printk("%s:%d returning %d\n", DEV_NAME, __LINE__, err);
                 if (err == 0)
-                    return err; /* if board activated correctly, return */
+                        return err; /* if board activated correctly, return */
         } /* end of if(activate) */
 
+        printk("%s:%d\n", DEV_NAME, __LINE__);
         /******** deactivate board *******/
-        if (this_board->info.board_number == 0) {
+        if (board_number == 0) {
                 device_destroy(pcieportal_class, MKDEV(MAJOR(device_number), MINOR(device_number) + MAX_MINOR_COUNT));
-                cdev_del(&this_board->extra->cdev);
+                cdev_del(&this_board->cdev);
 
                 device_destroy(pcieportal_class, MKDEV(MAJOR(device_number), MINOR(device_number) + MAX_MINOR_COUNT + 1));
-                cdev_del(&this_board->pcis->cdev);
+                cdev_del(&this_board->dma_pcis_cdev);
         }
         fpn = 0;
+        printk("%s:%d\n", DEV_NAME, __LINE__);
+        printk("%s:%d num_portals %d\n", DEV_NAME, __LINE__, this_board->info.num_portals);
         while(fpn < this_board->info.num_portals) {
                 tPortal *this_portal = &this_board->portal[fpn];
-                  /* remove device node in udev */
+                /* remove device node in udev */
                 dev_t this_device_number = MKDEV(MAJOR(device_number), MINOR(device_number) + this_portal->device_number);
                 portalp[this_portal->device_name] = 0;
                 device_destroy(pcieportal_class, this_device_number);
                 printk(KERN_INFO "%s: /dev/%s_b%dt%dp%d = %x removed\n",
                        DEV_NAME, DEV_NAME, this_portal->board->info.board_number, this_portal->device_tile, this_portal->device_name, this_device_number);
                 /* remove device */
-                cdev_del(&this_board->portal[fpn].extra->cdev);
+                cdev_del(&this_board->portal[fpn].cdev);
                 fpn++;
         }
+#if 0
         pci_clear_master(dev); /* disable PCI bus master */
+#endif
+        printk("%s:%d\n", DEV_NAME, __LINE__);
         /* set MSIX Entry 0 Vector Control value to 1 (masked) */
         iowrite32(1, this_board->bar0io + CSR_MSIX_MASKED);
+#if 0
         disable_irq(this_board->irq_num);
-        for (i = 0; i < num_entries; i++)
+        for (i = 0; i < num_entries; i++) 
                 free_irq(this_board->irq_num + i, (void *) &this_board->tile[i]);
-MSI_ENABLED_label:
-        /* disable MSI/MSIX */
-        pci_disable_msix(dev);
-BARS_MAPPED_label:
-        /* unmap PCI BARs */
-        if (this_board->bar0io)
-                pci_iounmap(dev, this_board->bar0io);
-        if (this_board->bar1io)
-                pci_iounmap(dev, this_board->bar1io);
-        if (this_board->bar2io)
-                pci_iounmap(dev, this_board->bar2io);
-        if (this_board->bar4io)
-                pci_iounmap(dev, this_board->bar4io);
-BARS_ALLOCATED_label:
-        pci_release_regions(dev); /* release PCI memory regions */
-PCI_DEV_ENABLED_label:
-        pci_disable_device(dev); /* disable pci device */
+#endif
+	for (i = 8; i < 16; i++) {
+		int irq_num = pci_irq_vector(this_board->pci_dev, i);
+		free_irq(irq_num, (void *)&this_board->tile[0]);
+	}
+
+        if (pcieportal_class)
+                class_destroy(pcieportal_class);
+
 err_exit:
         this_board->pci_dev = NULL;
+#if 0
         pci_set_drvdata(dev, NULL);
+#endif
+        printk("%s:%d\n", DEV_NAME, __LINE__);
         return err;
 }
 
 /* driver PCI operations */
 
+#if 0
 static int pcieportal_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
         tBoard *this_board = NULL;
-        int i, board_number = 0;
+        int board_number = 0;
+        int activated;
 
 printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__, &pcieportal_probe, dev, id, pci_get_drvdata(dev));
-        printk(KERN_INFO "%s: PCI probe for 0x%04x 0x%04x\n", DEV_NAME, dev->vendor, dev->device);
+        printk(KERN_INFO "%s: PCI probe for 0x%04x 0x%04x\n", DEV_NAME, dev->vendor, dev->device); 
         /* double-check vendor and device */
         if ((dev->vendor != BLUESPEC_VENDOR_ID || dev->device != CONNECTAL_DEVICE_ID)
             && (dev->vendor != AMAZON_VENDOR_ID || dev->device != AMAZON_DEVICE_ID)) {
@@ -821,15 +763,12 @@ printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__
         this_board = &board_map[board_number];
         printk(KERN_INFO "%s: board_number = %d\n", DEV_NAME, board_number);
         memset(this_board, 0, sizeof(tBoard));
-        for (i = 0; i < MAX_NUM_PORTALS; i++) {
-                this_board->portal[i].extra = &extra_portal_info[board_number * MAX_NUM_PORTALS + i];
-                extra_portal_info[board_number * MAX_NUM_PORTALS + i].portal = &this_board->portal[i];
-                INIT_LIST_HEAD(&this_board->portal[i].pmlist);
-        }
-        this_board->extra = &extra_board_info[board_number];
-        this_board->pcis = &pcis_board_info[board_number];
         this_board->info.board_number = board_number;
-        return board_activate(1, this_board, dev);
+        activated =  pcieportal_board_activate(1, this_board, 0, dev);
+        if (activated) {
+                pci_set_drvdata(dev, this_board);
+        }
+        return activated;
 }
 
 static void pcieportal_remove(struct pci_dev *dev)
@@ -840,7 +779,7 @@ printk("*****[%s:%d] getdrv %p\n", __FUNCTION__, __LINE__, this_board);
                 printk(KERN_ERR "%s: Unable to locate board when removing PCI device %p\n", DEV_NAME, dev);
                 return;
         }
-        board_activate(0, this_board, dev);
+        pcieportal_board_activate(0, this_board, dev);
 }
 
 /* PCI ID pattern table */
@@ -887,26 +826,7 @@ static const struct pci_error_handlers pcieportal_err_handler = {
         .slot_reset     = pcieportal_error_slot_reset,
         .resume         = pcieportal_error_resume,
 };
-
-/* PCI driver operations pointers */
-static struct pci_driver pcieportal_ops = {
-        .name = DEV_NAME,
-        .id_table = pcieportal_id_table,
-        .probe = pcieportal_probe,
-        .remove = pcieportal_remove,
-        .err_handler = &pcieportal_err_handler,
-};
-
-/*
- *
- * get the tBoard struct
- *
- */
-
-tBoard* get_pcie_portal_descriptor(void)
-{
-  return &board_map[0];
-}
+#endif
 
 /*
  * driver initialization and exit
@@ -916,6 +836,16 @@ tBoard* get_pcie_portal_descriptor(void)
  * registering the driver, obtaining a major and minor
  * numbers, etc.
  */
+
+#if 0
+/* PCI driver operations pointers */
+static struct pci_driver pcieportal_ops = {
+        .name = DEV_NAME,
+        .id_table = pcieportal_id_table,
+        .probe = pcieportal_probe,
+        .remove = pcieportal_remove,
+        .err_handler = &pcieportal_err_handler,
+};
 
 /* first routine called on module load */
 static int pcieportal_init(void)
@@ -971,8 +901,7 @@ static void pcieportal_exit(void)
 
 module_init(pcieportal_init);
 module_exit(pcieportal_exit);
-
-EXPORT_SYMBOL(get_pcie_portal_descriptor);
+#endif
 
 MODULE_AUTHOR("Bluespec, Inc., Cambridge hackers");
 MODULE_DESCRIPTION("PCIe device driver for PCIe FPGA portals");

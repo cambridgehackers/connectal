@@ -10,7 +10,7 @@
         "constraints": ["constraints/xilinx/awsf1.xdc"],
         "implconstraints": ["constraints/xilinx/awsf1.xdc"],
         "runscript" : "run.pcietest",
-        "CONNECTALFLAGS" : ["--mainclockperiod=8", "--derivedclockperiod=4", "--pcieclockperiod=8"],
+        "CONNECTALFLAGS" : ["--mainclockperiod=8", "--derivedclockperiod=8", "--pcieclockperiod=8"],
         "rewireclockstring" : ""
     },
     "pins": {

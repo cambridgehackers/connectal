@@ -74,6 +74,7 @@ argparser.add_argument('-m', '--bsimsource', help='Bsim C++ source files', actio
 argparser.add_argument('-b', '--bscflags', help='Options to pass to the BSV compiler', action='append', default=[])
 argparser.add_argument('--xelabflags', help='Options to pass to the xelab compiler', action='append', default=[])
 argparser.add_argument('--xsimflags', help='Options to pass to the xsim simulator', action='append', default=[])
+argparser.add_argument('--awsflags', help='Options to pass to aws_build_dcp_from_cl.sh', action='append', default=[])
 argparser.add_argument('--ipdir', help='Directory in which to store generated IP')
 argparser.add_argument('-q', '--qtused', help='Qt used in simulator test application', action='store_true')
 argparser.add_argument('--stl', help='STL implementation to use for Android builds', default=None, choices=supported_stl)
@@ -175,6 +176,7 @@ CFLAGS_PROJECT = %(cflags)s
 CXXFLAGS_PROJECT = %(cxxflags)s
 XELABFLAGS = %(xelabflags)s
 XSIMFLAGS  = %(xsimflags)s
+AWSFLAGS   = %(awsflags)s
 TOPBSVFILE = %(topbsvfile)s
 BSVDEFINES = %(bsvdefines)s
 QTUSED = %(qtused)s
@@ -536,6 +538,7 @@ if __name__=='__main__':
                                    'bscflags': ' '.join(options.bscflags),
                                    'xelabflags': ' '.join(options.xelabflags),
                                    'xsimflags': ' '.join(options.xsimflags),
+                                   'awsflags': ' '.join(options.awsflags),
                                    'cflags': ' ' .join(options.cflags),
                                    'cxxflags': ' ' .join(options.cxxflags),
                                    'bsvdefines_list': ' '.join(bsvdefines),

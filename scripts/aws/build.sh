@@ -50,6 +50,15 @@ if [ ! -f $CONNECTALDIR/out/awsf1/ila_connectal_1/ila_connectal_1.xci ]; then
     echo 'Finished generating Integrated Logic Analyzer core'
     echo
 fi
+if [ ! -f $CONNECTALDIR/out/awsf1/axi_protocol_checker_0/axi_protocol_checker_0.xci ]; then
+    echo
+    echo 'Generating AXI Protocol Checker core'
+    echo
+    vivado -mode batch -source $CONNECTALDIR/scripts/connectal-synth-axichecker.tcl
+    echo
+    echo 'Finished generating AXI Protocol Checker core'
+    echo
+fi
 
 export CL_DIR=`pwd`
 cd $BUILD_DIR
@@ -62,7 +71,7 @@ echo '#placeholder' > ../constraints/cl_pnr_user.xdc
 echo '#placeholder' > ../constraints/cl_synth_user.xdc
 
 ## run Vivado to build the FPGA image
-$AWS_FPGA_REPO_DIR/hdk/common/shell_stable/build/scripts/aws_build_dcp_from_cl.sh -ignore_memory_requirement -notify -foreground
+$AWS_FPGA_REPO_DIR/hdk/common/shell_stable/build/scripts/aws_build_dcp_from_cl.sh -ignore_memory_requirement -notify -foreground "$@"
 
 PROJECT_DIR=`dirname $CL_DIR`
 PROJECT_NAME=`basename $PROJECT_DIR`

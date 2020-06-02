@@ -53,6 +53,8 @@ if {$AWSF1_CL_DEBUG_BRIDGE} {
     read_ip [list \
 	     "$CONNECTALDIR/out/awsf1/ila_connectal_1/ila_connectal_1.xci" \
 	     "$CONNECTALDIR/out/awsf1/ila_connectal_2/ila_connectal_2.xci" \
+	     "$CONNECTALDIR/out/awsf1/ila_connectal_3/ila_connectal_3.xci" \
+	     "$CONNECTALDIR/out/awsf1/axi_protocol_checker_0/axi_protocol_checker_0.xci" \
 	    ]
 }
 
