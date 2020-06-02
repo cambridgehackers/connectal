@@ -1,3 +1,11 @@
+connectal (20.06.1-1xenial1) xenial; urgency=medium
+
+    * Integrated xdma support into pcieportal driver for AWS F1
+    * AWS: Allow project to provide custom strategy/clock recipe/etc
+    * AwsF1Top.bsv: Allow project to request a different derived clock
+
+ --  <jamey.hicks@gmail.com>  Mon, 01 Jun 2020 20:20:31 -0400
+
 connectal (20.05.8-1xenial1) xenial; urgency=medium
 
     * Actually include the driver update this time
