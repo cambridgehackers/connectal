@@ -112,6 +112,9 @@ static const struct pci_device_id pci_ids[] = {
     { PCI_DEVICE(0x1d0f, 0xf001), },
 	{ PCI_DEVICE(0x1d0f, 0x1042), },
 
+	// Connectal via PCIE
+	{ PCI_DEVICE(0x1be7, 0xc100), },
+
 	{0,}
 };
 MODULE_DEVICE_TABLE(pci, pci_ids);
