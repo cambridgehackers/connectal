@@ -40,7 +40,7 @@ static int event_portal(struct PortalInternal *pint)
         if(trace_portal)
             PORTAL_PRINTF( "%s: (fpga%d) about to receive messages int=%08x en=%08x qs=%08x handler %p parent %p\n", __FUNCTION__, pint->fpga_number, 0, 0, 0, pint->handler, pint->parent);
         if (pint->handler)
-            pint->handler(pint, 5/*portal number */, len /*HACK FOR ATOMICC*/);
+            pint->handler(pint, 5/*portal number ATOMICC */, 0);
         else {
             PORTAL_PRINTF( "%s: (fpga%d) no handler receive int=%08x en=%08x qs=%08x handler %p parent %p\n", __FUNCTION__, pint->fpga_number, 0, 0, 0, pint->handler, pint->parent);
             exit(-1);
