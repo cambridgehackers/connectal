@@ -1,6 +1,7 @@
 obj-m += pcieportal.o
 obj-m += portalmem.o
 
+pcieportal-objs := portal.o libxdma.o xdma_cdev.o cdev_ctrl.o cdev_events.o cdev_sgdma.o cdev_xvc.o cdev_bypass.o xdma_mod.o
 pcieportal.ko: driverversion.h
 
 driverversion.h:
