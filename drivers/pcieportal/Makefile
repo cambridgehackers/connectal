@@ -83,6 +83,12 @@ insmod: rmmod
 	insmod ../portalmem/portalmem.ko
 	chmod agu+rw /dev/portalmem
 
+
+PCIEPORTAL_SOURCE=$(wildcard portal.c portal_internal.h pcieportal.h version.h cdev*.[ch] *xdma*.[ch] driverversion.h)
+PORTALMEM_SOURCE=$(wildcard ../portalmem/*.[ch])
+CONNECTAL_HEADERS=$(addprefix ../../cpp/, portal.h portalKernel.h dmaSendFd.h)
+GENERATED_SOURCE=$(wildcard ../../generated/cpp/*.[ch])
+
 .PHONY: install-dkms
 install-dkms: pcieportal_signature_file.h
 	rm -f driverversion.h
@@ -93,11 +99,17 @@ install-dkms: pcieportal_signature_file.h
 	sed "s/@VERSION@/$(VERSION)/" Makefile.dkms > Makefile.dkms.out
 	cp -fv dkms.conf.out $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/dkms.conf
 	cp -fv Makefile.dkms.out $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/Makefile
-	cp -fv portal.c portal_internal.h pcieportal.h version.h cdev*.[ch] *xdma*.[ch] driverversion.h $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
-	cp -fv ../portalmem/*.[ch] $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
-	cp -fv ../../cpp/{portal,portalKernel,dmaSendFd}.h $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
-	cp -fv ../../generated/cpp/*.[ch] $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
+	cp -fv $(PCIEPORTAL_SOURCE) $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
+	cp -fv $(PORTALMEM_SOURCE) $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
+	cp -fv $(CONNECTAL_HEADERS) $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
+	cp -fv $(GENERATED_SOURCE) $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
 	sed -i 's|drivers/portalmem/||' $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/*.[ch]
 	sed -i 's|drivers/pcieportal/||' $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/*.[ch]
 	sed -i 's|drivers/zynqportal/||' $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/*.[ch]
 	sed -i 's|../../cpp/||g' $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/*.[ch]
+
+test-dkms:
+	rm -fr test-dkms
+	make DESTDIR=dkms install-dkms
+	cd dkms$(PREFIX)/src/$(PKG_NAME)-$(VERSION); make -C $(KROOT) M=$(PWD)/dkms$(PREFIX)/src/$(PKG_NAME)-$(VERSION) modules
+	rm -fr test-dkms
