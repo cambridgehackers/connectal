@@ -105,7 +105,7 @@ static irqreturn_t intr_handler(int irq, void *p)
 	tTile *this_tile = p;
         tBoard *this_board = this_tile->board;
         int i;
-        printk(KERN_INFO "%s_%d: interrupt %d!\n", DEV_NAME, this_tile->device_tile-1, irq);
+        //printk(KERN_INFO "%s_%d: interrupt %d!\n", DEV_NAME, this_tile->device_tile-1, irq);
         for (i = 0; i < MAX_NUM_PORTALS; i++) {
                 if ((this_tile->device_tile-1 == this_board->portal[i].device_tile)
                     || this_tile->board->info.aws_shell) {
