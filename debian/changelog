@@ -1,3 +1,9 @@
+connectal (20.06.4-1xenial1) xenial; urgency=medium
+
+  * removed unhelpful driver signatures
+
+ --  <jamey.hicks@gmail.com>  Fri, 05 Jun 2020 14:12:45 -0400
+
 connectal (20.06.3-1xenial1) xenial; urgency=medium
 
   * remove recent bashisms from drivers/pcieportal/Makefile
