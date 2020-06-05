@@ -21,9 +21,7 @@ CROSS_COMPILE?=arm-linux-gnueabi-
 PARAM=ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE)
 endif
 
-.PHONY: portalmem_signature_file.h
-
-portalmem.ko: portalmem.h portalmem.c portalmem_signature_file.h driverversion.h
+portalmem.ko: portalmem.h portalmem.c driverversion.h
 ifneq ("$(PARAM)","")
 	$(Q)$(MAKE) $(PARAM) -C $(KROOT) $(DEFCONFIG)
 	$(Q)$(MAKE) $(PARAM) -C $(KROOT) -j8 zImage
@@ -33,10 +31,7 @@ endif
 driverversion.h:
 	VERSION=$(VERSION) echo "#define DRIVER_VERSION \"$VERSION\"" > driverversion.h
 
-portalmem_signature_file.h:
-	md5sum *.c | grep -v mod.c | sed -f ../../scripts/driver_signature.sed >portalmem_signature_file.h
-
-parallellaportalmem.ko: portalmem.h portalmem.c portalmem_signature_file.h
+parallellaportalmem.ko: portalmem.h portalmem.c
 	$(Q)$(MAKE) $(PARAM) -C $(KROOT) parallella_defconfig
 	$(Q)$(MAKE) $(PARAM) -C $(KROOT) -j8 LOADADDR=0x8000 uImage
 	$(Q)$(MAKE) $(PARAM) -C $(KROOT) M=$(PWD) modules

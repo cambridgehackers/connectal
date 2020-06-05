@@ -19,7 +19,6 @@ ccflags-y := -I$(src)/../portalmem -I$(src)/../../cpp -I$(PWD)/../.. -I$(src)/..
 
 zynqportal.ko: zynqportal.h zynqportal.c
 	echo "$(VERSION)"
-	$(Q)md5sum *.c ../../generated/cpp/*.c | grep -v mod.c | sed -f ../../scripts/driver_signature.sed >driver_signature_file.h
 	$(Q)$(MAKE) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) $(DEFCONFIG)
 	$(Q)$(MAKE) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) oldconfig
 	$(Q)$(MAKE) -j 8 ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) zImage
@@ -27,7 +26,6 @@ zynqportal.ko: zynqportal.h zynqportal.c
 
 parallellazynqportal.ko: zynqportal.h zynqportal.c
 	echo "$(VERSION)"
-	$(Q)md5sum *.c ../../generated/cpp/*.c | grep -v mod.c | sed -f ../../../scripts/driver_signature.sed >driver_signature_file.h
 	$(Q)$(MAKE) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) parallella_defconfig
 	$(Q)$(MAKE) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) oldconfig
 	$(Q)$(MAKE) -j 8 ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) LOADADDR=0x8000 uImage
@@ -35,4 +33,3 @@ parallellazynqportal.ko: zynqportal.h zynqportal.c
 
 clean:
 	$(Q)$(MAKE) ARCH=arm CROSS_COMPILE=$(CROSS_COMPILE) -C $(KROOT) M=$(PWD) clean
-	rm -f driver_signature_file.h

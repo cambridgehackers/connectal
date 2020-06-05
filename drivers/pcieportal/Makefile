@@ -32,14 +32,10 @@ cflags-y += -I$(PWD)
 ../portalmem/portalmem.ko: ../portalmem/portalmem.c
 	cd ../portalmem; make
 
-.PHONY: pcieportal_signature_file.h
-pcieportal_signature_file.h:
-	md5sum *.c ../../generated/cpp/*.c | grep -v mod.c | sed -f ../../scripts/driver_signature.sed >pcieportal_signature_file.h
-
 driverversion.h:
 	VERSION=$(VERSION) echo "#define DRIVER_VERSION \"$$VERSION\"" > driverversion.h
 
-pcieportal.ko: portal.c pcieportal.h pcieportal_signature_file.h driverversion.h
+pcieportal.ko: portal.c pcieportal.h.h driverversion.h
 	$(Q)$(MAKE) -C $(KROOT) M=$(PWD) modules
 
 .PHONY: modules_check
@@ -90,10 +86,9 @@ CONNECTAL_HEADERS=$(addprefix ../../cpp/, portal.h portalKernel.h dmaSendFd.h)
 GENERATED_SOURCE=$(wildcard ../../generated/cpp/*.[ch])
 
 .PHONY: install-dkms
-install-dkms: pcieportal_signature_file.h
+install-dkms:
 	rm -f driverversion.h
 	make driverversion.h
-	make -C ../portalmem portalmem_signature_file.h
 	mkdir -p $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
 	sed "s/@VERSION@/$(VERSION)/" dkms.conf | sed "s/@PKG_NAME@/$(PKG_NAME)/" > dkms.conf.out
 	sed "s/@VERSION@/$(VERSION)/" Makefile.dkms > Makefile.dkms.out

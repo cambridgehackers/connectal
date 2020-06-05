@@ -554,27 +554,6 @@ static long pa_unlocked_ioctl(struct file *filep, unsigned int cmd, unsigned lon
                 fput(fmem);
                 return retsize;
         }
-        case PA_SIGNATURE: {
-                PortalSignatureMem signature;
-                static struct {
-                        const char md5[33];
-                        const char filename[33];
-                } filesignatures[] = {
-#include "portalmem_signature_file.h"
-                };
-                int err = copy_from_user(&signature, (void __user *) arg, sizeof(signature));
-                if (err)
-                        return -EFAULT;
-                signature.md5[0] = 0;
-                signature.filename[0] = 0;
-                if (signature.index < sizeof(filesignatures)/sizeof(filesignatures[0])) {
-                        memcpy(signature.md5, filesignatures[signature.index].md5, sizeof(signature.md5));
-                        memcpy(signature.filename, filesignatures[signature.index].filename, sizeof(signature.filename));
-                }
-                if (copy_to_user((void __user *)arg, &signature, sizeof(signature)))
-                        return -EFAULT;
-                return 0;
-        }
         default:
                 printk("pa_unlocked_ioctl ENOTTY cmd=%x\n", cmd);
                 return -ENOTTY;

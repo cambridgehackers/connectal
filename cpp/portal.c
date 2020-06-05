@@ -134,65 +134,6 @@ int portal_event(struct PortalInternal *pint)
 #endif
 }
 
-#ifdef ZYNQ
-#define DEV_CONNECTAL_SIGNATURE PORTAL_SIGNATURE
-#else
-#define DEV_CONNECTAL_SIGNATURE PCIE_SIGNATURE
-#endif
-
-#ifndef SIMULATION
-/*
- * Check md5 signatures of Linux device drivers to be sure they are up to date
- */
-static void checkSignature(const char *filename, int ioctlnum)
-{
-    int status;
-    static struct {
-        const char *md5;
-        const char *filename;
-    } filesignature[] = {
-#include "driver_signature_file.h"
-        {} };
-#ifdef ZYNQ
-    PortalSignature signature;
-#else
-    PortalSignaturePcie signature;
-#endif
-
-    int fd;
-    int tries;
-    for (tries = 0; tries < 10; tries++) {
-      fd = open(filename, O_RDONLY);
-      if (fd >= 0)
-	  break;
-    }
-    if (fd < 0) {
-	fprintf(stderr, "[%s:%d] failed to open %s %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
-	return;
-    }
-    if (strcmp(filename, "/dev/portalmem")) {
-        ssize_t len = read(fd, &status, sizeof(status));
-        if (len != sizeof(status))
-            fprintf(stderr, "[%s:%d] read status from '%s' was only %d bytes long\n", __FUNCTION__, __LINE__, filename, (int)len);
-    }
-    signature.index = 0;
-    while ((status = ioctl(fd, ioctlnum, &signature)) == 0 && strlen(signature.md5)) {
-        int i = 0;
-        while(filesignature[i].md5) {
-            if (!strcmp(filesignature[i].filename, signature.filename)) {
-                if (strcmp(filesignature[i].md5, signature.md5))
-		  fprintf(stderr, "%s: driver '%s' signature mismatch %s %s\n", __FUNCTION__,
-			  signature.filename, signature.md5, filesignature[i].md5);
-                break;
-            }
-            i++;
-        }
-        signature.index++;
-    }
-    close(fd);
-}
-#endif
-
 char *getExecutionFilename(char *buf, int buflen)
 {
     int rc, fd;
@@ -290,8 +231,6 @@ static void initPortalHardwareOnce(void)
 	      exit(-1);
 	  }
 	}
-        checkSignature("/dev/connectal", DEV_CONNECTAL_SIGNATURE);
-        checkSignature("/dev/portalmem", PA_SIGNATURE);
 #endif // !defined(SIMULATION)
     }
     else {
