@@ -42,7 +42,8 @@ import IfcNames::*;
 import `PinTypeInclude::*;
 
 interface Platform;
-   interface PhysMemSlave#(32,32) slave;
+   interface PhysMemSlave#(32,32) config_slave;
+   interface PhysMemSlave#(32,32) portal_slave;
    interface Vector#(NumberOfMasters,PhysMemMaster#(PhysAddrWidth, DataBusWidth)) masters;
    interface Vector#(MaxNumberOfPortals,ReadOnly#(Bool)) interrupt;
    interface `PinType pins;
@@ -156,17 +157,19 @@ module mkPlatform#(Vector#(NumberOfUserTiles, ConnectalTop#(`PinType)) tiles)(Pl
    framework_portals[3] = lMemServerRequestWrapper.portalIfc;
    PhysMemSlave#(18,32) framework_ctrl_mux <- mkSlaveMux(framework_portals);
    let framework_intr <- mkInterruptMux(getInterruptVector(framework_portals));
-   
+
    /////////////////////////////////////////////////////////////
    // expose interface to top
 
-   PhysMemSlave#(32,32) ctrl_mux <- mkPhysMemSlaveMux(cons(framework_ctrl_mux,tile_slaves));
+   PhysMemSlave#(32,32) config_ctrl_mux <- mkPhysMemSlaveMux(vec(framework_ctrl_mux));
+   PhysMemSlave#(32,32) portal_ctrl_mux <- mkPhysMemSlaveMux(tile_slaves);
    Vector#(MaxNumberOfPortals, ReadOnly#(Bool)) interrupts = replicate(interface ReadOnly; method Bool _read(); return False; endmethod endinterface);
    interrupts[0] = framework_intr;
    for (Integer i = 1; i < valueOf(NumberOfTiles); i = i + 1)
       interrupts[i] = tile_interrupts[i-1];
    interface interrupt = interrupts;
-   interface slave = ctrl_mux;
+   interface config_slave = config_ctrl_mux;
+   interface portal_slave = portal_ctrl_mux;
    interface masters = lMemServer.masters;
    interface pins = tiles[0].pins;
 endmodule

@@ -111,7 +111,7 @@ static irqreturn_t intr_handler(int irq, void *p)
         tTile *this_tile = p;
         tBoard *this_board = this_tile->board;
 	int i;
-        //printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_tile->device_tile-1);
+        printk(KERN_INFO "%s_%d: interrupt!\n", DEV_NAME, this_tile->device_tile-1);
         for (i = 0; i < MAX_NUM_PORTALS; i++) {
                 if ((this_tile->device_tile-1 == this_board->portal[i].device_tile)
                     || this_tile->board->info.aws_shell) {
@@ -141,7 +141,7 @@ static int pcieportal_open(struct inode *inode, struct file *filp)
 //printk("[%s:%d] inode %p filp %p portal %p priv %p privp %p extra %p\n", __FUNCTION__, __LINE__, inode, filp, this_portal, filp->private_data, privp, this_portal->extra);
 		init_waitqueue_head(&(this_portal->extra->wait_queue));
 		/* increment the open file count */
-		this_portal->board->open_count += 1; 
+		this_portal->board->open_count += 1;
         }
         filp->private_data = (void *) this_portal;
 	// FIXME: why does the kernel think this device is RDONLY?
@@ -570,7 +570,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
 		       DEV_NAME, num_entries, this_board->irq_num);
 		iowrite32(0, this_board->bar0io + CSR_MSIX_MASKED);
                 pci_set_master(dev); /* enable PCI bus master */
-		
+
 		if (this_board->info.aws_shell) {
 			portal_base = this_board->bar0io;
 			ptile = this_board->bar0io;
@@ -688,7 +688,7 @@ printk("[%s:%d]\n", __FUNCTION__, __LINE__);
         /* set MSIX Entry 0 Vector Control value to 1 (masked) */
         iowrite32(1, this_board->bar0io + CSR_MSIX_MASKED);
         disable_irq(this_board->irq_num);
-	for (i = 0; i < num_entries; i++) 
+	for (i = 0; i < num_entries; i++)
 		free_irq(this_board->irq_num + i, (void *) &this_board->tile[i]);
 MSI_ENABLED_label:
         /* disable MSI/MSIX */
@@ -721,7 +721,7 @@ static int pcieportal_probe(struct pci_dev *dev, const struct pci_device_id *id)
         int i, board_number = 0;
 
 printk("******[%s:%d] probe %p dev %p id %p getdrv %p\n", __FUNCTION__, __LINE__, &pcieportal_probe, dev, id, pci_get_drvdata(dev));
-        printk(KERN_INFO "%s: PCI probe for 0x%04x 0x%04x\n", DEV_NAME, dev->vendor, dev->device); 
+        printk(KERN_INFO "%s: PCI probe for 0x%04x 0x%04x\n", DEV_NAME, dev->vendor, dev->device);
         /* double-check vendor and device */
         if ((dev->vendor != BLUESPEC_VENDOR_ID || dev->device != CONNECTAL_DEVICE_ID)
 	    && (dev->vendor != AMAZON_VENDOR_ID || dev->device != AMAZON_DEVICE_ID)) {
@@ -815,10 +815,10 @@ static struct pci_driver pcieportal_ops = {
 
 /*
  *
- * get the tBoard struct 
+ * get the tBoard struct
  *
  */
-  
+
 tBoard* get_pcie_portal_descriptor(void)
 {
   return &board_map[0];
