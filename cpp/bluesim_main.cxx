@@ -106,7 +106,11 @@ int main (int argc, char *argv[])
     // tModel model = NEW_MODEL_MKFOO ();
     tModel model = new_MODEL_mkXsimTop();
 
+#ifdef BSC_OBSOLETE
     tSimStateHdl sim = bk_init (model, true, false);
+#else
+    tSimStateHdl sim = bk_init (model, true);
+#endif
 
     if (vcd_filename != NULL) {
 	tStatus status = bk_set_VCD_file (sim, vcd_filename);
