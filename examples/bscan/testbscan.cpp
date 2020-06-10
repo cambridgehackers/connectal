@@ -41,14 +41,19 @@ public:
 
 int main(int argc, const char **argv)
 {
-    BscanIndication *bscanIndication = new BscanIndication(IfcNames_BscanIndication);
-    bscanRequestProxy = new BscanRequestProxy(IfcNames_BscanRequest);
+    BscanIndication *bscanIndication = new BscanIndication(IfcNames_BscanIndicationH2S);
+    bscanRequestProxy = new BscanRequestProxy(IfcNames_BscanRequestS2H);
 
     if (argc == 1) {
         int v = 42;
         printf("Bscan put %x\n", v);
         for (int i = 0; i < 255; i++)
+{
+        printf("Bscan put %x\n", i);
           bscanRequestProxy->bscanPut(i, i*v);
+}
+        for (int i = 0; i < 16; i++)
+           bscanRequestProxy->bscanGet(i);
     }
     else if (argc == 2) {
         bscanRequestProxy->bscanGet(atoll(argv[1]));
@@ -56,5 +61,7 @@ int main(int argc, const char **argv)
     }
     else if (argc == 3)
         bscanRequestProxy->bscanPut(atoll(argv[1]), atoll(argv[2]));
+printf("[%s:%d] now sleep for 20 sec\n", __FUNCTION__, __LINE__);
+    sleep(20);
     return 0;
 }
