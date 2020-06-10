@@ -69,8 +69,17 @@ endif
 GDB_BSIM= LD_PRELOAD=libSegFault.so SEGFAULT_USE_ALTSTACK=1 SEGFAULT_OUTPUT_NAME=bin/bsim-segv-output.txt
 
 
-BSCVERSION=$(shell bsc -v |grep Compiler | sed -e "s/.*version //" -e "s/ .*//")
-BSCMAJOR=$(shell bsc -v |grep Compiler | sed -e "s/.*version //" -e "s/\..*//")
+BSCVERSION=$(shell bsc -v |grep version | sed -e "s/.*version //" -e "s/ .*//")
+BSCMAJOR=$(shell bsc -v |grep version | sed -e "s/.*version //" -e "s/\..*//")
+ifeq ($(BSCVERSION),)
+	BSIM_LIBRARY_DIR = $(BLUESPECDIR)/Bluesim
+else ifeq ($(shell test $(BSCMAJOR) -le 2019 &>/dev/null && echo obsolete),)
+	BSIM_LIBRARY_DIR = $(BLUESPECDIR)/Bluesim
+else
+	BSIM_LIBRARY_DIR = $(BLUESPECDIR)/Bluesim/g++4_64
+	CXXFLAGS_BSIM += -DBSC_OBSOLETE
+endif
+
 ifneq ($(BSCMAJOR), 2013)
     # S0015: The use of a mkSyncReset may not always result in a reset
     #        signal being seen on the destination side. Recommend
@@ -390,7 +399,7 @@ bsim: prepare_bin_target $(DTOP)/bin/libconnectal-sim.so obj/mkXsimTop.ba
 	$(Q)mkdir -p $(DTOP)/obj verilog
 	@echo BSCBSIM [$(DTOP)]
 	$(Q)cd generatedbsv; MAKEFLAGS="" $(RUN_BSC) -O -L $(DTOP)/bin  -l connectal-sim -sim -e $(MKTOP) -o bsim $(DTOP)/obj/*.ba
-	g++ -O -g -o bin/bsim -Iobj -I$(BLUESPECDIR)/Bluesim obj/*.o $(CONNECTALDIR)/cpp/bluesim_main.cxx -L$(BLUESPECDIR)/Bluesim/g++4_64 -lbskernel -lbsprim -lpthread -L bin -lconnectal-sim
+	g++ -O -g $(CXXFLAGS_BSIM) -o bin/bsim -Iobj -I$(BLUESPECDIR)/Bluesim obj/*.o $(CONNECTALDIR)/cpp/bluesim_main.cxx -L$(BSIM_LIBRARY_DIR) -lbskernel -lbsprim -lpthread -L bin -lconnectal-sim
 
 
 build/checkpoints/to_aws/mkTop.SH_CL_routed.dcp: verilog
