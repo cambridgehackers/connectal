@@ -144,13 +144,18 @@ long char_ctrl_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		return -ENOTTY;
 	}
 
-	if (_IOC_DIR(cmd) & _IOC_READ)
-		result = !access_ok((void __user *)arg,
-				_IOC_SIZE(cmd));
-	else if (_IOC_DIR(cmd) & _IOC_WRITE)
-		result =  !access_ok((void __user *)arg,
-				_IOC_SIZE(cmd));
-
+	if (_IOC_DIR(cmd) & _IOC_READ) {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,0,0))
+		result = !access_ok(VERIFY_READ, (void __user *)arg, _IOC_SIZE(cmd));
+#else
+		result = !access_ok((void __user *)arg, _IOC_SIZE(cmd));
+#endif
+	} else if (_IOC_DIR(cmd) & _IOC_WRITE)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,0,0))
+		result =  !access_ok(VERIFY_WRITE, (void __user *)arg, _IOC_SIZE(cmd));
+#else
+		result =  !access_ok((void __user *)arg, _IOC_SIZE(cmd));
+#endif
 	if (result) {
 		pr_err("bad access %ld.\n", result);
 		return -EFAULT;
