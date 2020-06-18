@@ -37,6 +37,13 @@
 #include "drivers/portalmem/portalmem.h"
 #include "driverversion.h"
 
+// Centos 7 uses Linux 3.10 with backported APIs so kernel version
+// comparisons do not work. Defining SUPPORT_CENTOS as 1 we're going
+// to assume dma-buf API equivalent to 4.12.0, which seems to work on
+// Centos 7 also. Doing this properly would require a configure script
+// to probe dma-buf.h on Centos.
+#define SUPPORT_CENTOS 1
+
 #ifdef DEBUG // was KERN_DEBUG
 #define driver_devel(format, ...)               \
         do {                                    \
@@ -251,7 +258,7 @@ static void pa_dma_buf_kunmap(struct dma_buf *dmabuf, unsigned long offset,
 }
 
 static int pa_dma_buf_begin_cpu_access(struct dma_buf *dmabuf,
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
+#if !SUPPORT_CENTOS && (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
                                        size_t start,
                                        size_t len,
 #endif
@@ -295,13 +302,13 @@ static int pa_dma_buf_begin_cpu_access(struct dma_buf *dmabuf,
 }
 
 static
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0))
+#if SUPPORT_CENTOS || (LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0))
 int
 #else
 void
 #endif
 pa_dma_buf_end_cpu_access(struct dma_buf *dmabuf,
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
+#if !SUPPORT_CENTOS && (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
                                       size_t start,
                                       size_t len,
 #endif
@@ -315,7 +322,7 @@ pa_dma_buf_end_cpu_access(struct dma_buf *dmabuf,
                 buffer->vaddr = NULL;
         }
         mutex_unlock(&buffer->lock);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0))
+#if SUPPORT_CENTOS || (LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0))
         return 0;
 #endif
 }
@@ -324,7 +331,7 @@ static void *pa_dma_buf_vmap(struct dma_buf *dmabuf)
 {
         struct pa_buffer *buffer = dmabuf->priv;
         pa_dma_buf_begin_cpu_access(dmabuf,
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
+#if !SUPPORT_CENTOS && (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
                                     0, 0,
 #endif
                                     0);
@@ -344,7 +351,7 @@ static struct dma_buf_ops dma_buf_ops = {
         .release          = pa_dma_buf_release,
         .begin_cpu_access = pa_dma_buf_begin_cpu_access,
         .end_cpu_access   = pa_dma_buf_end_cpu_access,
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,12,0))
+#if !SUPPORT_CENTOS && (LINUX_VERSION_CODE < KERNEL_VERSION(4,12,0))
         .kmap_atomic      = pa_dma_buf_kmap,
         .kunmap_atomic    = pa_dma_buf_kunmap,
         .kmap             = pa_dma_buf_kmap,
@@ -448,7 +455,7 @@ int portalmem_dmabuffer_create(PortalAlloc portalAlloc)
                 int ret = sg_alloc_table(table, infocount, GFP_KERNEL);
                 if (!ret) {
                         struct dma_buf *dmabuf;
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0) || LINUX_VERSION_CODE == KERNEL_VERSION(3,10,0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0) || SUPPORT_CENTOS)
                         struct dma_buf_export_info export_info = {
                                 .exp_name = "portalmem",
                         };
@@ -486,7 +493,7 @@ int portalmem_dmabuffer_create(PortalAlloc portalAlloc)
 #endif
                                 sg_dma_address(sg) = sg_phys(sg);
                         }
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0) || LINUX_VERSION_CODE == KERNEL_VERSION(3,10,0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0) || SUPPORT_CENTOS)
                         export_info.ops = &dma_buf_ops;
                         export_info.size = len;
                         export_info.flags = O_RDWR;
