@@ -105,7 +105,7 @@ def bsvDependencies(bsvfile, allBsv=False, bluespecdir=None, argbsvpath=[], bsvd
 
             if re.match('^//', line):
                 continue
-            m = re.match('import\s+([A-Za-z0-9_]+)\w*', line)
+            m = re.match('import\s+([A-Za-z0-9_]+)\w*', re.sub("`line\(.*\)", " ", line))
             if m:
                 pkg = m.group(1)
                 if pkg not in packages and pkg not in bsvpackages:
