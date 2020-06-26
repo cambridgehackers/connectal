@@ -1,14 +1,21 @@
-/*******************************************************************************
+/*
+ * This file is part of the Xilinx DMA IP Core driver for Linux
  *
- * Xilinx XDMA IP Core Linux Driver
+ * Copyright (c) 2016-present,  Xilinx, Inc.
+ * All rights reserved.
  *
- * Copyright(c) Sidebranch.
- * Copyright(c) Xilinx, Inc.
+ * This source code is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
  *
- * Karen Xie <karen.xie@xilinx.com>
- * Leon Woestenberg <leon@sidebranch.com>
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  *
- ******************************************************************************/
+ * The full GNU General Public License is included in this distribution in
+ * the file called "COPYING".
+ */
 
 #ifndef __XDMA_BASE_API_H__
 #define __XDMA_BASE_API_H__
@@ -125,6 +132,14 @@ int xdma_user_isr_disable(void *dev_hndl, unsigned int mask);
  */
 ssize_t xdma_xfer_submit(void *dev_hndl, int channel, bool write, u64 ep_addr,
 			struct sg_table *sgt, bool dma_mapped, int timeout_ms);
+
+ssize_t xdma_xfer_submit_nowait(void *cb_hndl, void *dev_hndl, int channel, bool write, u64 ep_addr,
+			struct sg_table *sgt, bool dma_mapped, int timeout_ms);
+
+
+ssize_t xdma_xfer_completion(void *cb_hndl, void *dev_hndl, int channel, bool write, u64 ep_addr,
+			struct sg_table *sgt, bool dma_mapped, int timeout_ms);
+
 			
 
 /////////////////////missing API////////////////////

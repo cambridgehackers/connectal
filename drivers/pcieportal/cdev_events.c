@@ -1,26 +1,22 @@
-/*******************************************************************************
+/*
+ * This file is part of the Xilinx DMA IP Core driver for Linux
  *
- * Xilinx XDMA IP Core Linux Driver
- * Copyright(c) 2015 - 2017 Xilinx, Inc.
+ * Copyright (c) 2016-present,  Xilinx, Inc.
+ * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify it
+ * This source code is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
  * version 2, as published by the Free Software Foundation.
  *
- * This program is distributed in the hope it will be useful, but WITHOUT
+ * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
  * The full GNU General Public License is included in this distribution in
- * the file called "LICENSE".
- *
- * Karen Xie <karen.xie@xilinx.com>
- *
- ******************************************************************************/
+ * the file called "COPYING".
+ */
+
 #define pr_fmt(fmt)     KBUILD_MODNAME ":%s: " fmt, __func__
 
 #include "xdma_cdev.h"
@@ -39,7 +35,7 @@ static ssize_t char_events_read(struct file *file, char __user *buf,
 
 	rv = xcdev_check(__func__, xcdev, 0);
 	if (rv < 0)
-		return rv;	
+		return rv;
 	user_irq = xcdev->user_irq;
 	if (!user_irq) {
 		pr_info("xcdev 0x%p, user_irq NULL.\n", xcdev);
@@ -88,7 +84,7 @@ static unsigned int char_events_poll(struct file *file, poll_table *wait)
 
 	rv = xcdev_check(__func__, xcdev, 0);
 	if (rv < 0)
-		return rv;	
+		return rv;
 	user_irq = xcdev->user_irq;
 	if (!user_irq) {
 		pr_info("xcdev 0x%p, user_irq NULL.\n", xcdev);

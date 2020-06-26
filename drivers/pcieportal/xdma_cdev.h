@@ -1,26 +1,22 @@
-/*******************************************************************************
+/*
+ * This file is part of the Xilinx DMA IP Core driver for Linux
  *
- * Xilinx XDMA IP Core Linux Driver
- * Copyright(c) 2015 - 2017 Xilinx, Inc.
+ * Copyright (c) 2016-present,  Xilinx, Inc.
+ * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify it
+ * This source code is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
  * version 2, as published by the Free Software Foundation.
  *
- * This program is distributed in the hope it will be useful, but WITHOUT
+ * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
  * The full GNU General Public License is included in this distribution in
- * the file called "LICENSE".
- *
- * Karen Xie <karen.xie@xilinx.com>
- *
- ******************************************************************************/
+ * the file called "COPYING".
+ */
+
 #ifndef __XDMA_CHRDEV_H__
 #define __XDMA_CHRDEV_H__
 
@@ -39,13 +35,13 @@ int xdma_cdev_init(void);
 
 int char_open(struct inode *inode, struct file *file);
 int char_close(struct inode *inode, struct file *file);
-int xcdev_check(const char *, struct xdma_cdev *, bool);
-
+int xcdev_check(const char *fname, struct xdma_cdev *xcdev, bool check_engine);
 void cdev_ctrl_init(struct xdma_cdev *xcdev);
 void cdev_xvc_init(struct xdma_cdev *xcdev);
 void cdev_event_init(struct xdma_cdev *xcdev);
 void cdev_sgdma_init(struct xdma_cdev *xcdev);
 void cdev_bypass_init(struct xdma_cdev *xcdev);
+long char_ctrl_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
 
 void xpdev_destroy_interfaces(struct xdma_pci_dev *xpdev);
 int xpdev_create_interfaces(struct xdma_pci_dev *xpdev);
