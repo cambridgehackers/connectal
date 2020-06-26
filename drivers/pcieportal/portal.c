@@ -514,12 +514,24 @@ int pcieportal_board_activate(int activate, tBoard *this_board, struct xdma_pci_
 
                 /* mapped BARs */
                 this_board->bar0io = xpdev->xdev->bar[0];
+                if (!this_board->bar0io) {
+                    this_board->bar0io = pci_iomap(dev, 0, 0);
+                }
                 printk("bar0io=%p\n", this_board->bar0io);
                 this_board->bar1io = xpdev->xdev->bar[1];
+                if (!this_board->bar1io) {
+                    this_board->bar1io = pci_iomap(dev, 1, 0);
+                }
                 printk("bar1io=%p\n", this_board->bar1io);
                 this_board->bar2io = xpdev->xdev->bar[2];
+                if (!this_board->bar2io) {
+                    this_board->bar2io = pci_iomap(dev, 2, 0);
+                }
                 printk("bar2io=%p\n", this_board->bar2io);
                 this_board->bar4io = xpdev->xdev->bar[4];
+                if (!this_board->bar4io) {
+                    this_board->bar4io = pci_iomap(dev, 4, 0);
+                }
                 printk("bar4io=%p\n", this_board->bar4io);
 
                 if (!this_board->bar4io) {

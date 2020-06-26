@@ -1,26 +1,22 @@
-/*******************************************************************************
+/*
+ * This file is part of the Xilinx DMA IP Core driver for Linux
  *
- * Xilinx XDMA IP Core Linux Driver
- * Copyright(c) 2015 - 2017 Xilinx, Inc.
+ * Copyright (c) 2016-present,  Xilinx, Inc.
+ * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify it
+ * This source code is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
  * version 2, as published by the Free Software Foundation.
  *
- * This program is distributed in the hope it will be useful, but WITHOUT
+ * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
  * The full GNU General Public License is included in this distribution in
- * the file called "LICENSE".
- *
- * Karen Xie <karen.xie@xilinx.com>
- *
- ******************************************************************************/
+ * the file called "COPYING".
+ */
+
 #define pr_fmt(fmt)     KBUILD_MODNAME ":%s: " fmt, __func__
 
 #include "xdma_cdev.h"
@@ -36,30 +32,30 @@
 
 #ifdef __REG_DEBUG__
 /* SECTION: Function definitions */
-inline void __write_register(const char *fn, u32 value, void *base,
+inline void __write_register(const char *fn, u32 value, void __iomem *base,
 				unsigned int off)
 {
-        pr_info("%s: 0x%p, W reg 0x%lx, 0x%x.\n", fn, base, off, value);
-        iowrite32(value, base + off);
+	pr_info("%s: 0x%p, W reg 0x%lx, 0x%x.\n", fn, base, off, value);
+	iowrite32(value, base + off);
 }
 
-inline u32 __read_register(const char *fn, void *base, unsigned int off)
+inline u32 __read_register(const char *fn, void __iomem *base, unsigned int off)
 {
 	u32 v = ioread32(base + off);
 
-        pr_info("%s: 0x%p, R reg 0x%lx, 0x%x.\n", fn, base, off, v);
-        return v;
+	pr_info("%s: 0x%p, R reg 0x%lx, 0x%x.\n", fn, base, off, v);
+	return v;
 }
-#define write_register(v,base,off) __write_register(__func__, v, base, off)
-#define read_register(base,off) __read_register(__func__, base, off)
+#define write_register(v, base, off) __write_register(__func__, v, base, off)
+#define read_register(base, off) __read_register(__func__, base, off)
 
 #else
-#define write_register(v,base,off)	iowrite32(v, (base) + (off))
-#define read_register(base,off)		ioread32((base) + (off))
+#define write_register(v, base, off)	iowrite32(v, (base) + (off))
+#define read_register(base, off)		ioread32((base) + (off))
 #endif /* #ifdef __REG_DEBUG__ */
 
 
-static int xvc_shift_bits(void *base, u32 tms_bits, u32 tdi_bits,
+static int xvc_shift_bits(void __iomem *base, u32 tms_bits, u32 tdi_bits,
 			u32 *tdo_bits)
 {
 	u32 control;
@@ -96,7 +92,7 @@ static int xvc_shift_bits(void *base, u32 tms_bits, u32 tdi_bits,
 
 static long xvc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
-        struct xdma_cdev *xcdev = (struct xdma_cdev *)filp->private_data;
+	struct xdma_cdev *xcdev = (struct xdma_cdev *)filp->private_data;
 	struct xdma_dev *xdev;
 	struct xvc_ioc xvc_obj;
 	unsigned int opcode;
@@ -113,6 +109,7 @@ static long xvc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	rv = xcdev_check(__func__, xcdev, 0);
 	if (rv < 0)
 		return rv;
+
 	xdev = xcdev->xdev;
 
 	if (cmd != XDMA_IOCXVC) {
@@ -139,7 +136,7 @@ static long xvc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	total_bits = xvc_obj.length;
 	total_bytes = (total_bits + 7) >> 3;
 
-	buffer = (char *)kmalloc(total_bytes * 3, GFP_KERNEL);
+	buffer = (unsigned char *)kmalloc(total_bytes * 3, GFP_KERNEL);
 	if (!buffer) {
 		pr_info("OOM %u, op 0x%x, len %u bits, %u bytes.\n",
 			3 * total_bytes, opcode, total_bits, total_bytes);
@@ -150,12 +147,16 @@ static long xvc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	tdi_buf = tms_buf + total_bytes;
 	tdo_buf = tdi_buf + total_bytes;
 
-	rv = copy_from_user((void *)tms_buf, xvc_obj.tms_buf, total_bytes);
+	rv = copy_from_user((void *)tms_buf,
+			(const char __user *)xvc_obj.tms_buf,
+			total_bytes);
 	if (rv) {
 		pr_info("copy tmfs_buf failed: %d/%u.\n", rv, total_bytes);
 		goto cleanup;
 	}
-	rv = copy_from_user((void *)tdi_buf, xvc_obj.tdi_buf, total_bytes);
+	rv = copy_from_user((void *)tdi_buf,
+			(const char __user *)xvc_obj.tdi_buf,
+			total_bytes);
 	if (rv) {
 		pr_info("copy tdi_buf failed: %d/%u.\n", rv, total_bytes);
 		goto cleanup;
@@ -166,7 +167,8 @@ static long xvc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	iobase = xdev->bar[xcdev->bar] + xcdev->base;
 	/* set length register to 32 initially if more than one
-	 * word-transaction is to be done */
+	 * word-transaction is to be done
+	 */
 	if (total_bits >= 32)
 		write_register(0x20, iobase, XVC_BAR_LENGTH_REG);
 
@@ -177,7 +179,7 @@ static long xvc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		u32 tms_store = 0;
 		u32 tdi_store = 0;
 		u32 tdo_store = 0;
-		
+
 		if (bits_left < 32) {
 			/* set number of bits to shift out */
 			write_register(bits_left, iobase, XVC_BAR_LENGTH_REG);
@@ -190,32 +192,34 @@ static long xvc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		/* Shift data out and copy to output buffer */
 		rv = xvc_shift_bits(iobase, tms_store, tdi_store, &tdo_store);
 		if (rv < 0)
-			goto cleanup;
+			break;
 
 		memcpy(tdo_buf + bytes, &tdo_store, shift_bytes);
 	}
 
+	if (rv < 0)
+		goto unlock;
+
 	/* if testing bar access swap tdi and tdo bufferes to "loopback" */
 	if (opcode == 0x2) {
-		char *tmp = tdo_buf;
+		unsigned char *tmp = tdo_buf;
 
 		tdo_buf = tdi_buf;
 		tdi_buf = tmp;
 	}
 
-	rv = copy_to_user((void *)xvc_obj.tdo_buf, tdo_buf, total_bytes);
-	if (rv) {
+	rv = copy_to_user(xvc_obj.tdo_buf, (const void *)tdo_buf, total_bytes);
+	if (rv)
 		pr_info("copy back tdo_buf failed: %d/%u.\n", rv, total_bytes);
-		rv = -EFAULT;
-		goto cleanup;
-	}
+
+unlock:
+#if KERNEL_VERSION(5, 1, 0) >= LINUX_VERSION_CODE
+	mmiowb();
+#endif
+	spin_unlock(&xcdev->lock);
 
 cleanup:
-	if (buffer)
-		kfree(buffer);
-
-	wmb();
-	spin_unlock(&xcdev->lock);
+	kfree(buffer);
 
 	return rv;
 }
@@ -224,10 +228,10 @@ cleanup:
  * character device file operations for the XVC
  */
 static const struct file_operations xvc_fops = {
-        .owner = THIS_MODULE,
-        .open = char_open,
-        .release = char_close,
-        .unlocked_ioctl = xvc_ioctl,
+	.owner = THIS_MODULE,
+	.open = char_open,
+	.release = char_close,
+	.unlocked_ioctl = xvc_ioctl,
 };
 
 void cdev_xvc_init(struct xdma_cdev *xcdev)

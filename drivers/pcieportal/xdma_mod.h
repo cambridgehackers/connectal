@@ -1,26 +1,22 @@
-/*******************************************************************************
+/*
+ * This file is part of the Xilinx DMA IP Core driver for Linux
  *
- * Xilinx XDMA IP Core Linux Driver
- * Copyright(c) 2015 - 2017 Xilinx, Inc.
+ * Copyright (c) 2016-present,  Xilinx, Inc.
+ * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify it
+ * This source code is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
  * version 2, as published by the Free Software Foundation.
  *
- * This program is distributed in the hope it will be useful, but WITHOUT
+ * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
  * The full GNU General Public License is included in this distribution in
- * the file called "LICENSE".
- *
- * Karen Xie <karen.xie@xilinx.com>
- *
- ******************************************************************************/
+ * the file called "COPYING".
+ */
+
 #ifndef __XDMA_MODULE_H__
 #define __XDMA_MODULE_H__
 
@@ -48,14 +44,22 @@
 #include <linux/splice.h>
 #include <linux/version.h>
 #include <linux/uio.h>
+#include <linux/spinlock_types.h>
 
 #include "libxdma.h"
+#include "xdma_thread.h"
+
+/* BEGIN CONNECTAL */
 #include "portal_internal.h"
+/* END CONNECTAL */
 
 #define MAGIC_ENGINE	0xEEEEEEEEUL
 #define MAGIC_DEVICE	0xDDDDDDDDUL
 #define MAGIC_CHAR	0xCCCCCCCCUL
 #define MAGIC_BITSTREAM 0xBBBBBBBBUL
+
+extern unsigned int desc_blen_max;
+extern unsigned int sgdma_timeout;
 
 struct xdma_cdev {
 	unsigned long magic;		/* structure ID for sanity checks */
@@ -96,17 +100,26 @@ struct xdma_pci_dev {
 
 	struct xdma_cdev xvc_cdev;
 
+	/* BEGIN CONNECTAL */
 	struct tBoard portal_board;
+	/* END CONNECTAL */
 
 	void *data;
 };
 
-struct xdma_io_cb {
-	void __user *buf;
-	size_t len;
-	unsigned int pages_nr;
-	struct sg_table sgt;
-	struct page **pages;
+struct cdev_async_io {
+	struct kiocb *iocb;
+	struct xdma_io_cb* cb;
+	bool write;
+	bool cancel;
+	int cmpl_cnt;
+	int req_cnt;
+	spinlock_t lock;
+	struct work_struct wrk_itm;
+	struct cdev_async_io *next;
+	ssize_t res;
+	ssize_t res2;
+	int err_cnt;
 };
 
 #endif /* ifndef __XDMA_MODULE_H__ */
