@@ -642,6 +642,10 @@ static struct xdma_transfer *engine_start(struct xdma_engine *engine)
 	u32 w;
 	int extra_adj = 0;
 	int rv;
+	/* BEGIN CONNECTAL */
+	/* See https://github.com/Xilinx/dma_ip_drivers/pull/49 */
+	u32 max_adj_4k = 0;
+	/* END CONNECTAL */
 
 	if (!engine) {
 		pr_err("dma engine NULL\n");
@@ -705,6 +709,14 @@ static struct xdma_transfer *engine_start(struct xdma_engine *engine)
 		extra_adj = transfer->desc_adjacent - 1;
 		if (extra_adj > MAX_EXTRA_ADJ)
 			extra_adj = MAX_EXTRA_ADJ;
+		/* BEGIN CONNECTAL */
+		/* See https://github.com/Xilinx/dma_ip_drivers/pull/49 */
+		max_adj_4k =
+			(0x1000 - (transfer->desc_bus & 0xFFF)) / 32 -
+			1;
+		if (extra_adj > max_adj_4k)
+			extra_adj = max_adj_4k;
+		/* END CONNECTAL */
 	}
 	dbg_tfr("iowrite32(0x%08x to 0x%p) (first_desc_adjacent)\n", extra_adj,
 		(void *)&engine->sgdma_regs->first_desc_adjacent);
@@ -2453,6 +2465,10 @@ static int transfer_desc_init(struct xdma_transfer *transfer, int count)
 	int adj = count - 1;
 	int extra_adj;
 	u32 temp_control;
+	/* BEGIN CONNECTAL */
+	/* See https://github.com/Xilinx/dma_ip_drivers/pull/49 */
+	u32 max_adj_4k = 0;
+	/* END CONNECTAL */
 
 	if (count > XDMA_TRANSFER_MAX_DESC) {
 		pr_err("Engine cannot transfer more than %d descriptors\n",
@@ -2475,6 +2491,14 @@ static int transfer_desc_init(struct xdma_transfer *transfer, int count)
 			extra_adj = adj - 1;
 			if (extra_adj > MAX_EXTRA_ADJ)
 				extra_adj = MAX_EXTRA_ADJ;
+			/* BEGIN CONNECTAL */
+			/* See https://github.com/Xilinx/dma_ip_drivers/pull/49 */
+			max_adj_4k =
+				(0x1000 - (desc_bus & 0xFFF)) / 32 -
+				1;
+			if (extra_adj > max_adj_4k)
+				extra_adj = max_adj_4k;
+			/* END CONNECTAL */
 
 			adj--;
 		} else {
