@@ -549,14 +549,13 @@ static int xdma_engine_stop(struct xdma_engine *engine)
 	} else {
 		w |= (u32)XDMA_CTRL_IE_DESC_STOPPED;
 		w |= (u32)XDMA_CTRL_IE_DESC_COMPLETED;
-
 	}
 
 	dbg_tfr("Stopping SG DMA %s engine; writing 0x%08x to 0x%p.\n",
 		engine->name, w, (u32 *)&engine->regs->control);
 	write_register(w, &engine->regs->control,
-		       (unsigned long)(&engine->regs->control) -
-			       (unsigned long)(&engine->regs));
+			(unsigned long)(&engine->regs->control) -
+				(unsigned long)(&engine->regs));
 	/* dummy read of status register to flush all previous writes */
 	dbg_tfr("%s(%s) done\n", __func__, engine->name);
 	return 0;
@@ -642,10 +641,6 @@ static struct xdma_transfer *engine_start(struct xdma_engine *engine)
 	u32 w;
 	int extra_adj = 0;
 	int rv;
-	/* BEGIN CONNECTAL */
-	/* See https://github.com/Xilinx/dma_ip_drivers/pull/49 */
-	u32 max_adj_4k = 0;
-	/* END CONNECTAL */
 
 	if (!engine) {
 		pr_err("dma engine NULL\n");
@@ -709,14 +704,6 @@ static struct xdma_transfer *engine_start(struct xdma_engine *engine)
 		extra_adj = transfer->desc_adjacent - 1;
 		if (extra_adj > MAX_EXTRA_ADJ)
 			extra_adj = MAX_EXTRA_ADJ;
-		/* BEGIN CONNECTAL */
-		/* See https://github.com/Xilinx/dma_ip_drivers/pull/49 */
-		max_adj_4k =
-			(0x1000 - (transfer->desc_bus & 0xFFF)) / 32 -
-			1;
-		if (extra_adj > max_adj_4k)
-			extra_adj = max_adj_4k;
-		/* END CONNECTAL */
 	}
 	dbg_tfr("iowrite32(0x%08x to 0x%p) (first_desc_adjacent)\n", extra_adj,
 		(void *)&engine->sgdma_regs->first_desc_adjacent);
@@ -1600,7 +1587,7 @@ static irqreturn_t xdma_isr(int irq, void *dev_id)
 	if (user_irq) {
 		int user = 0;
 		u32 mask = 1;
-		int max = xdev->h2c_channel_max;
+		int max = xdev->user_max;
 
 		for (; user < max && user_irq; user++, mask <<= 1) {
 			if (user_irq & mask) {
@@ -2462,13 +2449,6 @@ static int transfer_desc_init(struct xdma_transfer *transfer, int count)
 	struct xdma_desc *desc_virt = transfer->desc_virt;
 	dma_addr_t desc_bus = transfer->desc_bus;
 	int i;
-	int adj = count - 1;
-	int extra_adj;
-	u32 temp_control;
-	/* BEGIN CONNECTAL */
-	/* See https://github.com/Xilinx/dma_ip_drivers/pull/49 */
-	u32 max_adj_4k = 0;
-	/* END CONNECTAL */
 
 	if (count > XDMA_TRANSFER_MAX_DESC) {
 		pr_err("Engine cannot transfer more than %d descriptors\n",
@@ -2485,39 +2465,14 @@ static int transfer_desc_init(struct xdma_transfer *transfer, int count)
 		desc_virt[i].next_lo = cpu_to_le32(PCI_DMA_L(desc_bus));
 		desc_virt[i].next_hi = cpu_to_le32(PCI_DMA_H(desc_bus));
 		desc_virt[i].bytes = cpu_to_le32(0);
-
-		/* any adjacent descriptors? */
-		if (adj > 0) {
-			extra_adj = adj - 1;
-			if (extra_adj > MAX_EXTRA_ADJ)
-				extra_adj = MAX_EXTRA_ADJ;
-			/* BEGIN CONNECTAL */
-			/* See https://github.com/Xilinx/dma_ip_drivers/pull/49 */
-			max_adj_4k =
-				(0x1000 - (desc_bus & 0xFFF)) / 32 -
-				1;
-			if (extra_adj > max_adj_4k)
-				extra_adj = max_adj_4k;
-			/* END CONNECTAL */
-
-			adj--;
-		} else {
-			extra_adj = 0;
-		}
-
-		temp_control = DESC_MAGIC | (extra_adj << 8);
-
-		desc_virt[i].control = cpu_to_le32(temp_control);
+		desc_virt[i].control = cpu_to_le32(DESC_MAGIC);
 	}
 	/* { i = number - 1 } */
 	/* zero the last descriptor next pointer */
 	desc_virt[i].next_lo = cpu_to_le32(0);
 	desc_virt[i].next_hi = cpu_to_le32(0);
 	desc_virt[i].bytes = cpu_to_le32(0);
-
-	temp_control = DESC_MAGIC;
-
-	desc_virt[i].control = cpu_to_le32(temp_control);
+	desc_virt[i].control = cpu_to_le32(DESC_MAGIC);
 
 	return 0;
 }
@@ -2564,27 +2519,14 @@ static void xdma_desc_link(struct xdma_desc *first, struct xdma_desc *second,
 /* xdma_desc_adjacent -- Set how many descriptors are adjacent to this one */
 static void xdma_desc_adjacent(struct xdma_desc *desc, int next_adjacent)
 {
-	int extra_adj = 0;
 	/* remember reserved and control bits */
-	u32 control = le32_to_cpu(desc->control) & 0x0000f0ffUL;
-	u32 max_adj_4k = 0;
+	u32 control = le32_to_cpu(desc->control) & 0xffffc0ffUL;
 
-	if (next_adjacent > 0) {
-		extra_adj = next_adjacent - 1;
-		if (extra_adj > MAX_EXTRA_ADJ)
-			extra_adj = MAX_EXTRA_ADJ;
-		max_adj_4k =
-			(0x1000 - ((le32_to_cpu(desc->next_lo)) & 0xFFF)) / 32 -
-			1;
-		if (extra_adj > max_adj_4k)
-			extra_adj = max_adj_4k;
-		if (extra_adj < 0) {
-			pr_warn("extra_adj<0, converting it to 0\n");
-			extra_adj = 0;
-		}
-	}
-	/* merge adjacent and control field */
-	control |= 0xAD4B0000UL | (extra_adj << 8);
+	if (next_adjacent)
+		next_adjacent = next_adjacent - 1;
+	if (next_adjacent > MAX_EXTRA_ADJ)
+		next_adjacent = MAX_EXTRA_ADJ;
+	control |= (next_adjacent << 8);
 	/* write control and next_adjacent */
 	desc->control = cpu_to_le32(control);
 }
@@ -3262,14 +3204,12 @@ static int transfer_init(struct xdma_engine *engine, struct xdma_request_cb *req
 	dbg_sg("xfer= %p transfer->desc_bus = 0x%llx.\n",xfer, (u64)xfer->desc_bus);
 	transfer_build(engine, req, xfer , desc_max);
 
-	/* Contiguous descriptors cannot cross PAGE boundry. Adjust max accordingly */
-	desc_align = engine->desc_idx + desc_max - 1;
-	desc_align = desc_align % 128;
-	if (desc_align < (desc_max - 1)) {
-		desc_align = desc_max - desc_align - 1;
-	}
-	else
-		desc_align = desc_max;
+	/* Contiguous descriptors cannot cross PAGE boundry
+ 	 * The 1st descriptor may start in the middle of the page,
+ 	 * calculate the 1st block of adj desc accordingly */
+	desc_align = 128 - (engine->desc_idx % 128) - 1;
+	if (desc_align > (desc_max - 1))
+		desc_align = desc_max - 1;
 
 	xfer->desc_adjacent = desc_align;
 
@@ -3286,7 +3226,10 @@ static int transfer_init(struct xdma_engine *engine, struct xdma_request_cb *req
 	engine->desc_used += desc_max ;
 
 	/* fill in adjacent numbers */
-	for (i = 0; i < xfer->desc_num; i++)
+	for (i = 0; i < xfer->desc_num && desc_align; i++, desc_align--)
+		xdma_desc_adjacent(xfer->desc_virt + i, desc_align);
+
+	for (; i < xfer->desc_num; i++)
 		xdma_desc_adjacent(xfer->desc_virt + i, xfer->desc_num - i - 1);
 
 	spin_unlock_irqrestore(&engine->lock, flags);
