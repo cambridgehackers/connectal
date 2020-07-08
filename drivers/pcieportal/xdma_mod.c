@@ -109,6 +109,7 @@ static const struct pci_device_id pci_ids[] = {
 	/* BEGIN CONNECTAL */
 	// Connectal via PCIE
 	{ PCI_DEVICE(0x1be7, 0xc100), },
+	{ PCI_DEVICE(0x1be7, 0xf100), },
 	/* END CONNECTAL */
 
 #ifdef INTERNAL_TESTING
