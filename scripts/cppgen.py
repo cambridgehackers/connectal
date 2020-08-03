@@ -67,9 +67,10 @@ private:
     }
     int __internalResponse(struct PortalInternal *p, unsigned int channel) {
         int tmpfd __attribute__ ((unused));
-        volatile unsigned int* temp_working_addr = &p->map_base[1];
+        volatile unsigned int* temp_working_addr = p->transport->mapchannelInd(p, channel);
         int offset = 0, remain = 1;
-        uint32_t temp = (uint32_t)(((temp_working_addr[offset])&0xfffffffful));
+        p->transport->recv(p, temp_working_addr, 1, &tmpfd);
+        uint32_t temp = p->transport->read(p, &temp_working_addr);
         offset++;
         int messageSize = temp & 0xffff;
         temp = temp >> 16;
@@ -79,7 +80,8 @@ private:
         uint16_t *dest = (uint16_t *)&__internalWaitResult;
         while (messageSize > 0) {
             if (remain == 0) {
-                temp = (uint32_t)(((temp_working_addr[offset])&0xfffffffful));
+                p->transport->recv(p, temp_working_addr, 1, &tmpfd);
+                temp = p->transport->read(p, &temp_working_addr);
                 offset++;
                 remain = 2;
             }
