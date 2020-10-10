@@ -31,7 +31,7 @@ set_clock_groups -asynchronous -group {clk_fpga_1}
 create_clock -name clk_fpga_3 -period "5" [get_pins "*ps7_foo/FCLKCLK[3]"]
 set_input_jitter clk_fpga_3 0.6
 set_clock_groups -asynchronous -group {clk_fpga_3}
-create_clock -name bscan_refclk -period 20 [get_pins *bscan_mytck/O]
+create_clock -name bscan_refclk -period 20 [get_pins -hier -filter {NAME=~"*/bscan_mytck/O"}]
 
 
 ############################################################################
