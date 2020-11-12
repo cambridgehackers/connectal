@@ -1,136 +1,136 @@
 {
     "*io_vita_clk_pll": {
 	"PIO_DIRECTION": "OUTPUT",
-	"fmc": "LA13_p"
+	"fmc": "LA13_P"
     },
     "*io_vita_reset_n": {
 	"PIO_DIRECTION": "OUTPUT",
-	"fmc": "CLK0_M2C_n"
+	"fmc": "CLK0_M2C_N"
     },
     "*io_vita_trigger_0*": {
 	"PIO_DIRECTION": "OUTPUT",
-	"fmc": "LA14_n"
+	"fmc": "LA14_N"
     },
     "*io_vita_trigger_1*": {
 	"PIO_DIRECTION": "OUTPUT",
-	"fmc": "LA14_p"
+	"fmc": "LA14_P"
     },
     "*io_vita_trigger_2*": {
 	"PIO_DIRECTION": "OUTPUT",
-	"fmc": "LA13_n"
+	"fmc": "LA13_N"
     },
     "*io_vita_monitor*[0]": {
 	"PIO_DIRECTION": "INPUT",
-	"fmc": "LA15_p"
+	"fmc": "LA15_P"
     },
     "*io_vita_monitor*[1]": {
 	"PIO_DIRECTION": "INPUT",
-	"fmc": "LA15_n"
+	"fmc": "LA15_N"
     },
     "CLK_spi_clock": {
         "original_name": "io_vita_spi_sclk",
 	"PIO_DIRECTION": "OUTPUT",
-	"fmc": "LA12_p"
+	"fmc": "LA12_P"
     },
     "*spi_*sel_n": {
 	"PIO_DIRECTION": "OUTPUT",
-	"fmc": "LA12_n"
+	"fmc": "LA12_N"
     },
     "*spi_mosi": {
 	"PIO_DIRECTION": "OUTPUT",
-	"fmc": "LA11_p"
+	"fmc": "LA11_P"
     },
     "*miso_v": {
 	"PIO_DIRECTION": "INPUT",
-	"fmc": "LA11_n"
+	"fmc": "LA11_N"
     },
     "*io_vita_clk_p_v": {
 	"PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
-	"fmc": "LA00_p_CC"
+	"fmc": "LA00_CC_P"
     },
     "*io_vita_clk_n_v": {
 	"PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
-	"fmc": "LA00_n_CC"
+	"fmc": "LA00_CC_N"
     },
     "*io_vita_sync_p*": {
 	"PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
-	"fmc": "LA10_p"
+	"fmc": "LA10_P"
     },
     "*io_vita_sync_n*": {
 	"PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
-	"fmc": "LA10_n"
+	"fmc": "LA10_N"
     },
     "*io_vita_data_p_v[0]": {
 	"PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
-	"fmc": "LA09_p"
+	"fmc": "LA09_P"
     },
     "*io_vita_data_n_v[0]": {
 	"PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
-	"fmc": "LA09_n"
+	"fmc": "LA09_N"
     },
     "*io_vita_data_p_v[1]": {
 	"PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
-	"fmc": "LA07_p"
+	"fmc": "LA07_P"
     },
     "*io_vita_data_n_v[1]": {
 	"PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
-	"fmc": "LA07_n"
+	"fmc": "LA07_N"
     },
     "*io_vita_data_p_v[2]": {
 	"PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
-	"fmc": "LA08_p"
+	"fmc": "LA08_P"
     },
     "*io_vita_data_n_v[2]": {
 	"PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
-	"fmc": "LA08_n"
+	"fmc": "LA08_N"
     },
     "*io_vita_data_p_v[3]": {
 	"PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
-	"fmc": "LA05_p"
+	"fmc": "LA05_P"
     },
     "*io_vita_data_n_v[3]": {
 	"PIO_DIRECTION": "INPUT",
 	"IOSTANDARD": "LVDS_25",
 	"DIFF_TERM": "TRUE",
-	"fmc": "LA05_n"
+	"fmc": "LA05_N"
     },
     "fmc_video_clk1_v": {
 	"PIO_DIRECTION": "INPUT",
-	"fmc": "CLK0_M2C_p"
+	"fmc": "CLK0_M2C_P"
     },
     "*i2c_mux_reset_n": {
 	"PIO_DIRECTION": "OUTPUT",
-	"fmc": "LA01_n_CC"
+	"fmc": "LA01_CC_N"
     },
     "I2C1_scl": {
 	"PIO_DIRECTION": "BIDIR",
-	"fmc": "LA16_p"
+	"fmc": "LA16_P"
     },
     "I2C1_sda": {
 	"PIO_DIRECTION": "BIDIR",
-	"fmc": "LA16_n"
+	"fmc": "LA16_N"
     },
     "CLK_hdmi_clock_if": {
 	"hdmi": "clock"

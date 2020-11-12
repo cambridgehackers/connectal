@@ -29,7 +29,7 @@ interface ImageonCapturePins;
     method Bit#(1) io_vita_reset_n();
     method Vector#(3, ReadOnly#(Bit#(1))) io_vita_trigger();
     method Action io_vita_monitor(Bit#(2) v);
-    interface SpiMasterPins spi;
+    interface SpiMasterPins#(1) spi;
     method Bit#(1) i2c_mux_reset_n();
     interface Clock imageon_deleteme_unused_clock;
     interface Reset imageon_deleteme_unused_reset;

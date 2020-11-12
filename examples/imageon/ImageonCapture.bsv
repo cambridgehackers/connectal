@@ -87,7 +87,7 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, HdmiGenerato
     Clock imageon_clock = clk.imageon;
     Reset hdmi_reset <- mkAsyncReset(2, defaultReset, hdmi_clock);
     Reset imageon_reset <- mkAsyncReset(2, defaultReset, imageon_clock);
-    SPIMaster#(Bit#(26)) spiController <- mkSPIMaster(1000, True);
+    SPIMaster#(Bit#(26), 1) spiController <- mkSPIMaster(1000, True);
     Reg#(Bit#(1)) i2c_mux_reset_n_reg <- mkReg(0);
     Reg#(Bool) dmaRun <- mkSyncReg(False, defaultClock, defaultReset, imageon_clock);
     Reg#(Bit#(32)) trigger_cnt_reg <- mkSyncReg(0, defaultClock, defaultReset, imageon_clock);
@@ -178,7 +178,7 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, HdmiGenerato
     endrule
 
     rule spiResponse;
-        Bit#(26) v <- spiController.response.get();
+        Bit#(26) v <- spiController.response[0].get();
         cap_ind.spi_response(extend(v));
     endrule
 
@@ -237,7 +237,7 @@ module mkImageonCapture#(ImageonSerdesIndication serdes_indication, HdmiGenerato
 	    imageon_oe <= ~v;
 	endmethod
         method Action put_spi_request(Bit#(32) v);
-            spiController.request.put(truncate(v));
+            spiController.request[0].put(truncate(v));
         endmethod
         method Action set_i2c_mux_reset_n(Bit#(1) v);
             i2c_mux_reset_n_reg <= v;
