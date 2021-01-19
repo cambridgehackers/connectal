@@ -25,6 +25,11 @@ import gflags
 import common
 import usb_exceptions
 
+try:
+  basestring
+except NameError:
+  basestring = str  # Python 3 compatibility
+
 FLAGS = gflags.FLAGS
 gflags.DEFINE_integer('fastboot_write_chunk_size_kb', 4,
                       'The size of packets to write to usb, this is set to 4 '
