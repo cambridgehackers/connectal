@@ -37,19 +37,19 @@ from adb import common
 from argparse import RawTextHelpFormatter
 
 timelimit=600
-if os.environ.has_key('RUNTIMELIMIT'):
+if 'RUNTIMELIMIT' in os.environ:
     timelimit = int(os.environ['RUNTIMELIMIT'])
 buildbot_build=None
-if os.environ.has_key('BUILDBOT_BUILD_NUMBER'):
+if 'BUILDBOT_BUILD_NUMBER' in os.environ:
     buildbot_build = os.environ['BUILDBOT_BUILD_NUMBER']
 
-if os.environ.has_key('RUNPARAM'):
+if 'RUNPARAM' in os.environ:
     ipaddr = os.environ['RUNPARAM']
 else:
     ipaddr = None
 
 buildbot_url='http://connectalbuild.qrclab.com/archive/'
-if os.environ.has_key('BUILDBOT_URL'):
+if 'BUILDBOT_URL' in os.environ:
     buildbot_url=os.environ['BUILDBOT_URL']
 
 epilog = '''

@@ -289,7 +289,7 @@ def typeNumeric(item):
             return min(values[0], values[1])
     if tstr[0] == '`':
         var = tstr[1:]
-        if bsvdefines.has_key(var):
+        if var in bsvdefines:
             return int(bsvdefines[var])
     if tstr[0] >= 'A' and tstr[0] <= 'Z':
         return tstr
@@ -382,7 +382,7 @@ def hasBitWidth(item):
     return item['name'] in ['Bit', 'Int', 'UInt', 'fixed32', 'bit']
 
 def getNumeric(item):
-   if globalv_globalvars.has_key(item['name']):
+   if item['name'] in globalv_globalvars:
        decl = globalv_globalvars[item['name']]
        if decl.get('dtype') == 'TypeDef':
            return getNumeric(decl['tdtype'])
