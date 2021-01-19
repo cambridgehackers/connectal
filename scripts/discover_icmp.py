@@ -98,7 +98,7 @@ def send_ping(dest_addr):
         # if (send_cnt > 1024):
         #     time.sleep(0.1)
         icmp_socket.sendto(header, (dest_addr, 1))
-    except socket.error, e:
+    except socket.error as e:
         print((dest_addr,e))
         raise
       
@@ -111,13 +111,13 @@ def check_adb_port(dest_addr):
 def ping_request(dest_addr):
     try:
         send_ping(dest_addr)
-    except socket.gaierror, e:
+    except socket.gaierror as e:
         print("%s failed. (socket error: '%s')" % (dest_addr, e[1]))
 
 def ping_response(timeout = 0.1):
     try:
         addr = receive_ping(timeout)
-    except socket.gaierror, e:
+    except socket.gaierror as e:
         print("failed. (socket error: '%s')" % e[1])
     if (addr != None):
         responders.append(addr[0])
