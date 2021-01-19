@@ -22,6 +22,8 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from __future__ import print_function
+
 import sys
 import socket
 import struct
@@ -59,7 +61,7 @@ class socket_client:
     def send_frame(self, data):
         liw = math.ceil(len(data)/4.0)
         padding = ''.join([' ' for i in range(len(data), int(liw*4))])
-        print "send_frame (%d) %d %s" % (len(data),liw, data)
+        print("send_frame (%d) %d %s" % (len(data),liw, data))
         self.s.send(struct.pack("@i", (1+liw))+data+padding)
     def shutdown(self):
         self.s.shutdown(socket.SHUT_RDWR)
@@ -77,7 +79,7 @@ def createSendMethod(methname):
 
 def createDefaultCallbackMethod(methname):
     def method(self, d):
-        print "default %s(%s)" %(methname, str(d))
+        print("default %s(%s)" %(methname, str(d)))
     return (methname,method)
 
 def createWrapperEvent(meths):
@@ -130,7 +132,7 @@ if __name__ == "__main__":
     er = proxy_classes['EchoRequest'](s=req_s)
     
     def new_heard(d):
-        print "new heard(%s)" %(str(d))
+        print("new heard(%s)" %(str(d)))
 
     er.say({'x':1})
     ei.event()

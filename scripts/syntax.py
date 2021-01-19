@@ -20,6 +20,8 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
+from __future__ import print_function
+
 import ply.lex as lex
 import AST
 import json, os, re, sys

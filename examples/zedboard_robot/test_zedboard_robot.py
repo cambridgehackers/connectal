@@ -22,6 +22,8 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from __future__ import print_function
+
 import struct
 import sys
 import os
@@ -46,7 +48,7 @@ if __name__ == "__main__":
     spew_sonar = not options.visualize_sonar;
     visualize_gyro = options.visualize_gyro;
     visualize_sonar = options.visualize_sonar;
-    print options.address
+    print(options.address)
     if not options.address:
         options.address = os.environ['RUNPARAM']
     if (visualize_gyro):
@@ -69,10 +71,10 @@ if __name__ == "__main__":
                 sonar_distance = d['v']
             poss = gs.next_samples(samples)
             sonar_distance = sonar_distance/147.0
-            if (spew_sonar): print "sonar_distance: %f" % (sonar_distance)
+            if (spew_sonar): print("sonar_distance: %f" % (sonar_distance))
             if poss is not None:
                 for pos in poss:
-                    if (spew_gyro): print "%f %f %f" % (pos[0],pos[1],pos[2])
+                    if (spew_gyro): print("%f %f %f" % (pos[0],pos[1],pos[2]))
                     summ[0] = summ[0]+pos[0]
                     summ[1] = summ[1]+pos[1]
                     summ[2] = summ[2]+pos[2]

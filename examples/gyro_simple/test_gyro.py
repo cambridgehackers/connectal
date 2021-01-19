@@ -22,6 +22,8 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from __future__ import print_function
+
 import sys
 import socket
 import struct
@@ -82,7 +84,7 @@ class gyro_stream:
             zs = samples[2::3]
 
         if (self.times <= octave_length):
-            print self.times
+            print(self.times)
                 
         for x,y,z in zip(xs,ys,zs):
             #print "%d %d %d" % (x,y,z)
@@ -101,7 +103,7 @@ class gyro_stream:
         if (self.times == octave_length):
             for i in range (0,len(self.means)):
                 self.means[i] = self.means[i]/self.calibrate_window
-            print "x_mean:%d y_mean:%d, z_mean:%d\n" % (self.means[0],self.means[1],self.means[2])
+            print("x_mean:%d y_mean:%d, z_mean:%d\n" % (self.means[0],self.means[1],self.means[2]))
             if (write_octave):
                 octave_file.write("];\n");
                 octave_file.write("plot(v(:,1),color=\"r\");\n");
@@ -109,7 +111,7 @@ class gyro_stream:
                 octave_file.write("plot(v(:,2),color=\"g\");\n");
                 octave_file.write("plot(v(:,3),color=\"b\");\n");
                 octave_file.close()
-                print "done writing octave_file"
+                print("done writing octave_file")
 
         if (self.times > octave_length):
             return rv
@@ -123,7 +125,7 @@ if __name__ == "__main__":
     options = argparser.parse_args()
     spew = not options.visualize;
     visualize = options.visualize;
-    print options.address
+    print(options.address)
     if not options.address:
         options.address = os.environ['RUNPARAM']
     if (visualize):
@@ -142,7 +144,7 @@ if __name__ == "__main__":
             poss = gs.next_samples(samples)
             if poss is not None:
                 for pos in poss:
-                    if (spew): print "%f %f %f" % (pos[0],pos[1],pos[2])
+                    if (spew): print("%f %f %f" % (pos[0],pos[1],pos[2]))
                     summ[0] = summ[0]+pos[0]
                     summ[1] = summ[1]+pos[1]
                     summ[2] = summ[2]+pos[2]
@@ -151,7 +153,7 @@ if __name__ == "__main__":
                         time.sleep(1/gs.sample_freq_hz)
                 if (visualize and (not smoothe)):
                     v.update(summ, gs.sample_freq_hz)
-                if (not spew): print "%f %f %f" % (summ[0], summ[1], summ[2])
+                if (not spew): print("%f %f %f" % (summ[0], summ[1], summ[2]))
     except KeyboardInterrupt:
         jp.shutdown()
         sys.exit() 

@@ -22,6 +22,8 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from __future__ import print_function
+
 import time
 import sys
 import os
@@ -36,7 +38,7 @@ if __name__ == "__main__":
     argparser.add_argument('-a', '--address', help='Device address', default=None)
     options = argparser.parse_args()
 
-    print options.address
+    print(options.address)
     if not options.address:
         options.address = os.environ['RUNPARAM']
 
@@ -47,19 +49,19 @@ if __name__ == "__main__":
     req_p = portalJson.portal(options.address, req_port)
     
     d = {'name':'say','x':1}
-    print d
+    print(d)
     req_p.send(d)
-    print ind_p.recv()
+    print(ind_p.recv())
     d = {'name':'say','x':3}
-    print d
+    print(d)
     req_p.send(d)
-    print ind_p.recv()
+    print(ind_p.recv())
     d = {'name':'say2','x':2,'y':1}
-    print d
+    print(d)
     req_p.send(d)
-    print ind_p.recv()
+    print(ind_p.recv())
     d = {'name':'setLeds','x':0}
-    print d
+    print(d)
     req_p.send(d)
     time.sleep(1)
     req_p.shutdown()
