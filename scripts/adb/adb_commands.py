@@ -31,6 +31,11 @@ import common
 import filesync_protocol
 
 try:
+    basestring
+except NameError:
+    basestring = str  # Python 3 compatibility
+
+try:
     import libusb1
     # From adb.h
     CLASS = 0xFF

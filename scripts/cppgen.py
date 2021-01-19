@@ -24,6 +24,11 @@
 
 import functools, json, math, os, re, sys, util
 
+try:
+    basestring
+except NameError:
+    basestring = str  # Python 3 compatibility
+
 generatedSubdirectory = 'jni'
 verbose = False
 generateJson = True
@@ -214,7 +219,7 @@ def indent(f, indentation):
         f.write(' ')
 
 def cName(x):
-    if type(x) == str or type(x) == unicode:
+    if isinstance(x, basestring):
         x = x.replace(' ', '')
         x = x.replace('.', '$')
         return x

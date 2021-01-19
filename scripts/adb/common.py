@@ -21,6 +21,11 @@ import threading
 import weakref
 
 try:
+  basestring
+except NameError:
+  basestring = str  # Python 3 compatibility
+
+try:
   import libusb1
   import usb1
 
