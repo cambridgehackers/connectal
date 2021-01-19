@@ -57,7 +57,8 @@ class gv:
         self.p_line = box(length=1,height=0.08,width=0.1,color=color.yellow)
         self.plat_arrow = arrow(color=color.green,axis=(1,0,0), shaftwidth=0.06, fixedwidth=1)
 
-    def update(self,(roll,pitch,yaw), sampling_period):
+    def update(self, direction, sampling_period):
+        (roll,pitch,yaw) = direction
         axis=(cos(pitch)*cos(yaw),-cos(pitch)*sin(yaw),sin(pitch)) 
         up=(sin(roll)*sin(yaw)+cos(roll)*sin(pitch)*cos(yaw),sin(roll)*cos(yaw)-cos(roll)*sin(pitch)*sin(yaw),-cos(roll)*cos(pitch))
         self.platform.axis=axis
