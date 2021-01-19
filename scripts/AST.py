@@ -155,7 +155,7 @@ class Function:
     def __repr__(self):
         if not self.params:
             return '<function: %s %s NONE>' % (self.name, self.return_type)
-        sparams = map(str, self.params)
+        sparams = list(map(str, self.params))
         return '<function: %s %s %s>' % (self.name, self.return_type, sparams)
 
 class Variable:
@@ -284,7 +284,7 @@ class Type:
         else:
             self.params = []
     def __repr__(self):
-        sparams = map(str, self.params)
+        sparams = list(map(str, self.params))
         return '{type: %s %s}' % (self.name, sparams)
     def instantiate(self, paramBindings):
         #print('Type.instantiate', self.name, paramBindings)
