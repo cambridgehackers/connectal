@@ -102,7 +102,11 @@ def do_work_poll(start, end, port, get_hostname):
             if sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR) == 0:
                 print('ADDCON', fd, int2ip(addr))
                 connected.append(int2ip(addr))
-        for fd,t in fd_map.iteritems():
+        try:
+            fd_map_items = fd_map.iteritems()
+        except AttributeError:
+            fd_map_items = fd_map.items()  # Python 3 compatibility
+        for fd,t in fd_map_items:
             poller.unregister(t[1])
             t[1].close()
         sys.stdout.write("\r%d/%d" % (total-(end-start),total))
@@ -139,7 +143,11 @@ def do_work_kqueue(start, end, port, get_hostname):
             if w.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR) == 0:
                 print('ADDCON2', k.ident, w.fileno(), int2ip(addr), fd_map[w.fileno()])
                 connected.append(int2ip(addr))
-        for fd,t in fd_map.iteritems():
+        try:
+            fd_map_items = fd_map.iteritems()
+        except AttributeError:
+            fd_map_items = fd_map.items()  # Python 3 compatibility
+        for fd,t in fd_map_items:
             t[1].close()
         sys.stdout.write("\r%d/%d" % (total-(end-start),total))
         sys.stdout.flush()
