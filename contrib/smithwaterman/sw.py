@@ -1,5 +1,10 @@
 from __future__ import print_function
 
+try:
+    xrange
+except NameError:
+    xrange = range  # Python 3 compatibility
+
 def printmatrix(m):
   print("%s\n" * len (m) % tuple(m))
               

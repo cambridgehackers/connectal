@@ -25,6 +25,11 @@
 # with recursion depth O(lg n)
 from __future__ import print_function
 
+try:
+    xrange
+except NameError:
+    xrange = range  # Python 3 compatibility
+
 # compute maximal length subsequence of A and B
 # returns a full matrix L, where L[i][j] is the longest common subsequence in 
 # the prefixes A[:i] B[:j] up to L[m][n] which is the answer

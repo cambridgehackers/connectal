@@ -34,6 +34,11 @@ import AST
 import string
 import util
 
+try:
+    xrange
+except NameError:
+    xrange = range  # Python 3 compatibility
+
 preambleTemplate='''
 import FIFO::*;
 import FIFOF::*;
