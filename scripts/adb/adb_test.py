@@ -20,9 +20,9 @@ except ImportError:
 import struct
 import unittest
 
-import adb_commands
-import adb_protocol
-import common_stub
+from . import adb_commands
+from . import adb_protocol
+from . import common_stub
 
 
 BANNER = 'blazetest'

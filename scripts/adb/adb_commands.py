@@ -29,9 +29,9 @@ except ImportError:
 import os
 import socket
 
-import adb_protocol
-import common
-import filesync_protocol
+from . import adb_protocol
+from . import common
+from . import filesync_protocol
 
 try:
     basestring

@@ -23,8 +23,8 @@ import unittest
 
 import gflags
 
-import common_stub
-import fastboot
+from . import common_stub
+from . import fastboot
 
 FLAGS = gflags.FLAGS
 
