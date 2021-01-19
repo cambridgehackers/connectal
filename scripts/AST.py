@@ -38,7 +38,7 @@ lookupTable = {}
 class InterfaceMixin:
     def getSubinterface(self, name):
         subinterfaceName = name
-        if not globalv.globalvars.has_key(subinterfaceName):
+        if not subinterfaceName in globalv.globalvars:
             return None
         subinterface = globalv.globalvars[subinterfaceName]
         #print('subinterface', subinterface, subinterface)

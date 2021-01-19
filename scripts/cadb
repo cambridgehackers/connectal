@@ -39,7 +39,7 @@ if __name__ == '__main__':
     if args[0] not in command_list:
         ipaddr = args[0]
         args = args[1:]
-    if os.environ.has_key('RUNPARAM'):
+    if 'RUNPARAM' in os.environ:
         ipaddr=os.environ['RUNPARAM']
     if ipaddr == '':
          print 'cadb: missing address'

@@ -125,7 +125,7 @@ def emit_vcd_entry(f, timestamp, pktclass):
 
     if last_vcd_timestamp and timestamp > (last_vcd_timestamp+1):
         f.write('#%s\n0%s\n' % ((last_vcd_timestamp+mpz(1)), last_vcd_pktclass_code))
-    if pktclassCodes.has_key(pktclass):
+    if pktclass in pktclassCodes:
         pktclass_code = pktclassCodes[pktclass]
         f.write('#%s\n' % timestamp)
         f.write('1%s\n' % pktclass_code)
@@ -191,7 +191,7 @@ def print_tlp(tlpdata, f=None):
 
     portnum = int(tlpdata[-40:-38],16) >> 1
     pktclass = pktClassification(tlpsof, tlpeof, tlpbe, pktformat, pkttype, portnum)
-    if classCounts.has_key(pktclass):
+    if pktclass in classCounts:
        classCounts[pktclass] += 1
     else:
        classCounts[pktclass] = 1
