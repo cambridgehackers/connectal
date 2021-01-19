@@ -25,8 +25,8 @@ import struct
 
 import gflags
 
-import common
-import usb_exceptions
+from . import common
+from . import usb_exceptions
 
 try:
   basestring
