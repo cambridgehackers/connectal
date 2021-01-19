@@ -384,7 +384,7 @@ def hasBitWidth(item):
 def getNumeric(item):
    if globalv_globalvars.has_key(item['name']):
        decl = globalv_globalvars[item['name']]
-       if decl.get('type') == 'TypeDef':
+       if decl.get('dtype') == 'TypeDef':
            return getNumeric(decl['tdtype'])
    elif item['name'] in ['TAdd', 'TSub', 'TMul', 'TDiv', 'TLog', 'TExp', 'TMax', 'TMin']:
        values = [getNumeric(p) for p in item['params']]
