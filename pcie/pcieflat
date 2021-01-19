@@ -20,6 +20,8 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
+from __future__ import print_function
+
 import fcntl, glob, json, struct, subprocess, sys
 from gmpy import mpz
 BNOC_TRACE = 0xc008b508
@@ -368,10 +370,10 @@ def print_tlp(tlpdata, f=None):
             offset = offset - methodNumber * 0x100
             smeth = '/'+t[methodNumber-1]
         smeth = ('%02d' % interfaceNumber) + '/' + interfaceId(interfaceNumber) + smeth + '/' + "%x" % (offset/4)
-    print dir, '%10d %10d %s' % (seqno, delta, headerstr), smeth
+    print(dir, '%10d %10d %s' % (seqno, delta, headerstr), smeth)
     #print '                      ' + tlpdata[0:8] + ' ' + tlpdata[8:]
     if len(tlpdata) != 48:
-        print 'bogus len', len(tlpdata)
+        print('bogus len', len(tlpdata))
         sys.exit(1)
     last_seqno = seqno
 
@@ -379,8 +381,8 @@ def print_tlp_log(tlplog, f=None, lf=None):
     if f:
         emit_vcd_header(f)
     #ts     delta           response   foo XXX tlp(be hit eof sof) pkttype format             address  off be(1st last) tag req clid stat nosnoop bcnt laddr length data 
-    print '             ts     delta   response                     XXX          tlp          address  off   be       tag     clid  nosnp  laddr        data'
-    print '                                pkttype format               foo (be hit eof sof)            (1st last)        req     stat  bcnt    length'
+    print('             ts     delta   response                     XXX          tlp          address  off   be       tag     clid  nosnp  laddr        data')
+    print('                                pkttype format               foo (be hit eof sof)            (1st last)        req     stat  bcnt    length')
     for tlpdata in tlplog:
         if tlpdata.startswith('00000000') or tlpdata == '':
             continue
@@ -395,7 +397,7 @@ if __name__ == '__main__':
     interfaceMap = {}
     if argcount >= 2 and sys.argv[argindex] == '-j':
         fooMap = sys.argv[argindex+1].split(':')
-        print 'FFF', fooMap
+        print('FFF', fooMap)
         j2file = open(sys.argv[argindex + 2]).read()
         jsondata = json.loads(j2file)
         argindex = argindex + 3
@@ -403,7 +405,7 @@ if __name__ == '__main__':
         for item in jsondata['interfaces']:
             interfaceMap[item['name']] = [mitem['name'] for mitem in item['decls']]
     devfilenames = glob.glob('/dev/portal_*')
-    print 'pcieflat: devices are', devfilenames
+    print('pcieflat: devices are', devfilenames)
     if argcount == 2:
         tlplog = open(sys.argv[argindex]).read().split('\n')
         base = 0
@@ -422,7 +424,7 @@ if __name__ == '__main__':
                     break
                 src = v & 0xff
                 value = v >> 8
-                print 'pcie status change: %12d src=%20s:%02d value=%#06x' % (ts, Pcie3ChangeSrc[src], src, value)
+                print('pcie status change: %12d src=%20s:%02d value=%#06x' % (ts, Pcie3ChangeSrc[src], src, value))
                 pass
         except:
             pass
@@ -450,7 +452,7 @@ if __name__ == '__main__':
     f = open('tlp.vcd', 'w')
     baseLimit = base + 16 * 0x10000
     print_tlp_log(tlplog, f, lf)
-    print classCounts
-    print sum([ classCounts[k] for k in classCounts])
+    print(classCounts)
+    print(sum([ classCounts[k] for k in classCounts]))
     f.close()
     lf.close()

@@ -22,6 +22,8 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from __future__ import print_function
+
 import argparse
 import os
 import socket
@@ -101,9 +103,9 @@ def run_android(androidexe, pushFiles, pullFiles=[]):
                 if options.board_name == name:
                     ipaddr = ip
                     found = True
-                    print "found %s at %s" %(name,ip)
+                    print("found %s at %s" %(name,ip))
             if not found:
-                print "unable to find %s on your subnet" % name
+                print("unable to find %s on your subnet" % name)
         else:
             p = subprocess.Popen('checkip')
             ipaddr = p.stdout.read()
@@ -113,7 +115,7 @@ def run_android(androidexe, pushFiles, pullFiles=[]):
 
     device_serial = ipaddr
 
-    print 'connecting to %s' % device_serial
+    print('connecting to %s' % device_serial)
     connected = False
     while not connected:
         try:
@@ -123,7 +125,7 @@ def run_android(androidexe, pushFiles, pullFiles=[]):
             #print('socket.error', sys.exc_info())
             pass
 
-    print 'Reconnecting'
+    print('Reconnecting')
     connected = False
     while not connected:
         try:
@@ -169,7 +171,7 @@ if __name__ == '__main__':
         # download android.exe
         options.androidexe = 'android.exe'
         url = '%s/%s/%s/bin/android.exe' % (options.buildbot_url, options.project, options.build_number)
-        print 'downloading', url
+        print('downloading', url)
         status = subprocess.call(['curl', '-f', '-O', url])
         if status != 0:
             #print 'curl returned error', status
