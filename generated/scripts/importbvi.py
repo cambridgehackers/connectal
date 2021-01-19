@@ -55,7 +55,7 @@ class PinType(object):
 def parsenext():
     global toknum, tokval
     while True:
-        toknum, tokval, _, _, _ = tokgenerator.next()
+        toknum, tokval, _, _, _ = next(tokgenerator)
         if toknum != tokenize.NL and toknum != tokenize.NEWLINE:
             break
     #print('Token:', toknum, tokval)

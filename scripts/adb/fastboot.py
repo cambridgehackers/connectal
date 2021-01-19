@@ -193,7 +193,7 @@ class FastbootProtocol(object):
     """Sends the data to the device, tracking progress with the callback."""
     if progress_callback:
       progress = self._HandleProgress(length, progress_callback)
-      progress.next()
+      next(progress)
     while length:
       tmp = data.read(FLAGS.fastboot_write_chunk_size_kb * 1024)
       length -= len(tmp)
