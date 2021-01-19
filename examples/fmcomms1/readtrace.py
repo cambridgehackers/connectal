@@ -1,4 +1,4 @@
-
+from __future__ import print_function
 
 lastevent = 0
 osclo = 0

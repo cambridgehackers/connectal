@@ -21,6 +21,8 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from __future__ import print_function
+
 import os, sys, time
 from adb import adb_commands
 from adb import common
@@ -32,7 +34,7 @@ command_list = ['shell', 'push', 'pull', 'root', 'reboot']
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print 'cadb <ipaddr> <command> <args>'
+        print('cadb <ipaddr> <command> <args>')
         sys.exit(-1)
     ipaddr = ''
     args = sys.argv[1:]
@@ -42,20 +44,20 @@ if __name__ == '__main__':
     if 'RUNPARAM' in os.environ:
         ipaddr=os.environ['RUNPARAM']
     if ipaddr == '':
-         print 'cadb: missing address'
+         print('cadb: missing address')
          sys.exit(-1)
-    print 'connecting to %s' % ipaddr
+    print('connecting to %s' % ipaddr)
     starttime = time.clock()
     count = 0
     while True:
         try:
             connection = adb_commands.AdbCommands.ConnectDevice(serial=ipaddr)
-            print 'connect ok', count, time.clock() - starttime
+            print('connect ok', count, time.clock() - starttime)
             break
         except:
             pass
         if time.clock() - starttime > timebound:
-            print 'cadb: connection attempt timed out'
+            print('cadb: connection attempt timed out')
             sys.exit(-1)
         count += 1
     try:
@@ -76,6 +78,6 @@ if __name__ == '__main__':
             connection.Reboot()
         connection.Close()
     except:
-        print 'cadb: operation failed', args[0]
+        print('cadb: operation failed', args[0])
         sys.exit(-1)
     sys.exit(0)
