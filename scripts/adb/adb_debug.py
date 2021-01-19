@@ -16,6 +16,8 @@
 Call it similar to how you call android's adb. Takes either --serial or
 --port_path to connect to a device.
 """
+from __future__ import print_function
+
 import os
 import sys
 
@@ -43,7 +45,7 @@ def GetRSAKwargs():
         'auth_timeout_ms': int(FLAGS.auth_timeout_s * 1000.0),
         }
     except:
-        print 'Install M2Crypto in order to use adb debug'
+        print('Install M2Crypto in order to use adb debug')
   return {}
 
 

@@ -19,6 +19,8 @@ StartCli handles connecting to a device, calling the expected method, and
 outputting the results.
 """
 
+from __future__ import print_function
+
 import cStringIO
 import inspect
 import re
@@ -58,7 +60,7 @@ def Camelcase(name):
 
 def Usage(adb_dev):
   methods = inspect.getmembers(adb_dev, inspect.ismethod)
-  print 'Methods:'
+  print('Methods:')
   for name, method in methods:
     if name.startswith('_'):
       continue
@@ -77,8 +79,8 @@ def Usage(adb_dev):
 
       args = ' ' + ' '.join(args)
 
-    print '  %s%s:' % (Uncamelcase(name), args)
-    print '    %s' % method.__doc__
+    print('  %s%s:' % (Uncamelcase(name), args))
+    print('    %s' % method.__doc__)
 
 
 def StartCli(argv, device_callback, kwarg_callback=None, list_callback=None,
@@ -96,11 +98,11 @@ def StartCli(argv, device_callback, kwarg_callback=None, list_callback=None,
     # ------------------------------
     for device in list_callback():
       if FLAGS.output_port_path:
-        print '%s\tdevice\t%s' % (
+        print('%s\tdevice\t%s' % (
             device.serial_number,
-            ','.join(str(port) for port in device.port_path))
+            ','.join(str(port) for port in device.port_path)))
       else:
-        print '%s\tdevice' % device.serial_number
+        print('%s\tdevice' % device.serial_number)
     return
 
   port_path = [int(part) for part in FLAGS.port_path]
@@ -111,10 +113,10 @@ def StartCli(argv, device_callback, kwarg_callback=None, list_callback=None,
     dev = device_callback(
         port_path=port_path, serial=serial, **device_kwargs)
   except usb_exceptions.DeviceNotFoundError as e:
-    print >> sys.stderr, 'No device found: %s' % e
+    print('No device found: %s' % e, file=sys.stderr)
     return
   except usb_exceptions.CommonUsbError as e:
-    print >> sys.stderr, 'Could not connect to device: %s' % e
+    print('Could not connect to device: %s' % e, file=sys.stderr)
     raise
 
   if not argv:

@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 import os
 import re
 import sys
@@ -115,7 +117,7 @@ def emit_vcd_entry(f, timestamp, pktclass):
         return
     if not first_vcd_timestamp:
         first_vcd_timestamp = timestamp
-    print last_vcd_timestamp, timestamp, (timestamp < last_vcd_timestamp)
+    print(last_vcd_timestamp, timestamp, (timestamp < last_vcd_timestamp))
     if last_vcd_timestamp and (timestamp < last_vcd_timestamp):
         f.write('$comment %s %s %s $end\n' % (hex(last_vcd_timestamp), hex(timestamp), hex(timestamp + mpz('100000000', 16))))
         timestamp = timestamp + mpz('100000000', 16)
@@ -199,67 +201,67 @@ def print_tlp(tlpdata, f=None):
     if f:
         emit_vcd_entry(f, seqno, pktclass)
 
-    print tlpdata
-    print 'timestamp:', seqno
-    print '    delta:', delta
+    print(tlpdata)
+    print('timestamp:', seqno)
+    print('    delta:', delta)
     last_seqno = seqno
-    print '   ', pktclass
-    print '    foo:', tlpdata[-40:-38], hex(int(tlpdata[-40:-38],16) >> 1)
-    print '    tlpbe:', tlpbe
-    print '    tlphit:', tlphit
-    print '    tlpeof:', tlpeof
-    print '    tlpsof:', tlpsof
+    print('   ', pktclass)
+    print('    foo:', tlpdata[-40:-38], hex(int(tlpdata[-40:-38],16) >> 1))
+    print('    tlpbe:', tlpbe)
+    print('    tlphit:', tlphit)
+    print('    tlpeof:', tlpeof)
+    print('    tlpsof:', tlpsof)
     if tlpsof:
-        print '    format:', tlpdata[-32:-31], pktformat, TlpPacketFormat[pktformat]
-        print '   pkttype:', tlpdata[-32:-30], pkttype, TlpPacketType[pkttype]
+        print('    format:', tlpdata[-32:-31], pktformat, TlpPacketFormat[pktformat])
+        print('   pkttype:', tlpdata[-32:-30], pkttype, TlpPacketType[pkttype])
 
     if tlpsof == 0:
-        print '     data:', tlpdata[-32:]
+        print('     data:', tlpdata[-32:])
     elif TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA' and TlpPacketType[pkttype] == 'COMPLETION':
-        print '      tag:', tlpdata[-12:-10]
-        print '    reqid:', tlpdata[-16:-12]
-        print '   cmplid:', tlpdata[-24:-20]
-        print '   status:', tlpdata[-20:-19]
-        print '  nosnoop:', tlpdata[-28:-27], int(tlpdata[-28:-27],16) >> 3
-        print 'bytecount:', tlpdata[-19:-16]
-        print 'loweraddr:', tlpdata[-10:-8]
-        print '  length:', int(tlpdata[-27:-24],16) & 0x3ff
-        print '    data:', tlpdata[-8:]
+        print('      tag:', tlpdata[-12:-10])
+        print('    reqid:', tlpdata[-16:-12])
+        print('   cmplid:', tlpdata[-24:-20])
+        print('   status:', tlpdata[-20:-19])
+        print('  nosnoop:', tlpdata[-28:-27], int(tlpdata[-28:-27],16) >> 3)
+        print('bytecount:', tlpdata[-19:-16])
+        print('loweraddr:', tlpdata[-10:-8])
+        print('  length:', int(tlpdata[-27:-24],16) & 0x3ff)
+        print('    data:', tlpdata[-8:])
     elif TlpPacketFormat[pktformat] == 'MEM_READ_3DW_NO_DATA' or TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA':
-        print ' address:', tlpdata[-16:-8], (int(tlpdata[-16:-8],16) >> 2) % 8192
-        print '  1st be:', tlpdata[-17:-16]
-        print ' last be:', tlpdata[-18:-17]
-        print '     tag:', tlpdata[-20:-18]
-        print '   reqid:', tlpdata[-24:-20]
-        print '  length:', int(tlpdata[-27:-24],16) & 0x3ff
+        print(' address:', tlpdata[-16:-8], (int(tlpdata[-16:-8],16) >> 2) % 8192)
+        print('  1st be:', tlpdata[-17:-16])
+        print(' last be:', tlpdata[-18:-17])
+        print('     tag:', tlpdata[-20:-18])
+        print('   reqid:', tlpdata[-24:-20])
+        print('  length:', int(tlpdata[-27:-24],16) & 0x3ff)
         if TlpPacketFormat[pktformat] == 'MEM_WRITE_3DW_DATA':
-            print '    data:', tlpdata[-8:]
+            print('    data:', tlpdata[-8:])
     elif TlpPacketFormat[pktformat] == 'MEM_READ_4DW_NO_DATA' or TlpPacketFormat[pktformat] == 'MEM_WRITE_4DW_DATA':
-        print ' address:', tlpdata[-16:]
-        print '  1st be:', tlpdata[-17:-16]
-        print ' last be:', tlpdata[-18:-17]
-        print '     tag:', tlpdata[-20:-18]
-        print '   reqid:', tlpdata[-24:-20]
-        print '  length:', int(tlpdata[-27:-24],16) & 0x3ff
+        print(' address:', tlpdata[-16:])
+        print('  1st be:', tlpdata[-17:-16])
+        print(' last be:', tlpdata[-18:-17])
+        print('     tag:', tlpdata[-20:-18])
+        print('   reqid:', tlpdata[-24:-20])
+        print('  length:', int(tlpdata[-27:-24],16) & 0x3ff)
     else:
-        print '  tlp data:', tlpdata[-8:]
-        print 'lower addr:', tlpdata[-10:-8]
-        print '       tag:', tlpdata[-12:-10]
-        print '     reqid:', tlpdata[-14:-12]
-        print ' bytecount:', '0x' + tlpdata[-15:-14]
-        print '       bcm:', int(tlpdata[-16:-15], 16) & 1
-        print '   cstatus:', (int(tlpdata[-16:-15], 16) >> 1) & 7
-        print '    cmplid:', tlpdata[-18:-16]
-        print '    cmplen:', tlpdata[-21:-18]
-        print '   nosnoop:', int(tlpdata[-22:-21],16) & 1
-        print '   relaxed:', int(tlpdata[-22:-21],16) & 2
-        print '   poison:', int(tlpdata[-22:-21],16) & 4
-        print '   digest:', int(tlpdata[-22:-21],16) & 8
-        print '     zero:', tlpdata[-23:-22]
-        print '   tclass:', tlpdata[-24:-23]
-        print '  pkttype:', int(tlpdata[-26:-24],16) & 0x1f, TlpPacketType[int(tlpdata[-26:-24],16) & 0x1f]
-        print '  format:', (int(tlpdata[-26:-24],16) >> 1) & 3, TlpPacketFormat[(int(tlpdata[-26:-24],16) >> 1) & 3]
-    print
+        print('  tlp data:', tlpdata[-8:])
+        print('lower addr:', tlpdata[-10:-8])
+        print('       tag:', tlpdata[-12:-10])
+        print('     reqid:', tlpdata[-14:-12])
+        print(' bytecount:', '0x' + tlpdata[-15:-14])
+        print('       bcm:', int(tlpdata[-16:-15], 16) & 1)
+        print('   cstatus:', (int(tlpdata[-16:-15], 16) >> 1) & 7)
+        print('    cmplid:', tlpdata[-18:-16])
+        print('    cmplen:', tlpdata[-21:-18])
+        print('   nosnoop:', int(tlpdata[-22:-21],16) & 1)
+        print('   relaxed:', int(tlpdata[-22:-21],16) & 2)
+        print('   poison:', int(tlpdata[-22:-21],16) & 4)
+        print('   digest:', int(tlpdata[-22:-21],16) & 8)
+        print('     zero:', tlpdata[-23:-22])
+        print('   tclass:', tlpdata[-24:-23])
+        print('  pkttype:', int(tlpdata[-26:-24],16) & 0x1f, TlpPacketType[int(tlpdata[-26:-24],16) & 0x1f])
+        print('  format:', (int(tlpdata[-26:-24],16) >> 1) & 3, TlpPacketFormat[(int(tlpdata[-26:-24],16) >> 1) & 3])
+    print()
 
 def print_tlp_log(tlplog, f=None):
     if f:
@@ -281,5 +283,5 @@ if __name__ == '__main__':
     else:
         tlplog = subprocess.check_output(['connectalutil', 'tlp', '/dev/portal0']).split('\n')
     print_tlp_log(tlplog[0:-1], f)
-    print classCounts
-    print sum([ classCounts[k] for k in classCounts])
+    print(classCounts)
+    print(sum([ classCounts[k] for k in classCounts]))

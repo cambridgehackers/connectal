@@ -19,6 +19,8 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 #
+from __future__ import print_function
+
 import portal
 
 class BlueCheck:
@@ -30,7 +32,7 @@ class BlueCheck:
         self.proxy.startTest(v)
 
 bc = BlueCheck()
-print "test started"
+print("test started")
 
 bc.startTest(22)
 

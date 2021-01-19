@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 import os, sys
 import glob
 import argparse
@@ -63,7 +65,7 @@ if __name__=='__main__':
     filesProject = expandPackages(options.bsvfile)
     if not os.path.exists(options.output):
         os.makedirs(options.output)
-    print filesProject
+    print(filesProject)
     for file in filesProject:
         copyfile(file, os.path.join(options.output,os.path.basename(file)))
 
