@@ -21,7 +21,10 @@ outputting the results.
 
 from __future__ import print_function
 
-import cStringIO
+try:
+  import cStringIO
+except ImportError:
+  import io as cStringIO  # Python 3 compatibility
 import inspect
 import re
 import sys
@@ -146,7 +149,14 @@ def StartCli(argv, device_callback, kwarg_callback=None, list_callback=None,
       result = method(*argv, **kwargs)
 
     if result is not None:
-      if isinstance(result, cStringIO.OutputType):
+      try:
+        # An empty call to cStringIO.StringIO returns an instance of
+        # cStringIO.OutputType on Python 2.
+        StringIOType = cStringIO.OutputType
+      except AttributeError:
+        # On Python 3, this object is just an instance of StringIO.
+        StringIOType = cStringIO.StringIO
+      if isinstance(result, StringIOType):
         sys.stdout.write(result.getvalue())
       elif isinstance(result, (list, types.GeneratorType)):
         for r in result:

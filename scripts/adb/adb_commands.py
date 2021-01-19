@@ -22,7 +22,10 @@ subprocess and a network socket.
 All timeouts are in milliseconds.
 """
 
-import cStringIO
+try:
+  import cStringIO
+except ImportError:
+  import io as cStringIO  # Python 3 compatibility
 import os
 import socket
 
@@ -196,9 +199,14 @@ class AdbCommands(object):
         timeout_ms=timeout_ms)
     self.filesync_handler.Pull(connection, device_filename, dest_file)
     connection.Close()
-    # An empty call to cStringIO.StringIO returns an instance of
-    # cStringIO.OutputType.
-    if isinstance(dest_file, cStringIO.OutputType):
+    try:
+      # An empty call to cStringIO.StringIO returns an instance of
+      # cStringIO.OutputType on Python 2.
+      StringIOType = cStringIO.OutputType
+    except AttributeError:
+      # On Python 3, this object just an instance of StringIO.
+      StringIOType = cStringIO.StringIO
+    if isinstance(dest_file, StringIOType):
       return dest_file.getvalue()
 
   def Stat(self, device_filename):

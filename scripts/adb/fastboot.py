@@ -15,7 +15,10 @@
 
 import binascii
 import collections
-import cStringIO
+try:
+  import cStringIO
+except ImportError:
+  import io as cStringIO  # Python 3 compatibility
 import logging
 import os
 import struct

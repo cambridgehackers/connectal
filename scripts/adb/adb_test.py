@@ -13,7 +13,10 @@
 # limitations under the License.
 """Tests for adb."""
 
-import cStringIO
+try:
+  import cStringIO
+except ImportError:
+  import io as cStringIO  # Python 3 compatibility
 import struct
 import unittest
 

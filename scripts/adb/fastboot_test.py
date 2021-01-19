@@ -13,7 +13,10 @@
 # limitations under the License.
 """Tests for adb.fastboot."""
 
-import cStringIO
+try:
+  import cStringIO
+except ImportError:
+  import io as cStringIO  # Python 3 compatibility
 import os
 import tempfile
 import unittest
