@@ -95,7 +95,7 @@ def ProxyClassFactory(name, meths, BaseClass=BaseClass):
         for key, value in kwargs.items():
             setattr(self, key, value)
         BaseClass.__init__(self, name[:-len("Class")])
-    newclass = type(toascii(name), (BaseClass,),dict([("__init__",__init__)]+map(createSendMethod, meths)))
+    newclass = type(toascii(name), (BaseClass,),dict([("__init__",__init__)]+list(map(createSendMethod, meths))))
     return newclass
 
 def WrapperClassFactory(name, meths, BaseClass=BaseClass):
@@ -103,7 +103,7 @@ def WrapperClassFactory(name, meths, BaseClass=BaseClass):
         for key, value in kwargs.items():
             setattr(self, key, value)
         BaseClass.__init__(self, name[:-len("Class")])
-    newclass = type(toascii(name), (BaseClass,),dict([("__init__",__init__), ("event", createWrapperEvent(meths))]+map(createDefaultCallbackMethod, meths)))
+    newclass = type(toascii(name), (BaseClass,),dict([("__init__",__init__), ("event", createWrapperEvent(meths))]+list(map(createDefaultCallbackMethod, meths))))
     return newclass
 
 
