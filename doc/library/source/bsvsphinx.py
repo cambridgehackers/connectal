@@ -7,6 +7,8 @@
     :license: BSD, see LICENSE for details.
 """
 
+from __future__ import print_function
+
 import re
 
 from docutils import nodes

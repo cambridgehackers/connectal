@@ -21,6 +21,8 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
+from __future__ import print_function
+
 import os, sys, re, string
 import argparse
 
