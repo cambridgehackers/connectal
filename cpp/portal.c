@@ -286,9 +286,14 @@ static void initPortalHardwareOnce(void)
         argv[ind++] = (char *)"work.xsimtop";
 #endif
 #if defined(BOARD_vcs)
+#if defined(__ATOMICC__)
+	const char *exetype = "simv";
+        argv[ind++] = (char *)"+verbose=1";
+#else
 	const char *exetype = "vcs";
 	bindir = 0; // the simulation driver is found in $PATH
 	//FIXME ARGS
+#endif
 #endif
 #if defined(BOARD_vsim)
 	const char *exetype = "vsim";
