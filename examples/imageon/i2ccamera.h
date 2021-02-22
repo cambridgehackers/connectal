@@ -18,8 +18,14 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#define BYTE_OPERATION 0x80 // to use BYTE_READ/WRITE instead of BLOCK_READ/WRITE (cdce913 datasheet, table 8)
 static void init_i2c_camera(void)
 {
+// PCA9546A Mux:
+//     Channel 0: HDMIO_DDC   0x01
+//     Channel 1: HDMIO       0x02
+//     Channel 2: HDMII       0x04
+//     Channel 3: PLL-IO      0x08
 static unsigned char cmuxdata[] = {8, 8};
 static unsigned char cdce913_data[] = {
     0x00, 0x81,  0x01, 0x01,
@@ -105,9 +111,12 @@ printf("[%s:%d] /dev/i2c-1 open fd %d\n", __FUNCTION__, __LINE__, fd);
     if (fd < 0)
         printf("[%s] /dev/i2c-1 open failed\n", __FUNCTION__);
     // setup mux for enabling clock generator
-    if (i2c_write_array(fd, 0x70, cmuxdata, sizeof(cmuxdata)))
+    if (i2c_write_array(fd, 0x70, cmuxdata, sizeof(cmuxdata), 0))
         printf("[%s] write mux failed\n", __FUNCTION__);
+    int version = i2c_read_reg(fd, 0x65, 0x00 | BYTE_OPERATION);
+printf("[%s:%d] pllversion %x\n", __FUNCTION__, __LINE__, version);
     // initialize clock generator
-    if (i2c_write_array(fd, 0x65, cdce913_data, sizeof(cdce913_data)))
+    if (i2c_write_array(fd, 0x65, cdce913_data, sizeof(cdce913_data), BYTE_OPERATION))
         printf("[%s] write data failed\n", __FUNCTION__);
+    close(fd);
 }

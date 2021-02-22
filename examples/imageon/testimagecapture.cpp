@@ -462,8 +462,6 @@ int main(int argc, const char **argv)
     printf("[%s:%d] before setDeLine/Pixel\n", __FUNCTION__, __LINE__);
     for (int i = 0; i < 4; i++) {
       int pixclk = (long)edid.timing[i].pixclk * 10000;
-//break;
-      if ((pixclk > 0) && (pixclk < 148000000)) {
         nlines = edid.timing[i].nlines;    // number of visible lines
         npixels = edid.timing[i].npixels;
         int vblank = edid.timing[i].blines; // number of blanking lines
@@ -479,6 +477,7 @@ int main(int argc, const char **argv)
                 pixclk,
                 60l * (long)(hblank + npixels) * (long)(vblank + nlines),
                 npixels, nlines);
+      if ((pixclk > 0) && (pixclk < 148000000)) {
         status = setClockFrequency(1, pixclk, 0);
 
 hblank--; // needed on zc702
@@ -489,6 +488,7 @@ hblank--; // needed on zc702
         hdmidevice->setDePixel(hsyncoff,
                                 hsyncoff+hsyncwidth, hblank,
                                 hblank + npixels, hblank + npixels / 2);
+        i2c_hdmi_start();
         break;
       }
     }
@@ -515,7 +515,8 @@ printf("[%s:%d] before i2c_hdmi\n", __FUNCTION__, __LINE__);
 printf("[%s:%d] after i2c_hdmi\n", __FUNCTION__, __LINE__);
     //init_vclk();
 //jca sleep(5);
-sleep(2);
+printf("[%s:%d] now displaying test pattern\n", __FUNCTION__, __LINE__);
+sleep(20);
     hdmidevice->setTestPattern(0);
 
     // Reset DCMs
