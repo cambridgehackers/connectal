@@ -58,6 +58,11 @@ if {$AWSF1_CL_DEBUG_BRIDGE} {
 	    ]
 }
 
+if { [file exists $CL_DIR/read_extra_files.tcl] } {
+    puts "Reading extra files"
+    source $CL_DIR/read_extra_files.tcl
+}
+
 #---- End of section replaced by User ----
 
 puts "AWS FPGA: Reading AWS Shell design";
