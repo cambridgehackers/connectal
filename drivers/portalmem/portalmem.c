@@ -350,12 +350,14 @@ static struct dma_buf_ops dma_buf_ops = {
         .kmap             = pa_dma_buf_kmap,
         .kunmap           = pa_dma_buf_kunmap,
 #else
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,0,0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,0,0)) && !(defined(RHEL_MAJOR) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,0))
         .map_atomic       = pa_dma_buf_kmap,
         .unmap_atomic     = pa_dma_buf_kunmap,
 #endif
+#if !(defined(RHEL_MAJOR) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,0))
         .map              = pa_dma_buf_kmap,
         .unmap            = pa_dma_buf_kunmap,
+#endif
 #endif
         .vmap             = pa_dma_buf_vmap,
         .vunmap           = pa_dma_buf_vunmap,
