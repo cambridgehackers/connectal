@@ -128,7 +128,7 @@ install-python-example-dependences:
 install-doc-dependences:
 	apt-get install asciidoc python-setuptools
 	easy_install blockdiag seqdiag actdiag nwdiag libusb1
-        wget https://asciidoc-diag-filter.googlecode.com/files/diag_filter.zip
+	wget https://asciidoc-diag-filter.googlecode.com/files/diag_filter.zip
 	asciidoc --filter install diag_filter.zip
 	wget http://laurent-laville.org/asciidoc/bootstrap/bootstrap-3.3.0.zip
 	asciidoc --backend install bootstrap-3.3.0.zip
