@@ -325,6 +325,20 @@ $(DTOP)/obj_dir/vlsim: $(DTOP)/obj_dir/vlsim.mk
 	+$(MAKE) USER_LDLIBS="-lconnectal-sim -lpthread" VM_PARALLEL_BUILDS=1 -C obj_dir -f vlsim.mk
 	cp obj_dir/vlsim bin/vlsim
 
+vcssim:  bin/simv
+
+VCS_DEFINES = $(addprefix +define+, $(BSVDEFINES_LIST))
+VCS_ARGS?= -CFLAGS "-I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -I$(DTOP)/jni"
+VCS_ARGS += +define+SVA_ON -assert svaext+enable_diag
+VCS_ARGS += -debug_acc+all
+VCS_ARGS += -kdb -fsdb
+VCS_ARGS += $(VCS_PROJECT_ARGS)
+
+bin/simv: $(DTOP)/bin/libconnectal-sim.so verilog
+	vcs -full64  -sverilog $(VCS_DEFINES) $(VCS_ARGS) -o $(DTOP)/bin/simv \
+		$(CONNECTALDIR)/verilog/xsimtop.sv $(SIM_CXX_LOCAL) \
+		+libext+.v+.sv $(VERILOG_PATH:%=-y %)
+
 MODELSIMDIR=$(realpath $(dir $(MODELSIM))/..)
 VSIM_CFLAGS= $(CFLAGS_PROJECT) -Wa,-W -fPIC -m64 -I"$(MODELSIMDIR)/include" -DSYSTEM_VERILOG -DBOARD_vsim -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -Ijni
 VSIM_CXXFLAGS= $(CXXFLAGS_PROJECT) -Wa,-W -fPIC -m64 -I"$(MODELSIMDIR)/include" -DSYSTEM_VERILOG -DBOARD_vsim -I$(CONNECTALDIR)/cpp -I$(CONNECTALDIR) -Ijni
