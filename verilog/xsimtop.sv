@@ -61,20 +61,26 @@ module xsimtop(
    import "DPI-C" function void dpi_init(input int unused);
    import "DPI-C" function bit dpi_cycle(input int returns); // unused non-zero if verilog should $finish().
 
+`ifdef __ATOMICC__
+   VsimTop connectalTop(.CLK(CLK), .nRST(RST_N),
+			  .CLK_derivedClock(DERIVED_CLK), .nRST_derivedReset(DERIVED_RST_N),
+			  .CLK_sys_clk(sys_clk));
+`else
    mkXsimTop connectalTop(.CLK(CLK), .RST_N(RST_N),
 			  .CLK_derivedClock(DERIVED_CLK), .RST_N_derivedReset(DERIVED_RST_N),
 			  .CLK_sys_clk(sys_clk));
+`endif
    initial begin
 `ifdef XSIM
-      CLK = 0;
-      DERIVED_CLK = 0;
-      sys_clk = 0;
+      CLK = 1'b0;
+      DERIVED_CLK = 1'b0;
+      sys_clk = 1'b0;
 `endif
       RST_N = `BSV_RESET_VALUE;
       DERIVED_RST_N = `BSV_RESET_VALUE;
       count = 0;
       count_derived = 0;
-      finish = 0;
+      finish = 1'b0;
       dpi_init(0);
    end
 
