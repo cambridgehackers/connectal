@@ -148,7 +148,7 @@ CPPFILES2 += jsoncpp/dist/jsoncpp.cpp
 
 prebuild::
 	[ -d jsoncpp ] || git clone git://github.com/open-source-parsers/jsoncpp
-	cd jsoncpp; python amalgamate.py; mkdir -p json; cd json; ln -sf ../dist/json/*.h .
+	cd jsoncpp; python3 amalgamate.py; mkdir -p json; cd json; ln -sf ../dist/json/*.h .
 endif #zedboard
 
 ifeq ($(BOARD),zedboard_ubuntu)
@@ -161,7 +161,7 @@ CPPFILES2 += jsoncpp/dist/jsoncpp.cpp
 
 prebuild::
 	[ -d jsoncpp ] || git clone git://github.com/open-source-parsers/jsoncpp
-	cd jsoncpp; python amalgamate.py; mkdir -p json; cd json; ln -sf ../dist/json/*.h .
+	cd jsoncpp; python3 amalgamate.py; mkdir -p json; cd json; ln -sf ../dist/json/*.h .
 endif # zedboard_ubuntu
 endif # PYFILES
 
