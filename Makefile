@@ -97,6 +97,9 @@ spkg:
 	sed -i s/xenial/focal/g debian/changelog
 	gbp buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu --git-ignore-new -S -tc -pgpg2 '--git-upstream-tag=v%(version)s'
 	git checkout debian
+	sed -i s/xenial/jammy/g debian/changelog
+	gbp buildpackage --git-upstream-branch=master --git-debian-branch=ubuntu --git-ignore-new -S -tc -pgpg2 '--git-upstream-tag=v%(version)s'
+	git checkout debian
 
 upload:
 	git push origin v$(VERSION)
