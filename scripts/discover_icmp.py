@@ -22,6 +22,8 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from __future__ import print_function
+
 import sys
 import os
 import socket
@@ -38,7 +40,7 @@ from adb import common
 def connect_with_adb(ipaddr):
     connected = False
     device_serial = '%s:5555' % (ipaddr)
-    print 'connecting to android device %s' % device_serial
+    print('connecting to android device %s' % device_serial)
     while not connected:
         try:
             connection = adb_commands.AdbCommands.ConnectDevice(serial=device_serial)
@@ -47,10 +49,10 @@ def connect_with_adb(ipaddr):
             pass
     if 'hostname' in connection.Shell('ls /mnt/sdcard/'):
         name = connection.Shell('cat /mnt/sdcard/hostname') 
-        print name
+        print(name)
         return (ipaddr, name)
     else:
-        print "/mnt/sdcard/hostname not found"
+        print("/mnt/sdcard/hostname not found")
 
 
 def calcsum(source_string):
@@ -96,8 +98,8 @@ def send_ping(dest_addr):
         # if (send_cnt > 1024):
         #     time.sleep(0.1)
         icmp_socket.sendto(header, (dest_addr, 1))
-    except socket.error, e:
-        print (dest_addr,e)
+    except socket.error as e:
+        print((dest_addr,e))
         raise
       
 def check_adb_port(dest_addr):
@@ -109,14 +111,14 @@ def check_adb_port(dest_addr):
 def ping_request(dest_addr):
     try:
         send_ping(dest_addr)
-    except socket.gaierror, e:
-        print "%s failed. (socket error: '%s')" % (dest_addr, e[1])
+    except socket.gaierror as e:
+        print("%s failed. (socket error: '%s')" % (dest_addr, e[1]))
 
 def ping_response(timeout = 0.1):
     try:
         addr = receive_ping(timeout)
-    except socket.gaierror, e:
-        print "failed. (socket error: '%s')" % e[1]
+    except socket.gaierror as e:
+        print("failed. (socket error: '%s')" % e[1])
     if (addr != None):
         responders.append(addr[0])
 
@@ -151,7 +153,7 @@ def do_work(start, end):
     stop = False
     low_addr = start
     high_addr = end
-    print "pinging "+int2ip(low_addr)+" to "+int2ip(high_addr)
+    print("pinging "+int2ip(low_addr)+" to "+int2ip(high_addr))
 
     icmp = socket.getprotobyname("icmp")
     icmp_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
@@ -191,13 +193,13 @@ def detect_network():
             af_inet = ifaddrs[netifaces.AF_INET]
             for i in af_inet: 
                 if i.get('addr') == '127.0.0.1':
-                    print 'skipping localhost'
+                    print('skipping localhost')
                 else:
                     addr = ip2int(i.get('addr'))
                     netmask = ip2int(i.get('netmask'))
                     start = addr & netmask
                     end = start + (netmask ^ 0xffffffff) 
-                    print (int2ip(start), int2ip(end)) 
+                    print((int2ip(start), int2ip(end)))
                     do_work(start, end) 
 
 if __name__ ==  '__main__':

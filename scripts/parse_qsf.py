@@ -50,7 +50,7 @@ for line in qsflines:
             io = re.search('IO_STANDARD', r)
             if io:
                 standard = r.split('IO_STANDARD')[1].strip().replace("\"", '')
-                if pins.has_key(name):
+                if name in pins:
                     pins[name].update({'IO_STANDARD': standard})
                     pins[name].update({'GROUP': group})
                 else:
@@ -68,7 +68,7 @@ for line in qsflines:
             loc = re.search('PIN_[A-Z]+[0-9]+', r)
             if loc:
                 location = loc.group(0)
-                if pins.has_key(name):
+                if name in pins:
                     pins[name].update({'LOC': location})
                 else:
                     pins.update({name:{'LOC': location}})

@@ -22,6 +22,8 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from __future__ import print_function
+
 import sys
 import os
 import socket
@@ -57,11 +59,11 @@ def connect_with_adb(ipaddr,port):
             if 'hostname.txt' in connection.Shell('ls /mnt/sdcard/'):
                 name = connection.Shell('cat /mnt/sdcard/hostname.txt').strip()
                 connection.Close()
-                print 'discover_tcp: ', ipaddr, name
+                print('discover_tcp: ', ipaddr, name)
                 deviceAddresses[ipaddr] = name
                 return
             else:
-                print 'discover_tcp: ', ipaddr, " /mnt/sdcard/hostname.txt not found"
+                print('discover_tcp: ', ipaddr, " /mnt/sdcard/hostname.txt not found")
                 deviceAddresses[ipaddr] =  ipaddr
                 return
         cnt = cnt+1
@@ -74,7 +76,7 @@ def open_adb_socket(dest_addr,port):
 
 # non-Darwin version
 def do_work_poll(start, end, port, get_hostname):
-    print "scanning "+int2ip(start)+" to "+int2ip(end)
+    print("scanning "+int2ip(start)+" to "+int2ip(end))
     connected = []
     total = end-start
 
@@ -98,21 +100,25 @@ def do_work_poll(start, end, port, get_hostname):
         for fd,flag in events:
             (addr,sock) = fd_map[fd]
             if sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR) == 0:
-                print 'ADDCON', fd, int2ip(addr)
+                print('ADDCON', fd, int2ip(addr))
                 connected.append(int2ip(addr))
-        for fd,t in fd_map.iteritems():
+        try:
+            fd_map_items = fd_map.iteritems()
+        except AttributeError:
+            fd_map_items = fd_map.items()  # Python 3 compatibility
+        for fd,t in fd_map_items:
             poller.unregister(t[1])
             t[1].close()
         sys.stdout.write("\r%d/%d" % (total-(end-start),total))
         sys.stdout.flush()
-    print
+    print()
     if get_hostname:
         for c in connected:
             connect_with_adb(c,port)
 
 # Darwin version
 def do_work_kqueue(start, end, port, get_hostname):
-    print "kqueue scanning "+int2ip(start)+" to "+int2ip(end)
+    print("kqueue scanning "+int2ip(start)+" to "+int2ip(end))
     connected = []
     total = end-start
 
@@ -135,13 +141,17 @@ def do_work_kqueue(start, end, port, get_hostname):
             w = fd_map[k.ident][1]
             addr = fd_map[w.fileno()][0]
             if w.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR) == 0:
-                print 'ADDCON2', k.ident, w.fileno(), int2ip(addr), fd_map[w.fileno()]
+                print('ADDCON2', k.ident, w.fileno(), int2ip(addr), fd_map[w.fileno()])
                 connected.append(int2ip(addr))
-        for fd,t in fd_map.iteritems():
+        try:
+            fd_map_items = fd_map.iteritems()
+        except AttributeError:
+            fd_map_items = fd_map.items()  # Python 3 compatibility
+        for fd,t in fd_map_items:
             t[1].close()
         sys.stdout.write("\r%d/%d" % (total-(end-start),total))
         sys.stdout.flush()
-    print
+    print()
     if get_hostname:
         for c in connected:
             connect_with_adb(c,port)
@@ -165,7 +175,7 @@ def detect_network(network=None, port=5555, get_hostname=True):
         nw = network.split("/")
         start = ip2int(nw[0])
         if len(nw) != 2:
-            print 'Usage: discover_tcp.py ipaddr/prefix_width'
+            print('Usage: discover_tcp.py ipaddr/prefix_width')
             sys.exit(-1)
         end = start + (1 << (32-int(nw[1])) ) - 2
         do_work(start+1,end,port,get_hostname)
@@ -176,7 +186,7 @@ def detect_network(network=None, port=5555, get_hostname=True):
                 af_inet = ifaddrs[netifaces.AF_INET]
                 for i in af_inet:
                     if i.get('addr') == '127.0.0.1':
-                        print 'skipping localhost'
+                        print('skipping localhost')
                     else:
                         addr = ip2int(i.get('addr'))
                         netmask = ip2int(i.get('netmask'))
@@ -184,7 +194,7 @@ def detect_network(network=None, port=5555, get_hostname=True):
                         end = start + (netmask ^ 0xffffffff)
                         start = start+1
                         end = end-1
-                        print (int2ip(start), int2ip(end))
+                        print((int2ip(start), int2ip(end)))
                         do_work(start, end,port,get_hostname)
 
 if __name__ ==  '__main__':

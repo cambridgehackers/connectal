@@ -23,6 +23,8 @@
 ## SOFTWARE.
 
 ##
+from __future__ import print_function
+
 import os
 import math
 import re
@@ -31,6 +33,11 @@ import hashlib
 import AST
 import string
 import util
+
+try:
+    xrange
+except NameError:
+    xrange = range  # Python 3 compatibility
 
 preambleTemplate='''
 import FIFO::*;

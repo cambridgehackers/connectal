@@ -73,17 +73,33 @@ module mkHdmiGenerator#(Clock axi_clock, Reset axi_reset,
     // 1920 * 1080
     // horiz: frontPorch:87, sync: 44, backPorch:148, pixel:1920
     // vert: frontPorch:3, sync:5, backPorch:36, lines:1080
-    Reg#(Bit#(12)) dePixelStartSync <- mkSyncReg(              87, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(12)) dePixelEndSync <- mkSyncReg(           44 + 87, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(12)) dePixelStartVisible <- mkSyncReg(148 + 44 + 87, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(12)) dePixelEnd <- mkSyncReg(  1920 + 148 + 44 + 87, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(12)) dePixelMid <- mkSyncReg((1920/2) + 148 + 44, axi_clock, axi_reset, defaultClock);
+`define hFront   87
+`define hSync    44
+`define hBack   148
+`define hPixel 1920
+`define vFront    3
+`define vSync     5
+`define vBack    36
+`define vLines 1080
+//`define hFront   88
+//`define hSync    44
+//`define hBack   280
+//`define hPixel 1920
+//`define vFront    4
+//`define vSync     5
+//`define vBack    45
+//`define vLines 1080
+    Reg#(Bit#(12)) dePixelStartSync <- mkSyncReg(              `hFront, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) dePixelEndSync <- mkSyncReg(           `hSync + `hFront, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) dePixelStartVisible <- mkSyncReg(`hBack + `hSync + `hFront, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) dePixelEnd <- mkSyncReg(  `hPixel + `hBack + `hSync + `hFront, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(12)) dePixelMid <- mkSyncReg((`hPixel/2) + `hBack + `hSync, axi_clock, axi_reset, defaultClock);
 
-    Reg#(Bit#(11)) deLineStartSync <- mkSyncReg(              3, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) deLineEndSync <- mkSyncReg(            5 + 3, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) deLineStartVisible <- mkSyncReg(  36 + 5 + 3, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) deLineEnd <- mkSyncReg(    1080 + 36 + 5 + 3, axi_clock, axi_reset, defaultClock);
-    Reg#(Bit#(11)) deLineMid <- mkSyncReg((1080/2) + 41, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) deLineStartSync <- mkSyncReg(              `vFront, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) deLineEndSync <- mkSyncReg(            `vSync + `vFront, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) deLineStartVisible <- mkSyncReg(  `vBack + `vSync + `vFront, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) deLineEnd <- mkSyncReg(    `vLines + `vBack + `vSync + `vFront, axi_clock, axi_reset, defaultClock);
+    Reg#(Bit#(11)) deLineMid <- mkSyncReg((`vLines/2) + `vBack + `vSync, axi_clock, axi_reset, defaultClock);
 
     Vector#(4, Reg#(Bit#(24))) patternRegs <- replicateM(mkSyncReg(24'h00FFFFFF, axi_clock, axi_reset, defaultClock));
     Reg#(Bit#(1)) shadowTestPatternEnabled <- mkSyncReg(1, axi_clock, axi_reset, defaultClock);

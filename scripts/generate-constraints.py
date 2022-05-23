@@ -85,7 +85,7 @@ if __name__=='__main__':
             pinName = ''
             #print('PPP', projectPinInfo)
             for groupName in bindings:
-                if projectPinInfo.has_key(groupName):
+                if groupName in projectPinInfo:
                     used.append(groupName)
                     pinName = projectPinInfo[groupName]
                     #print('LLL', groupName, pinName, bindings[groupName])
@@ -98,13 +98,13 @@ if __name__=='__main__':
                         used.append(prop)
                         pinName = projectPinInfo[prop]
                         boardPinInfo = boardInfo[prop]
-                        #print('FFF', prop, pinName, boardPinInfo, boardPinInfo.has_key(pinName), boardPinInfo.get(pinName))
+                        #print('FFF', prop, pinName, boardPinInfo, pinName in boardPinInfo, boardPinInfo.get(pinName))
                         break
             if boardPinInfo == {}:
                 print('Missing group description for', pin, pinName, projectPinInfo, file=sys.stderr)
                 errorDetected = True
             pinInfo = {}
-            if boardPinInfo.has_key(pinName):
+            if pinName in boardPinInfo:
                 pinInfo = copy.copy(boardPinInfo[pinName])
             else:
                 print('Missing pin description for', pin, pinName, projectPinInfo, file=sys.stderr)
@@ -112,7 +112,7 @@ if __name__=='__main__':
                 errorDetected = True
             pinInfo[u'name'] = pin
             for prop in projectPinInfo:
-                if projectPinInfo.has_key(prop):
+                if prop in projectPinInfo:
                     pinInfo[prop] = projectPinInfo[prop]
             try:
                 out.write(template % pinInfo)

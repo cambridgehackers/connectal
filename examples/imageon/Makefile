@@ -16,6 +16,7 @@ ifeq ($(BOARD),zedboard)
 else
     PIN_BINDINGS ?= fmc:fmc2
 endif
+CONNECTALFLAGS += -C imageon-clocks.xdc --tcl clock.tcl
 AUTOTOP = --interface pins:ImageonCapture.pins
 
 include $(CONNECTALDIR)/Makefile.connectal

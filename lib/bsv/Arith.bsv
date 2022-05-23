@@ -40,3 +40,6 @@ endfunction
 function Vector#(n, Bit#(b)) vrshift(Vector#(n, Bit#(b)) x1, Integer i);
    return map(flip(rshift)(i), x1);
 endfunction
+
+function a bitwiseor(a x1, a x2) provisos (Bitwise#(a)); return x1 | x2; endfunction
+function a bitwiseand(a x1, a x2) provisos (Bitwise#(a)); return x1 & x2; endfunction

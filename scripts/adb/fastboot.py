@@ -15,15 +15,23 @@
 
 import binascii
 import collections
-import cStringIO
+try:
+  import cStringIO
+except ImportError:
+  import io as cStringIO  # Python 3 compatibility
 import logging
 import os
 import struct
 
 import gflags
 
-import common
-import usb_exceptions
+from . import common
+from . import usb_exceptions
+
+try:
+  basestring
+except NameError:
+  basestring = str  # Python 3 compatibility
 
 FLAGS = gflags.FLAGS
 gflags.DEFINE_integer('fastboot_write_chunk_size_kb', 4,
@@ -193,7 +201,7 @@ class FastbootProtocol(object):
     """Sends the data to the device, tracking progress with the callback."""
     if progress_callback:
       progress = self._HandleProgress(length, progress_callback)
-      progress.next()
+      next(progress)
     while length:
       tmp = data.read(FLAGS.fastboot_write_chunk_size_kb * 1024)
       length -= len(tmp)

@@ -20,6 +20,8 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
+from __future__ import print_function
+
 import ctypes, json, os, sys, threading, time, portal
 
 class Echo:
@@ -29,24 +31,24 @@ class Echo:
 
     def call_say(self, a):
         self.proxy.say(a)
-        print 'say response:', self.response
+        print('say response:', self.response)
 
     def call_say2(self, a, b):
         self.proxy.say2(a, b)
-        print 'say2 response:', self.response
+        print('say2 response:', self.response)
 
     def heard(self, v):
-        print 'heard called!!!', v
+        print('heard called!!!', v)
         self.response = v
 
     def heard2(self, a, b):
-        print 'heard2 called!!!', a, b
+        print('heard2 called!!!', a, b)
         self.response = (a,b)
 
 echo = Echo()
 
 v = 42
-print "Saying %d" % v
+print("Saying %d" % v)
 echo.call_say(v);
 echo.call_say2(v, v*3);
 echo.call_say(v*5);

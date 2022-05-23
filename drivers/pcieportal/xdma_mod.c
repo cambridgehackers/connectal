@@ -280,7 +280,11 @@ static void xdma_error_resume(struct pci_dev *pdev)
 	struct xdma_pci_dev *xpdev = dev_get_drvdata(&pdev->dev);
 
 	pr_info("dev 0x%p,0x%p.\n", pdev, xpdev);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,7,0) && !(defined(RHEL_MAJOR) && RHEL_RELEASE_VERSION(8,3) >= RHEL_RELEASE_CODE)
 	pci_cleanup_aer_uncorrect_error_status(pdev);
+#else
+	pci_aer_clear_nonfatal_status(pdev);
+#endif
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)

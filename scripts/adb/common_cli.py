@@ -19,7 +19,12 @@ StartCli handles connecting to a device, calling the expected method, and
 outputting the results.
 """
 
-import cStringIO
+from __future__ import print_function
+
+try:
+  import cStringIO
+except ImportError:
+  import io as cStringIO  # Python 3 compatibility
 import inspect
 import re
 import sys
@@ -27,7 +32,7 @@ import types
 
 import gflags
 
-import usb_exceptions
+from . import usb_exceptions
 
 gflags.DEFINE_integer('timeout_ms', 10000, 'Timeout in milliseconds.')
 gflags.DEFINE_list('port_path', [], 'USB port path integers (eg 1,2 or 2,1,1)')
@@ -58,7 +63,7 @@ def Camelcase(name):
 
 def Usage(adb_dev):
   methods = inspect.getmembers(adb_dev, inspect.ismethod)
-  print 'Methods:'
+  print('Methods:')
   for name, method in methods:
     if name.startswith('_'):
       continue
@@ -77,8 +82,8 @@ def Usage(adb_dev):
 
       args = ' ' + ' '.join(args)
 
-    print '  %s%s:' % (Uncamelcase(name), args)
-    print '    %s' % method.__doc__
+    print('  %s%s:' % (Uncamelcase(name), args))
+    print('    %s' % method.__doc__)
 
 
 def StartCli(argv, device_callback, kwarg_callback=None, list_callback=None,
@@ -96,11 +101,11 @@ def StartCli(argv, device_callback, kwarg_callback=None, list_callback=None,
     # ------------------------------
     for device in list_callback():
       if FLAGS.output_port_path:
-        print '%s\tdevice\t%s' % (
+        print('%s\tdevice\t%s' % (
             device.serial_number,
-            ','.join(str(port) for port in device.port_path))
+            ','.join(str(port) for port in device.port_path)))
       else:
-        print '%s\tdevice' % device.serial_number
+        print('%s\tdevice' % device.serial_number)
     return
 
   port_path = [int(part) for part in FLAGS.port_path]
@@ -111,10 +116,10 @@ def StartCli(argv, device_callback, kwarg_callback=None, list_callback=None,
     dev = device_callback(
         port_path=port_path, serial=serial, **device_kwargs)
   except usb_exceptions.DeviceNotFoundError as e:
-    print >> sys.stderr, 'No device found: %s' % e
+    print('No device found: %s' % e, file=sys.stderr)
     return
   except usb_exceptions.CommonUsbError as e:
-    print >> sys.stderr, 'Could not connect to device: %s' % e
+    print('Could not connect to device: %s' % e, file=sys.stderr)
     raise
 
   if not argv:
@@ -144,7 +149,14 @@ def StartCli(argv, device_callback, kwarg_callback=None, list_callback=None,
       result = method(*argv, **kwargs)
 
     if result is not None:
-      if isinstance(result, cStringIO.OutputType):
+      try:
+        # An empty call to cStringIO.StringIO returns an instance of
+        # cStringIO.OutputType on Python 2.
+        StringIOType = cStringIO.OutputType
+      except AttributeError:
+        # On Python 3, this object is just an instance of StringIO.
+        StringIOType = cStringIO.StringIO
+      if isinstance(result, StringIOType):
         sys.stdout.write(result.getvalue())
       elif isinstance(result, (list, types.GeneratorType)):
         for r in result:

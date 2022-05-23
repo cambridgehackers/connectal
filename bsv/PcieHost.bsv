@@ -71,20 +71,32 @@ import PcieEndpointS5    :: *;
 import HostInterface     :: *;
 
 `ifdef XILINX_SYS_CLK
-`ifdef VirtexUltrascale
-`define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n, Clock sys_clk1_300_p, Clock sys_clk1_300_n, Clock sys_clk2_300_p, Clock sys_clk2_300_n, 
-`define SYS_CLK_ARG sys_clk_p, sys_clk_n, sys_clk1_300_p, sys_clk1_300_n, sys_clk2_300_p, sys_clk2_300_n, 
+ `ifdef VirtexUltrascalePlus
+   `define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n, Clock sys_clk_300_p, Clock sys_clk_300_n, Clock sys_clk1_250_p, Clock sys_clk1_250_n, Clock sys_clk2_250_p, Clock sys_clk2_250_n, 
+   `define SYS_CLK_ARG sys_clk_p, sys_clk_n, sys_clk_300_p, sys_clk_300_n, sys_clk1_250_p, sys_clk1_250_n, sys_clk2_250_p, sys_clk2_250_n, 
+ `else
+   `ifdef VirtexUltrascale
+     `define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n, Clock sys_clk1_300_p, Clock sys_clk1_300_n, Clock sys_clk2_300_p, Clock sys_clk2_300_n, 
+     `define SYS_CLK_ARG sys_clk_p, sys_clk_n, sys_clk1_300_p, sys_clk1_300_n, sys_clk2_300_p, sys_clk2_300_n, 
+   `else
+     `define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n,
+     `define SYS_CLK_ARG sys_clk_p, sys_clk_n,
+   `endif
+  `endif
 `else
-`define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n,
-`define SYS_CLK_ARG sys_clk_p, sys_clk_n,
+  `define SYS_CLK_PARAM
+  `define SYS_CLK_ARG
 `endif
+
+
+`ifdef PCIE3
+typedef TMin#(DataBusWidth, 128) PcieDataBusWidth;
 `else
-`define SYS_CLK_PARAM
-`define SYS_CLK_ARG
+typedef TMin#(DataBusWidth, 128) PcieDataBusWidth;
 `endif
 
 (* synthesize *)
-module mkMemToPcieSynth#(PciId my_id)(MemToPcie#(DataBusWidth));
+module mkMemToPcieSynth#(PciId my_id)(MemToPcie#(PcieDataBusWidth));
    let memSlaveEngine <- mkMemToPcie(my_id);
    return memSlaveEngine;
 endmodule
@@ -94,10 +106,10 @@ endmodule
 //
 `ifdef PCIE3
 (* synthesize *)
-module mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
+module mkPcieHost#(PciId my_pciId)(PcieHost#(PcieDataBusWidth, NumberOfMasters));
    TLPDispatcher dispatcher <- mkTLPDispatcher;
    TLPArbiter arbiter <- mkTLPArbiter;
-   MemToPcie#(DataBusWidth) sEngine <- mkMemToPcieSynth(my_pciId);
+   MemToPcie#(PcieDataBusWidth) sEngine <- mkMemToPcieSynth(my_pciId);
 `ifdef PCIE3
    MemInterrupt intr <- mkMemInterrupt(my_pciId);
 `endif
@@ -148,11 +160,11 @@ endmodule: mkPcieHost
 // ======================================================
 // PCIE GEN1 and GEN2 PcieHost
 //(* synthesize *) commented out so that the guards in MemServer aren't destroyed (mdk)
-module  mkPcieHost#(PciId my_pciId)(PcieHost#(DataBusWidth, NumberOfMasters));
+module  mkPcieHost#(PciId my_pciId)(PcieHost#(PcieDataBusWidth, NumberOfMasters));
    let dispatcher <- mkTLPDispatcher;
    let arbiter    <- mkTLPArbiter;
-   Vector#(NumberOfMasters,MemToPcie#(DataBusWidth)) sEngine <- replicateM(mkMemToPcieSynth(my_pciId));
-   Vector#(NumberOfMasters,PhysMemSlave#(PciePhysAddrWidth,DataBusWidth)) slavearr;
+   Vector#(NumberOfMasters,MemToPcie#(PcieDataBusWidth)) sEngine <- replicateM(mkMemToPcieSynth(my_pciId));
+   Vector#(NumberOfMasters,PhysMemSlave#(PciePhysAddrWidth,PcieDataBusWidth)) slavearr;
    MemInterrupt intr <- mkMemInterrupt(my_pciId);
 `ifdef PCIE_BSCAN
    BscanTop bscan <- mkBscanTop(3); // Use USER3  (JTAG IDCODE address 0x22)
@@ -231,7 +243,7 @@ endinterface
 module mkBsimPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_PARAM Reset pci_sys_reset_n)(PcieHostTop);
    let dc <- exposeCurrentClock;
    let dr <- exposeCurrentReset;
-   PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(PciId{ bus:0, dev:0, func:0});
+   PcieHost#(PcieDataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(PciId{ bus:0, dev:0, func:0});
    // connect pciehost.pci to bdip functions here
    rule from_bdpi if (can_get_tlp);
       TLPData#(16) foo <- get_tlp;
@@ -261,23 +273,44 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_
 `endif
        sys_clk_p, sys_clk_n);
    Clock sys_clk_200mhz_buf <- mkClockBUFG(clocked_by sys_clk_200mhz);
+
+`ifdef VirtexUltrascalePlus   
+   Clock sys_clk_300mhz <- mkClockIBUFDS(
+                                         `ifdef ClockDefaultParam
+                                         defaultValue,
+                                         `endif
+                                         sys_clk_300_p, sys_clk_300_n);
+   Clock sys_clk_300mhz_buf <- mkClockBUFG(clocked_by sys_clk_300mhz);
    
-`ifdef VirtexUltrascale 
+   Clock sys_clk1_250mhz <- mkClockIBUFDS(
+                                          `ifdef ClockDefaultParam
+                                          defaultValue,
+                                          `endif
+                                          sys_clk1_250_p, sys_clk1_250_n);
+   Clock sys_clk1_250mhz_buf <- mkClockBUFG(clocked_by sys_clk1_250mhz);
+   Clock sys_clk2_250mhz <- mkClockIBUFDS(
+                                          `ifdef ClockDefaultParam
+                                          defaultValue,
+                                          `endif
+                                          sys_clk2_250_p, sys_clk2_250_n);
+   Clock sys_clk2_250mhz_buf <- mkClockBUFG(clocked_by sys_clk2_250mhz);
+`else
+ `ifdef VirtexUltrascale 
    Clock sys_clk1_300mhz <- mkClockIBUFDS(
-`ifdef ClockDefaultParam
-       defaultValue,
-`endif
-       sys_clk1_300_p, sys_clk1_300_n);
+                                          `ifdef ClockDefaultParam
+                                          defaultValue,
+                                          `endif
+                                          sys_clk1_300_p, sys_clk1_300_n);
    Clock sys_clk1_300mhz_buf <- mkClockBUFG(clocked_by sys_clk1_300mhz);
    
    Clock sys_clk2_300mhz <- mkClockIBUFDS(
-`ifdef ClockDefaultParam
-       defaultValue,
-`endif
-       sys_clk2_300_p, sys_clk2_300_n);
+                                          `ifdef ClockDefaultParam
+                                          defaultValue,
+                                          `endif
+                                          sys_clk2_300_p, sys_clk2_300_n);
    Clock sys_clk2_300mhz_buf <- mkClockBUFG(clocked_by sys_clk2_300mhz);
-`endif // VirtexUltrascale
-   
+  `endif // VirtexUltrascale
+`endif // VirtexUltrascalePlus
 `endif // XILINX_SYS_CLK
    
    GTE2ClockGenIfc clockGen <- mkClockIBUFDS_GTE(
@@ -290,16 +323,18 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_
 `else
    Clock pci_clk_100mhz_buf = clockGen.gen_clk;
 `endif
+   
+   let pci_sys_reset_n_c <- mkResetIBUF(defaultValue, reset_by pci_sys_reset_n);
    // Instantiate the PCIE endpoint
    PcieEndpointX7#(PcieLanes) ep7 <- mkPcieEndpointX7(
 `ifdef PCIE3
       clockGen.gen_clk,
 `endif
-      clocked_by pci_clk_100mhz_buf, reset_by pci_sys_reset_n);
+      clocked_by pci_clk_100mhz_buf, reset_by pci_sys_reset_n_c);
 
    Clock pcieClock_ = ep7.epPcieClock;
    Reset pcieReset_ = ep7.epPcieReset;
-   PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(
+   PcieHost#(PcieDataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(
 `ifdef PCIE3
          PciId{bus: 0, dev: 0, func:0},
 `else
@@ -332,13 +367,22 @@ module mkXilinxPcieHostTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_
 `ifdef XILINX_SYS_CLK
    interface Clock tsys_clk_200mhz = sys_clk_200mhz;
    interface Clock tsys_clk_200mhz_buf = sys_clk_200mhz_buf;
-`ifdef VirtexUltrascale
+ `ifdef VirtexUltrascalePlus
+   interface Clock tsys_clk_300mhz      = sys_clk_300mhz;
+   interface Clock tsys_clk_300mhz_buf  = sys_clk_300mhz_buf;
+   interface Clock tsys_clk1_250mhz     = sys_clk1_250mhz;
+   interface Clock tsys_clk1_250mhz_buf = sys_clk1_250mhz_buf;
+   interface Clock tsys_clk2_250mhz     = sys_clk2_250mhz;
+   interface Clock tsys_clk2_250mhz_buf = sys_clk2_250mhz_buf;
+ `else
+  `ifdef VirtexUltrascale
    interface Clock tsys_clk1_300mhz = sys_clk1_300mhz;
    interface Clock tsys_clk1_300mhz_buf = sys_clk1_300mhz_buf;
    interface Clock tsys_clk2_300mhz = sys_clk2_300mhz;
    interface Clock tsys_clk2_300mhz_buf = sys_clk2_300mhz_buf;
-`endif
-`endif
+  `endif // VirtexUltrascale
+ `endif // VirtexUltrascalePlus
+`endif // XILINX_SYS_CLK
    interface Clock tpci_clk_100mhz_buf = pci_clk_100mhz_buf;
 
    interface PcieEndpointX7 tep7 = ep7;
@@ -372,7 +416,7 @@ module mkAlteraPcieHostTop #(Clock clk_100MHz, Clock clk_50MHz, Reset perst_n)(P
    Clock portalClock_ = epPcieClock;
    Reset portalReset_ = epPcieReset;
 
-   PcieHost#(DataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(ep7.device, clocked_by portalClock_, reset_by portalReset_);
+   PcieHost#(PcieDataBusWidth, NumberOfMasters) pciehost <- mkPcieHost(ep7.device, clocked_by portalClock_, reset_by portalReset_);
    mkConnection(ep7.tlp, pciehost.pci, clocked_by portalClock_, reset_by portalReset_);
 
    interface PcieEndpointS5 tep7 = ep7;

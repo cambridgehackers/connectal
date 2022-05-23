@@ -286,9 +286,14 @@ static void initPortalHardwareOnce(void)
         argv[ind++] = (char *)"work.xsimtop";
 #endif
 #if defined(BOARD_vcs)
-	const char *exetype = "vcs";
-	bindir = 0; // the simulation driver is found in $PATH
-	//FIXME ARGS
+	const char *exetype = "simv";
+        argv[ind++] = (char *)"+verbose=1";
+        argv[ind++] = (char *)"-assert";
+        argv[ind++] = (char *)"verbose+success";
+	if (simulator_dump_vcd) {
+	  //argv[ind++] = (char*)"-t";
+	  //argv[ind++] = (char*)simulator_vcd_name;
+	}
 #endif
 #if defined(BOARD_vsim)
 	const char *exetype = "vsim";

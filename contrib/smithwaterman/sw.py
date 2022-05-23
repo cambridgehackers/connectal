@@ -1,6 +1,12 @@
+from __future__ import print_function
+
+try:
+    xrange
+except NameError:
+    xrange = range  # Python 3 compatibility
 
 def printmatrix(m):
-  print "%s\n" * len (m) % tuple(m)
+  print("%s\n" * len (m) % tuple(m))
               
 # Step 1 is Gotoh's algorithm]
 # arrays C[0..m, 0..n], D[0..m, 0..n] I[0..M, 0..N]
@@ -43,12 +49,12 @@ def gotoh(A, B):
             I[i][j] = min(I[i][j-1], C[i][j-1] + g) + h
             D[i][j] = min(D[i-1][j], C[i-1][j] + g) + h
             C[i][j] = min(D[i][j], I[i][j], C[i-1][j-1] + w(A[i-1], B[j-1]))
-    print "String A %s String B %s" % (A, B)
-    print "Matrix C"
+    print("String A %s String B %s" % (A, B))
+    print("Matrix C")
     printmatrix(C)
-    print "Matrix D"
+    print("Matrix D")
     printmatrix(D)
-    print "Matrix I"
+    print("Matrix I")
     printmatrix(I)
     return(C[m][n])
 
@@ -88,9 +94,9 @@ def gotohb(A, B):
             CC[j] = c
     return([CC, DD])
 
-print "Calling gotohb(%s, %s)" % (A, B)
+print("Calling gotohb(%s, %s)" % (A, B))
 regular = gotohb(A, B)
-print regular
+print(regular)
 
 def gotohb2(A, B, t):
     m = len(A)
@@ -118,9 +124,9 @@ def gotohb2(A, B, t):
     DD[0] = CC[0]
     return([CC, DD])
 
-print "Calling gotohb2 (%s, %s) " % ( A, B)
+print("Calling gotohb2 (%s, %s) " % ( A, B))
 alternate = gotohb2(A, B, g)
-print alternate
+print(alternate)
               
 #
 #
@@ -131,12 +137,12 @@ print alternate
 def gotohc(A, B, sa, sb, m, n, tb, te):
     # m = len(A) - sa
     # n = len(B) - sb
-    print "in gotohc", A, B, sa, sb, m, n, tb, te
+    print("in gotohc", A, B, sa, sb, m, n, tb, te)
     if n == 0:
         if m > 0:
-            print "delete A[%d] through A[%d]" % (sa, sa + m - 1)
+            print("delete A[%d] through A[%d]" % (sa, sa + m - 1))
     elif m == 0:
-        print "insert B[%d] through B[%d]" % (sb, sb + n - 1)
+        print("insert B[%d] through B[%d]" % (sb, sb + n - 1))
     elif m == 1:
         alt1 = min(tb, te) + h + gap(n)
         minsofar = alt1;
@@ -147,10 +153,10 @@ def gotohc(A, B, sa, sb, m, n, tb, te):
                 minsofar = min(alt1, alt2)
                 jsofar = j
         if (jsofar > 1):
-            print "delete B[%d] through B[%d]" % (sb, sb + jsofar -1)
-        print "convert A[%d] (%s) to B[%d] (%s) " % (sa, A[sa], sb + jsofar - 1, B[sb + jsofar - 1])
+            print("delete B[%d] through B[%d]" % (sb, sb + jsofar -1))
+        print("convert A[%d] (%s) to B[%d] (%s) " % (sa, A[sa], sb + jsofar - 1, B[sb + jsofar - 1]))
         if jsofar < n:
-            print "delete B[%d] through B[%d]" % (sb + jsofar, sb + n - 1)
+            print("delete B[%d] through B[%d]" % (sb + jsofar, sb + n - 1))
     else:
         i = m >> 1
         # print "fwd rev", A, sa, i, B, sb, n
@@ -158,8 +164,8 @@ def gotohc(A, B, sa, sb, m, n, tb, te):
         rev = gotohb2(A[sa + i:sa + m][::-1],B[sb:sb+n][::-1], te)
         minfound = 0
         minsofar = 0
-        print "CC ", fwd[0], " DD ", fwd[1]
-        print "RR ", rev[0], " SS ", rev[1]
+        print("CC ", fwd[0], " DD ", fwd[1])
+        print("RR ", rev[0], " SS ", rev[1])
         for j in xrange(0,n+1):
             t1 = fwd[0][j] + rev[0][n-j]
             t2 = fwd[1][j] + rev[1][n-j] - g
@@ -174,14 +180,14 @@ def gotohc(A, B, sa, sb, m, n, tb, te):
             minfound = 1
         # minj minsofar and mintype are set
         if mintype == 1:
-            print "type 1 midpoint at %d,%d" % (i, minj)
+            print("type 1 midpoint at %d,%d" % (i, minj))
             gotohc(A,B, sa, sb, i, minj, tb, g)
             gotohc(A,B, sa+i, sb+minj, m-i, n-minj, g, te)
         else:
-            print "type 2 midpoint at %d,%d" % (i, minj)
+            print("type 2 midpoint at %d,%d" % (i, minj))
             gotohc(A,B, sa, sb, i - 1, minj, tb, 0)
-            print "delete a[", sa + i, "] and a[", sa + i + 1, "]"
+            print("delete a[", sa + i, "] and a[", sa + i + 1, "]")
             gotohc(A,B, sa + i + 1, sb + minj, m - i - 1, n - minj, 0, te)
 
-print "calling gotohc(%s, %s)" %(A, B)
+print("calling gotohc(%s, %s)" %(A, B))
 gotohc(A, B, 0, 0, len(A), len(B),  g, g)

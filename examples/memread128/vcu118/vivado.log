@@ -1,0 +1,925 @@
+#-----------------------------------------------------------
+# Vivado v2018.1 (64-bit)
+# SW Build 2188600 on Wed Apr  4 18:39:19 MDT 2018
+# IP Build 2185939 on Wed Apr  4 20:55:05 MDT 2018
+# Start of session at: Sat Oct 12 21:07:48 2019
+# Process ID: 102870
+# Current directory: /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/examples/memread128/vcu118
+# Command line: vivado -notrace -mode batch -source /home/shuotao/workspace/NDPSql_github/platform/build_tools/fpgamake/tcl/topdown.tcl
+# Log file: /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/examples/memread128/vcu118/vivado.log
+# Journal file: /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/examples/memread128/vcu118/vivado.jou
+#-----------------------------------------------------------
+source /home/shuotao/workspace/NDPSql_github/platform/build_tools/fpgamake/tcl/topdown.tcl -notrace
+read_checkpoint ./Synth/mkPcieTop/mkPcieTop-synth.dcp
+Command: read_checkpoint ./Synth/mkPcieTop/mkPcieTop-synth.dcp
+WARNING: [Vivado 12-4167] The checkpoint part 'xcvu9p-flga2104-2L-e' does not match the current project part 'xc7vx485tffg1157-1'.
+Elapsed time 0 seconds
+link_design
+Command: link_design
+Design is defaulting to srcset: sources_1
+Design is defaulting to constrset: constrs_1
+Design is defaulting to dcp part: xcvu9p-flga2104-2L-e
+Design is defaulting to dcp top: mkPcieTop
+INFO: [Netlist 29-17] Analyzing 1084 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+INFO: [Project 1-479] Netlist was created with Vivado 2018.1
+INFO: [Device 21-403] Loading part xcvu9p-flga2104-2L-e
+INFO: [Project 1-570] Preparing netlist for logic optimization
+INFO: [Timing 38-478] Restoring timing data from binary archive.
+INFO: [Timing 38-479] Binary timing data restore complete.
+INFO: [Project 1-856] Restoring constraints from binary archive.
+INFO: [Project 1-853] Binary constraint restore complete.
+Reading XDEF placement.
+Reading placer database...
+Reading XDEF routing.
+Read XDEF File: Time (s): cpu = 00:00:00.55 ; elapsed = 00:00:00.64 . Memory (MB): peak = 2541.000 ; gain = 0.000 ; free physical = 11763 ; free virtual = 104637
+Restored from archive | CPU: 0.630000 secs | Memory: 1.855392 MB |
+Finished XDEF File Restore: Time (s): cpu = 00:00:00.55 ; elapsed = 00:00:00.64 . Memory (MB): peak = 2541.000 ; gain = 0.000 ; free physical = 11763 ; free virtual = 104637
+INFO: [Project 1-111] Unisim Transformation Summary:
+  A total of 123 instances were transformed.
+  IBUF => IBUF (IBUFCTRL, INBUF): 1 instances
+  RAM16X1D => RAM32X1D (RAMD32, RAMD32): 1 instances
+  RAM32M16 => RAM32M16 (RAMD32, RAMD32, RAMD32, RAMD32, RAMD32, RAMD32, RAMD32, RAMD32, RAMD32, RAMD32, RAMD32, RAMD32, RAMD32, RAMD32, RAMS32, RAMS32): 121 instances
+
+10 Infos, 1 Warnings, 0 Critical Warnings and 0 Errors encountered.
+link_design completed successfully
+link_design: Time (s): cpu = 00:00:22 ; elapsed = 00:00:44 . Memory (MB): peak = 2541.000 ; gain = 1348.285 ; free physical = 11779 ; free virtual = 104654
+Elapsed time 44 seconds
+read_xdc /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/vcu118.xdc
+Parsing XDC File [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/vcu118.xdc]
+WARNING: [Vivado 12-584] No ports matched 'CLK_sys_clk1_300_p'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/vcu118.xdc:13]
+CRITICAL WARNING: [Common 17-55] 'set_property' expects at least one object. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/vcu118.xdc:13]
+Resolution: If [get_<value>] was used to populate the object, check to make sure this command returns at least one valid object.
+WARNING: [Vivado 12-584] No ports matched 'CLK_sys_clk1_300_n'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/vcu118.xdc:14]
+CRITICAL WARNING: [Common 17-55] 'set_property' expects at least one object. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/vcu118.xdc:14]
+Resolution: If [get_<value>] was used to populate the object, check to make sure this command returns at least one valid object.
+WARNING: [Vivado 12-584] No ports matched 'CLK_sys_clk2_300_p'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/vcu118.xdc:15]
+CRITICAL WARNING: [Common 17-55] 'set_property' expects at least one object. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/vcu118.xdc:15]
+Resolution: If [get_<value>] was used to populate the object, check to make sure this command returns at least one valid object.
+WARNING: [Vivado 12-584] No ports matched 'CLK_sys_clk2_300_n'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/vcu118.xdc:16]
+CRITICAL WARNING: [Common 17-55] 'set_property' expects at least one object. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/vcu118.xdc:16]
+Resolution: If [get_<value>] was used to populate the object, check to make sure this command returns at least one valid object.
+WARNING: [Vivado 12-584] No ports matched 'CLK_sys_clk1_300_p'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/vcu118.xdc:18]
+CRITICAL WARNING: [Common 17-55] 'set_property' expects at least one object. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/vcu118.xdc:18]
+Resolution: If [get_<value>] was used to populate the object, check to make sure this command returns at least one valid object.
+WARNING: [Vivado 12-584] No ports matched 'CLK_sys_clk1_300_n'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/vcu118.xdc:19]
+CRITICAL WARNING: [Common 17-55] 'set_property' expects at least one object. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/vcu118.xdc:19]
+Resolution: If [get_<value>] was used to populate the object, check to make sure this command returns at least one valid object.
+WARNING: [Vivado 12-584] No ports matched 'CLK_sys_clk2_300_p'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/vcu118.xdc:20]
+CRITICAL WARNING: [Common 17-55] 'set_property' expects at least one object. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/vcu118.xdc:20]
+Resolution: If [get_<value>] was used to populate the object, check to make sure this command returns at least one valid object.
+WARNING: [Vivado 12-584] No ports matched 'CLK_sys_clk2_300_n'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/vcu118.xdc:21]
+CRITICAL WARNING: [Common 17-55] 'set_property' expects at least one object. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/vcu118.xdc:21]
+Resolution: If [get_<value>] was used to populate the object, check to make sure this command returns at least one valid object.
+Finished Parsing XDC File [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/vcu118.xdc]
+Elapsed time 0 seconds
+CRITICAL WARNING: [Common 17-55] 
+CRITICAL WARNING: [Common 17-55] 
+CRITICAL WARNING: [Common 17-55] 
+CRITICAL WARNING: [Common 17-55] 
+CRITICAL WARNING: [Common 17-55] 
+CRITICAL WARNING: [Common 17-55] 
+CRITICAL WARNING: [Common 17-55] 
+CRITICAL WARNING: [Common 17-55] 
+read_xdc /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc
+Parsing XDC File [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc]
+WARNING: [Vivado 12-584] No ports matched 'CLK_sys_clk_p'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:3]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports CLK_sys_clk_p]'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:3]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'CLK_sys_clk1_300_p'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:4]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports CLK_sys_clk1_300_p]'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:4]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'CLK_sys_clk2_300_p'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:5]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports CLK_sys_clk2_300_p]'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:5]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Constraints 18-633] Creating clock host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[0].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK with 8 sources. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119]
+INFO: [Timing 38-35] Done setting XDC timing constraints. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:7]
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[0].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:7]
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[1].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:7]
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[2].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:7]
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[3].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:7]
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[0].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:7]
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[1].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:7]
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[2].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:7]
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[3].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:7]
+INFO: [Timing 38-2] Deriving generated clocks [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:7]
+WARNING: [Vivado 12-627] No clocks matched 'userclk2'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:7]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:7]
+WARNING: [Vivado 12-627] No clocks matched 'userclk2'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:7]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:7]
+CRITICAL WARNING: [Common 17-55] 'get_property' expects at least one object. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:7]
+Resolution: If [get_<value>] was used to populate the object, check to make sure this command returns at least one valid object.
+WARNING: [Vivado 12-627] No clocks matched 'userclk2'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:8]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:8]
+WARNING: [Vivado 12-627] No clocks matched 'userclk2'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:8]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:8]
+CRITICAL WARNING: [Common 17-55] 'get_property' expects at least one object. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:8]
+Resolution: If [get_<value>] was used to populate the object, check to make sure this command returns at least one valid object.
+WARNING: [Vivado 12-627] No clocks matched 'userclk2'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:10]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:10]
+WARNING: [Vivado 12-627] No clocks matched 'userclk2'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:10]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:10]
+CRITICAL WARNING: [Common 17-55] 'get_property' expects at least one object. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:10]
+Resolution: If [get_<value>] was used to populate the object, check to make sure this command returns at least one valid object.
+WARNING: [Vivado 12-627] No clocks matched 'userclk2'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:11]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:11]
+WARNING: [Vivado 12-627] No clocks matched 'userclk2'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:11]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:11]
+CRITICAL WARNING: [Common 17-55] 'get_property' expects at least one object. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:11]
+Resolution: If [get_<value>] was used to populate the object, check to make sure this command returns at least one valid object.
+WARNING: [Vivado 12-627] No clocks matched 'userclk2'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:13]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:13]
+WARNING: [Vivado 12-627] No clocks matched 'userclk2'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:13]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:13]
+CRITICAL WARNING: [Common 17-55] 'get_property' expects at least one object. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:13]
+Resolution: If [get_<value>] was used to populate the object, check to make sure this command returns at least one valid object.
+WARNING: [Vivado 12-627] No clocks matched 'userclk2'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:14]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:14]
+WARNING: [Vivado 12-627] No clocks matched 'userclk2'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:14]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:14]
+CRITICAL WARNING: [Common 17-55] 'get_property' expects at least one object. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:14]
+Resolution: If [get_<value>] was used to populate the object, check to make sure this command returns at least one valid object.
+WARNING: [Vivado 12-627] No clocks matched 'userclk2'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:16]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:16]
+WARNING: [Vivado 12-627] No clocks matched 'sys_clk'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:16]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:16]
+CRITICAL WARNING: [Vivado 12-4739] set_max_delay:No valid object(s) found for '-from [get_clocks userclk2]'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:16]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-627] No clocks matched 'userclk2'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:17]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:17]
+WARNING: [Vivado 12-627] No clocks matched 'sys_clk'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:17]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:17]
+CRITICAL WARNING: [Vivado 12-4739] set_max_delay:No valid object(s) found for '-from [get_clocks sys_clk]'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:17]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-627] No clocks matched 'userclk2'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:19]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:19]
+WARNING: [Vivado 12-627] No clocks matched 'clk_pll_i'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:19]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:19]
+CRITICAL WARNING: [Vivado 12-4739] set_max_delay:No valid object(s) found for '-from [get_clocks userclk2]'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:19]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-627] No clocks matched 'userclk2'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:20]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:20]
+WARNING: [Vivado 12-627] No clocks matched 'clk_pll_i'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:20]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:20]
+CRITICAL WARNING: [Vivado 12-4739] set_max_delay:No valid object(s) found for '-from [get_clocks clk_pll_i]'. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc:20]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+Finished Parsing XDC File [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/constraints/xilinx/pcie-clocks.xdc]
+Elapsed time 3 seconds
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for 
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for 
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for 
+CRITICAL WARNING: [Common 17-55] 
+CRITICAL WARNING: [Common 17-55] 
+CRITICAL WARNING: [Common 17-55] 
+CRITICAL WARNING: [Common 17-55] 
+CRITICAL WARNING: [Common 17-55] 
+CRITICAL WARNING: [Common 17-55] 
+CRITICAL WARNING: [Vivado 12-4739] set_max_delay:No valid object(s) found for 
+CRITICAL WARNING: [Vivado 12-4739] set_max_delay:No valid object(s) found for 
+CRITICAL WARNING: [Vivado 12-4739] set_max_delay:No valid object(s) found for 
+CRITICAL WARNING: [Vivado 12-4739] set_max_delay:No valid object(s) found for 
+read_xdc /home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc
+Parsing XDC File [/home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc]
+WARNING: [Vivado 12-508] No pins matched '*ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/phy_clk_i/bufg_gt_userclk/O'. [/home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc:17]
+WARNING: [Vivado 12-1008] No clocks found for command 'get_clocks -of_objects [get_pins *ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/phy_clk_i/bufg_gt_userclk/O]'. [/home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc:17]
+Resolution: Verify the create_clock command was called to create the clock object before it is referenced.
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc:17]
+CRITICAL WARNING: [Vivado 12-4739] set_clock_groups:No valid object(s) found for '-group [get_clocks -of_objects [get_pins *ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/phy_clk_i/bufg_gt_userclk/O]]'. [/home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc:17]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+CRITICAL WARNING: [Vivado 12-5201] set_clock_groups: cannot set the clock group when only one non-empty group remains. [/home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc:17]
+WARNING: [Vivado 12-508] No pins matched '*ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/phy_clk_i/bufg_gt_userclk/O'. [/home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc:18]
+WARNING: [Vivado 12-1008] No clocks found for command 'get_clocks -of_objects [get_pins *ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/phy_clk_i/bufg_gt_userclk/O]'. [/home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc:18]
+Resolution: Verify the create_clock command was called to create the clock object before it is referenced.
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc:18]
+CRITICAL WARNING: [Vivado 12-4739] set_clock_groups:No valid object(s) found for '-group [get_clocks -of_objects [get_pins *ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/phy_clk_i/bufg_gt_userclk/O]]'. [/home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc:18]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+CRITICAL WARNING: [Vivado 12-5201] set_clock_groups: cannot set the clock group when only one non-empty group remains. [/home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc:18]
+WARNING: [Vivado 12-508] No pins matched '*ep7/CLK_epDerivedClock'. [/home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc:47]
+WARNING: [Vivado 12-1008] No clocks found for command 'get_clocks -of_objects [get_pins *ep7/CLK_epDerivedClock]'. [/home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc:47]
+Resolution: Verify the create_clock command was called to create the clock object before it is referenced.
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc:47]
+WARNING: [Vivado 12-3521] Clock specified in more than one group: host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[0].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [/home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc:58]
+CRITICAL WARNING: [Vivado 12-4739] set_clock_groups:No valid object(s) found for '-group [get_clocks -of_objects [get_pins *ep7/CLK_epDerivedClock]]'. [/home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc:59]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+CRITICAL WARNING: [Vivado 12-5201] set_clock_groups: cannot set the clock group when only one non-empty group remains. [/home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc:59]
+Finished Parsing XDC File [/home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc]
+Elapsed time 1 seconds
+CRITICAL WARNING: [Vivado 12-4739] set_clock_groups:No valid object(s) found for 
+CRITICAL WARNING: [Vivado 12-5201] set_clock_groups: cannot set the clock group when only one non-empty group remains. [/home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc:17]
+CRITICAL WARNING: [Vivado 12-4739] set_clock_groups:No valid object(s) found for 
+CRITICAL WARNING: [Vivado 12-5201] set_clock_groups: cannot set the clock group when only one non-empty group remains. [/home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc:18]
+CRITICAL WARNING: [Vivado 12-4739] set_clock_groups:No valid object(s) found for 
+CRITICAL WARNING: [Vivado 12-5201] set_clock_groups: cannot set the clock group when only one non-empty group remains. [/home/shuotao/workspace/NDPSql_github/platform/xilinx/constraints/pcieclock-vcu118.xdc:59]
+write_checkpoint -force ./Impl/TopDown/top-post-link.dcp
+INFO: [Timing 38-480] Writing timing data to binary archive.
+Writing placer database...
+Writing XDEF routing.
+Writing XDEF routing logical nets.
+Writing XDEF routing special nets.
+Write XDEF Complete: Time (s): cpu = 00:00:00.33 ; elapsed = 00:00:00.07 . Memory (MB): peak = 2761.938 ; gain = 0.000 ; free physical = 11787 ; free virtual = 104669
+INFO: [Common 17-1381] The checkpoint '/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/examples/memread128/vcu118/Impl/TopDown/top-post-link.dcp' has been generated.
+write_checkpoint: Time (s): cpu = 00:00:12 ; elapsed = 00:00:13 . Memory (MB): peak = 2761.938 ; gain = 8.016 ; free physical = 11788 ; free virtual = 104663
+Elapsed time 13 seconds
+INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -2L, Temperature grade: E, Delay Type: min_max.
+INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 8 CPUs
+report_timing_summary: Time (s): cpu = 00:00:45 ; elapsed = 00:00:58 . Memory (MB): peak = 3936.371 ; gain = 1174.434 ; free physical = 9933 ; free virtual = 102809
+INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -2L, Temperature grade: E, Delay Type: max.
+INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 8 CPUs
+INFO: [Timing 38-78] ReportTimingParams: -max_paths 100 -nworst 1 -delay_type max -sort_by group.
+INFO: [Timing 38-91] UpdateTimingParams: No interconnect No Cell Dly, Speed grade: -2L, Temperature grade: E, Delay Type: max.
+INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 8 CPUs
+INFO: [Timing 38-433] Consider using Xilinx recommended XPM_CDC modules to avoid Critical severities
+INFO: [Timing 38-314] The report_cdc command only analyzes and reports clock domain crossing paths where clocks have been defined on both source and destination sides. Ports with no input delay constraint are skipped. Please run check_timing to verify there are no missing clock definitions in your design, nor any unconstrained input port.
+report_utilization: Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 3936.371 ; gain = 0.000 ; free physical = 9941 ; free virtual = 102817
+WARNING: [Vivado 12-1609] Net 'GetPutWithClocks_inst_mkConnectionWithClocks_getProbe_PROBE[0]' is marked DONT_TOUCH by the tool (not by the user), and it cannot be unset.
+Resolution: If the net is set as MARK_DEBUG, then MARK_DEBUG must be unset to remove the DONT_TOUCH
+WARNING: [Vivado 12-1609] Net 'GetPutWithClocks_inst_mkConnectionWithClocks_getProbe_PROBE[1]' is marked DONT_TOUCH by the tool (not by the user), and it cannot be unset.
+Resolution: If the net is set as MARK_DEBUG, then MARK_DEBUG must be unset to remove the DONT_TOUCH
+WARNING: [Vivado 12-1609] Net 'GetPutWithClocks_inst_mkConnectionWithClocks_getProbe_PROBE[2]' is marked DONT_TOUCH by the tool (not by the user), and it cannot be unset.
+Resolution: If the net is set as MARK_DEBUG, then MARK_DEBUG must be unset to remove the DONT_TOUCH
+WARNING: [Vivado 12-1609] Net 'GetPutWithClocks_inst_mkConnectionWithClocks_getProbe_PROBE[3]' is marked DONT_TOUCH by the tool (not by the user), and it cannot be unset.
+Resolution: If the net is set as MARK_DEBUG, then MARK_DEBUG must be unset to remove the DONT_TOUCH
+WARNING: [Vivado 12-1609] Net 'GetPutWithClocks_inst_mkConnectionWithClocks_getProbe_PROBE_VALID' is marked DONT_TOUCH by the tool (not by the user), and it cannot be unset.
+Resolution: If the net is set as MARK_DEBUG, then MARK_DEBUG must be unset to remove the DONT_TOUCH
+WARNING: [Vivado 12-1609] Net 'GetPutWithClocks_inst_mkConnectionWithClocks_putProbe_PROBE[0]' is marked DONT_TOUCH by the tool (not by the user), and it cannot be unset.
+Resolution: If the net is set as MARK_DEBUG, then MARK_DEBUG must be unset to remove the DONT_TOUCH
+WARNING: [Vivado 12-1609] Net 'GetPutWithClocks_inst_mkConnectionWithClocks_putProbe_PROBE[1]' is marked DONT_TOUCH by the tool (not by the user), and it cannot be unset.
+Resolution: If the net is set as MARK_DEBUG, then MARK_DEBUG must be unset to remove the DONT_TOUCH
+WARNING: [Vivado 12-1609] Net 'GetPutWithClocks_inst_mkConnectionWithClocks_putProbe_PROBE[2]' is marked DONT_TOUCH by the tool (not by the user), and it cannot be unset.
+Resolution: If the net is set as MARK_DEBUG, then MARK_DEBUG must be unset to remove the DONT_TOUCH
+WARNING: [Vivado 12-1609] Net 'GetPutWithClocks_inst_mkConnectionWithClocks_putProbe_PROBE[3]' is marked DONT_TOUCH by the tool (not by the user), and it cannot be unset.
+Resolution: If the net is set as MARK_DEBUG, then MARK_DEBUG must be unset to remove the DONT_TOUCH
+WARNING: [Vivado 12-1609] Net 'GetPutWithClocks_inst_mkConnectionWithClocks_putProbe_PROBE_VALID' is marked DONT_TOUCH by the tool (not by the user), and it cannot be unset.
+Resolution: If the net is set as MARK_DEBUG, then MARK_DEBUG must be unset to remove the DONT_TOUCH
+WARNING: [Vivado 12-1609] Net 'host_pcieHostTop_ep7/pcie_ep/inst/store_ltssm' is marked DONT_TOUCH by the tool (not by the user), and it cannot be unset.
+Resolution: If the net is set as MARK_DEBUG, then MARK_DEBUG must be unset to remove the DONT_TOUCH
+opt_design
+Command: opt_design
+Attempting to get a license for feature 'Implementation' and/or device 'xcvu9p'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xcvu9p'
+Running DRC as a precondition to command opt_design
+
+Starting DRC Task
+INFO: [DRC 23-27] Running DRC with 8 threads
+INFO: [Project 1-461] DRC finished with 0 Errors
+INFO: [Project 1-462] Please refer to the DRC report (report_drc) for more information.
+
+Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 3968.434 ; gain = 16.031 ; free physical = 10901 ; free virtual = 103777
+
+Starting Logic Optimization Task
+
+Phase 1 Retarget
+INFO: [Opt 31-138] Pushed 24 inverter(s) to 7441 load pin(s).
+INFO: [Opt 31-49] Retargeted 0 cell(s).
+Phase 1 Retarget | Checksum: a9db0941
+
+Time (s): cpu = 00:00:05 ; elapsed = 00:00:03 . Memory (MB): peak = 3968.434 ; gain = 0.000 ; free physical = 11282 ; free virtual = 104159
+INFO: [Opt 31-389] Phase Retarget created 0 cells and removed 0 cells
+
+Phase 2 Constant propagation
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+Phase 2 Constant propagation | Checksum: 14ee22507
+
+Time (s): cpu = 00:00:06 ; elapsed = 00:00:04 . Memory (MB): peak = 3968.434 ; gain = 0.000 ; free physical = 11282 ; free virtual = 104158
+INFO: [Opt 31-389] Phase Constant propagation created 395 cells and removed 1088 cells
+
+Phase 3 Sweep
+Phase 3 Sweep | Checksum: 1294e3903
+
+Time (s): cpu = 00:00:10 ; elapsed = 00:00:08 . Memory (MB): peak = 3968.434 ; gain = 0.000 ; free physical = 11243 ; free virtual = 104119
+INFO: [Opt 31-389] Phase Sweep created 0 cells and removed 7048 cells
+
+Phase 4 BUFG optimization
+Phase 4 BUFG optimization | Checksum: 1294e3903
+
+Time (s): cpu = 00:00:11 ; elapsed = 00:00:09 . Memory (MB): peak = 3968.434 ; gain = 0.000 ; free physical = 11196 ; free virtual = 104072
+INFO: [Opt 31-389] Phase BUFG optimization created 0 cells and removed 0 cells
+
+Phase 5 Shift Register Optimization
+Phase 5 Shift Register Optimization | Checksum: 1294e3903
+
+Time (s): cpu = 00:00:20 ; elapsed = 00:00:17 . Memory (MB): peak = 3968.434 ; gain = 0.000 ; free physical = 11214 ; free virtual = 104090
+INFO: [Opt 31-389] Phase Shift Register Optimization created 0 cells and removed 0 cells
+
+Phase 6 Post Processing Netlist
+Phase 6 Post Processing Netlist | Checksum: 1294e3903
+
+Time (s): cpu = 00:00:20 ; elapsed = 00:00:18 . Memory (MB): peak = 3968.434 ; gain = 0.000 ; free physical = 11199 ; free virtual = 104075
+INFO: [Opt 31-389] Phase Post Processing Netlist created 0 cells and removed 0 cells
+
+Starting Connectivity Check Task
+
+Time (s): cpu = 00:00:00.09 ; elapsed = 00:00:00.09 . Memory (MB): peak = 3968.434 ; gain = 0.000 ; free physical = 11202 ; free virtual = 104078
+Ending Logic Optimization Task | Checksum: 1294e3903
+
+Time (s): cpu = 00:00:20 ; elapsed = 00:00:18 . Memory (MB): peak = 3968.434 ; gain = 0.000 ; free physical = 11202 ; free virtual = 104078
+
+Starting Power Optimization Task
+INFO: [Pwropt 34-132] Skipping clock gating for clocks with a period < 2.00 ns.
+WARNING: [Constraints 18-633] Creating clock host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[0].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK with 8 sources. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119]
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+INFO: [Pwropt 34-9] Applying IDT optimizations ...
+INFO: [Pwropt 34-10] Applying ODC optimizations ...
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[0].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[1].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[2].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[3].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[0].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[1].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[2].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[3].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+INFO: [Physopt 32-619] Estimated Timing Summary | WNS=1.550 | TNS=0.000 |
+Running Vector-less Activity Propagation...
+
+Finished Running Vector-less Activity Propagation
+
+
+Starting PowerOpt Patch Enables Task
+INFO: [Pwropt 34-162] WRITE_MODE attribute of 4 BRAM(s) out of a total of 65 has been updated to save power. Run report_power_opt to get a complete listing of the BRAMs updated.
+INFO: [Pwropt 34-201] Structural ODC has moved 0 WE to EN ports
+Number of BRAM Ports augmented: 0 newly gated: 10 Total Ports: 130
+Ending PowerOpt Patch Enables Task | Checksum: 54740fbd
+
+Time (s): cpu = 00:00:00.43 ; elapsed = 00:00:00.42 . Memory (MB): peak = 4406.566 ; gain = 0.000 ; free physical = 10785 ; free virtual = 103661
+Ending Power Optimization Task | Checksum: 54740fbd
+
+Time (s): cpu = 00:00:51 ; elapsed = 00:00:27 . Memory (MB): peak = 4406.566 ; gain = 438.133 ; free physical = 10829 ; free virtual = 103705
+
+Starting Logic Optimization Task
+WARNING: [Constraints 18-633] Creating clock host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[0].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK with 8 sources. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119]
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[0].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[1].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[2].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[3].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[0].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[1].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[2].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[3].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+
+Phase 1 Remap
+Phase 1 Remap | Checksum: 14284439f
+
+Time (s): cpu = 00:00:08 ; elapsed = 00:00:03 . Memory (MB): peak = 4406.566 ; gain = 0.000 ; free physical = 10826 ; free virtual = 103702
+INFO: [Opt 31-389] Phase Remap created 4 cells and removed 8 cells
+
+Phase 2 Post Processing Netlist
+Phase 2 Post Processing Netlist | Checksum: 7c331da1
+
+Time (s): cpu = 00:00:08 ; elapsed = 00:00:03 . Memory (MB): peak = 4406.566 ; gain = 0.000 ; free physical = 10826 ; free virtual = 103703
+INFO: [Opt 31-389] Phase Post Processing Netlist created 0 cells and removed 4 cells
+Ending Logic Optimization Task | Checksum: 7c331da1
+
+Time (s): cpu = 00:00:08 ; elapsed = 00:00:03 . Memory (MB): peak = 4406.566 ; gain = 0.000 ; free physical = 10826 ; free virtual = 103703
+INFO: [Common 17-83] Releasing license: Implementation
+70 Infos, 77 Warnings, 27 Critical Warnings and 0 Errors encountered.
+opt_design completed successfully
+opt_design: Time (s): cpu = 00:01:23 ; elapsed = 00:00:53 . Memory (MB): peak = 4406.566 ; gain = 456.168 ; free physical = 10826 ; free virtual = 103703
+Elapsed time 52 seconds
+write_checkpoint -force ./Impl/TopDown/top-post-opt.dcp
+INFO: [Timing 38-480] Writing timing data to binary archive.
+Writing placer database...
+Writing XDEF routing.
+Writing XDEF routing logical nets.
+Writing XDEF routing special nets.
+Write XDEF Complete: Time (s): cpu = 00:00:00.31 ; elapsed = 00:00:00.07 . Memory (MB): peak = 4406.566 ; gain = 0.000 ; free physical = 10815 ; free virtual = 103698
+INFO: [Common 17-1381] The checkpoint '/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/examples/memread128/vcu118/Impl/TopDown/top-post-opt.dcp' has been generated.
+write_checkpoint: Time (s): cpu = 00:00:11 ; elapsed = 00:00:11 . Memory (MB): peak = 4406.566 ; gain = 0.000 ; free physical = 10664 ; free virtual = 103540
+Elapsed time 12 seconds
+WARNING: [Constraints 18-633] Creating clock host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[0].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK with 8 sources. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119]
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[0].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[1].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[2].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[3].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[0].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[1].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[2].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[3].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -2L, Temperature grade: E, Delay Type: min_max.
+INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 8 CPUs
+report_utilization: Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 4406.566 ; gain = 0.000 ; free physical = 10406 ; free virtual = 103282
+WARNING: [Vivado 12-1034] No pblocks matched '*'.
+Command: report_drc -file ./Impl/TopDown/pre_place_drc.txt
+INFO: [IP_Flow 19-234] Refreshing IP repositories
+INFO: [IP_Flow 19-1704] No user IP repositories specified
+INFO: [IP_Flow 19-2313] Loaded Vivado IP repository '/opt/Xilinx/Vivado/2018.1/data/ip'.
+INFO: [DRC 23-27] Running DRC with 8 threads
+INFO: [Coretcl 2-168] The results of DRC are in file /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/examples/memread128/vcu118/Impl/TopDown/pre_place_drc.txt.
+report_drc completed successfully
+report_drc: Time (s): cpu = 00:00:10 ; elapsed = 00:00:07 . Memory (MB): peak = 4406.566 ; gain = 0.000 ; free physical = 10281 ; free virtual = 103157
+place_design
+Command: place_design
+Attempting to get a license for feature 'Implementation' and/or device 'xcvu9p'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xcvu9p'
+INFO: [DRC 23-27] Running DRC with 8 threads
+INFO: [Vivado_Tcl 4-198] DRC finished with 0 Errors
+INFO: [Vivado_Tcl 4-199] Please refer to the DRC report (report_drc) for more information.
+Running DRC as a precondition to command place_design
+INFO: [DRC 23-27] Running DRC with 8 threads
+INFO: [Vivado_Tcl 4-198] DRC finished with 0 Errors
+INFO: [Vivado_Tcl 4-199] Please refer to the DRC report (report_drc) for more information.
+
+Starting Placer Task
+INFO: [Place 30-611] Multithreading enabled for place_design using a maximum of 8 CPUs
+
+Phase 1 Placer Initialization
+
+Phase 1.1 Placer Initialization Netlist Sorting
+Netlist sorting complete. Time (s): cpu = 00:00:00.07 ; elapsed = 00:00:00.07 . Memory (MB): peak = 4406.570 ; gain = 0.000 ; free physical = 10130 ; free virtual = 103006
+Phase 1.1 Placer Initialization Netlist Sorting | Checksum: 1da705c8
+
+Time (s): cpu = 00:00:00.10 ; elapsed = 00:00:00.11 . Memory (MB): peak = 4406.570 ; gain = 0.000 ; free physical = 10130 ; free virtual = 103006
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+Netlist sorting complete. Time (s): cpu = 00:00:00.06 ; elapsed = 00:00:00.06 . Memory (MB): peak = 4406.570 ; gain = 0.000 ; free physical = 10202 ; free virtual = 103078
+
+Phase 1.2 IO Placement/ Clock Placement/ Build Placer Device
+WARNING: [Constraints 18-633] Creating clock host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[0].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK with 8 sources. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119]
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[0].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[1].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[2].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[3].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[0].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[1].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[2].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[3].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+Phase 1.2 IO Placement/ Clock Placement/ Build Placer Device | Checksum: 9b5f8ae8
+
+Time (s): cpu = 00:00:22 ; elapsed = 00:00:14 . Memory (MB): peak = 4406.570 ; gain = 0.000 ; free physical = 10184 ; free virtual = 103060
+
+Phase 1.3 Build Placer Netlist Model
+Phase 1.3 Build Placer Netlist Model | Checksum: dac1ac92
+
+Time (s): cpu = 00:00:36 ; elapsed = 00:00:21 . Memory (MB): peak = 4406.570 ; gain = 0.000 ; free physical = 10113 ; free virtual = 102989
+
+Phase 1.4 Constrain Clocks/Macros
+Phase 1.4 Constrain Clocks/Macros | Checksum: dac1ac92
+
+Time (s): cpu = 00:00:37 ; elapsed = 00:00:22 . Memory (MB): peak = 4406.570 ; gain = 0.000 ; free physical = 10103 ; free virtual = 102979
+Phase 1 Placer Initialization | Checksum: dac1ac92
+
+Time (s): cpu = 00:00:38 ; elapsed = 00:00:22 . Memory (MB): peak = 4406.570 ; gain = 0.000 ; free physical = 10031 ; free virtual = 102907
+
+Phase 2 Global Placement
+INFO: [Place 30-822] Clock net host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/phy_clk_i/CLK_CORECLK has a user defined clock root in clock region X5Y6. Therefore, clock net host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/phy_clk_i/CLK_PCLK2_GT will use a clock root in the same clock region, as these nets should have matching clock routes.
+Phase 2 Global Placement | Checksum: 1b805546d
+
+Time (s): cpu = 00:03:16 ; elapsed = 00:01:30 . Memory (MB): peak = 4527.418 ; gain = 120.848 ; free physical = 9448 ; free virtual = 102324
+
+Phase 3 Detail Placement
+
+Phase 3.1 Commit Multi Column Macros
+Phase 3.1 Commit Multi Column Macros | Checksum: 1fd872c25
+
+Time (s): cpu = 00:03:17 ; elapsed = 00:01:31 . Memory (MB): peak = 4527.418 ; gain = 120.848 ; free physical = 9439 ; free virtual = 102315
+
+Phase 3.2 Commit Most Macros & LUTRAMs
+Phase 3.2 Commit Most Macros & LUTRAMs | Checksum: 1ae6c2a50
+
+Time (s): cpu = 00:03:23 ; elapsed = 00:01:34 . Memory (MB): peak = 4531.426 ; gain = 124.855 ; free physical = 9408 ; free virtual = 102284
+
+Phase 3.3 Area Swap Optimization
+Phase 3.3 Area Swap Optimization | Checksum: 13dd24f0b
+
+Time (s): cpu = 00:03:24 ; elapsed = 00:01:34 . Memory (MB): peak = 4531.426 ; gain = 124.855 ; free physical = 9416 ; free virtual = 102292
+
+Phase 3.4 Pipeline Register Optimization
+Phase 3.4 Pipeline Register Optimization | Checksum: 106458eae
+
+Time (s): cpu = 00:03:25 ; elapsed = 00:01:35 . Memory (MB): peak = 4531.426 ; gain = 124.855 ; free physical = 9417 ; free virtual = 102293
+
+Phase 3.5 IO Cut Optimizer
+Phase 3.5 IO Cut Optimizer | Checksum: 106458eae
+
+Time (s): cpu = 00:03:25 ; elapsed = 00:01:35 . Memory (MB): peak = 4531.426 ; gain = 124.855 ; free physical = 9417 ; free virtual = 102293
+
+Phase 3.6 Timing Path Optimizer
+Phase 3.6 Timing Path Optimizer | Checksum: 106458eae
+
+Time (s): cpu = 00:03:25 ; elapsed = 00:01:35 . Memory (MB): peak = 4531.426 ; gain = 124.855 ; free physical = 9416 ; free virtual = 102293
+
+Phase 3.7 Fast Optimization
+Phase 3.7 Fast Optimization | Checksum: c10fc05f
+
+Time (s): cpu = 00:03:25 ; elapsed = 00:01:35 . Memory (MB): peak = 4531.426 ; gain = 124.855 ; free physical = 9404 ; free virtual = 102280
+
+Phase 3.8 Small Shape Clustering
+Phase 3.8 Small Shape Clustering | Checksum: 1965443cb
+
+Time (s): cpu = 00:03:31 ; elapsed = 00:01:40 . Memory (MB): peak = 4531.426 ; gain = 124.855 ; free physical = 9355 ; free virtual = 102231
+
+Phase 3.9 DP Optimization
+Phase 3.9 DP Optimization | Checksum: 180159c20
+
+Time (s): cpu = 00:04:51 ; elapsed = 00:02:09 . Memory (MB): peak = 4531.426 ; gain = 124.855 ; free physical = 9377 ; free virtual = 102254
+
+Phase 3.10 Flow Legalize Slice Clusters
+Phase 3.10 Flow Legalize Slice Clusters | Checksum: ffae92dc
+
+Time (s): cpu = 00:04:53 ; elapsed = 00:02:10 . Memory (MB): peak = 4531.426 ; gain = 124.855 ; free physical = 9375 ; free virtual = 102251
+
+Phase 3.11 Slice Area Swap
+Phase 3.11 Slice Area Swap | Checksum: 18328a693
+
+Time (s): cpu = 00:05:03 ; elapsed = 00:02:18 . Memory (MB): peak = 4586.922 ; gain = 180.352 ; free physical = 9278 ; free virtual = 102154
+
+Phase 3.12 Commit Slice Clusters
+Phase 3.12 Commit Slice Clusters | Checksum: 1d43916b1
+
+Time (s): cpu = 00:05:14 ; elapsed = 00:02:22 . Memory (MB): peak = 4586.922 ; gain = 180.352 ; free physical = 9340 ; free virtual = 102216
+
+Phase 3.13 Re-assign LUT pins
+Phase 3.13 Re-assign LUT pins | Checksum: 1564e024c
+
+Time (s): cpu = 00:05:16 ; elapsed = 00:02:23 . Memory (MB): peak = 4586.922 ; gain = 180.352 ; free physical = 9420 ; free virtual = 102297
+
+Phase 3.14 Pipeline Register Optimization
+Phase 3.14 Pipeline Register Optimization | Checksum: 222f60c3b
+
+Time (s): cpu = 00:05:19 ; elapsed = 00:02:26 . Memory (MB): peak = 4586.922 ; gain = 180.352 ; free physical = 9442 ; free virtual = 102319
+Phase 3 Detail Placement | Checksum: 222f60c3b
+
+Time (s): cpu = 00:05:19 ; elapsed = 00:02:26 . Memory (MB): peak = 4586.922 ; gain = 180.352 ; free physical = 9449 ; free virtual = 102325
+
+Phase 4 Post Placement Optimization and Clean-Up
+
+Phase 4.1 Post Commit Optimization
+WARNING: [Constraints 18-633] Creating clock host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[0].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK with 8 sources. [/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119]
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[0].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[1].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[2].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[3].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[0].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[1].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[2].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+WARNING: [Timing 38-3] User defined clock exists on pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[32].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[3].GTYE4_CHANNEL_PRIM_INST/TXOUTCLK [See /home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/out/vcu118/pcie_uscale_plus_0/source/ip_pcie4_uscale_plus_x1y2.xdc:119] and will prevent any subsequent automatic derivation of generated clocks on that pin. If the user defined clock specifies '-add', any existing auto-derived clocks on that pin are retained.
+
+Phase 4.1.1 Post Placement Optimization
+Post Placement Optimization Initialization | Checksum: 1f98bac84
+
+Phase 4.1.1.1 BUFG Insertion
+INFO: [Physopt 32-721] Multithreading enabled for phys_opt_design using a maximum of 8 CPUs
+INFO: [Place 46-35] Processed net host_pcieHostTop_ep7/pcieReset250/routeFrom_reg[0], inserted BUFG to drive 5353 loads.
+INFO: [Place 46-35] Processed net host_pcieHostTop_ep7/pcie_ep/inst/user_reset, inserted BUFG to drive 1320 loads.
+INFO: [Place 46-31] BUFG insertion identified 2 candidate nets, 2 success, 0 skipped for placement/routing, 0 skipped for timing, 0 skipped for netlist change reason.
+Phase 4.1.1.1 BUFG Insertion | Checksum: 7e7e5a63
+
+Time (s): cpu = 00:05:44 ; elapsed = 00:02:35 . Memory (MB): peak = 4586.922 ; gain = 180.352 ; free physical = 9477 ; free virtual = 102354
+INFO: [Place 30-746] Post Placement Timing Summary WNS=0.519. For the most accurate timing information please run report_timing.
+
+Phase 4.1.1.2 Replication
+INFO: [Physopt 32-721] Multithreading enabled for phys_opt_design using a maximum of 8 CPUs
+INFO: [Place 46-19] Post Replication Timing Summary WNS=0.519. For the most accurate timing information please run report_timing.
+Phase 4.1.1.2 Replication | Checksum: 6d28ef00
+
+Time (s): cpu = 00:05:47 ; elapsed = 00:02:38 . Memory (MB): peak = 4586.922 ; gain = 180.352 ; free physical = 9475 ; free virtual = 102351
+Phase 4.1.1 Post Placement Optimization | Checksum: 6d28ef00
+
+Time (s): cpu = 00:05:47 ; elapsed = 00:02:38 . Memory (MB): peak = 4586.922 ; gain = 180.352 ; free physical = 9476 ; free virtual = 102352
+Phase 4.1 Post Commit Optimization | Checksum: 6d28ef00
+
+Time (s): cpu = 00:05:47 ; elapsed = 00:02:38 . Memory (MB): peak = 4586.922 ; gain = 180.352 ; free physical = 9480 ; free virtual = 102356
+
+Phase 4.2 Post Placement Cleanup
+Phase 4.2 Post Placement Cleanup | Checksum: 6d28ef00
+
+Time (s): cpu = 00:05:49 ; elapsed = 00:02:39 . Memory (MB): peak = 4586.922 ; gain = 180.352 ; free physical = 9529 ; free virtual = 102405
+
+Phase 4.3 Placer Reporting
+Phase 4.3 Placer Reporting | Checksum: 797b8381
+
+Time (s): cpu = 00:06:15 ; elapsed = 00:03:05 . Memory (MB): peak = 4586.922 ; gain = 180.352 ; free physical = 9346 ; free virtual = 102223
+
+Phase 4.4 Final Placement Cleanup
+Phase 4.4 Final Placement Cleanup | Checksum: 1176a4f03
+
+Time (s): cpu = 00:06:15 ; elapsed = 00:03:05 . Memory (MB): peak = 4586.922 ; gain = 180.352 ; free physical = 9370 ; free virtual = 102246
+Phase 4 Post Placement Optimization and Clean-Up | Checksum: 1176a4f03
+
+Time (s): cpu = 00:06:15 ; elapsed = 00:03:06 . Memory (MB): peak = 4586.922 ; gain = 180.352 ; free physical = 9346 ; free virtual = 102223
+Ending Placer Task | Checksum: ffd1ebe0
+
+Time (s): cpu = 00:06:16 ; elapsed = 00:03:06 . Memory (MB): peak = 4586.922 ; gain = 180.352 ; free physical = 9621 ; free virtual = 102497
+INFO: [Common 17-83] Releasing license: Implementation
+100 Infos, 105 Warnings, 27 Critical Warnings and 0 Errors encountered.
+place_design completed successfully
+place_design: Time (s): cpu = 00:06:23 ; elapsed = 00:03:12 . Memory (MB): peak = 4586.922 ; gain = 180.355 ; free physical = 9621 ; free virtual = 102497
+Elapsed time 192 seconds
+write_checkpoint -force ./Impl/TopDown/top-post-place.dcp
+INFO: [Timing 38-480] Writing timing data to binary archive.
+Writing placer database...
+Writing XDEF routing.
+Writing XDEF routing logical nets.
+Writing XDEF routing special nets.
+Write XDEF Complete: Time (s): cpu = 00:00:05 ; elapsed = 00:00:02 . Memory (MB): peak = 4586.922 ; gain = 0.000 ; free physical = 9536 ; free virtual = 102478
+INFO: [Common 17-1381] The checkpoint '/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/examples/memread128/vcu118/Impl/TopDown/top-post-place.dcp' has been generated.
+write_checkpoint: Time (s): cpu = 00:00:13 ; elapsed = 00:00:12 . Memory (MB): peak = 4586.922 ; gain = 0.000 ; free physical = 9594 ; free virtual = 102489
+Elapsed time 12 seconds
+report_utilization: Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 4586.922 ; gain = 0.000 ; free physical = 9587 ; free virtual = 102482
+INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -2L, Temperature grade: E, Delay Type: min_max.
+INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 8 CPUs
+report_timing_summary: Time (s): cpu = 00:00:27 ; elapsed = 00:00:07 . Memory (MB): peak = 4586.922 ; gain = 0.000 ; free physical = 9578 ; free virtual = 102473
+report_io: Time (s): cpu = 00:00:00.30 ; elapsed = 00:00:00.42 . Memory (MB): peak = 4586.922 ; gain = 0.000 ; free physical = 9505 ; free virtual = 102400
+phys_opt_design -directive AggressiveFanoutOpt
+Command: phys_opt_design -directive AggressiveFanoutOpt
+Attempting to get a license for feature 'Implementation' and/or device 'xcvu9p'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xcvu9p'
+INFO: [Vivado_Tcl 4-137] Directive used for phys_opt_design is: AggressiveFanoutOpt
+INFO: [Vivado_Tcl 4-383] Design worst setup slack (WNS) is greater than or equal to 0.250 ns. Skipping all physical synthesis optimizations.
+INFO: [Vivado_Tcl 4-232] No setup violation found. The netlist was not modified.
+INFO: [Common 17-83] Releasing license: Implementation
+109 Infos, 105 Warnings, 27 Critical Warnings and 0 Errors encountered.
+phys_opt_design completed successfully
+Elapsed time 1 seconds
+write_checkpoint -force ./Impl/TopDown/top-post-phys-opt.dcp
+INFO: [Timing 38-480] Writing timing data to binary archive.
+Writing placer database...
+Writing XDEF routing.
+Writing XDEF routing logical nets.
+Writing XDEF routing special nets.
+Write XDEF Complete: Time (s): cpu = 00:00:05 ; elapsed = 00:00:02 . Memory (MB): peak = 4586.926 ; gain = 0.000 ; free physical = 9468 ; free virtual = 102429
+INFO: [Common 17-1381] The checkpoint '/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/examples/memread128/vcu118/Impl/TopDown/top-post-phys-opt.dcp' has been generated.
+write_checkpoint: Time (s): cpu = 00:00:13 ; elapsed = 00:00:12 . Memory (MB): peak = 4586.926 ; gain = 0.000 ; free physical = 9545 ; free virtual = 102440
+Elapsed time 12 seconds
+route_design
+Command: route_design
+Attempting to get a license for feature 'Implementation' and/or device 'xcvu9p'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xcvu9p'
+INFO: [DRC 23-27] Running DRC with 8 threads
+INFO: [Vivado_Tcl 4-198] DRC finished with 0 Errors
+INFO: [Vivado_Tcl 4-199] Please refer to the DRC report (report_drc) for more information.
+Running DRC as a precondition to command route_design
+INFO: [DRC 23-27] Running DRC with 8 threads
+INFO: [Vivado_Tcl 4-198] DRC finished with 0 Errors
+INFO: [Vivado_Tcl 4-199] Please refer to the DRC report (report_drc) for more information.
+
+
+Starting Routing Task
+INFO: [Route 35-254] Multithreading enabled for route_design using a maximum of 8 CPUs
+Checksum: PlaceDB: 4f8e2d92 ConstDB: 0 ShapeSum: a3f129cd RouteDB: c529481
+
+Phase 1 Build RT Design
+Phase 1 Build RT Design | Checksum: fa998f49
+
+Time (s): cpu = 00:02:36 ; elapsed = 00:01:45 . Memory (MB): peak = 5493.586 ; gain = 906.660 ; free physical = 8976 ; free virtual = 101871
+Post Restoration Checksum: NetGraph: f8deab8d NumContArr: a0917b92 Constraints: b8cb3948 Timing: 0
+
+Phase 2 Router Initialization
+
+Phase 2.1 Create Timer
+Phase 2.1 Create Timer | Checksum: 2523b6067
+
+Time (s): cpu = 00:02:39 ; elapsed = 00:01:47 . Memory (MB): peak = 5493.586 ; gain = 906.660 ; free physical = 8980 ; free virtual = 101875
+
+Phase 2.2 Fix Topology Constraints
+Phase 2.2 Fix Topology Constraints | Checksum: 2523b6067
+
+Time (s): cpu = 00:02:39 ; elapsed = 00:01:47 . Memory (MB): peak = 5493.586 ; gain = 906.660 ; free physical = 8843 ; free virtual = 101738
+
+Phase 2.3 Pre Route Cleanup
+Phase 2.3 Pre Route Cleanup | Checksum: 2523b6067
+
+Time (s): cpu = 00:02:39 ; elapsed = 00:01:47 . Memory (MB): peak = 5493.586 ; gain = 906.660 ; free physical = 8843 ; free virtual = 101738
+
+Phase 2.4 Global Clock Net Routing
+ Number of Nodes with overlaps = 0
+Phase 2.4 Global Clock Net Routing | Checksum: 22915b2ba
+
+Time (s): cpu = 00:02:45 ; elapsed = 00:01:53 . Memory (MB): peak = 5612.852 ; gain = 1025.926 ; free physical = 8817 ; free virtual = 101712
+
+Phase 2.5 Update Timing
+Phase 2.5 Update Timing | Checksum: 22db2adc0
+
+Time (s): cpu = 00:03:11 ; elapsed = 00:02:01 . Memory (MB): peak = 5612.852 ; gain = 1025.926 ; free physical = 8798 ; free virtual = 101693
+INFO: [Route 35-416] Intermediate Timing Summary | WNS=0.607  | TNS=0.000  | WHS=-0.395 | THS=-227.397|
+
+Phase 2 Router Initialization | Checksum: 266fbb0e1
+
+Time (s): cpu = 00:03:40 ; elapsed = 00:02:09 . Memory (MB): peak = 5612.852 ; gain = 1025.926 ; free physical = 8772 ; free virtual = 101667
+
+Phase 3 Initial Routing
+Phase 3 Initial Routing | Checksum: 1e4c639e2
+
+Time (s): cpu = 00:04:40 ; elapsed = 00:02:46 . Memory (MB): peak = 5612.852 ; gain = 1025.926 ; free physical = 8725 ; free virtual = 101620
+
+INFO: [Route 35-449] Initial Estimated Congestion
+ ________________________________________________________________________
+|           | Global Congestion | Long Congestion   | Short Congestion  |
+|           |___________________|___________________|___________________|
+| Direction | Size   | % Tiles  | Size   | % Tiles  | Size   | % Tiles  |
+|___________|________|__________|________|__________|________|__________|
+|      NORTH|     4x4|      0.05|     8x8|      0.36|     4x4|      0.05|
+|___________|________|__________|________|__________|________|__________|
+|      SOUTH|     4x4|      0.08|   16x16|      0.59|     2x2|      0.01|
+|___________|________|__________|________|__________|________|__________|
+|       EAST|     4x4|      0.01|     2x2|      0.01|     4x4|      0.09|
+|___________|________|__________|________|__________|________|__________|
+|       WEST|     2x2|      0.00|     1x1|      0.01|     4x4|      0.05|
+|___________|________|__________|________|__________|________|__________|
+Congestion Report
+LONG Congestion bounded by tiles (Lower Left Tile -> Upper Right Tile):
+SOUTH
+	INT_X100Y332->INT_X107Y451 (PCIE4_PCIE4_FT_X99Y300->GTY_R_X107Y420)
+	INT_X104Y460->INT_X107Y463 (CLEM_R_X104Y460->GTY_R_X107Y420)
+	INT_X104Y448->INT_X107Y451 (CLEM_R_X104Y448->GTY_R_X107Y420)
+	INT_X104Y444->INT_X107Y447 (CLEM_R_X104Y444->GTY_R_X107Y420)
+	INT_X104Y440->INT_X107Y443 (CLEM_R_X104Y440->GTY_R_X107Y420)
+
+Phase 4 Rip-up And Reroute
+
+Phase 4.1 Global Iteration 0
+ Number of Nodes with overlaps = 10993
+ Number of Nodes with overlaps = 970
+ Number of Nodes with overlaps = 160
+ Number of Nodes with overlaps = 25
+ Number of Nodes with overlaps = 4
+ Number of Nodes with overlaps = 1
+ Number of Nodes with overlaps = 0
+INFO: [Route 35-416] Intermediate Timing Summary | WNS=0.522  | TNS=0.000  | WHS=-0.053 | THS=-0.156 |
+
+Phase 4.1 Global Iteration 0 | Checksum: 1749490be
+
+Time (s): cpu = 00:07:56 ; elapsed = 00:03:29 . Memory (MB): peak = 5612.852 ; gain = 1025.926 ; free physical = 8722 ; free virtual = 101617
+
+Phase 4.2 Global Iteration 1
+ Number of Nodes with overlaps = 4
+ Number of Nodes with overlaps = 0
+INFO: [Route 35-416] Intermediate Timing Summary | WNS=0.522  | TNS=0.000  | WHS=N/A    | THS=N/A    |
+
+Phase 4.2 Global Iteration 1 | Checksum: 116e373ad
+
+Time (s): cpu = 00:08:12 ; elapsed = 00:03:35 . Memory (MB): peak = 5612.852 ; gain = 1025.926 ; free physical = 8714 ; free virtual = 101609
+
+Phase 4.3 Global Iteration 2
+ Number of Nodes with overlaps = 42
+ Number of Nodes with overlaps = 9
+ Number of Nodes with overlaps = 8
+ Number of Nodes with overlaps = 1
+ Number of Nodes with overlaps = 0
+INFO: [Route 35-416] Intermediate Timing Summary | WNS=0.555  | TNS=0.000  | WHS=N/A    | THS=N/A    |
+
+Phase 4.3 Global Iteration 2 | Checksum: 22bc015aa
+
+Time (s): cpu = 00:08:37 ; elapsed = 00:03:48 . Memory (MB): peak = 5612.852 ; gain = 1025.926 ; free physical = 8711 ; free virtual = 101606
+Phase 4 Rip-up And Reroute | Checksum: 22bc015aa
+
+Time (s): cpu = 00:08:37 ; elapsed = 00:03:48 . Memory (MB): peak = 5612.852 ; gain = 1025.926 ; free physical = 8710 ; free virtual = 101606
+
+Phase 5 Delay and Skew Optimization
+
+Phase 5.1 Delay CleanUp
+Phase 5.1 Delay CleanUp | Checksum: 283dd4e3b
+
+Time (s): cpu = 00:08:38 ; elapsed = 00:03:48 . Memory (MB): peak = 5612.852 ; gain = 1025.926 ; free physical = 8736 ; free virtual = 101631
+
+Phase 5.2 Clock Skew Optimization
+Phase 5.2 Clock Skew Optimization | Checksum: 283dd4e3b
+
+Time (s): cpu = 00:08:39 ; elapsed = 00:03:49 . Memory (MB): peak = 5612.852 ; gain = 1025.926 ; free physical = 8736 ; free virtual = 101631
+Phase 5 Delay and Skew Optimization | Checksum: 283dd4e3b
+
+Time (s): cpu = 00:08:39 ; elapsed = 00:03:49 . Memory (MB): peak = 5612.852 ; gain = 1025.926 ; free physical = 8736 ; free virtual = 101631
+
+Phase 6 Post Hold Fix
+
+Phase 6.1 Hold Fix Iter
+
+Phase 6.1.1 Update Timing
+Phase 6.1.1 Update Timing | Checksum: 2107a7187
+
+Time (s): cpu = 00:08:57 ; elapsed = 00:03:54 . Memory (MB): peak = 5612.852 ; gain = 1025.926 ; free physical = 8738 ; free virtual = 101633
+INFO: [Route 35-416] Intermediate Timing Summary | WNS=0.555  | TNS=0.000  | WHS=0.010  | THS=0.000  |
+
+Phase 6.1 Hold Fix Iter | Checksum: 1f3081e42
+
+Time (s): cpu = 00:08:57 ; elapsed = 00:03:54 . Memory (MB): peak = 5612.852 ; gain = 1025.926 ; free physical = 8738 ; free virtual = 101633
+Phase 6 Post Hold Fix | Checksum: 1f3081e42
+
+Time (s): cpu = 00:08:57 ; elapsed = 00:03:54 . Memory (MB): peak = 5612.852 ; gain = 1025.926 ; free physical = 8749 ; free virtual = 101644
+
+Phase 7 Route finalize
+
+Router Utilization Summary
+  Global Vertical Routing Utilization    = 1.03154 %
+  Global Horizontal Routing Utilization  = 0.70792 %
+  Routable Net Status*
+  *Does not include unroutable nets such as driverless and loadless.
+  Run report_route_status for detailed report.
+  Number of Failed Nets               = 0
+  Number of Unrouted Nets             = 0
+  Number of Partially Routed Nets     = 0
+  Number of Node Overlaps             = 0
+
+Phase 7 Route finalize | Checksum: 1fb2dc264
+
+Time (s): cpu = 00:09:01 ; elapsed = 00:03:55 . Memory (MB): peak = 5612.852 ; gain = 1025.926 ; free physical = 8723 ; free virtual = 101618
+
+Phase 8 Verifying routed nets
+
+ Verification completed successfully
+Phase 8 Verifying routed nets | Checksum: 1fb2dc264
+
+Time (s): cpu = 00:09:01 ; elapsed = 00:03:56 . Memory (MB): peak = 5612.852 ; gain = 1025.926 ; free physical = 8723 ; free virtual = 101618
+
+Phase 9 Depositing Routes
+INFO: [Route 35-467] Router swapped GT pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_common.gen_common_container[31].gen_enabled_common.gtye4_common_wrapper_inst/common_inst/gtye4_common_gen.GTYE4_COMMON_PRIM_INST/GTREFCLK00 to physical pin GTYE4_COMMON_X1Y7/COM0_REFCLKOUT5
+INFO: [Route 35-467] Router swapped GT pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_common.gen_common_container[31].gen_enabled_common.gtye4_common_wrapper_inst/common_inst/gtye4_common_gen.GTYE4_COMMON_PRIM_INST/GTREFCLK01 to physical pin GTYE4_COMMON_X1Y7/COM2_REFCLKOUT5
+INFO: [Route 35-467] Router swapped GT pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[0].GTYE4_CHANNEL_PRIM_INST/GTREFCLK0 to physical pin GTYE4_CHANNEL_X1Y28/SOUTHREFCLK1
+INFO: [Route 35-467] Router swapped GT pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[1].GTYE4_CHANNEL_PRIM_INST/GTREFCLK0 to physical pin GTYE4_CHANNEL_X1Y29/SOUTHREFCLK1
+INFO: [Route 35-467] Router swapped GT pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[2].GTYE4_CHANNEL_PRIM_INST/GTREFCLK0 to physical pin GTYE4_CHANNEL_X1Y30/SOUTHREFCLK1
+INFO: [Route 35-467] Router swapped GT pin host_pcieHostTop_ep7/pcie_ep/inst/gt_top_i/diablo_gt.diablo_gt_phy_wrapper/gt_wizard.gtwizard_top_i/pcie_uscale_plus_0_gt_i/inst/gen_gtwizard_gtye4_top.pcie_uscale_plus_0_gt_gtwizard_gtye4_inst/gen_gtwizard_gtye4.gen_channel_container[31].gen_enabled_channel.gtye4_channel_wrapper_inst/channel_inst/gtye4_channel_gen.gen_gtye4_channel_inst[3].GTYE4_CHANNEL_PRIM_INST/GTREFCLK0 to physical pin GTYE4_CHANNEL_X1Y31/SOUTHREFCLK1
+Phase 9 Depositing Routes | Checksum: 1fb2dc264
+
+Time (s): cpu = 00:09:04 ; elapsed = 00:03:58 . Memory (MB): peak = 5612.852 ; gain = 1025.926 ; free physical = 8719 ; free virtual = 101614
+
+Phase 10 Post Router Timing
+INFO: [Route 35-57] Estimated Timing Summary | WNS=0.555  | TNS=0.000  | WHS=0.010  | THS=0.000  |
+
+INFO: [Route 35-327] The final timing numbers are based on the router estimated timing analysis. For a complete and accurate timing signoff, please run report_timing_summary.
+Phase 10 Post Router Timing | Checksum: 1fb2dc264
+
+Time (s): cpu = 00:09:05 ; elapsed = 00:03:58 . Memory (MB): peak = 5612.852 ; gain = 1025.926 ; free physical = 8733 ; free virtual = 101628
+INFO: [Route 35-16] Router Completed Successfully
+
+Time (s): cpu = 00:09:05 ; elapsed = 00:03:59 . Memory (MB): peak = 5612.852 ; gain = 1025.926 ; free physical = 8946 ; free virtual = 101841
+
+Routing Is Done.
+INFO: [Common 17-83] Releasing license: Implementation
+135 Infos, 105 Warnings, 27 Critical Warnings and 0 Errors encountered.
+route_design completed successfully
+route_design: Time (s): cpu = 00:09:15 ; elapsed = 00:04:06 . Memory (MB): peak = 5612.852 ; gain = 1025.926 ; free physical = 8946 ; free virtual = 101841
+Elapsed time 246 seconds
+write_checkpoint -force ./Impl/TopDown/top-post-route.dcp
+INFO: [Timing 38-480] Writing timing data to binary archive.
+Writing placer database...
+Writing XDEF routing.
+Writing XDEF routing logical nets.
+Writing XDEF routing special nets.
+Write XDEF Complete: Time (s): cpu = 00:00:06 ; elapsed = 00:00:02 . Memory (MB): peak = 5612.852 ; gain = 0.000 ; free physical = 8850 ; free virtual = 101832
+INFO: [Common 17-1381] The checkpoint '/home/shuotao/workspace/NDPSql_github/platform/build_tools/connectal/examples/memread128/vcu118/Impl/TopDown/top-post-route.dcp' has been generated.
+write_checkpoint: Time (s): cpu = 00:00:14 ; elapsed = 00:00:13 . Memory (MB): peak = 5612.852 ; gain = 0.000 ; free physical = 8941 ; free virtual = 101836
+Elapsed time 13 seconds
+report_utilization: Time (s): cpu = 00:00:12 ; elapsed = 00:00:09 . Memory (MB): peak = 5612.852 ; gain = 0.000 ; free physical = 8930 ; free virtual = 101825
+report_utilization: Time (s): cpu = 00:00:12 ; elapsed = 00:00:09 . Memory (MB): peak = 5612.852 ; gain = 0.000 ; free physical = 8930 ; free virtual = 101825
+INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -2L, Temperature grade: E, Delay Type: min_max.
+INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 8 CPUs
+report_timing_summary: Time (s): cpu = 00:00:27 ; elapsed = 00:00:07 . Memory (MB): peak = 5612.852 ; gain = 0.000 ; free physical = 8944 ; free virtual = 101839
+INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -2L, Temperature grade: E, Delay Type: max.
+INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 8 CPUs
+INFO: [Timing 38-78] ReportTimingParams: -max_paths 100 -nworst 1 -delay_type max -sort_by group.
+report_io: Time (s): cpu = 00:00:00.28 ; elapsed = 00:00:00.45 . Memory (MB): peak = 5612.852 ; gain = 0.000 ; free physical = 8886 ; free virtual = 101780
+INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -2L, Delay Type: min_max.
+INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 8 CPUs
+INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -2L, Delay Type: min_max.
+INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 8 CPUs
+INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -2L, Delay Type: min_max.
+INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 8 CPUs
+write_bitstream -bin_file -force Impl/TopDown/mkTop.bit
+Command: write_bitstream -bin_file -force Impl/TopDown/mkTop.bit
+Attempting to get a license for feature 'Implementation' and/or device 'xcvu9p'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xcvu9p'
+Running DRC as a precondition to command write_bitstream
+INFO: [DRC 23-27] Running DRC with 8 threads
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/RAM32K.bram_comp_inst/bram_16k_0_int/ECC_RAM.RAMB36E2[0].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/RAM32K.bram_comp_inst/bram_16k_0_int/ECC_RAM.RAMB36E2[1].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/RAM32K.bram_comp_inst/bram_16k_0_int/ECC_RAM.RAMB36E2[2].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/RAM32K.bram_comp_inst/bram_16k_0_int/ECC_RAM.RAMB36E2[3].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/RAM32K.bram_comp_inst/bram_16k_0_int/ECC_RAM.RAMB36E2[4].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/RAM32K.bram_comp_inst/bram_16k_0_int/ECC_RAM.RAMB36E2[5].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/RAM32K.bram_comp_inst/bram_16k_1_int/ECC_RAM.RAMB36E2[0].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/RAM32K.bram_comp_inst/bram_16k_1_int/ECC_RAM.RAMB36E2[1].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/RAM32K.bram_comp_inst/bram_16k_1_int/ECC_RAM.RAMB36E2[2].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/RAM32K.bram_comp_inst/bram_16k_1_int/ECC_RAM.RAMB36E2[3].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/RAM32K.bram_comp_inst/bram_16k_1_int/ECC_RAM.RAMB36E2[4].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/RAM32K.bram_comp_inst/bram_16k_1_int/ECC_RAM.RAMB36E2[5].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/bram_post_inst/bram_16k_int/ECC_RAM.RAMB36E2[0].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/bram_post_inst/bram_16k_int/ECC_RAM.RAMB36E2[1].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/bram_post_inst/bram_16k_int/ECC_RAM.RAMB36E2[2].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/bram_post_inst/bram_16k_int/ECC_RAM.RAMB36E2[3].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/bram_post_inst/bram_16k_int/ECC_RAM.RAMB36E2[4].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/bram_post_inst/bram_16k_int/ECC_RAM.RAMB36E2[5].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/bram_repl_inst/bram_rep_int_0/ECC_RAM.RAMB36E2[0].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/bram_repl_inst/bram_rep_int_0/ECC_RAM.RAMB36E2[1].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/bram_repl_inst/bram_rep_int_0/ECC_RAM.RAMB36E2[2].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [DRC REQP-1858] RAMB36E2_writefirst_collision_advisory: Synchronous clocking is detected for BRAM (host_pcieHostTop_ep7/pcie_ep/inst/pcie_4_0_pipe_inst/pcie_4_0_bram_inst/bram_repl_inst/bram_rep_int_0/ECC_RAM.RAMB36E2[3].ramb36e2_inst) in SDP mode with WRITE_FIRST write-mode. It is strongly suggested to change this mode to NO_CHANGE for best power characteristics. However, both WRITE_FIRST and NO_CHANGE may exhibit address collisions if the same address appears on both read and write ports resulting in unknown or corrupted read data. It is suggested to confirm via simulation that an address collision never occurs and if so it is suggested to try and avoid this situation. If address collisions cannot be avoided, the write-mode may be set to READ_FIRST which guarantees that the read data is the prior contents of the memory at the cost of additional power in the design. See the FPGA Memory Resources User Guide for additional information.
+INFO: [Vivado 12-3199] DRC finished with 0 Errors, 22 Advisories
+INFO: [Vivado 12-3200] Please refer to the DRC report (report_drc) for more information.
+INFO: [Designutils 20-2272] Running write_bitstream with 8 threads.
+Loading data files...
+Loading site data...
+Loading route data...
+Processing options...
+Creating bitmap...
+Creating bitstream...
+Writing bitstream Impl/TopDown/mkTop.bit...
+Writing bitstream Impl/TopDown/mkTop.bin...
+INFO: [Vivado 12-1842] Bitgen Completed Successfully.
+INFO: [Common 17-83] Releasing license: Implementation
+177 Infos, 105 Warnings, 27 Critical Warnings and 0 Errors encountered.
+write_bitstream completed successfully
+write_bitstream: Time (s): cpu = 00:01:09 ; elapsed = 00:02:56 . Memory (MB): peak = 5831.664 ; gain = 218.812 ; free physical = 9009 ; free virtual = 102058
+Elapsed time 176 seconds
+topdown.tcl elapsed time 888 seconds
+INFO: [Common 17-206] Exiting Vivado at Sat Oct 12 21:22:43 2019...

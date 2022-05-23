@@ -19,9 +19,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include <ctype.h> // isprint, isascii
-#include "i2chdmi.h"
-#include "i2ccamera.h"
-#include "edid.h"
 #include "dmaManager.h"
 #include "ImageonCaptureRequest.h"
 #include "ImageonCaptureIndication.h"
@@ -29,6 +26,9 @@
 #include "ImageonSerdesIndication.h"
 #include "HdmiGeneratorRequest.h"
 #include "HdmiGeneratorIndication.h"
+#include "i2chdmi.h"
+#include "i2ccamera.h"
+#include "edid.h"
 
 static ImageonSerdesRequestProxy *serdesdevice;
 static HdmiGeneratorRequestProxy *hdmidevice;
@@ -270,7 +270,7 @@ static void vita_spi_write_sequence(uint16_t pConfig[][3], uint32_t uLength)
    for ( i = 0; i < (int)uLength; i++) {
       if ( pConfig[i][1] != 0xFFFF) {
          uData = vita_spi_read(pConfig[i][0]) & ~pConfig[i][1];
-         printf( "\t                    0x%04X\n\r", pConfig[i][1]);
+         printf( "\t                    0x%04X\n", pConfig[i][1]);
      }
    }
    for ( i = 0; i < (int)uLength; i++) {
@@ -287,16 +287,16 @@ static void vita_spi_write_sequence(uint16_t pConfig[][3], uint32_t uLength)
 static void fmc_imageon_demo_enable_ipipe( void)
 {
    // VITA-2000 Initialization
-   printf( "FMC-IMAGEON VITA Initialization ...\n\r");
+   printf( "FMC-IMAGEON VITA Initialization ...\n");
    uint16_t uData;
    uint32_t uStatus;
    int timeout;
    serdesdevice->set_serdes_training(0x03A6);
 uint32_t uManualTap = 25;
-   printf( "VITA ISERDES - Setting Manual Tap to 0x%08X\n\r", uManualTap);
+   printf( "VITA ISERDES - Setting Manual Tap to 0x%08X\n", uManualTap);
    serdesdevice->set_serdes_manual_tap(uManualTap);
 
-   printf("VITA SPI Sequence 0 - Assert RESET_N pin\n\r");
+   printf("VITA SPI Sequence 0 - Assert RESET_N pin\n");
    serdesdevice->set_iserdes_control( VITA_ISERDES_RESET_BIT);
    serdesdevice->set_decoder_control( VITA_DECODER_RESET_BIT);
 
@@ -308,84 +308,84 @@ uint32_t uManualTap = 25;
 printf("[%s:%d] %x\n", __FUNCTION__, __LINE__, uData);
    switch ( uData) {
    case 0:
-       printf( "\tVITA Sensor absent\n\r");
+       printf( "\tVITA Sensor absent\n");
        break;
    case 0x560D:
-       printf( "\tVITA-1300 Sensor detected\n\r");
+       printf( "\tVITA-1300 Sensor detected\n");
        break;
    case 0x5614:
-       printf( "\tVITA-2000 Sensor detected\n\r");
+       printf( "\tVITA-2000 Sensor detected\n");
        break;
    case 0x5632:
-       printf( "\tVITA-5000 Sensor detected\n\r");
+       printf( "\tVITA-5000 Sensor detected\n");
        break;
    case 0x56FA:
-       printf( "\tVITA-25K Sensor detected\n\r");
+       printf( "\tVITA-25K Sensor detected\n");
        break;
    default:
-       printf( "\tERROR: Unknown CHIP_ID !!!\n\r");
+       printf( "\tERROR: Unknown CHIP_ID !!!\n");
        break;
    }
    if ( uData != 0x5614) {
-      printf( "\tERROR: Absent or unsupported VITA sensor !!!\n\r");
+      printf( "\tERROR: Absent or unsupported VITA sensor !!!\n");
       return;
    }
-   printf("VITA SPI Sequence 1 - Enable Clock Management - Part 1\n\r");
+   printf("VITA SPI Sequence 1 - Enable Clock Management - Part 1\n");
    vita_spi_write_sequence(vita_spi_seq1, VITA_SPI_SEQ1_QTY);
    {
    uint16_t uLock = 0;
-   printf("VITA SPI Sequence 2 - Verify PLL Lock Indicator\n\r");
+   printf("VITA SPI Sequence 2 - Verify PLL Lock Indicator\n");
    timeout = 10;
    while ( !(uLock) && --timeout) {
       usleep(100000);
       uLock = vita_spi_read(24);
    }
    if ( !timeout) {
-       printf( "\tERROR: Timed Out while waiting for PLL lock to assert !!!\n\r");
+       printf( "\tERROR: Timed Out while waiting for PLL lock to assert !!!\n");
       return;
    }
    }
-   printf("VITA SPI Sequence 3 - Enable Clock Management - Part 2\n\r");
+   printf("VITA SPI Sequence 3 - Enable Clock Management - Part 2\n");
    vita_spi_write_sequence(vita_spi_seq3, VITA_SPI_SEQ3_QTY);
-   printf("VITA SPI Sequence 4 - Required Register Upload\n\r");
+   printf("VITA SPI Sequence 4 - Required Register Upload\n");
    vita_spi_write_sequence(vita_spi_seq4, VITA_SPI_SEQ4_QTY);
-   printf("VITA SPI Sequence 5 - Soft Power-Up\n\r");
+   printf("VITA SPI Sequence 5 - Soft Power-Up\n");
    vita_spi_write_sequence(vita_spi_seq5, VITA_SPI_SEQ5_QTY);
    uStatus = read_iserdes_control();
-   printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
+   printf( "VITA ISERDES - Status = 0x%08X\n", uStatus);
    uStatus = read_iserdes_control();
-   printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
+   printf( "VITA ISERDES - Status = 0x%08X\n", uStatus);
    uStatus = read_iserdes_control();
-   printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
-   printf( "VITA ISERDES - Align Start\n\r");
+   printf( "VITA ISERDES - Status = 0x%08X\n", uStatus);
+   printf( "VITA ISERDES - Align Start\n");
    serdesdevice->set_iserdes_control( VITA_ISERDES_ALIGN_START_BIT);
-   printf( "VITA ISERDES - Waiting for ALIGN_BUSY to assert\n\r");
+   printf( "VITA ISERDES - Waiting for ALIGN_BUSY to assert\n");
    uStatus = read_iserdes_control();
-   printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
+   printf( "VITA ISERDES - Status = 0x%08X\n", uStatus);
    timeout = 9;
    while ( !(uStatus & 0x0200) && --timeout) {
        uStatus = read_iserdes_control();
-       printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
+       printf( "VITA ISERDES - Status = 0x%08X\n", uStatus);
        //usleep(1);
    }
    if ( !timeout) {
-       printf( "\tTimed Out !!!\n\r");
+       printf( "\tTimed Out !!!\n");
        return;
    }
    serdesdevice->set_iserdes_control( 0);
-   printf( "VITA ISERDES - Waiting for ALIGN_BUSY to de-assert\n\r");
+   printf( "VITA ISERDES - Waiting for ALIGN_BUSY to de-assert\n");
    uStatus = read_iserdes_control();
-   printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
+   printf( "VITA ISERDES - Status = 0x%08X\n", uStatus);
    timeout = 9;
    while ( (uStatus & 0x0200) && --timeout) {
        uStatus = read_iserdes_control();
-       printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
+       printf( "VITA ISERDES - Status = 0x%08X\n", uStatus);
        usleep(1);
    }
    if ( !timeout)
-       printf( "\tTimed Out !!!\n\r");
+       printf( "\tTimed Out !!!\n");
    uStatus = read_iserdes_control();
-   printf( "VITA ISERDES - Status = 0x%08X\n\r", uStatus);
+   printf( "VITA ISERDES - Status = 0x%08X\n", uStatus);
    vita_spi_write_sequence(vita_roi0_crop_1080p_seq, VITA_ROI0_CROP_1080P_QTY);
    vita_spi_write_sequence(vita_mult_timer_line_resolution_seq, VITA_MULT_TIMER_LINE_RESOLUTION_QTY);
    vita_spi_write_sequence(vita_autoexp_on_seq, VITA_AUTOEXP_ON_QTY);
@@ -462,8 +462,6 @@ int main(int argc, const char **argv)
     printf("[%s:%d] before setDeLine/Pixel\n", __FUNCTION__, __LINE__);
     for (int i = 0; i < 4; i++) {
       int pixclk = (long)edid.timing[i].pixclk * 10000;
-//break;
-      if ((pixclk > 0) && (pixclk < 148000000)) {
         nlines = edid.timing[i].nlines;    // number of visible lines
         npixels = edid.timing[i].npixels;
         int vblank = edid.timing[i].blines; // number of blanking lines
@@ -479,6 +477,7 @@ int main(int argc, const char **argv)
                 pixclk,
                 60l * (long)(hblank + npixels) * (long)(vblank + nlines),
                 npixels, nlines);
+      if ((pixclk > 0) && (pixclk < 148000000)) {
         status = setClockFrequency(1, pixclk, 0);
 
 hblank--; // needed on zc702
@@ -489,6 +488,7 @@ hblank--; // needed on zc702
         hdmidevice->setDePixel(hsyncoff,
                                 hsyncoff+hsyncwidth, hblank,
                                 hblank + npixels, hblank + npixels / 2);
+        i2c_hdmi_start();
         break;
       }
     }
@@ -515,7 +515,8 @@ printf("[%s:%d] before i2c_hdmi\n", __FUNCTION__, __LINE__);
 printf("[%s:%d] after i2c_hdmi\n", __FUNCTION__, __LINE__);
     //init_vclk();
 //jca sleep(5);
-sleep(2);
+printf("[%s:%d] now displaying test pattern\n", __FUNCTION__, __LINE__);
+sleep(20);
     hdmidevice->setTestPattern(0);
 
     // Reset DCMs
@@ -527,7 +528,7 @@ sleep(2);
 
     //jca usleep(500000);
     // FMC-IMAGEON VITA Receiver Initialization
-    printf( "FMC-IMAGEON VITA Receiver Initialization ...\n\r");
+    printf( "FMC-IMAGEON VITA Receiver Initialization ...\n");
     idevice->startWrite(ref_srcAlloc, DMA_BUFFER_SIZE);
     fmc_imageon_demo_enable_ipipe();
     printf("[%s:%d] passed fmc_imageon_demo_init\n", __FUNCTION__, __LINE__);

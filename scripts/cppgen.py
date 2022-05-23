@@ -22,7 +22,14 @@
 ## CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ## SOFTWARE.
 
+from __future__ import print_function
+
 import functools, json, math, os, re, sys, util
+
+try:
+    basestring
+except NameError:
+    basestring = str  # Python 3 compatibility
 
 generatedSubdirectory = 'jni'
 verbose = False
@@ -67,9 +74,10 @@ private:
     }
     int __internalResponse(struct PortalInternal *p, unsigned int channel) {
         int tmpfd __attribute__ ((unused));
-        volatile unsigned int* temp_working_addr = &p->map_base[1];
+        volatile unsigned int* temp_working_addr = p->transport->mapchannelInd(p, channel);
         int offset = 0, remain = 1;
-        uint32_t temp = (uint32_t)(((temp_working_addr[offset])&0xfffffffful));
+        p->transport->recv(p, temp_working_addr, 1, &tmpfd);
+        uint32_t temp = p->transport->read(p, &temp_working_addr);
         offset++;
         int messageSize = temp & 0xffff;
         temp = temp >> 16;
@@ -79,7 +87,8 @@ private:
         uint16_t *dest = (uint16_t *)&__internalWaitResult;
         while (messageSize > 0) {
             if (remain == 0) {
-                temp = (uint32_t)(((temp_working_addr[offset])&0xfffffffful));
+                p->transport->recv(p, temp_working_addr, 1, &tmpfd);
+                temp = p->transport->read(p, &temp_working_addr);
                 offset++;
                 remain = 2;
             }
@@ -212,7 +221,7 @@ def indent(f, indentation):
         f.write(' ')
 
 def cName(x):
-    if type(x) == str or type(x) == unicode:
+    if isinstance(x, basestring):
         x = x.replace(' ', '')
         x = x.replace('.', '$')
         return x
@@ -287,7 +296,7 @@ def typeNumeric(item):
             return min(values[0], values[1])
     if tstr[0] == '`':
         var = tstr[1:]
-        if bsvdefines.has_key(var):
+        if var in bsvdefines:
             return int(bsvdefines[var])
     if tstr[0] >= 'A' and tstr[0] <= 'Z':
         return tstr
@@ -380,9 +389,9 @@ def hasBitWidth(item):
     return item['name'] in ['Bit', 'Int', 'UInt', 'fixed32', 'bit']
 
 def getNumeric(item):
-   if globalv_globalvars.has_key(item['name']):
+   if item['name'] in globalv_globalvars:
        decl = globalv_globalvars[item['name']]
-       if decl.get('type') == 'TypeDef':
+       if decl.get('dtype') == 'TypeDef':
            return getNumeric(decl['tdtype'])
    elif item['name'] in ['TAdd', 'TSub', 'TMul', 'TDiv', 'TLog', 'TExp', 'TMax', 'TMin']:
        values = [getNumeric(p) for p in item['params']]

@@ -13,13 +13,16 @@
 # limitations under the License.
 """Tests for adb."""
 
-import cStringIO
+try:
+  import cStringIO
+except ImportError:
+  import io as cStringIO  # Python 3 compatibility
 import struct
 import unittest
 
-import adb_commands
-import adb_protocol
-import common_stub
+from . import adb_commands
+from . import adb_protocol
+from . import common_stub
 
 
 BANNER = 'blazetest'

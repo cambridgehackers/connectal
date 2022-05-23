@@ -22,7 +22,7 @@
 
 import ctypes, json, os, sys, threading, time
 
-if os.environ.has_key('LD_LIBRARY_PATH'):
+if 'LD_LIBRARY_PATH' in os.environ:
     connectal = ctypes.CDLL('connectal.so')
 else:
     connectal = ctypes.CDLL('./connectal.so')

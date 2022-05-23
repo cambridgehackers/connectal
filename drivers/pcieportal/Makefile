@@ -35,7 +35,7 @@ cflags-y += -I$(PWD)
 driverversion.h:
 	VERSION=$(VERSION) echo "#define DRIVER_VERSION \"$$VERSION\"" > driverversion.h
 
-pcieportal.ko: portal.c pcieportal.h.h driverversion.h
+pcieportal.ko: portal.c pcieportal.h driverversion.h
 	$(Q)$(MAKE) -C $(KROOT) M=$(PWD) modules
 
 .PHONY: modules_check

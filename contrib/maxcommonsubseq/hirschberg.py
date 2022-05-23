@@ -23,6 +23,12 @@
 # CACM June 1975
 # Given strings A and B of lengths m and n, this runs in O(mn) time and O(m + n) space
 # with recursion depth O(lg n)
+from __future__ import print_function
+
+try:
+    xrange
+except NameError:
+    xrange = range  # Python 3 compatibility
 
 # compute maximal length subsequence of A and B
 # returns a full matrix L, where L[i][j] is the longest common subsequence in 
@@ -72,7 +78,7 @@ def hirschbergalgb(A, B):
 # The natural order of execution will return the parts of the answer <in order> so the results
 # could be pushed into a stream or fifo
 def hirschbergalgc(A, B):
-    print "algC ", A, B
+    print("algC ", A, B)
     m = len(A)
     n = len(B)
     if n == 0:
@@ -85,10 +91,10 @@ def hirschbergalgc(A, B):
     i = m / 2
     # solve the forward problem, using string prefixes
     L1 = hirschbergalgb(A[0:i], B)
-    print "algB ", " A ", A[0:i], " B ", B, " L1 ", L1
+    print("algB ", " A ", A[0:i], " B ", B, " L1 ", L1)
     # solve the reverse problem, using string suffixes
     L2 = hirschbergalgb(A[i:][::-1], B[::-1])
-    print "algB ", " A ", A[i:][::-1], " B ", B, " L2 ", L2
+    print("algB ", " A ", A[i:][::-1], " B ", B, " L2 ", L2)
     # find k, the j at which m is maximized
     m = -1
     for j in xrange(n+1):
@@ -104,7 +110,7 @@ def hirschbergalgc(A, B):
 def hirschbergalgc2(sa, sb, A, B):
     m = len(A)
     n = len(B)
-    print "algC ", "sa ", sa, " la ", m, " sb ", sb, " lb ", n, A, B
+    print("algC ", "sa ", sa, " la ", m, " sb ", sb, " lb ", n, A, B)
     if n == 0:
         return ""
     if m == 1:
@@ -113,13 +119,13 @@ def hirschbergalgc2(sa, sb, A, B):
         else:
             return ""
     i = m / 2
-    print "m= ", m, " i = ", i
+    print("m= ", m, " i = ", i)
     # solve the forward problem, using string prefixes
     L1 = hirschbergalgb(A[0:i], B)
-    print "algB ", " A ", A[0:i], " B ", B, " L1 ", L1
+    print("algB ", " A ", A[0:i], " B ", B, " L1 ", L1)
     # solve the reverse problem, using string suffixes
     L2 = hirschbergalgb(A[i:][::-1], B[::-1])
-    print "algB ", " A ", A[i:][::-1], " B ", B, " L2 ", L2
+    print("algB ", " A ", A[i:][::-1], " B ", B, " L2 ", L2)
     # find k, the j at which m is maximized
     m = -1
     for j in xrange(n+1):

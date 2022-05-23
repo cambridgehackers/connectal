@@ -48,7 +48,7 @@ for line in xdclines:
             loc = re.search('PACKAGE_PIN', line)
             if loc:
                 pin = line.split('PACKAGE_PIN')[1].split()[0].strip().replace("\"", '')
-                if pins.has_key(name):
+                if name in pins:
                     pins[name].update({'LOC': pin})
                     pins[name].update({'GROUP': group})
                 else:
@@ -58,7 +58,7 @@ for line in xdclines:
             io = re.search('IOSTANDARD', line)
             if io:
                 standard = line.split('IOSTANDARD')[1].split()[0].strip().replace("\"", '')
-                if pins.has_key(standard):
+                if standard in pins:
                     pins[name].update({'IOSTANDARD': standard})
                 else:
                     pins[name].update({'IOSTANDARD': standard})

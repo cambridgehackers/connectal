@@ -68,17 +68,36 @@ import Platform          :: *;
 `endif
 
 `ifdef XILINX_SYS_CLK
-`ifdef VirtexUltrascale
-`define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n, Clock sys_clk1_300_p, Clock sys_clk1_300_n, Clock sys_clk2_300_p, Clock sys_clk2_300_n, 
-`define SYS_CLK_ARG sys_clk_p, sys_clk_n, sys_clk1_300_p, sys_clk1_300_n, sys_clk2_300_p, sys_clk2_300_n, 
+ `ifdef VirtexUltrascalePlus
+   `define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n, Clock sys_clk_300_p, Clock sys_clk_300_n, Clock sys_clk1_250_p, Clock sys_clk1_250_n, Clock sys_clk2_250_p, Clock sys_clk2_250_n, 
+   `define SYS_CLK_ARG sys_clk_p, sys_clk_n, sys_clk_300_p, sys_clk_300_n, sys_clk1_250_p, sys_clk1_250_n, sys_clk2_250_p, sys_clk2_250_n, 
+ `else
+   `ifdef VirtexUltrascale
+     `define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n, Clock sys_clk1_300_p, Clock sys_clk1_300_n, Clock sys_clk2_300_p, Clock sys_clk2_300_n, 
+     `define SYS_CLK_ARG sys_clk_p, sys_clk_n, sys_clk1_300_p, sys_clk1_300_n, sys_clk2_300_p, sys_clk2_300_n, 
+   `else
+     `define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n,
+     `define SYS_CLK_ARG sys_clk_p, sys_clk_n,
+   `endif
+  `endif
 `else
-`define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n, 
-`define SYS_CLK_ARG sys_clk_p, sys_clk_n,
+  `define SYS_CLK_PARAM
+  `define SYS_CLK_ARG
 `endif
-`else
-`define SYS_CLK_PARAM
-`define SYS_CLK_ARG
-`endif
+
+// `ifdef XILINX_SYS_CLK
+// `ifdef VirtexUltrascale
+// `define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n, Clock sys_clk1_300_p, Clock sys_clk1_300_n, Clock sys_clk2_300_p, Clock sys_clk2_300_n, 
+// `define SYS_CLK_ARG sys_clk_p, sys_clk_n, sys_clk1_300_p, sys_clk1_300_n, sys_clk2_300_p, sys_clk2_300_n, 
+// `else
+// `define SYS_CLK_PARAM Clock sys_clk_p, Clock sys_clk_n, 
+// `define SYS_CLK_ARG sys_clk_p, sys_clk_n,
+// `endif
+// `else
+// `define SYS_CLK_PARAM
+// `define SYS_CLK_ARG
+// `endif
+
 
 (* synthesize, no_default_clock, no_default_reset *)
 `ifdef XILINX
@@ -89,7 +108,6 @@ module mkPcieTop #(Clock pci_sys_clk_p, Clock pci_sys_clk_n, `SYS_CLK_PARAM Rese
 module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (PcieTop#(`PinType));
    PcieHostTop host <- mkPcieHostTop(pcie_refclk_p, osc_50_b3b, pcie_perst_n);
 `endif
-
    Vector#(NumberOfUserTiles,ConnectalTop#(`PinType)) tile <- replicateM(mkConnectalTop(
 `ifdef IMPORT_HOSTIF // no synthesis boundary
       host,
@@ -104,20 +122,36 @@ module mkPcieTop #(Clock pcie_refclk_p, Clock osc_50_b3b, Reset pcie_perst_n) (P
    if (mainClockPeriod == pcieClockPeriod) begin
        mkConnection(host.tpciehost.master, portalTop.slave, clocked_by host.portalClock, reset_by host.portalReset);
        if (valueOf(NumberOfMasters) > 0) begin
-	  zipWithM_(mkConnection,portalTop.masters, host.tpciehost.slave);
+          for ( Integer i = 0; i < valueOf(NumberOfMasters); i = i + 1) begin
+             `ifndef USE_WIDE_WIDTH
+	         mkConnection(portalTop.masters[i], host.tpciehost.slave[i]);
+             `else
+             let memCnx <- GetPutWithClocks::mkConnectionWithGearbox(host.portalClock, host.portalReset,
+			                                           host.pcieClock, host.pcieReset,
+			                                           portalTop.masters[i], host.tpciehost.slave[i]);
+             `endif
+          end
        end
    end
    else begin
        let portalCnx <- GetPutWithClocks::mkConnectionWithClocks(host.pcieClock, host.pcieReset,
 								 host.portalClock, host.portalReset,
 								 host.tpciehost.master, portalTop.slave);
-       if (valueOf(NumberOfMasters) > 0) begin
+      if (valueOf(NumberOfMasters) > 0) begin
 	  //zipWithM_(GetPutWithClocks::mkConnectionWithClocks2, portalTop.masters, host.tpciehost.slave);
-	  for (Integer i = 0; i < valueOf(NumberOfMasters); i = i + 1)
-	     let memCnx <- GetPutWithClocks::mkConnectionWithClocks(host.portalClock, host.portalReset,
-								    host.pcieClock, host.pcieReset,
-								    portalTop.masters[i], host.tpciehost.slave[i]);
-       end
+	     for (Integer i = 0; i < valueOf(NumberOfMasters); i = i + 1) begin
+            
+            `ifndef USE_WIDE_WIDTH
+	        GetPutWithClocks::mkConnectionWithClocks(host.portalClock, host.portalReset,
+			                                         host.pcieClock, host.pcieReset,
+			                                         portalTop.masters[i], host.tpciehost.slave[i]);
+            `else
+            let memCnx <- GetPutWithClocks::mkConnectionWithGearbox(host.portalClock, host.portalReset,
+			                                                        host.pcieClock, host.pcieReset,
+			                                                        portalTop.masters[i], host.tpciehost.slave[i]);
+            `endif
+         end
+      end
    end
 
    // going from level to edge-triggered interrupt

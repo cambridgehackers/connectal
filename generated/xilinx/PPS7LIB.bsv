@@ -399,24 +399,24 @@ module mkPPS7LIB#(Clock maxigp0aclk, Clock maxigp1aclk, Clock saxiacpaclk, Clock
         input_clock saxihp3aclk(SAXIHP3ACLK) = saxihp3aclk;
         input_reset saxihp3aclk_reset() = saxihp3aclk_reset; /* from clock*/
     interface Pps7Ddr     ddr;
-        ifc_inout a(DDRA);
+        ifc_inout a(DDRA) clocked_by (no_clock) reset_by (no_reset);
         method arb(DDRARB) enable((*inhigh*) EN_DDRARB);
-        ifc_inout ba(DDRBA);
-        ifc_inout casb(DDRCASB);
-        ifc_inout cke(DDRCKE);
-        ifc_inout ckn(DDRCKN);
-        ifc_inout ckp(DDRCKP);
-        ifc_inout csb(DDRCSB);
-        ifc_inout dm(DDRDM);
-        ifc_inout dq(DDRDQ);
-        ifc_inout dqsn(DDRDQSN);
-        ifc_inout dqsp(DDRDQSP);
-        ifc_inout drstb(DDRDRSTB);
-        ifc_inout odt(DDRODT);
-        ifc_inout rasb(DDRRASB);
-        ifc_inout vrn(DDRVRN);
-        ifc_inout vrp(DDRVRP);
-        ifc_inout web(DDRWEB);
+        ifc_inout ba(DDRBA) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout casb(DDRCASB) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout cke(DDRCKE) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout ckn(DDRCKN) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout ckp(DDRCKP) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout csb(DDRCSB) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout dm(DDRDM) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout dq(DDRDQ) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout dqsn(DDRDQSN) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout dqsp(DDRDQSP) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout drstb(DDRDRSTB) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout odt(DDRODT) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout rasb(DDRRASB) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout vrn(DDRVRN) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout vrp(DDRVRP) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout web(DDRWEB) clocked_by (no_clock) reset_by (no_reset);
     endinterface
 `ifdef PS7EXTENDED
     interface Pps7Dma     dma0;
@@ -814,11 +814,11 @@ module mkPPS7LIB#(Clock maxigp0aclk, Clock maxigp1aclk, Clock saxiacpaclk, Clock
         method MAXIGP1WSTRB wstrb() clocked_by (maxigp1aclk) reset_by (maxigp1aclk_reset);
         method MAXIGP1WVALID wvalid() clocked_by (maxigp1aclk) reset_by (maxigp1aclk_reset);
     endinterface
-    ifc_inout mio(MIO);
+    ifc_inout mio(MIO) clocked_by (no_clock) reset_by (no_reset);
     interface Pps7Ps     ps;
-        ifc_inout clk(PSCLK);
-        ifc_inout porb(PSPORB);
-        ifc_inout srstb(PSSRSTB);
+        ifc_inout clk(PSCLK) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout porb(PSPORB) clocked_by (no_clock) reset_by (no_reset);
+        ifc_inout srstb(PSSRSTB) clocked_by (no_clock) reset_by (no_reset);
     endinterface
     interface Pps7Saxiacp     saxiacp;
         method araddr(SAXIACPARADDR) clocked_by (saxiacpaclk) reset_by (saxiacpaclk_reset) enable((*inhigh*) EN_SAXIACPARADDR);

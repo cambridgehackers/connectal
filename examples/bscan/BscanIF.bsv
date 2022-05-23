@@ -28,6 +28,7 @@ import GetPut       :: *;
 import Connectable  :: *;
 import DefaultValue :: *;
 import Clocks       :: *;
+import HostInterface:: *;
 
 interface BscanIndication;
     method Action bscanGet(Bit#(64) v);
@@ -38,17 +39,21 @@ interface BscanRequest;
    method Action bscanPut(Bit#(8) addr, Bit#(64) v);
 endinterface
 
-module mkBscanRequest#(BscanIndication indication, BscanTop bscan)(BscanRequest);
+interface BscanIF;
+   interface BscanRequest request;
+endinterface
+
+module mkBscanIF#(HostInterface host, BscanIndication indication)(BscanIF);
    Clock defaultClock <- exposeCurrentClock();
    Reset defaultReset <- exposeCurrentReset();
 
    Reg#(Bit#(8)) addrReg <- mkReg(0);
 
-   BscanBram#(Bit#(8),Bit#(64)) bscanBram <- mkBscanBram(123, addrReg, bscan);
+   BscanBram#(Bit#(8),Bit#(64)) bscanBram <- mkBscanBram(123, addrReg, host.bscan);
    let bram <- mkBRAM2Server(defaultValue);
    mkConnection(bscanBram.bramClient, bram.portB);
    rule tdorule;
-      bscan.tdo(bscanBram.data_out());
+      host.bscan.tdo(bscanBram.data_out());
    endrule
 
    rule bscanGetRule2;
@@ -56,6 +61,7 @@ module mkBscanRequest#(BscanIndication indication, BscanTop bscan)(BscanRequest)
       indication.bscanGet(v);
    endrule
    
+   interface BscanRequest request;
    method Action bscanGet(Bit#(8) addr);
       bram.portA.request.put(BRAMRequest {write:False, responseOnWrite:False, address:addr, datain: ?});
    endmethod
@@ -63,4 +69,5 @@ module mkBscanRequest#(BscanIndication indication, BscanTop bscan)(BscanRequest)
    method Action bscanPut(Bit#(8) addr, Bit#(64) v);
       bram.portA.request.put(BRAMRequest {write:True, responseOnWrite:False, address:addr, datain: truncate(v)});
    endmethod
+   endinterface
 endmodule

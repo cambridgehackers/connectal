@@ -183,7 +183,7 @@ set_property LOC RAMB36_X4Y28 [get_cells {*/pcie_7x_i/pcie_top_i/pcie_7x_i/pcie_
 ######################################################################################################
 
 # # clocks
-create_clock -name bscan_refclk -period 20 [get_pins *pcieBscanBram_bscan/TCK]
+create_clock -name bscan_refclk -period 20 [get_pins -hier -filter {NAME=~"*pcieBscanBram_bscan/TCK"}]
 
 create_clock -name pci_refclk -period 10 [get_pins *pci_clk_100mhz_buf/O]
 create_clock -name sys_clk -period 5 [get_pins *sys_clk_200mhz/O]

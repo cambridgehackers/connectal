@@ -105,6 +105,18 @@ Variables Controlling the Bluespec Compiler
 
    Specifies additional flags to pass to bsc.
 
+Verilator-related Variables
+-------------------------
+
+.. make:var:: VERILATOR_PROJECT_ARGS
+
+   Flags passed to verilator when compiling verilog for
+   simulation. For example, to enable saving signal traces to a VCD
+   file, add the following to your project's Makefile::
+
+    CONNECTALFLAGS += -DVERILATOR_PROJECT_ARGS="--trace"
+
+
 Bluesim-related Variables
 -------------------------
 

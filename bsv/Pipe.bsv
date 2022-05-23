@@ -22,6 +22,7 @@
 
 
 import FIFOF::*;
+import SpecialFIFOs::*;
 import GetPut::*;
 import Connectable::*;
 import Vector::*;
@@ -241,7 +242,7 @@ endinstance
 
 instance Connectable#(PipeOut#(a),Put#(a));
    module mkConnection#(PipeOut#(a) in, Put#(a) out)(Empty);
-      rule connect;
+      rule connect if (in.notEmpty);
 	 let v = in.first;
 	 in.deq();
 	 out.put(v);
@@ -260,7 +261,7 @@ endinstance
 
 instance Connectable#(PipeOut#(a),PipeIn#(a));
    module mkConnection#(PipeOut#(a) in, PipeIn#(a) out)(Empty);
-      rule connect;
+      rule connect if (in.notEmpty);
 	 let v = in.first;
 	 in.deq();
 	 out.enq(v);
@@ -395,20 +396,20 @@ module mkUnFunnelPipesPipelinedInternal#(Vector#(1, PipeOut#(Tuple2#(Bit#(TLog#(
    Vector#(krounded, PipeOut#(Tuple2#(Bit#(logk),a))) outs = newVector;
    for(Integer j = 0; j < valueOf(stages); j=j+1) begin 
       for(Integer i = 0; i < min(valueOf(krounded), 2**(j*valueOf(bpc))); i=i+1) begin
-	 Integer bits = (j == valueOf(stages)-1) ? valueOf(logk)-(j*valueOf(bpc)) : valueOf(bpc);
-	 function Bit#(bpc) sh(Bit#(bpc) x) = x<<(valueOf(bpc)-bits);
-	 for(Integer l = 0; l < 2**bits; l=l+1)  begin
-	    let buff <- mkFIFOF;
-	    // extra conditional in case 'k' is not a power of 2
-	    let idx = (2**bits)*i+l;
-	    if (idx < valueOf(k)) begin
-	       outs[idx] = toPipeOut(buff);
-	       rule xfer if(tpl_1(ins[i].first)[(valueOf(logk)-1):max(0,(valueOf(logk)-valueOf(bpc)))] == sh(fromInteger(l)));
-		  match{.idx, .v} <- toGet(ins[i]).get;
-		  buff.enq(tuple2(idx<<valueOf(bpc), v));
-	       endrule
-	    end
-	 end
+	     Integer bits = (j == valueOf(stages)-1) ? valueOf(logk)-(j*valueOf(bpc)) : valueOf(bpc);
+	     function Bit#(bpc) sh(Bit#(bpc) x) = x<<(valueOf(bpc)-bits);
+	     for(Integer l = 0; l < 2**bits; l=l+1)  begin
+	        let buff <- mkFIFOF;
+	        // extra conditional in case 'k' is not a power of 2
+	        let idx = (2**bits)*i+l;
+	        if (idx < valueOf(k)) begin
+	           outs[idx] = toPipeOut(buff);
+	           rule xfer if(tpl_1(ins[i].first)[(valueOf(logk)-1):max(0,(valueOf(logk)-valueOf(bpc)))] == sh(fromInteger(l)));
+		          match{.idx, .v} <- toGet(ins[i]).get;
+		          buff.enq(tuple2(idx<<valueOf(bpc), v));
+	           endrule
+	        end
+	     end
       end
       ins = outs;
    end

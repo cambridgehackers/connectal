@@ -77,6 +77,13 @@ typedef XsimHost HostInterface;
 
 `ifdef PcieHostIF
 
+`ifdef PCIE3
+typedef TMin#(DataBusWidth, 128) PcieDataBusWidth;
+`else
+typedef TMin#(DataBusWidth, 128) PcieDataBusWidth;
+`endif
+
+
 import Vector            :: *;
 import GetPut            :: *;
 import ClientServer      :: *;
@@ -135,7 +142,7 @@ interface PcieHost#(numeric type dsz, numeric type nSlaves);
 endinterface
 
 interface PcieHostTop;
-   interface PcieHost#(DataBusWidth, NumberOfMasters) tpciehost;
+   interface PcieHost#(PcieDataBusWidth, NumberOfMasters) tpciehost;
 `ifdef PCIE_CHANGES_HOSTIF
    interface PipeOut#(Bit#(64)) tchanges;
 `endif
@@ -143,11 +150,20 @@ interface PcieHostTop;
 `ifdef XILINX_SYS_CLK
    interface Clock tsys_clk_200mhz;
    interface Clock tsys_clk_200mhz_buf;
+`ifdef VirtexUltrascalePlus
+   interface Clock tsys_clk_300mhz;
+   interface Clock tsys_clk_300mhz_buf;
+   interface Clock tsys_clk1_250mhz;
+   interface Clock tsys_clk1_250mhz_buf;
+   interface Clock tsys_clk2_250mhz;
+   interface Clock tsys_clk2_250mhz_buf;
+`else
 `ifdef VirtexUltrascale
    interface Clock tsys_clk1_300mhz;
    interface Clock tsys_clk1_300mhz_buf;
    interface Clock tsys_clk2_300mhz;
    interface Clock tsys_clk2_300mhz_buf;
+`endif
 `endif
 `endif
    interface Clock tpci_clk_100mhz_buf;
