@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Usage doxyfilter_bsv.psv < infile.bsv > outfile.java
 
 import fileinput
