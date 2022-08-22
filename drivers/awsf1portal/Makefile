@@ -11,6 +11,9 @@ CURRENTDIR := $(PWD)
 CONNECTALDIR ?= $(CURRENTDIR)/../..
 include $(CONNECTALDIR)/Makefile.version
 
+pcieportal-objs := portal.o libxdma.o xdma_cdev.o cdev_ctrl.o cdev_events.o cdev_sgdma.o cdev_xvc.o cdev_bypass.o xdma_mod.o
+
+TARGET_MODULE:=pcieportal
 obj-m += pcieportal.o
 
 PKG_NAME?=connectal
@@ -32,7 +35,7 @@ cflags-y += -I$(PWD)
 driverversion.h:
 	VERSION=$(VERSION) echo "#define DRIVER_VERSION \"$$VERSION\"" > driverversion.h
 
-pcieportal.ko: pcieportal.c pcieportal.h driverversion.h
+pcieportal.ko: portal.c pcieportal.h driverversion.h
 	$(Q)$(MAKE) -C $(KROOT) M=$(PWD) modules
 
 .PHONY: modules_check
@@ -76,6 +79,12 @@ insmod: rmmod
 	insmod ../portalmem/portalmem.ko
 	chmod agu+rw /dev/portalmem
 
+
+PCIEPORTAL_SOURCE=$(wildcard portal.c portal_internal.h pcieportal.h version.h cdev*.[ch] *xdma*.[ch] driverversion.h)
+PORTALMEM_SOURCE=$(wildcard ../portalmem/*.[ch])
+CONNECTAL_HEADERS=$(addprefix ../../cpp/, portal.h portalKernel.h dmaSendFd.h)
+GENERATED_SOURCE=$(wildcard ../../generated/cpp/*.[ch])
+
 .PHONY: install-dkms
 install-dkms:
 	rm -f driverversion.h
@@ -85,11 +94,17 @@ install-dkms:
 	sed "s/@VERSION@/$(VERSION)/" Makefile.dkms > Makefile.dkms.out
 	cp -fv dkms.conf.out $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/dkms.conf
 	cp -fv Makefile.dkms.out $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/Makefile
-	cp -fv pcieportal.c pcieportal.h driverversion.h $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
-	cp -fv ../../cpp/*.[ch] ../portalmem/*.[ch] \
-	../../generated/cpp/*.[ch] \
-	$(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
+	cp -fv $(PCIEPORTAL_SOURCE) $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
+	cp -fv $(PORTALMEM_SOURCE) $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
+	cp -fv $(CONNECTAL_HEADERS) $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
+	cp -fv $(GENERATED_SOURCE) $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)
 	sed -i 's|drivers/portalmem/||' $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/*.[ch]
 	sed -i 's|drivers/pcieportal/||' $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/*.[ch]
 	sed -i 's|drivers/zynqportal/||' $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/*.[ch]
 	sed -i 's|../../cpp/||g' $(DESTDIR)$(PREFIX)/src/$(PKG_NAME)-$(VERSION)/*.[ch]
+
+test-dkms:
+	rm -fr test-dkms
+	make DESTDIR=dkms install-dkms
+	cd dkms$(PREFIX)/src/$(PKG_NAME)-$(VERSION); make -C $(KROOT) M=$(PWD)/dkms$(PREFIX)/src/$(PKG_NAME)-$(VERSION) modules
+	rm -fr test-dkms
