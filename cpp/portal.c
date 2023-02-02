@@ -399,16 +399,17 @@ int portalAlloc(size_t size, int cached)
     }
 #else
     {
+      #define FNAME_BUF_SIZE 128
       static int portalmem_number = 0;
-      char fname[128];
+      char fname[FNAME_BUF_SIZE];
       snprintf(fname, sizeof(fname), "/tmp/portalmem-%d-%d.bin", getpid(), portalmem_number++);
       fd = open(fname, O_RDWR|O_CREAT, 0600);
       if (fd < 0)
 	fprintf(stderr, "ERROR %s:%d fname=%s fd=%d\n", __FUNCTION__, __LINE__, fname, fd);
       unlink(fname);
       lseek(fd, size, SEEK_SET);
-      size_t bytesWritten = write(fd, (void*)fname, 512);
-      if (bytesWritten != 512)
+      size_t bytesWritten = write(fd, (void*)fname, FNAME_BUF_SIZE);
+      if (bytesWritten != FNAME_BUF_SIZE)
 	fprintf(stderr, "ERROR %s:%d fname=%s fd=%d wrote %ld bytes\n", __FUNCTION__, __LINE__, fname, fd, (long)bytesWritten);
       portalmem_sizes[fd] = size;
     }
