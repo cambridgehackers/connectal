@@ -175,7 +175,8 @@ all bits verilog implementation bsim xsim vsim xsimrun: gentarget prebuild
 android.exe bsim_exe ubuntu.exe exe: gentarget
 	+make -C $(PROJECTDIR) --no-print-directory $@
 
-PCIEGEN=$(shell grep PCIE $(CONNECTALDIR)/boardinfo/$(BOARD).json | sed 's/.*PCIE\([123]\).*/\1/')
+ZYNQ_MPSOC=$(shell jq -r .options.ZYNQ_MPSOC < $(CONNECTALDIR)/boardinfo/$(BOARD).json)
+PCIEGEN=$(shell jq -r .options.need_pcie < $(CONNECTALDIR)/boardinfo/$(BOARD).json | sed 's/.*gen\([123]\).*/\1/')
 NEED_XILINX_PCIE_ac701=$(PCIEGEN)
 NEED_XILINX_PCIE_ac701g2=$(PCIEGEN)
 NEED_XILINX_PCIE_kc160g2=$(PCIEGEN)
@@ -232,7 +233,7 @@ ifeq ($(NEED_ALTERA_PCIE_$(BOARD)),1)
 	FPGAMAKE_CONNECTALFLAGS += --tcl=$(CONNECTALDIR)/constraints/altera/$(BOARD).sdc
 	CONNECTALFLAGS += --bscflags="+RTS -K46777216 -RTS -demote-errors G0066:G0045 -suppress-warnings G0046:G0020:S0015:S0080:S0039"
 endif
-ifeq ($(BOARD),zcu102)
+ifeq ($(ZYNQ_MPSOC),zynq_ultra_ps_e)
     CONNECTALFLAGS += --xci=$(IPDIR)/$(BOARD)/zynq_ultra_ps_e_0/zynq_ultra_ps_e_0.xci
 endif
 
@@ -309,7 +310,7 @@ ifneq ($(NEED_XILINX_PCIE_$(BOARD)),)
 	$(Q)[ -e $(IPDIR) ] || mkdir -p $(IPDIR)
 	cd $(PROJECTDIR); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) vivado -notrace -mode batch -source $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-pcie.tcl
 endif
-ifeq ($(BOARD),zcu102)
+ifeq ($(ZYNQ_MPSOC),zynq_ultra_ps_e)
 	@echo "building ... $(BOARD) Zynq MPSOC core"
 	$(Q)[ -e $(IPDIR) ] || mkdir -p $(IPDIR)
 	cd $(PROJECTDIR); BUILDCACHE_CACHEDIR=$(BUILDCACHE_CACHEDIR) $(BUILDCACHE) vivado -notrace -mode batch -source $(shell cd $(CONNECTALDIR); /bin/pwd)/scripts/connectal-synth-zynq-mpsoc.tcl

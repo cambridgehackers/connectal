@@ -13,7 +13,7 @@
         "TOP" : "ZynqUltraTop",
         "runscript" : "run.pcietest",
         "CONNECTALFLAGS" : ["--mainclockperiod=5", "--derivedclockperiod=2.5"],
-        "need_pcie" : "unused"
+	"ZYNQ_MPSOC": "zynq_ultra_ps_e"
     },
     "fmc1": {
 	"LA00_p_CC": {
