@@ -427,7 +427,13 @@ def typeBitWidth(item):
     if item['name'] == 'SpecialTypeForSendingFd':
         return 32
     if item.get('type') == 'Enum':
-        return int(math.ceil(math.log(len(item['elements']), 2)))
+        enum_width = int(math.ceil(math.log(len(item['elements']), 2)))
+        # determines that the element is a scoped enum
+        if len(item['elements'][0]) == 2 and item['elements'][0][1] != None:
+            # calculate the maximum bit width among all enum items
+            enum_width = max([int(math.ceil(math.log(int(element[1]) + 1, 2))) for element in item['elements']])
+        return enum_width
+
     if hasBitWidth(item):
         width = item['params'][0]['name']
         while width in globalv_globalvars:
