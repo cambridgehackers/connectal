@@ -55,6 +55,8 @@ int main(int argc, const char **argv)
     v1arg2[i] = ~testval;
     testval = (testval << 4) | ((testval >> 28) & 0xf);
   }
+  fprintf(stderr, "Main::calling say9\n");
+  device->say9(v9v, v9w);
   device->sayv1(v1arg1, v1arg2);
   testval = 0x12349876;
   for (int i = 0; i < 16; i++) {

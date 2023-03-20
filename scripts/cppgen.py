@@ -535,6 +535,8 @@ def generate_demarshall(fmt, methodName, argWords):
                     print('generate_demarshall: when using "generatePacketOnly", fd items cannot be sent')
                     sys.exit(-1)
                 statements.append('tempdata.%s.%s %s messageFd;'%(methodName, e.name, e.assignOp))
+            elif e.datatype.get('type') == 'Enum' and e.assignOp == '|=':
+                statements.append('tempdata.%s.%s = (%s)((int)tempdata.%s.%s | %s);'%(methodName, e.name, typeCName(e.datatype), methodName, e.name, field))
             else:
                 statements.append('tempdata.%s.%s %s (%s)(%s);'%(methodName, e.name, e.assignOp, typeCName(e.datatype), field))
             off = off+e.width-e.shifted

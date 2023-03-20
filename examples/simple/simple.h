@@ -43,6 +43,8 @@ uint64_t v6b = 0x000000EFFECAFECA;
 uint32_t v6c = 0xCCCCCCCC;
 uint32_t v7a = 0xDADADADA;
 E1 v7b = E1Choice2;
+E1 v9v = E1Choice2;
+E1 v9w = E1Choice3;
 S3 s3 = { a: v7a, e1: v7b };
 
 bsvvector_Luint32_t_L2 xs = { 0xa1, 0xa2 };
@@ -106,6 +108,12 @@ public:
     fprintf(stderr, "say8\n");
     for (int i = 0; i < 128; i++)
         fprintf(stderr, "    [%d] = 0x%x\n", i, v[i]);
+    incr_cnt();
+  }
+  void say9(E1 v, E1 w) {
+    fprintf(stderr, "say9(%08x, %08x)\n", v, w);
+    TEST_ASSERT(v == v9v);
+    TEST_ASSERT(w == v9w);
     incr_cnt();
   }
   void sayv1(const int32_t*arg1, const int32_t*arg2) {
