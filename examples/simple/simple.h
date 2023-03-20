@@ -43,9 +43,9 @@ uint64_t v6b = 0x000000EFFECAFECA;
 uint32_t v6c = 0xCCCCCCCC;
 uint32_t v7a = 0xDADADADA;
 E1 v7b = E1Choice2;
-E1 v9v = E1Choice2;
-E1 v9w = E1Choice3;
 S3 s3 = { a: v7a, e1: v7b };
+E1 v9v = E1Choice2;
+E1 v9w = E1ChoiceBig;
 
 bsvvector_Luint32_t_L2 xs = { 0xa1, 0xa2 };
 bsvvector_Luint32_t_L2 ys = { 0xb1, 0xb2 };

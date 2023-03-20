@@ -429,9 +429,10 @@ def typeBitWidth(item):
     if item.get('type') == 'Enum':
         enum_width = int(math.ceil(math.log(len(item['elements']), 2)))
         # determines that the element is a scoped enum
-        if len(item['elements'][0]) == 2 and item['elements'][0][1] != None:
+        if any([element[1] is not None for element in item['elements']]):
             # calculate the maximum bit width among all enum items
-            enum_width = max([int(math.ceil(math.log(int(element[1]) + 1, 2))) for element in item['elements']])
+            enum_width = max([int(math.ceil(math.log(int(element[1] or i) + 1, 2)))
+                              for i, element in enumerate(item['elements'])])
         return enum_width
 
     if hasBitWidth(item):

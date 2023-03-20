@@ -38,7 +38,9 @@ typedef struct{
 typedef enum {
    E1Choice1,
    E1Choice2,
-   E1Choice3
+   E1Choice3,
+   E1ChoiceBig = 33554432,
+   E1ChoiceBig2 = 33554433
    } E1 deriving (Bits,Eq);
 
 typedef struct{
@@ -126,7 +128,7 @@ module mkSimple#(SimpleRequest indication)(Simple);
    endmethod
 
    method Action say9(E1 v, E1 w);
-      if (verbose) $display("mkSimple::say8", v, w);
+      if (verbose) $display("mkSimple::say9", v, w);
       indication.say9(v, w);
    endmethod
 
