@@ -32,7 +32,7 @@ if __name__=='__main__':
     if filename == '-':
         infile = sys.stdin
     else:
-        infile = open(filename)
+        infile = open(filename, 'rb')
     readarr = array.array('I', infile.read())
     readarr.byteswap()
-    open(sys.argv[2], 'w').write(readarr.tostring())
+    open(sys.argv[2], 'wb').write(readarr.tostring())
