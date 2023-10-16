@@ -73,7 +73,7 @@ BSCVERSION=$(shell bsc -v |grep version | sed -e "s/.*version //" -e "s/ .*//")
 BSCMAJOR=$(shell bsc -v |grep version | sed -e "s/.*version //" -e "s/\..*//")
 ifeq ($(BSCVERSION),)
 	BSIM_LIBRARY_DIR = $(BLUESPECDIR)/Bluesim
-else ifeq ($(shell test $(BSCMAJOR) -le 2019 &>/dev/null && echo obsolete),)
+else ifeq ($(shell test $(BSCMAJOR) -le 2019 &>/dev/null && echo obsolete),obsolete)
 	BSIM_LIBRARY_DIR = $(BLUESPECDIR)/Bluesim/g++4_64
 	CXXFLAGS_BSIM += -DBSC_OBSOLETE
 else
