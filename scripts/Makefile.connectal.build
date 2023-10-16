@@ -69,6 +69,7 @@ endif
 GDB_BSIM= LD_PRELOAD=libSegFault.so SEGFAULT_USE_ALTSTACK=1 SEGFAULT_OUTPUT_NAME=bin/bsim-segv-output.txt
 
 
+BLUESPECDIR?=$(shell bsc --help | grep 'Bluespec directory:' | sed 's/Bluespec directory: //')
 BSCVERSION=$(shell bsc -v |grep version | sed -e "s/.*version //" -e "s/ .*//")
 BSCMAJOR=$(shell bsc -v |grep version | sed -e "s/.*version //" -e "s/\..*//")
 ifeq ($(BSCVERSION),)
@@ -404,7 +405,7 @@ $(VFILE): $(addprefix obj/, $(patsubst %.bsv, %.bo, $(notdir $(TOPBSVFILE))))
 
 obj/Makefile: $(OBJMAKEFILE_DEP) syntax.timestamp
 	@mkdir -p obj
-	$(CONNECTALDIR)/scripts/bsvdepend.py -o obj/Makefile $(BSVDEFINES) --bsvpath=$(BSVPATH) --all $(TOPBSVFILE)
+	$(CONNECTALDIR)/scripts/bsvdepend.py -o obj/Makefile $(BSVDEFINES) --bsvpath=$(BSVPATH) --bluespecdir=$(BLUESPECDIR) --all $(TOPBSVFILE)
 
 $(DTOP)/bin/libconnectal-sim.so: $(SIM_OBJECTS) prepare_bin_target
 	$(Q)mkdir -p $(DTOP)/bin
